@@ -14,7 +14,9 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowReactApp",
-        policy => policy.WithOrigins("http://localhost:3000")
+        policy => policy.WithOrigins(
+            "http://localhost:3000",
+            "http://localhost:5173")
                         .AllowAnyHeader()
                         .AllowAnyMethod());
 });
@@ -37,14 +39,20 @@ if (app.Environment.IsDevelopment())
 
 // Sử dụng CORS
 app.UseCors("AllowReactApp");
+app.UseCors("AllowFrontend");
 
 app.UseHttpsRedirection();
 app.UseAuthorization();
 app.MapControllers();
+var uploadPath = Path.Combine(builder.Environment.ContentRootPath, "Uploads");
+if (!Directory.Exists(uploadPath))
+{
+    Directory.CreateDirectory(uploadPath);
+}
+
 app.UseStaticFiles(new StaticFileOptions
 {
-    FileProvider = new PhysicalFileProvider(
-        Path.Combine(builder.Environment.ContentRootPath, "Uploads")),
+    FileProvider = new PhysicalFileProvider(uploadPath),
     RequestPath = "/Uploads"
 });
 app.Run();
