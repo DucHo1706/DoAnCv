@@ -29,3 +29,9 @@ obj/
 Thumbs.db
 # Upload folder (optional)
 Uploads/
+
+# Visual Studio Code
+node_modules/
+.env
+dist/
+build/
