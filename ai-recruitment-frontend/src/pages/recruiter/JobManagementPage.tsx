@@ -75,8 +75,9 @@ function JobManagementPage() {
   const fetchJobs = async () => {
     try {
       setLoading(true);
-      const data = await jobService.getJobs();
-      setJobs(data);
+      const data: any = await jobService.getJobs();
+      // Bảo vệ giao diện: Chống sập White Screen nếu API trả về Object lỗi
+      setJobs(Array.isArray(data) ? data : (data?.$values || []));
     } catch (error) {
       console.error(error);
       message.error("Không tải được danh sách tin tuyển dụng");
@@ -106,9 +107,9 @@ function JobManagementPage() {
 
     return {
       id: job.id,
-      title: job.title,
+      title: job.position?.name || "Chưa cập nhật vị trí",
       field: "Chưa hoàn thiện",
-      location: job.location || "Chưa cập nhật",
+      location: job.branch?.name || "Chưa cập nhật chi nhánh",
       type: "Chưa hoàn thiện",
       applications: 0,
       status,
@@ -308,9 +309,17 @@ function JobManagementPage() {
           <Form.Item
             label="Tên vị trí"
             name="title"
-            rules={[{ required: true, message: "Vui lòng nhập tên vị trí" }]}
+            rules={[{ required: true, message: "Vui lòng chọn vị trí tuyển dụng" }]}
           >
-            <Input placeholder="Ví dụ: Frontend Developer" />
+            <Select placeholder="Chọn vị trí tuyển dụng" showSearch>
+              <Select.Option value="Frontend Developer">Frontend Developer</Select.Option>
+              <Select.Option value="Backend Developer">Backend Developer</Select.Option>
+              <Select.Option value="Fullstack Developer">Fullstack Developer</Select.Option>
+              <Select.Option value="Business Analyst">Business Analyst</Select.Option>
+              <Select.Option value="Tester / QA">Tester / QA</Select.Option>
+              <Select.Option value="UI/UX Designer">UI/UX Designer</Select.Option>
+              <Select.Option value="Project Manager">Project Manager</Select.Option>
+            </Select>
           </Form.Item>
 
           <Form.Item
@@ -329,11 +338,16 @@ function JobManagementPage() {
           </Form.Item>
 
           <Form.Item
-            label="Địa điểm"
+            label="Chi nhánh (Địa điểm)"
             name="location"
-            rules={[{ required: true, message: "Vui lòng nhập địa điểm" }]}
+            rules={[{ required: true, message: "Vui lòng chọn chi nhánh" }]}
           >
-            <Input placeholder="Ví dụ: Ho Chi Minh City" />
+            <Select placeholder="Chọn chi nhánh làm việc">
+              <Select.Option value="Trụ sở Hồ Chí Minh">Trụ sở Hồ Chí Minh</Select.Option>
+              <Select.Option value="Chi nhánh Hà Nội">Chi nhánh Hà Nội</Select.Option>
+              <Select.Option value="Chi nhánh Đà Nẵng">Chi nhánh Đà Nẵng</Select.Option>
+              <Select.Option value="Remote (Làm việc từ xa)">Remote (Làm việc từ xa)</Select.Option>
+            </Select>
           </Form.Item>
 
           <Form.Item
@@ -396,10 +410,10 @@ function JobManagementPage() {
 
             <Descriptions bordered column={2} size="middle">
               <Descriptions.Item label="Tên vị trí" span={2}>
-                {jobDetail.jobInfo.title}
+                {jobDetail.jobInfo.position?.name || "Chưa cập nhật"}
               </Descriptions.Item>
               <Descriptions.Item label="Địa điểm">
-                {jobDetail.jobInfo.location || "Chưa cập nhật"}
+                {jobDetail.jobInfo.branch?.name || "Chưa cập nhật"}
               </Descriptions.Item>
               <Descriptions.Item label="Mức lương">
                 {jobDetail.jobInfo.salaryRange || "Chưa cập nhật"}

@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using RecruitmentBackend.Data;
 using RecruitmentBackend.DTOs.Requests;
@@ -26,10 +26,10 @@ namespace RecruitmentBackend.Services
             var newJob = new Job
             {
                 Id = Guid.NewGuid().ToString(), 
-                Title = request.Title,
+                PositionId = request.PositionId,
                 Description = request.Description,
                 Requirements = request.Requirements,
-                Location = request.Location,
+                BranchId = request.BranchId,
                 SalaryRange = request.SalaryRange,
                 CreatedAt = DateTime.UtcNow,
                 StartDate = request.StartDate,
@@ -54,7 +54,10 @@ namespace RecruitmentBackend.Services
 
         public async Task<JobReviewDto?> ReviewJobAsync(string jobId)
         {
-            var job = await _context.Jobs.FindAsync(jobId);
+            var job = await _context.Jobs
+                .Include(j => j.Position)
+                .Include(j => j.Branch)
+                .FirstOrDefaultAsync(j => j.Id == jobId);
             if (job == null) return null;
 
             var inputSkills = job.Requirements
@@ -132,6 +135,8 @@ namespace RecruitmentBackend.Services
         public async Task<IEnumerable<Job>> GetAllJobsAsync()
         {
             return await _context.Jobs
+                .Include(j => j.Position)
+                .Include(j => j.Branch)
                 .Where(j => j.IsActive)
                 .OrderByDescending(j => j.CreatedAt)
                 .ToListAsync();
@@ -140,6 +145,8 @@ namespace RecruitmentBackend.Services
         public async Task<IEnumerable<Job>> GetPendingJobsAsync()
         {
             return await _context.Jobs
+                                 .Include(j => j.Position)
+                                 .Include(j => j.Branch)
                                  .Where(j => !j.IsApproved && j.IsActive)
                                  .OrderByDescending(j => j.CreatedAt)
                                  .ToListAsync();

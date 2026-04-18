@@ -1,6 +1,8 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿﻿using Microsoft.AspNetCore.Mvc;
 using RecruitmentBackend.DTOs.Requests;
 using RecruitmentBackend.Interfaces;
+using System.Threading.Tasks;
+using System.Linq;
 
 namespace RecruitmentBackend.Controllers
 {
@@ -8,49 +10,105 @@ namespace RecruitmentBackend.Controllers
     [ApiController]
     public class JobsController : ControllerBase
     {
-        private readonly IJobService _jobService; 
+        private readonly IJobService _jobService;
 
         public JobsController(IJobService jobService)
         {
             _jobService = jobService;
         }
 
+        // 1. Lấy danh sách toàn bộ Job
+        [HttpGet]
+        public async Task<IActionResult> GetJobs()
+        {
+            var jobs = await _jobService.GetAllJobsAsync();
+            
+            // Ngắt vòng lặp vô hạn (Circular Reference) của Entity Framework
+            var safeJobs = jobs.Select(j => new {
+                id = j.Id,
+                description = j.Description,
+                requirements = j.Requirements,
+                salaryRange = j.SalaryRange,
+                isActive = j.IsActive,
+                isApproved = j.IsApproved,
+                createdAt = j.CreatedAt,
+                startDate = j.StartDate,
+                deadline = j.Deadline,
+                maxCandidates = j.MaxCandidates,
+                position = j.Position != null ? new { id = j.Position.Id, name = j.Position.Name } : null,
+                branch = j.Branch != null ? new { id = j.Branch.Id, name = j.Branch.Name } : null
+            });
+            return Ok(safeJobs);
+        }
+
+        // 2. Tạo Job mới (HR tạo tin tuyển dụng)
         [HttpPost]
         public async Task<IActionResult> CreateJob([FromBody] CreateJobRequest request)
         {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
             var jobId = await _jobService.CreatePendingJobAsync(request);
-            return Ok(new { message = "Đăng bài thành công. Đang chờ Admin duyệt!", jobId });
+            return Ok(new { message = "Tạo tin tuyển dụng thành công!", id = jobId });
         }
 
+        // 3. Lấy chi tiết Job cho Modal "Xem chi tiết" của HR
         [HttpGet("{id}/review")]
-        public async Task<IActionResult> ReviewJob(string id)
+        public async Task<IActionResult> GetJobReview(string id)
         {
             var reviewResult = await _jobService.ReviewJobAsync(id);
-            if (reviewResult == null) return NotFound("Không tìm thấy bài đăng");
+            if (reviewResult == null) return NotFound("Không tìm thấy công việc");
 
-            return Ok(reviewResult);
+            var j = reviewResult.JobInfo;
+            var safeJobInfo = new {
+                id = j.Id,
+                description = j.Description,
+                requirements = j.Requirements,
+                salaryRange = j.SalaryRange,
+                isActive = j.IsActive,
+                isApproved = j.IsApproved,
+                createdAt = j.CreatedAt,
+                startDate = j.StartDate,
+                deadline = j.Deadline,
+                maxCandidates = j.MaxCandidates,
+                position = j.Position != null ? new { id = j.Position.Id, name = j.Position.Name } : null,
+                branch = j.Branch != null ? new { id = j.Branch.Id, name = j.Branch.Name } : null
+            };
+            return Ok(new { jobInfo = safeJobInfo, wordsToHighlight = reviewResult.WordsToHighlight });
         }
 
+        // 4. Duyệt Job và đồng bộ từ khóa cho AI
         [HttpPost("{id}/approve")]
         public async Task<IActionResult> ApproveJob(string id)
         {
             var success = await _jobService.ApproveJobAndSyncAiAsync(id);
-            if (!success) return BadRequest("Không tìm thấy bài đăng hoặc bài đã được duyệt rồi.");
+            if (!success) return BadRequest("Không thể duyệt công việc này hoặc công việc đã được duyệt.");
 
-            return Ok(new { message = "Đã duyệt bài đăng! AI đã được cập nhật thêm các từ mới (nếu có)." });
-        }
-        [HttpGet]
-        public async Task<IActionResult> GetAllJobs()
-        {
-            var jobs = await _jobService.GetAllJobsAsync();
-            return Ok(jobs);
+            return Ok(new { message = "Đã duyệt bài đăng! AI đã cập nhật thêm các từ khóa mới." });
         }
 
+        // 5. Lấy danh sách Job đang chờ duyệt
         [HttpGet("pending")]
         public async Task<IActionResult> GetPendingJobs()
         {
             var jobs = await _jobService.GetPendingJobsAsync();
-            return Ok(jobs);
+            
+            // Ngắt vòng lặp vô hạn (Circular Reference) của Entity Framework
+            var safeJobs = jobs.Select(j => new {
+                id = j.Id,
+                description = j.Description,
+                requirements = j.Requirements,
+                salaryRange = j.SalaryRange,
+                isActive = j.IsActive,
+                isApproved = j.IsApproved,
+                createdAt = j.CreatedAt,
+                startDate = j.StartDate,
+                deadline = j.Deadline,
+                maxCandidates = j.MaxCandidates,
+                position = j.Position != null ? new { id = j.Position.Id, name = j.Position.Name } : null,
+                branch = j.Branch != null ? new { id = j.Branch.Id, name = j.Branch.Name } : null
+            });
+            return Ok(safeJobs);
         }
     }
 }

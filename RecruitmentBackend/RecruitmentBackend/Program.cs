@@ -29,6 +29,7 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddScoped<IFileService, FileService>();
 builder.Services.AddHttpClient<IAiService, AiService>();
 builder.Services.AddScoped<IJobService, JobService>();
+
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())

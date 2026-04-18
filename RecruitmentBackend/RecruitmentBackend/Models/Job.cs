@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace RecruitmentBackend.Models
 {
@@ -6,15 +7,22 @@ namespace RecruitmentBackend.Models
     {
         [Key]
         public string Id { get; set; }
+        
         [Required]
-        [StringLength(100)]
-        public string Title { get; set; }
+        public string PositionId { get; set; }
+        [ForeignKey("PositionId")]
+        public JobPosition Position { get; set; }
+
         [Required]
         public string Description { get; set; }
         [Required]
         public string Requirements { get; set; }
 
-        public string Location { get; set; }
+        [Required]
+        public string BranchId { get; set; }
+        [ForeignKey("BranchId")]
+        public Branch Branch { get; set; }
+
         public string SalaryRange { get; set; }
         // trạng thái 
         public bool IsActive { get; set; } = true;

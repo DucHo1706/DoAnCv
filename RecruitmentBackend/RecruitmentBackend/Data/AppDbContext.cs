@@ -12,6 +12,9 @@ namespace RecruitmentBackend.Data
         public DbSet<CandidateProfile> CandidateProfiles { get; set; }
         public DbSet<Skill> Skills { get; set; }
         public DbSet<Category> Categories { get; set; }
+        public DbSet<Branch> Branches { get; set; }
+        public DbSet<JobPosition> JobPositions { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<CandidateProfile>()

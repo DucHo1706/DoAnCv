@@ -1,25 +1,20 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
 namespace RecruitmentBackend.DTOs.Requests
 {
-    public class CreateJobRequest 
+    public class CreateJobRequest
     {
-        [Required]
-        public string Title { get; set; }
-
-        [Required]
-        public string Description { get; set; }
-
-        [Required]
-        public string Requirements { get; set; }
-
-        public string Location { get; set; }
+        [Required] public string PositionId { get; set; }
+        [Required] public string Description { get; set; }
+        [Required] public string Requirements { get; set; }
+        
+        [Required] public string BranchId { get; set; }
         public string SalaryRange { get; set; }
-
         public DateTime? StartDate { get; set; }
         public DateTime? Deadline { get; set; }
         public int? MaxCandidates { get; set; }
-        public List<string> CategoryIds { get; set; } = new List<string>();
+        public List<string> CategoryIds { get; set; }
     }
 }

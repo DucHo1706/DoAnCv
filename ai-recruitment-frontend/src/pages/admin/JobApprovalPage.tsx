@@ -52,8 +52,9 @@ function JobApprovalPage() {
   const fetchPendingJobs = async () => {
     try {
       setLoading(true);
-      const data = await jobService.getPendingJobs();
-      setJobs(data);
+      const data: any = await jobService.getPendingJobs();
+      // Bảo vệ giao diện: Chống sập White Screen nếu API trả về Object lỗi
+      setJobs(Array.isArray(data) ? data : (data?.$values || []));
     } catch (error) {
       console.error(error);
       message.error("Không tải được danh sách tin chờ duyệt");
@@ -69,8 +70,8 @@ function JobApprovalPage() {
   const tableData: PendingJobTableItem[] = useMemo(() => {
     return jobs.map((job) => ({
       id: job.id,
-      title: job.title,
-      location: job.location || "Chưa cập nhật",
+      title: job.position?.name || "Chưa cập nhật",
+      location: job.branch?.name || "Chưa cập nhật",
       salaryRange: job.salaryRange || "Chưa cập nhật",
       createdAt: job.createdAt,
       deadline: job.deadline,
@@ -237,8 +238,8 @@ function JobApprovalPage() {
                   onClick={() =>
                     handleApproveJob({
                       id: jobDetail.jobInfo.id,
-                      title: jobDetail.jobInfo.title,
-                      location: jobDetail.jobInfo.location,
+                      title: jobDetail.jobInfo.position?.name || "Chưa cập nhật",
+                      location: jobDetail.jobInfo.branch?.name || "Chưa cập nhật",
                       salaryRange: jobDetail.jobInfo.salaryRange,
                       createdAt: jobDetail.jobInfo.createdAt,
                       deadline: jobDetail.jobInfo.deadline,
@@ -266,10 +267,10 @@ function JobApprovalPage() {
 
             <Descriptions bordered column={2} size="middle">
               <Descriptions.Item label="Tên vị trí" span={2}>
-                {jobDetail.jobInfo.title}
+                {jobDetail.jobInfo.position?.name || "Chưa cập nhật"}
               </Descriptions.Item>
               <Descriptions.Item label="Địa điểm">
-                {jobDetail.jobInfo.location || "Chưa cập nhật"}
+                {jobDetail.jobInfo.branch?.name || "Chưa cập nhật"}
               </Descriptions.Item>
               <Descriptions.Item label="Mức lương">
                 {jobDetail.jobInfo.salaryRange || "Chưa cập nhật"}

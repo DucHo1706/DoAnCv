@@ -12,6 +12,10 @@ import ml_scorer
 
 app = FastAPI(title="AI Recruitment System API", version="1.0")
 
+@app.get("/")
+async def root():
+    return {"message": "AI Recruitment Service is running perfectly!", "status": "ok"}
+
 # 1. Khai báo cấu trúc dữ liệu mới
 class SkillUpdateRequest(BaseModel):
     skills: List[str]

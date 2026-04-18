@@ -1,36 +1,60 @@
-﻿using RecruitmentBackend.Interfaces;
+﻿﻿using CloudinaryDotNet;
+using CloudinaryDotNet.Actions;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Configuration;
+using RecruitmentBackend.Interfaces;
+using System;
+using System.IO;
+using System.Threading.Tasks;
 
 namespace RecruitmentBackend.Services
 {
     public class FileService : IFileService
     {
-        private readonly IWebHostEnvironment _env;
+        private readonly Cloudinary _cloudinary;
 
-        public FileService(IWebHostEnvironment env)
+        public FileService(IConfiguration config)
         {
-            _env = env;
+            var account = new Account(
+                config["Cloudinary:CloudName"],
+                config["Cloudinary:ApiKey"],
+                config["Cloudinary:ApiSecret"]
+            );
+            _cloudinary = new Cloudinary(account);
         }
 
         public async Task<string> SaveFileAsync(IFormFile file)
         {
-            var contentPath = _env.ContentRootPath;
-            var path = Path.Combine(contentPath, "Uploads");
+            if (file == null || file.Length == 0) return null;
 
-            if (!Directory.Exists(path)) Directory.CreateDirectory(path);
+            using var stream = file.OpenReadStream();
+            
+            // ĐỔI SANG ImageUploadParams: Cloudinary sẽ cho phép xem trực tiếp file PDF trên trình duyệt thay vì ép tải xuống
+            var uploadParams = new ImageUploadParams()
+            {
+                File = new FileDescription(file.FileName, stream),
+                Folder = "cv_uploads",
+                PublicId = $"{Guid.NewGuid()}_{Path.GetFileNameWithoutExtension(file.FileName)}"
+            };
 
-            var fileName = $"{Guid.NewGuid()}{Path.GetExtension(file.FileName)}";
-            var fullPath = Path.Combine(path, fileName);
+            var uploadResult = await _cloudinary.UploadAsync(uploadParams);
+            
+            if (uploadResult.Error != null)
+            {
+                throw new Exception($"Lỗi upload Cloudinary: {uploadResult.Error.Message}. Vui lòng kiểm tra lại cấu hình Cloudinary trong appsettings.json!");
+            }
 
-            using var stream = new FileStream(fullPath, FileMode.Create);
-            await file.CopyToAsync(stream);
-
-            return fileName; // Trả về tên file để lưu vào DB
+            return uploadResult.SecureUrl?.ToString();
         }
 
-        public void DeleteFile(string fileName)
+        public async Task<bool> DeleteFileAsync(string publicId)
         {
-            var path = Path.Combine(_env.ContentRootPath, "Uploads", fileName);
-            if (File.Exists(path)) File.Delete(path);
+            var deletionParams = new DeletionParams(publicId)
+            {
+                ResourceType = ResourceType.Image
+            };
+            var result = await _cloudinary.DestroyAsync(deletionParams);
+            return result.Result == "ok";
         }
     }
 }

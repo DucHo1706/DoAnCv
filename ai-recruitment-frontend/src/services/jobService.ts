@@ -2,10 +2,10 @@ import axiosClient from "./axiosClient";
 
 export interface JobDto {
   id: string;
-  title: string;
   description: string;
   requirements: string;
-  location: string;
+  position: JobPositionDto;
+  branch: BranchDto;
   salaryRange: string;
   isActive: boolean;
   isApproved: boolean;
@@ -20,11 +20,21 @@ export interface CategoryDto {
   name: string;
 }
 
+export interface JobPositionDto {
+  id: string;
+  name: string;
+}
+
+export interface BranchDto {
+  id: string;
+  name: string;
+}
+
 export interface CreateJobPayload {
-  title: string;
+  positionId: string;
   description: string;
   requirements: string;
-  location: string;
+  branchId: string;
   salaryRange: string;
   startDate?: string | null;
   deadline?: string | null;
@@ -45,6 +55,16 @@ export const jobService = {
 
   async getCategories() {
     const response = await axiosClient.get<CategoryDto[]>("/categories");
+    return response.data;
+  },
+
+  async getJobPositions() {
+    const response = await axiosClient.get<JobPositionDto[]>("/jobpositions");
+    return response.data;
+  },
+
+  async getBranches() {
+    const response = await axiosClient.get<BranchDto[]>("/branches");
     return response.data;
   },
 
