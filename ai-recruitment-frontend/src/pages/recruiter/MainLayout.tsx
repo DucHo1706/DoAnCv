@@ -28,31 +28,39 @@ function MainLayout() {
   ];
 
   const adminMenuItems = [
-    {
-      key: "/admin/dashboard",
-      label: <Link to="/admin/dashboard">Admin Dashboard</Link>,
-    },
-    {
-      key: "/admin/approval",
-      label: <Link to="/admin/approval">Duyệt Tin Tuyển Dụng</Link>,
-    },
-    {
-      key: "/admin/users",
-      label: <Link to="/admin/users">Quản lý HR & Người Dùng</Link>,
-    },
-    {
-      key: "/admin/branches",
-      label: <Link to="/admin/branches">Quản lý Chi Nhánh</Link>,
-    },
-    {
-      key: "/admin/roles",
-      label: <Link to="/admin/roles">Phân Quyền & Vai Trò</Link>,
-    },
-    {
-      key: "/admin/reports",
-      label: <Link to="/admin/reports">Báo cáo Hệ thống</Link>,
-    },
-  ];
+  {
+    key: "/admin/dashboard",
+    label: <Link to="/admin/dashboard">Admin Dashboard</Link>,
+  },
+  {
+    key: "/admin/approval",
+    label: <Link to="/admin/approval">Duyệt Tin Tuyển Dụng</Link>,
+  },
+  {
+    key: "/admin/users",
+    label: <Link to="/admin/users">Quản lý HR & Người Dùng</Link>,
+  },
+  {
+    key: "/admin/branches",
+    label: <Link to="/admin/branches">Quản lý Chi Nhánh</Link>,
+  },
+  {
+    key: "/admin/categories",
+    label: <Link to="/admin/categories">Quản lý Lĩnh Vực</Link>,
+  },
+  {
+    key: "/admin/job-positions",
+    label: <Link to="/admin/job-positions">Quản lý Vị Trí</Link>,
+  },
+  {
+    key: "/admin/roles",
+    label: <Link to="/admin/roles">Phân Quyền & Vai Trò</Link>,
+  },
+  {
+    key: "/admin/reports",
+    label: <Link to="/admin/reports">Báo cáo Hệ thống</Link>,
+  },
+];
 
   const menuItems = isAdminRoute ? adminMenuItems : hrMenuItems;
 

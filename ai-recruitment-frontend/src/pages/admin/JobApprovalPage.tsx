@@ -202,9 +202,9 @@ function JobApprovalPage() {
         </Col>
         <Col xs={24} sm={12}>
           <StatCard
-            title="Đã sẵn sàng xử lý"
+            title="Tin đã duyệt"
             value={tableData.length}
-            subtitle="Có thể xem chi tiết và duyệt ngay"
+            subtitle="Danh sách tin đang được công khai"
           />
         </Col>
       </Row>

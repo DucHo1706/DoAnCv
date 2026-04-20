@@ -1,4 +1,4 @@
-﻿﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using RecruitmentBackend.DTOs.Requests;
 using RecruitmentBackend.Interfaces;
 using System.Threading.Tasks;
@@ -22,7 +22,7 @@ namespace RecruitmentBackend.Controllers
         public async Task<IActionResult> GetJobs()
         {
             var jobs = await _jobService.GetAllJobsAsync();
-            
+
             // Ngắt vòng lặp vô hạn (Circular Reference) của Entity Framework
             var safeJobs = jobs.Select(j => new {
                 id = j.Id,
@@ -36,7 +36,8 @@ namespace RecruitmentBackend.Controllers
                 deadline = j.Deadline,
                 maxCandidates = j.MaxCandidates,
                 position = j.Position != null ? new { id = j.Position.Id, name = j.Position.Name } : null,
-                branch = j.Branch != null ? new { id = j.Branch.Id, name = j.Branch.Name } : null
+                branch = j.Branch != null ? new { id = j.Branch.Id, name = j.Branch.Name } : null,
+                categories = j.Categories.Select(c => new { id = c.Id, name = c.Name })
             });
             return Ok(safeJobs);
         }
@@ -48,8 +49,15 @@ namespace RecruitmentBackend.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            var jobId = await _jobService.CreatePendingJobAsync(request);
-            return Ok(new { message = "Tạo tin tuyển dụng thành công!", id = jobId });
+            try
+            {
+                var jobId = await _jobService.CreatePendingJobAsync(request);
+                return Ok(new { message = "Tạo tin tuyển dụng thành công!", id = jobId });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         // 3. Lấy chi tiết Job cho Modal "Xem chi tiết" của HR
@@ -60,7 +68,8 @@ namespace RecruitmentBackend.Controllers
             if (reviewResult == null) return NotFound("Không tìm thấy công việc");
 
             var j = reviewResult.JobInfo;
-            var safeJobInfo = new {
+            var safeJobInfo = new
+            {
                 id = j.Id,
                 description = j.Description,
                 requirements = j.Requirements,
@@ -72,7 +81,8 @@ namespace RecruitmentBackend.Controllers
                 deadline = j.Deadline,
                 maxCandidates = j.MaxCandidates,
                 position = j.Position != null ? new { id = j.Position.Id, name = j.Position.Name } : null,
-                branch = j.Branch != null ? new { id = j.Branch.Id, name = j.Branch.Name } : null
+                branch = j.Branch != null ? new { id = j.Branch.Id, name = j.Branch.Name } : null,
+                categories = j.Categories.Select(c => new { id = c.Id, name = c.Name })
             };
             return Ok(new { jobInfo = safeJobInfo, wordsToHighlight = reviewResult.WordsToHighlight });
         }
@@ -92,7 +102,7 @@ namespace RecruitmentBackend.Controllers
         public async Task<IActionResult> GetPendingJobs()
         {
             var jobs = await _jobService.GetPendingJobsAsync();
-            
+
             // Ngắt vòng lặp vô hạn (Circular Reference) của Entity Framework
             var safeJobs = jobs.Select(j => new {
                 id = j.Id,
@@ -106,7 +116,8 @@ namespace RecruitmentBackend.Controllers
                 deadline = j.Deadline,
                 maxCandidates = j.MaxCandidates,
                 position = j.Position != null ? new { id = j.Position.Id, name = j.Position.Name } : null,
-                branch = j.Branch != null ? new { id = j.Branch.Id, name = j.Branch.Name } : null
+                branch = j.Branch != null ? new { id = j.Branch.Id, name = j.Branch.Name } : null,
+                categories = j.Categories.Select(c => new { id = c.Id, name = c.Name })
             });
             return Ok(safeJobs);
         }

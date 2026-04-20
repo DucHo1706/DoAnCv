@@ -36,6 +36,7 @@ function AppSidebar({ brand, items }: AppSidebarProps) {
         theme="dark"
         mode="inline"
         selectedKeys={[location.pathname]}
+        defaultOpenKeys={["catalog"]}
         items={items}
         onClick={({ key }) => navigate(String(key))}
         style={{ borderRight: 0, paddingTop: 8 }}

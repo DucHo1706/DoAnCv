@@ -1,4 +1,4 @@
-﻿﻿using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using RecruitmentBackend.Data;
 using RecruitmentBackend.DTOs.Requests;
@@ -23,9 +23,30 @@ namespace RecruitmentBackend.Services
 
         public async Task<string> CreatePendingJobAsync(CreateJobRequest request)
         {
+            var position = await _context.JobPositions
+                .FirstOrDefaultAsync(p => p.Id == request.PositionId);
+            if (position == null)
+                throw new Exception("Vị trí không tồn tại");
+
+            var branch = await _context.Branches
+                .FirstOrDefaultAsync(b => b.Id == request.BranchId);
+            if (branch == null)
+                throw new Exception("Chi nhánh không tồn tại");
+
+            List<Category> categories = new();
+            if (request.CategoryIds != null && request.CategoryIds.Count > 0)
+            {
+                categories = await _context.Categories
+                    .Where(c => request.CategoryIds.Contains(c.Id))
+                    .ToListAsync();
+
+                if (categories.Count != request.CategoryIds.Count)
+                    throw new Exception("Một hoặc nhiều lĩnh vực không tồn tại");
+            }
+
             var newJob = new Job
             {
-                Id = Guid.NewGuid().ToString(), 
+                Id = Guid.NewGuid().ToString(),
                 PositionId = request.PositionId,
                 Description = request.Description,
                 Requirements = request.Requirements,
@@ -35,16 +56,10 @@ namespace RecruitmentBackend.Services
                 StartDate = request.StartDate,
                 Deadline = request.Deadline,
                 MaxCandidates = request.MaxCandidates,
-                IsActive = true, 
-                IsApproved = false 
+                IsActive = true,
+                IsApproved = false,
+                Categories = categories
             };
-            if (request.CategoryIds != null && request.CategoryIds.Count > 0)
-            {
-                var categories = await _context.Categories
-                                               .Where(c => request.CategoryIds.Contains(c.Id))
-                                               .ToListAsync();
-                newJob.Categories = categories;
-            }
 
             _context.Jobs.Add(newJob);
             await _context.SaveChangesAsync();
@@ -57,6 +72,7 @@ namespace RecruitmentBackend.Services
             var job = await _context.Jobs
                 .Include(j => j.Position)
                 .Include(j => j.Branch)
+                .Include(j => j.Categories)
                 .FirstOrDefaultAsync(j => j.Id == jobId);
             if (job == null) return null;
 
@@ -137,6 +153,7 @@ namespace RecruitmentBackend.Services
             return await _context.Jobs
                 .Include(j => j.Position)
                 .Include(j => j.Branch)
+                .Include(j => j.Categories)
                 .Where(j => j.IsActive)
                 .OrderByDescending(j => j.CreatedAt)
                 .ToListAsync();
@@ -147,6 +164,7 @@ namespace RecruitmentBackend.Services
             return await _context.Jobs
                                  .Include(j => j.Position)
                                  .Include(j => j.Branch)
+                                 .Include(j => j.Categories)
                                  .Where(j => !j.IsApproved && j.IsActive)
                                  .OrderByDescending(j => j.CreatedAt)
                                  .ToListAsync();

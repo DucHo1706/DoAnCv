@@ -18,6 +18,9 @@ import ReportsPage from "../pages/admin/ReportsPage";
 import RolePermissionPage from "../pages/admin/RolePermissionPage";
 import UserManagementPage from "../pages/admin/UserManagementPage";
 import JobApprovalPage from "../pages/admin/JobApprovalPage";
+import BranchManagementPage from "../pages/admin/BranchManagementPage";
+import CategoryManagementPage from "../pages/admin/CategoryManagementPage";
+import JobPositionManagementPage from "../pages/admin/JobPositionManagementPage";
 
 import CandidateListPage from "../pages/recruiter/CandidateListPage";
 import CVRankingPage from "../pages/recruiter/CVRankingPage";
@@ -58,6 +61,9 @@ function AppRoutes() {
           <Route path="roles" element={<RolePermissionPage />} />
           <Route path="reports" element={<ReportsPage />} />
           <Route path="job-approvals" element={<JobApprovalPage />} />
+          <Route path="branches"       element={<BranchManagementPage />} />
+          <Route path="categories"     element={<CategoryManagementPage />} />
+          <Route path="job-positions"  element={<JobPositionManagementPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

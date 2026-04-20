@@ -1,8 +1,8 @@
 import {
   DeleteOutlined,
   EditOutlined,
-  EnvironmentOutlined,
   PlusOutlined,
+  SolutionOutlined,
 } from "@ant-design/icons";
 import {
   Button,
@@ -19,45 +19,45 @@ import {
 import { useEffect, useState } from "react";
 import PageContainer from "../../components/common/PageContainer";
 import TableToolbar from "../../components/common/TableToolbar";
-import { branchService } from "../../services/jobService";
-import type { BranchDto } from "../../services/jobService";
+import { jobPositionService } from "../../services/jobService";
+import type { JobPositionDto } from "../../services/jobService";
 
-function BranchManagementPage() {
-  const [branches, setBranches] = useState<BranchDto[]>([]);
+function JobPositionManagementPage() {
+  const [positions, setPositions] = useState<JobPositionDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingBranch, setEditingBranch] = useState<BranchDto | null>(null);
+  const [editingPosition, setEditingPosition] = useState<JobPositionDto | null>(null);
   const [form] = Form.useForm();
 
   // ── Fetch ──────────────────────────────────────────────
-  const fetchBranches = async () => {
+  const fetchPositions = async () => {
     try {
       setLoading(true);
-      const data = await branchService.getBranches();
-      setBranches(data);
+      const data = await jobPositionService.getJobPositions();
+      setPositions(data);
     } catch {
-      message.error("Không tải được danh sách chi nhánh");
+      message.error("Không tải được danh sách vị trí");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchBranches();
+    fetchPositions();
   }, []);
 
   // ── Modal handlers ─────────────────────────────────────
   const handleOpenCreate = () => {
-    setEditingBranch(null);
+    setEditingPosition(null);
     form.resetFields();
     setIsModalOpen(true);
   };
 
-  const handleOpenEdit = (record: BranchDto) => {
-    setEditingBranch(record);
+  const handleOpenEdit = (record: JobPositionDto) => {
+    setEditingPosition(record);
     form.setFieldsValue({ name: record.name });
     setIsModalOpen(true);
   };
@@ -67,23 +67,22 @@ function BranchManagementPage() {
       const values = await form.validateFields();
       setSubmitting(true);
 
-      if (editingBranch) {
-        const updated = await branchService.updateBranch(editingBranch.id, {
+      if (editingPosition) {
+        const updated = await jobPositionService.updateJobPosition(editingPosition.id, {
           name: values.name,
         });
-        setBranches((prev) =>
-          prev.map((b) => (b.id === editingBranch.id ? updated : b))
+        setPositions((prev) =>
+          prev.map((p) => (p.id === editingPosition.id ? updated : p))
         );
-        message.success("Cập nhật chi nhánh thành công!");
+        message.success("Cập nhật vị trí thành công!");
       } else {
-        const created = await branchService.createBranch({ name: values.name });
-        setBranches((prev) => [...prev, created]);
-        message.success("Thêm mới chi nhánh thành công!");
+        const created = await jobPositionService.createJobPosition({ name: values.name });
+        setPositions((prev) => [...prev, created]);
+        message.success("Thêm mới vị trí thành công!");
       }
 
       setIsModalOpen(false);
     } catch (error: any) {
-      // Lỗi validate form thì bỏ qua, lỗi API thì hiển thị
       if (error?.response) {
         const msg =
           error.response.data?.message ||
@@ -99,9 +98,9 @@ function BranchManagementPage() {
   const handleDelete = async (id: string) => {
     try {
       setDeletingId(id);
-      await branchService.deleteBranch(id);
-      setBranches((prev) => prev.filter((b) => b.id !== id));
-      message.success("Đã xóa chi nhánh!");
+      await jobPositionService.deleteJobPosition(id);
+      setPositions((prev) => prev.filter((p) => p.id !== id));
+      message.success("Đã xóa vị trí!");
     } catch (error: any) {
       const msg =
         error?.response?.data?.message ||
@@ -116,12 +115,12 @@ function BranchManagementPage() {
   // ── Columns ────────────────────────────────────────────
   const columns = [
     {
-      title: "Tên chi nhánh",
+      title: "Tên vị trí",
       dataIndex: "name",
       key: "name",
       render: (text: string) => (
         <Typography.Text strong>
-          <EnvironmentOutlined style={{ marginRight: 6, color: "#1677ff" }} />
+          <SolutionOutlined style={{ marginRight: 6, color: "#1677ff" }} />
           {text}
         </Typography.Text>
       ),
@@ -130,7 +129,7 @@ function BranchManagementPage() {
       title: "Thao tác",
       key: "action",
       width: 160,
-      render: (_: unknown, record: BranchDto) => (
+      render: (_: unknown, record: JobPositionDto) => (
         <Space size="middle">
           <Button
             icon={<EditOutlined />}
@@ -141,8 +140,8 @@ function BranchManagementPage() {
             Sửa
           </Button>
           <Popconfirm
-            title="Bạn có chắc muốn xóa chi nhánh này?"
-            description="Chi nhánh đang được dùng trong tin tuyển dụng sẽ không thể xóa."
+            title="Bạn có chắc muốn xóa vị trí này?"
+            description="Vị trí đang được dùng trong tin tuyển dụng sẽ không thể xóa."
             onConfirm={() => handleDelete(record.id)}
             okText="Xóa"
             cancelText="Hủy"
@@ -166,23 +165,23 @@ function BranchManagementPage() {
   // ── Render ─────────────────────────────────────────────
   return (
     <PageContainer
-      title="Quản lý Chi Nhánh"
-      subtitle="Thêm, sửa, xóa thông tin các chi nhánh để HR chọn khi tạo tin tuyển dụng."
+      title="Quản lý Vị trí công việc"
+      subtitle="Thêm, sửa, xóa các vị trí để HR chọn khi tạo tin tuyển dụng."
       extra={
         <Button
           type="primary"
           icon={<PlusOutlined />}
           onClick={handleOpenCreate}
         >
-          Thêm Chi nhánh
+          Thêm Vị trí
         </Button>
       }
     >
       <Card>
-        <TableToolbar searchPlaceholder="Tìm kiếm chi nhánh..." />
+        <TableToolbar searchPlaceholder="Tìm kiếm vị trí..." />
         <Table
           columns={columns}
-          dataSource={branches}
+          dataSource={positions}
           rowKey="id"
           loading={loading}
           pagination={{ pageSize: 10 }}
@@ -190,7 +189,7 @@ function BranchManagementPage() {
       </Card>
 
       <Modal
-        title={editingBranch ? "Cập nhật Chi nhánh" : "Thêm Chi nhánh mới"}
+        title={editingPosition ? "Cập nhật Vị trí" : "Thêm Vị trí mới"}
         open={isModalOpen}
         onOk={handleSave}
         onCancel={() => setIsModalOpen(false)}
@@ -201,14 +200,14 @@ function BranchManagementPage() {
       >
         <Form form={form} layout="vertical" style={{ marginTop: 24 }}>
           <Form.Item
-            label="Tên chi nhánh"
+            label="Tên vị trí"
             name="name"
             rules={[
-              { required: true, message: "Vui lòng nhập tên chi nhánh" },
+              { required: true, message: "Vui lòng nhập tên vị trí" },
               { whitespace: true, message: "Tên không được chỉ có khoảng trắng" },
             ]}
           >
-            <Input placeholder="Ví dụ: Chi nhánh Cần Thơ" />
+            <Input placeholder="Ví dụ: Frontend Developer" />
           </Form.Item>
         </Form>
       </Modal>
@@ -216,4 +215,4 @@ function BranchManagementPage() {
   );
 }
 
-export default BranchManagementPage;
+export default JobPositionManagementPage;

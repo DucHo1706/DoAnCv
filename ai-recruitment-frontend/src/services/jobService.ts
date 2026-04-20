@@ -88,3 +88,81 @@ export const jobService = {
     return response.data;
   },
 };
+
+export interface BranchPayload {
+  name: string;
+}
+
+export const branchService = {
+  async getBranches() {
+    const response = await axiosClient.get<BranchDto[]>("/branches");
+    return response.data;
+  },
+
+  async createBranch(payload: BranchPayload) {
+    const response = await axiosClient.post<BranchDto>("/branches", payload);
+    return response.data;
+  },
+
+  async updateBranch(id: string, payload: BranchPayload) {
+    const response = await axiosClient.put<BranchDto>(`/branches/${id}`, payload);
+    return response.data;
+  },
+
+  async deleteBranch(id: string) {
+    const response = await axiosClient.delete(`/branches/${id}`);
+    return response.data;
+  },
+};
+
+export interface CategoryPayload {
+  name: string;
+}
+
+export const categoryService = {
+  async getCategories() {
+    const response = await axiosClient.get<CategoryDto[]>("/categories");
+    return response.data;
+  },
+
+  async createCategory(payload: CategoryPayload) {
+    const response = await axiosClient.post<CategoryDto>("/categories", payload);
+    return response.data;
+  },
+
+  async updateCategory(id: string, payload: CategoryPayload) {
+    const response = await axiosClient.put<CategoryDto>(`/categories/${id}`, payload);
+    return response.data;
+  },
+
+  async deleteCategory(id: string) {
+    const response = await axiosClient.delete(`/categories/${id}`);
+    return response.data;
+  },
+};
+
+export interface JobPositionPayload {
+  name: string;
+}
+
+export const jobPositionService = {
+  async getJobPositions() {
+    const response = await axiosClient.get<JobPositionDto[]>("/jobpositions");
+    return response.data;
+  },
+
+  async createJobPosition(payload: JobPositionPayload) {
+    const response = await axiosClient.post<JobPositionDto>("/jobpositions", payload);
+    return response.data;
+  },
+
+  async updateJobPosition(id: string, payload: JobPositionPayload) {
+    const response = await axiosClient.put<JobPositionDto>(`/jobpositions/${id}`, payload);
+    return response.data;
+  },
+
+  async deleteJobPosition(id: string) {
+    const response = await axiosClient.delete(`/jobpositions/${id}`);
+    return response.data;
+  },
+};

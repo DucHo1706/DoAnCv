@@ -3,6 +3,7 @@ import {
   Button,
   Card,
   Col,
+  DatePicker,
   Descriptions,
   Divider,
   Form,
@@ -17,38 +18,46 @@ import {
   Tag,
   Typography,
 } from "antd";
+import dayjs from "dayjs";
 import { useEffect, useMemo, useState } from "react";
 import PageContainer from "../../components/common/PageContainer";
 import StatCard from "../../components/common/StatCard";
 import TableToolbar from "../../components/common/TableToolbar";
-import { jobService } from "../../services/jobService";
+import {
+  jobService,
+  jobPositionService,
+  branchService,
+} from "../../services/jobService";
 import type {
+  BranchDto,
   CategoryDto,
   CreateJobPayload,
   JobDto,
+  JobPositionDto,
   JobReviewResponse,
 } from "../../services/jobService";
 
 const { Paragraph, Text } = Typography;
 type JobStatus = "approved" | "pending";
 
+// Thêm categories vào JobDto (bổ sung phía frontend)
+type JobDtoExtended = JobDto & {
+  categories?: CategoryDto[];
+};
+
 type JobTableItem = {
   id: string;
   title: string;
   field: string;
   location: string;
-  type: string;
-  applications: number;
   status: JobStatus;
-  raw: JobDto;
+  raw: JobDtoExtended;
 };
 
 function formatDate(value?: string | null) {
   if (!value) return "Chưa cập nhật";
-
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
-
   return date.toLocaleDateString("vi-VN");
 }
 
@@ -56,7 +65,6 @@ function getStatusMeta(status: JobStatus) {
   if (status === "approved") {
     return { label: "Đã duyệt", color: "green" as const };
   }
-
   return { label: "Chờ duyệt", color: "gold" as const };
 }
 
@@ -64,81 +72,103 @@ function JobManagementPage() {
   const [openModal, setOpenModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [jobs, setJobs] = useState<JobDto[]>([]);
+  const [jobs, setJobs] = useState<JobDtoExtended[]>([]);
   const [form] = Form.useForm();
 
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
   const [jobDetail, setJobDetail] = useState<JobReviewResponse | null>(null);
-  const [categories, setCategories] = useState<CategoryDto[]>([]);
 
+  // Dropdown data từ API
+  const [categories, setCategories] = useState<CategoryDto[]>([]);
+  const [positions, setPositions] = useState<JobPositionDto[]>([]);
+  const [branches, setBranches] = useState<BranchDto[]>([]);
+  const [dropdownLoading, setDropdownLoading] = useState(false);
+
+  // ── Fetch danh sách tin ────────────────────────────────
   const fetchJobs = async () => {
     try {
       setLoading(true);
       const data: any = await jobService.getJobs();
-      // Bảo vệ giao diện: Chống sập White Screen nếu API trả về Object lỗi
       setJobs(Array.isArray(data) ? data : (data?.$values || []));
-    } catch (error) {
-      console.error(error);
+    } catch {
       message.error("Không tải được danh sách tin tuyển dụng");
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchCategories = async () => {
-  try {
-    const data = await jobService.getCategories();
-    setCategories(data);
-  } catch (error) {
-    console.error(error);
-    message.error("Không tải được danh sách lĩnh vực");
-  }
+  // ── Fetch dropdown data khi mở modal tạo tin ──────────
+  const fetchDropdownData = async () => {
+    try {
+      setDropdownLoading(true);
+      const [posData, branchData, cateData] = await Promise.all([
+        jobPositionService.getJobPositions(),
+        branchService.getBranches(),
+        jobService.getCategories(),
+      ]);
+      setPositions(posData);
+      setBranches(branchData);
+      setCategories(cateData);
+    } catch {
+      message.error("Không tải được dữ liệu dropdown");
+    } finally {
+      setDropdownLoading(false);
+    }
   };
 
   useEffect(() => {
-  fetchJobs();
-  fetchCategories();
+    fetchJobs();
   }, []);
 
-  const tableData: JobTableItem[] = useMemo(() => {
-  return jobs.map((job) => {
-    const status: JobStatus = job.isApproved ? "approved" : "pending";
+  const handleOpenCreateModal = () => {
+    form.resetFields();
+    setOpenModal(true);
+    fetchDropdownData();
+  };
 
-    return {
-      id: job.id,
-      title: job.position?.name || "Chưa cập nhật vị trí",
-      field: "Chưa hoàn thiện",
-      location: job.branch?.name || "Chưa cập nhật chi nhánh",
-      type: "Chưa hoàn thiện",
-      applications: 0,
-      status,
-      raw: job,
-    };
-  });
+  // ── Table data ─────────────────────────────────────────
+  const tableData: JobTableItem[] = useMemo(() => {
+    return jobs.map((job) => {
+      const status: JobStatus = job.isApproved ? "approved" : "pending";
+      const categoryNames =
+        job.categories && job.categories.length > 0
+          ? job.categories.map((c) => c.name).join(", ")
+          : "Chưa cập nhật";
+
+      return {
+        id: job.id,
+        title: job.position?.name || "Chưa cập nhật",
+        field: categoryNames,
+        location: job.branch?.name || "Chưa cập nhật",
+        status,
+        raw: job,
+      };
+    });
   }, [jobs]);
 
-  const approvedJobs = tableData.filter((job) => job.status === "approved").length;
-  const pendingJobs = tableData.filter((job) => job.status === "pending").length;
-  const totalApplications = tableData.reduce(
-    (sum, job) => sum + job.applications,
-    0,
-  );
+  const approvedJobs = tableData.filter((j) => j.status === "approved").length;
+  const pendingJobs = tableData.filter((j) => j.status === "pending").length;
 
+  // ── Tạo tin tuyển dụng ────────────────────────────────
   const handleCreateJob = async () => {
     try {
       const values = await form.validateFields();
 
       const payload: CreateJobPayload = {
-      title: values.title,
-      description: values.description,
-      requirements: values.requirements,
-      location: values.location,
-      salaryRange: values.salaryRange,
-      startDate: values.startDate || null,
-      deadline: values.deadline || null,
-      maxCandidates: values.maxCandidates ?? null,
-      categoryIds: values.categoryIds || [],
+        positionId: values.positionId,
+        branchId: values.branchId,
+        description: values.description,
+        requirements: values.requirements,
+        salaryRange: values.salaryRange,
+        startDate: values.startDate
+          ? dayjs(values.startDate).toISOString()
+          : null,
+        deadline: values.deadline
+          ? dayjs(values.deadline).toISOString()
+          : null,
+        maxCandidates: values.maxCandidates ?? null,
+        categoryIds: values.categoryIds || [],
       };
 
       setSubmitting(true);
@@ -148,22 +178,27 @@ function JobManagementPage() {
       form.resetFields();
       setOpenModal(false);
       await fetchJobs();
-    } catch (error) {
-      console.error(error);
-      message.error("Tạo tin tuyển dụng thất bại");
+    } catch (error: any) {
+      if (error?.response) {
+        const msg =
+          error.response.data?.message ||
+          error.response.data ||
+          "Tạo tin tuyển dụng thất bại";
+        message.error(typeof msg === "string" ? msg : "Tạo tin tuyển dụng thất bại");
+      }
     } finally {
       setSubmitting(false);
     }
   };
 
+  // ── Xem chi tiết ──────────────────────────────────────
   const handleViewJob = async (record: JobTableItem) => {
     try {
       setDetailOpen(true);
       setDetailLoading(true);
       const data = await jobService.getJobReview(record.id);
       setJobDetail(data);
-    } catch (error) {
-      console.error(error);
+    } catch {
       message.error("Không tải được chi tiết tin tuyển dụng");
       setDetailOpen(false);
     } finally {
@@ -171,6 +206,7 @@ function JobManagementPage() {
     }
   };
 
+  // ── Columns ───────────────────────────────────────────
   const columns = [
     {
       title: "Vị trí",
@@ -187,17 +223,6 @@ function JobManagementPage() {
       title: "Địa điểm",
       dataIndex: "location",
       key: "location",
-    },
-    {
-      title: "Loại hình",
-      dataIndex: "type",
-      key: "type",
-      render: (value: string) => <Text type="secondary">{value}</Text>,
-    },
-    {
-      title: "Hồ sơ",
-      dataIndex: "applications",
-      key: "applications",
     },
     {
       title: "Trạng thái",
@@ -227,12 +252,17 @@ function JobManagementPage() {
   const detailStatus = jobDetail?.jobInfo?.isApproved ? "approved" : "pending";
   const detailStatusMeta = getStatusMeta(detailStatus);
 
+  // ── Render ────────────────────────────────────────────
   return (
     <PageContainer
       title="Quản lý tin tuyển dụng"
       subtitle="Tạo, cập nhật và theo dõi hiệu quả các vị trí tuyển dụng đang mở."
       extra={
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => setOpenModal(true)}>
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          onClick={handleOpenCreateModal}
+        >
           Tạo tin tuyển dụng
         </Button>
       }
@@ -254,9 +284,9 @@ function JobManagementPage() {
         </Col>
         <Col xs={24} sm={8}>
           <StatCard
-            title="Tổng hồ sơ nhận được"
-            value={totalApplications}
-            subtitle="Toàn bộ tin tuyển dụng"
+            title="Tổng tin tuyển dụng"
+            value={tableData.length}
+            subtitle="Toàn bộ tin đang hoạt động"
           />
         </Col>
       </Row>
@@ -269,18 +299,19 @@ function JobManagementPage() {
               <Select
                 placeholder="Lọc trạng thái"
                 style={{ width: 180 }}
+                allowClear
                 options={[
-                  { label: "Tất cả", value: "all" },
                   { label: "Đã duyệt", value: "approved" },
                   { label: "Chờ duyệt", value: "pending" },
                 ]}
               />
               <Select
-                placeholder="Lĩnh vực"
+                placeholder="Lọc lĩnh vực"
                 style={{ width: 220 }}
-                options={categories.map((category) => ({
-                  label: category.name,
-                  value: category.id,
+                allowClear
+                options={categories.map((c) => ({
+                  label: c.name,
+                  value: c.id,
                 }))}
               />
             </>
@@ -296,58 +327,64 @@ function JobManagementPage() {
         />
       </Card>
 
+      {/* ── Modal tạo tin ── */}
       <Modal
         title="Tạo tin tuyển dụng"
         open={openModal}
         onCancel={() => setOpenModal(false)}
         onOk={handleCreateJob}
         confirmLoading={submitting}
-        okText="Lưu"
+        okText="Gửi duyệt"
         cancelText="Hủy"
+        width={640}
       >
-        <Form form={form} layout="vertical">
+        <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
           <Form.Item
-            label="Tên vị trí"
-            name="title"
-            rules={[{ required: true, message: "Vui lòng chọn vị trí tuyển dụng" }]}
-          >
-            <Select placeholder="Chọn vị trí tuyển dụng" showSearch>
-              <Select.Option value="Frontend Developer">Frontend Developer</Select.Option>
-              <Select.Option value="Backend Developer">Backend Developer</Select.Option>
-              <Select.Option value="Fullstack Developer">Fullstack Developer</Select.Option>
-              <Select.Option value="Business Analyst">Business Analyst</Select.Option>
-              <Select.Option value="Tester / QA">Tester / QA</Select.Option>
-              <Select.Option value="UI/UX Designer">UI/UX Designer</Select.Option>
-              <Select.Option value="Project Manager">Project Manager</Select.Option>
-            </Select>
-          </Form.Item>
-
-          <Form.Item
-            label="Lĩnh vực"
-            name="categoryIds"
-            // rules={[{ required: true, message: "Vui lòng chọn ít nhất 1 lĩnh vực" }]} //bỏ validate để không bắt buộc chọn lĩnh vực, vì chưa có lĩnh vực nào được tạo sẵn trong hệ thống
+            label="Vị trí tuyển dụng"
+            name="positionId"
+            rules={[{ required: true, message: "Vui lòng chọn vị trí" }]}
           >
             <Select
+              placeholder="Chọn vị trí tuyển dụng"
+              showSearch
+              loading={dropdownLoading}
+              filterOption={(input, option) =>
+                (option?.label ?? "")
+                  .toLowerCase()
+                  .includes(input.toLowerCase())
+              }
+              options={positions.map((p) => ({
+                label: p.name,
+                value: p.id,
+              }))}
+            />
+          </Form.Item>
+
+          <Form.Item label="Lĩnh vực" name="categoryIds">
+            <Select
               mode="multiple"
-              placeholder="Chọn lĩnh vực"
-              options={categories.map((category) => ({
-                label: category.name,
-                value: category.id,
+              placeholder="Chọn lĩnh vực (không bắt buộc)"
+              loading={dropdownLoading}
+              options={categories.map((c) => ({
+                label: c.name,
+                value: c.id,
               }))}
             />
           </Form.Item>
 
           <Form.Item
-            label="Chi nhánh (Địa điểm)"
-            name="location"
+            label="Địa điểm"
+            name="branchId"
             rules={[{ required: true, message: "Vui lòng chọn chi nhánh" }]}
           >
-            <Select placeholder="Chọn chi nhánh làm việc">
-              <Select.Option value="Trụ sở Hồ Chí Minh">Trụ sở Hồ Chí Minh</Select.Option>
-              <Select.Option value="Chi nhánh Hà Nội">Chi nhánh Hà Nội</Select.Option>
-              <Select.Option value="Chi nhánh Đà Nẵng">Chi nhánh Đà Nẵng</Select.Option>
-              <Select.Option value="Remote (Làm việc từ xa)">Remote (Làm việc từ xa)</Select.Option>
-            </Select>
+            <Select
+              placeholder="Chọn chi nhánh làm việc"
+              loading={dropdownLoading}
+              options={branches.map((b) => ({
+                label: b.name,
+                value: b.id,
+              }))}
+            />
           </Form.Item>
 
           <Form.Item
@@ -358,24 +395,33 @@ function JobManagementPage() {
             <Input placeholder="Ví dụ: 15 - 25 triệu" />
           </Form.Item>
 
-          <Form.Item label="Ngày bắt đầu" name="startDate">
-            <Input placeholder="Ví dụ: 2026-03-18T00:00:00" />
-          </Form.Item>
-
-          <Form.Item label="Ngày kết thúc" name="deadline">
-            <Input placeholder="Ví dụ: 2026-04-01T00:00:00" />
-          </Form.Item>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item label="Ngày bắt đầu nhận CV" name="startDate">
+                <DatePicker
+                  style={{ width: "100%" }}
+                  format="DD/MM/YYYY"
+                  placeholder="Chọn ngày bắt đầu"
+                />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item label="Hạn chót nộp CV" name="deadline">
+                <DatePicker
+                  style={{ width: "100%" }}
+                  format="DD/MM/YYYY"
+                  placeholder="Chọn hạn chót"
+                />
+              </Form.Item>
+            </Col>
+          </Row>
 
           <Form.Item label="Số lượng ứng viên tối đa" name="maxCandidates">
-            <InputNumber style={{ width: "100%" }} min={1} placeholder="Ví dụ: 20" />
-          </Form.Item>
-
-          <Form.Item
-            label="Yêu cầu"
-            name="requirements"
-            rules={[{ required: true, message: "Vui lòng nhập yêu cầu" }]}
-          >
-            <Input.TextArea rows={4} placeholder="Nhập yêu cầu công việc..." />
+            <InputNumber
+              style={{ width: "100%" }}
+              min={1}
+              placeholder="Ví dụ: 20"
+            />
           </Form.Item>
 
           <Form.Item
@@ -385,9 +431,18 @@ function JobManagementPage() {
           >
             <Input.TextArea rows={4} placeholder="Nhập mô tả công việc..." />
           </Form.Item>
+
+          <Form.Item
+            label="Yêu cầu"
+            name="requirements"
+            rules={[{ required: true, message: "Vui lòng nhập yêu cầu" }]}
+          >
+            <Input.TextArea rows={4} placeholder="Nhập yêu cầu công việc..." />
+          </Form.Item>
         </Form>
       </Modal>
 
+      {/* ── Modal xem chi tiết ── */}
       <Modal
         title="Chi tiết tin tuyển dụng"
         open={detailOpen}
@@ -399,6 +454,10 @@ function JobManagementPage() {
         width={820}
         confirmLoading={detailLoading}
       >
+        {detailLoading && (
+          <Text type="secondary">Đang tải dữ liệu...</Text>
+        )}
+
         {jobDetail && (
           <>
             <Space style={{ marginBottom: 16 }}>
@@ -409,7 +468,7 @@ function JobManagementPage() {
             </Space>
 
             <Descriptions bordered column={2} size="middle">
-              <Descriptions.Item label="Tên vị trí" span={2}>
+              <Descriptions.Item label="Vị trí" span={2}>
                 {jobDetail.jobInfo.position?.name || "Chưa cập nhật"}
               </Descriptions.Item>
               <Descriptions.Item label="Địa điểm">
@@ -421,11 +480,11 @@ function JobManagementPage() {
               <Descriptions.Item label="Ngày bắt đầu">
                 {formatDate(jobDetail.jobInfo.startDate)}
               </Descriptions.Item>
-              <Descriptions.Item label="Ngày kết thúc">
+              <Descriptions.Item label="Hạn chót">
                 {formatDate(jobDetail.jobInfo.deadline)}
               </Descriptions.Item>
-              <Descriptions.Item label="Số lượng ứng viên tối đa" span={2}>
-                {jobDetail.jobInfo.maxCandidates ?? "Chưa cập nhật"}
+              <Descriptions.Item label="Số lượng tối đa" span={2}>
+                {jobDetail.jobInfo.maxCandidates ?? "Không giới hạn"}
               </Descriptions.Item>
             </Descriptions>
 
