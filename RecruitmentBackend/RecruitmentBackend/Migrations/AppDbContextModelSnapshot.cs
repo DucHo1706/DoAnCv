@@ -22,241 +22,553 @@ namespace RecruitmentBackend.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
-            modelBuilder.Entity("CategoryJob", b =>
+            modelBuilder.Entity("RecruitmentBackend.Models.AIEvaluation", b =>
                 {
-                    b.Property<string>("CategoriesId")
+                    b.Property<string>("EvaluationID")
                         .HasColumnType("nvarchar(450)");
 
-                    b.Property<string>("JobsId")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.HasKey("CategoriesId", "JobsId");
-
-                    b.HasIndex("JobsId");
-
-                    b.ToTable("CategoryJob");
-                });
-
-            modelBuilder.Entity("RecruitmentBackend.Models.Branch", b =>
-                {
-                    b.Property<string>("Id")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("Name")
+                    b.Property<string>("ApplicationID")
                         .IsRequired()
-                        .HasMaxLength(150)
-                        .HasColumnType("nvarchar(150)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Branches");
-                });
-
-            modelBuilder.Entity("RecruitmentBackend.Models.CandidateProfile", b =>
-                {
-                    b.Property<string>("Id")
                         .HasColumnType("nvarchar(450)");
 
-                    b.Property<string>("AiExplanation")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("AppliedAt")
+                    b.Property<DateTime>("EvaluatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("CvFilePath")
+                    b.Property<decimal>("FitScore")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("MatchedSkills")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("Email")
+                    b.Property<string>("MissingSkills")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("ExtractedSkills")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("FullName")
+                    b.Property<string>("Reason")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("JobId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                    b.HasKey("EvaluationID");
 
-                    b.Property<double>("MatchScore")
-                        .HasColumnType("float");
+                    b.HasIndex("ApplicationID")
+                        .IsUnique();
 
-                    b.Property<string>("Phone")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("JobId");
-
-                    b.ToTable("CandidateProfiles");
+                    b.ToTable("AIEvaluations");
                 });
 
-            modelBuilder.Entity("RecruitmentBackend.Models.Category", b =>
+            modelBuilder.Entity("RecruitmentBackend.Models.Account", b =>
                 {
-                    b.Property<string>("Id")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Categories");
-                });
-
-            modelBuilder.Entity("RecruitmentBackend.Models.Job", b =>
-                {
-                    b.Property<string>("Id")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("BranchId")
-                        .IsRequired()
+                    b.Property<string>("AccountID")
                         .HasColumnType("nvarchar(450)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<DateTime?>("Deadline")
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("Description")
+                    b.HasKey("AccountID");
+
+                    b.ToTable("Accounts");
+                });
+
+            modelBuilder.Entity("RecruitmentBackend.Models.Application", b =>
+                {
+                    b.Property<string>("ApplicationID")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("AppliedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CVID")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("JobID")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("ApplicationID");
+
+                    b.HasIndex("CVID");
+
+                    b.HasIndex("JobID");
+
+                    b.ToTable("Applications");
+                });
+
+            modelBuilder.Entity("RecruitmentBackend.Models.Branch", b =>
+                {
+                    b.Property<string>("BranchID")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("Address")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("BranchName")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
-                    b.Property<bool>("IsApproved")
+                    b.Property<string>("Phone")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("BranchID");
+
+                    b.ToTable("Branches");
+                });
+
+            modelBuilder.Entity("RecruitmentBackend.Models.Candidate", b =>
+                {
+                    b.Property<string>("CandidateID")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("AccountID")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("Address")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("DOB")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Gender")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Phone")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("CandidateID");
+
+                    b.HasIndex("AccountID")
+                        .IsUnique();
+
+                    b.ToTable("Candidates");
+                });
+
+            modelBuilder.Entity("RecruitmentBackend.Models.CandidateCV", b =>
+                {
+                    b.Property<string>("CVID")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("CVExtractedSkills")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("CandidateID")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("FilePath")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("RawText")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("CVID");
+
+                    b.ToTable("CandidateCVs");
+                });
+
+            modelBuilder.Entity("RecruitmentBackend.Models.Category", b =>
+                {
+                    b.Property<string>("CategoryID")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsActive")
                         .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("ParentId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("CategoryID");
+
+                    b.HasIndex("ParentId");
+
+                    b.ToTable("Categories");
+                });
+
+            modelBuilder.Entity("RecruitmentBackend.Models.JobCriterion", b =>
+                {
+                    b.Property<string>("CriterionID")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("JobID")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Weight")
+                        .HasColumnType("int");
+
+                    b.HasKey("CriterionID");
+
+                    b.HasIndex("JobID");
+
+                    b.ToTable("JobCriteria");
+                });
+
+            modelBuilder.Entity("RecruitmentBackend.Models.JobLevel", b =>
+                {
+                    b.Property<string>("JobLevelID")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("ParentId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("JobLevelID");
+
+                    b.HasIndex("ParentId");
+
+                    b.ToTable("JobLevels");
+                });
+
+            modelBuilder.Entity("RecruitmentBackend.Models.JobPosting", b =>
+                {
+                    b.Property<string>("JobID")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime?>("ApprovedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ApprovedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("BranchID")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("CategoryID")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("Deadline")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("JDExtractedSkills")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("JobDescription")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("JobLevelID")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("JobRequirement")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int?>("MaxCandidates")
                         .HasColumnType("int");
 
-                    b.Property<string>("PositionId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("Requirements")
+                    b.Property<string>("PositionID")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("SalaryRange")
+                    b.Property<string>("RecruiterID")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("RejectReason")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal>("SalaryMax")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("SalaryMin")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime?>("StartDate")
                         .HasColumnType("datetime2");
 
-                    b.HasKey("Id");
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
-                    b.HasIndex("BranchId");
+                    b.HasKey("JobID");
 
-                    b.HasIndex("PositionId");
+                    b.HasIndex("CategoryID");
 
-                    b.ToTable("Jobs");
+                    b.HasIndex("JobLevelID");
+
+                    b.ToTable("JobPostings");
                 });
 
-            modelBuilder.Entity("RecruitmentBackend.Models.JobPosition", b =>
+            modelBuilder.Entity("RecruitmentBackend.Models.Position", b =>
                 {
-                    b.Property<string>("Id")
+                    b.Property<string>("PositionID")
                         .HasColumnType("nvarchar(450)");
 
-                    b.Property<string>("Name")
+                    b.Property<string>("CategoryID")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(450)");
 
-                    b.HasKey("Id");
-
-                    b.ToTable("JobPositions");
-                });
-
-            modelBuilder.Entity("RecruitmentBackend.Models.Skill", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<bool>("IsApproved")
+                    b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
-                    b.Property<string>("Name")
+                    b.Property<string>("PositionName")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(max)");
 
-                    b.HasKey("Id");
+                    b.HasKey("PositionID");
 
-                    b.ToTable("Skills");
+                    b.HasIndex("CategoryID");
+
+                    b.ToTable("Positions");
                 });
 
-            modelBuilder.Entity("CategoryJob", b =>
+            modelBuilder.Entity("RecruitmentBackend.Models.Recruiter", b =>
                 {
-                    b.HasOne("RecruitmentBackend.Models.Category", null)
+                    b.Property<string>("RecruiterID")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("AccountID")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Phone")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("RecruiterID");
+
+                    b.HasIndex("AccountID")
+                        .IsUnique();
+
+                    b.ToTable("Recruiters");
+                });
+
+            modelBuilder.Entity("RecruitmentBackend.Models.RecruiterBranch", b =>
+                {
+                    b.Property<string>("RecruiterID")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("BranchID")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("RecruiterID", "BranchID");
+
+                    b.ToTable("RecruiterBranches");
+                });
+
+            modelBuilder.Entity("RecruitmentBackend.Models.AIEvaluation", b =>
+                {
+                    b.HasOne("RecruitmentBackend.Models.Application", null)
+                        .WithOne("AIEvaluation")
+                        .HasForeignKey("RecruitmentBackend.Models.AIEvaluation", "ApplicationID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("RecruitmentBackend.Models.Application", b =>
+                {
+                    b.HasOne("RecruitmentBackend.Models.CandidateCV", "CandidateCV")
                         .WithMany()
-                        .HasForeignKey("CategoriesId")
+                        .HasForeignKey("CVID")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("RecruitmentBackend.Models.Job", null)
+                    b.HasOne("RecruitmentBackend.Models.JobPosting", "JobPosting")
                         .WithMany()
-                        .HasForeignKey("JobsId")
+                        .HasForeignKey("JobID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("CandidateCV");
+
+                    b.Navigation("JobPosting");
+                });
+
+            modelBuilder.Entity("RecruitmentBackend.Models.Candidate", b =>
+                {
+                    b.HasOne("RecruitmentBackend.Models.Account", "Account")
+                        .WithOne("Candidate")
+                        .HasForeignKey("RecruitmentBackend.Models.Candidate", "AccountID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Account");
+                });
+
+            modelBuilder.Entity("RecruitmentBackend.Models.Category", b =>
+                {
+                    b.HasOne("RecruitmentBackend.Models.Category", "ParentCategory")
+                        .WithMany("SubCategories")
+                        .HasForeignKey("ParentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("ParentCategory");
+                });
+
+            modelBuilder.Entity("RecruitmentBackend.Models.JobCriterion", b =>
+                {
+                    b.HasOne("RecruitmentBackend.Models.JobPosting", "JobPosting")
+                        .WithMany("Criteria")
+                        .HasForeignKey("JobID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("JobPosting");
+                });
+
+            modelBuilder.Entity("RecruitmentBackend.Models.JobLevel", b =>
+                {
+                    b.HasOne("RecruitmentBackend.Models.JobLevel", "ParentLevel")
+                        .WithMany("SubLevels")
+                        .HasForeignKey("ParentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("ParentLevel");
+                });
+
+            modelBuilder.Entity("RecruitmentBackend.Models.JobPosting", b =>
+                {
+                    b.HasOne("RecruitmentBackend.Models.Category", "Category")
+                        .WithMany()
+                        .HasForeignKey("CategoryID");
+
+                    b.HasOne("RecruitmentBackend.Models.JobLevel", "JobLevel")
+                        .WithMany()
+                        .HasForeignKey("JobLevelID");
+
+                    b.Navigation("Category");
+
+                    b.Navigation("JobLevel");
+                });
+
+            modelBuilder.Entity("RecruitmentBackend.Models.Position", b =>
+                {
+                    b.HasOne("RecruitmentBackend.Models.Category", "Category")
+                        .WithMany("Positions")
+                        .HasForeignKey("CategoryID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Category");
+                });
+
+            modelBuilder.Entity("RecruitmentBackend.Models.Recruiter", b =>
+                {
+                    b.HasOne("RecruitmentBackend.Models.Account", "Account")
+                        .WithOne("Recruiter")
+                        .HasForeignKey("RecruitmentBackend.Models.Recruiter", "AccountID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Account");
+                });
+
+            modelBuilder.Entity("RecruitmentBackend.Models.RecruiterBranch", b =>
+                {
+                    b.HasOne("RecruitmentBackend.Models.Recruiter", null)
+                        .WithMany("RecruiterBranches")
+                        .HasForeignKey("RecruiterID")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("RecruitmentBackend.Models.CandidateProfile", b =>
+            modelBuilder.Entity("RecruitmentBackend.Models.Account", b =>
                 {
-                    b.HasOne("RecruitmentBackend.Models.Job", "Job")
-                        .WithMany("Candidates")
-                        .HasForeignKey("JobId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                    b.Navigation("Candidate")
                         .IsRequired();
 
-                    b.Navigation("Job");
-                });
-
-            modelBuilder.Entity("RecruitmentBackend.Models.Job", b =>
-                {
-                    b.HasOne("RecruitmentBackend.Models.Branch", "Branch")
-                        .WithMany("Jobs")
-                        .HasForeignKey("BranchId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                    b.Navigation("Recruiter")
                         .IsRequired();
+                });
 
-                    b.HasOne("RecruitmentBackend.Models.JobPosition", "Position")
-                        .WithMany("Jobs")
-                        .HasForeignKey("PositionId")
-                        .OnDelete(DeleteBehavior.Cascade)
+            modelBuilder.Entity("RecruitmentBackend.Models.Application", b =>
+                {
+                    b.Navigation("AIEvaluation")
                         .IsRequired();
-
-                    b.Navigation("Branch");
-
-                    b.Navigation("Position");
                 });
 
-            modelBuilder.Entity("RecruitmentBackend.Models.Branch", b =>
+            modelBuilder.Entity("RecruitmentBackend.Models.Category", b =>
                 {
-                    b.Navigation("Jobs");
+                    b.Navigation("Positions");
+
+                    b.Navigation("SubCategories");
                 });
 
-            modelBuilder.Entity("RecruitmentBackend.Models.Job", b =>
+            modelBuilder.Entity("RecruitmentBackend.Models.JobLevel", b =>
                 {
-                    b.Navigation("Candidates");
+                    b.Navigation("SubLevels");
                 });
 
-            modelBuilder.Entity("RecruitmentBackend.Models.JobPosition", b =>
+            modelBuilder.Entity("RecruitmentBackend.Models.JobPosting", b =>
                 {
-                    b.Navigation("Jobs");
+                    b.Navigation("Criteria");
+                });
+
+            modelBuilder.Entity("RecruitmentBackend.Models.Recruiter", b =>
+                {
+                    b.Navigation("RecruiterBranches");
                 });
 #pragma warning restore 612, 618
         }

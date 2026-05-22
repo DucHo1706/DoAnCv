@@ -1,8 +1,7 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using RecruitmentBackend.Data;
+﻿﻿﻿﻿﻿﻿﻿﻿using Microsoft.AspNetCore.Mvc;
 using RecruitmentBackend.DTOs.Requests;
-using RecruitmentBackend.Models;
+using RecruitmentBackend.Interfaces;
+using System.Threading.Tasks;
 
 namespace RecruitmentBackend.Controllers
 {
@@ -10,91 +9,72 @@ namespace RecruitmentBackend.Controllers
     [ApiController]
     public class CategoriesController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        private readonly ICategoryService _categoryService;
 
-        public CategoriesController(AppDbContext context)
+        public CategoriesController(ICategoryService categoryService)
         {
-            _context = context;
+            _categoryService = categoryService;
         }
 
         [HttpGet]
         public async Task<IActionResult> GetCategories()
         {
-            var categories = await _context.Categories
-                .OrderBy(c => c.Name)
-                .ToListAsync();
-
+            var categories = await _categoryService.GetCategoriesAsync();
             return Ok(categories);
         }
 
         [HttpPost]
-        public async Task<IActionResult> CreateCategory([FromBody] NameOnlyRequest request)
+        public async Task<IActionResult> CreateCategory([FromBody] CategoryRequest request)
         {
             if (!ModelState.IsValid || string.IsNullOrWhiteSpace(request.Name))
                 return BadRequest("Tên lĩnh vực không được để trống");
 
-            var normalizedName = request.Name.Trim();
-
-            var exists = await _context.Categories
-                .AnyAsync(c => c.Name.ToLower() == normalizedName.ToLower());
-
-            if (exists)
-                return BadRequest("Lĩnh vực đã tồn tại");
-
-            var category = new Category
-            {
-                Id = Guid.NewGuid().ToString(),
-                Name = normalizedName
-            };
-
-            _context.Categories.Add(category);
-            await _context.SaveChangesAsync();
-
-            return Ok(category);
+            var result = await _categoryService.CreateCategoryAsync(request);
+            
+            if (result.IsSuccess == false) return BadRequest(result.Message);
+            
+            return Ok(result.Data);
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateCategory(string id, [FromBody] NameOnlyRequest request)
+        public async Task<IActionResult> UpdateCategory(string id, [FromBody] CategoryRequest request)
         {
             if (!ModelState.IsValid || string.IsNullOrWhiteSpace(request.Name))
                 return BadRequest("Tên lĩnh vực không được để trống");
 
-            var category = await _context.Categories.FindAsync(id);
-            if (category == null)
-                return NotFound("Không tìm thấy lĩnh vực");
+            var result = await _categoryService.UpdateCategoryAsync(id, request);
+            
+            if (result.IsSuccess == false)
+            {
+                if (result.Message == "Không tìm thấy lĩnh vực") return NotFound(result.Message);
+                return BadRequest(result.Message);
+            }
 
-            var normalizedName = request.Name.Trim();
+            return Ok(result.Data);
+        }
 
-            var exists = await _context.Categories
-                .AnyAsync(c => c.Id != id && c.Name.ToLower() == normalizedName.ToLower());
-
-            if (exists)
-                return BadRequest("Tên lĩnh vực đã tồn tại");
-
-            category.Name = normalizedName;
-            await _context.SaveChangesAsync();
-
-            return Ok(category);
+        [HttpPut("{id}/toggle-status")]
+        public async Task<IActionResult> ToggleCategoryStatus(string id)
+        {
+            var result = await _categoryService.ToggleCategoryStatusAsync(id);
+            
+            if (result.IsSuccess == false) return NotFound(result.Message);
+            
+            return Ok(result.Data);
         }
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteCategory(string id)
         {
-            var category = await _context.Categories.FindAsync(id);
-            if (category == null)
-                return NotFound("Không tìm thấy lĩnh vực");
-
-            var isUsed = await _context.Jobs
-                .Include(j => j.Categories)
-                .AnyAsync(j => j.Categories.Any(c => c.Id == id));
-
-            if (isUsed)
-                return BadRequest("Lĩnh vực đang được sử dụng trong tin tuyển dụng, không thể xóa");
-
-            _context.Categories.Remove(category);
-            await _context.SaveChangesAsync();
-
-            return Ok(new { message = "Xóa lĩnh vực thành công" });
+            var result = await _categoryService.DeleteCategoryAsync(id);
+            
+            if (result.IsSuccess == false)
+            {
+                if (result.Message == "Không tìm thấy lĩnh vực") return NotFound(result.Message);
+                return BadRequest(result.Message);
+            }
+            
+            return Ok(new { message = result.Message });
         }
     }
 }

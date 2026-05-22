@@ -1,8 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using RecruitmentBackend.Data;
 using RecruitmentBackend.DTOs.Requests;
-using RecruitmentBackend.Models;
+using RecruitmentBackend.Interfaces;
+using System.Threading.Tasks;
 
 namespace RecruitmentBackend.Controllers
 {
@@ -10,88 +9,55 @@ namespace RecruitmentBackend.Controllers
     [ApiController]
     public class JobPositionsController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        private readonly IJobPositionService _jobPositionService;
 
-        public JobPositionsController(AppDbContext context)
+        public JobPositionsController(IJobPositionService jobPositionService)
         {
-            _context = context;
+            _jobPositionService = jobPositionService;
         }
 
         [HttpGet]
         public async Task<IActionResult> GetJobPositions()
         {
-            var positions = await _context.JobPositions
-                .OrderBy(p => p.Name)
-                .ToListAsync();
-
+            var positions = await _jobPositionService.GetJobPositionsAsync();
             return Ok(positions);
         }
 
         [HttpPost]
-        public async Task<IActionResult> CreateJobPosition([FromBody] NameOnlyRequest request)
+        public async Task<IActionResult> CreateJobPosition([FromBody] JobPositionRequest request)
         {
-            if (!ModelState.IsValid || string.IsNullOrWhiteSpace(request.Name))
+            if (!ModelState.IsValid || string.IsNullOrWhiteSpace(request.Name) || string.IsNullOrWhiteSpace(request.CategoryId))
                 return BadRequest("Tên vị trí không được để trống");
 
-            var normalizedName = request.Name.Trim();
-
-            var exists = await _context.JobPositions
-                .AnyAsync(p => p.Name.ToLower() == normalizedName.ToLower());
-
-            if (exists)
-                return BadRequest("Vị trí đã tồn tại");
-
-            var position = new JobPosition
-            {
-                Id = Guid.NewGuid().ToString(),
-                Name = normalizedName
-            };
-
-            _context.JobPositions.Add(position);
-            await _context.SaveChangesAsync();
-
-            return Ok(position);
+            var result = await _jobPositionService.CreateJobPositionAsync(request);
+            if (!result.IsSuccess) return BadRequest(result.Message);
+            
+            return Ok(result.Data);
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateJobPosition(string id, [FromBody] NameOnlyRequest request)
+        public async Task<IActionResult> UpdateJobPosition(string id, [FromBody] JobPositionRequest request)
         {
-            if (!ModelState.IsValid || string.IsNullOrWhiteSpace(request.Name))
+            if (!ModelState.IsValid || string.IsNullOrWhiteSpace(request.Name) || string.IsNullOrWhiteSpace(request.CategoryId))
                 return BadRequest("Tên vị trí không được để trống");
 
-            var position = await _context.JobPositions.FindAsync(id);
-            if (position == null)
-                return NotFound("Không tìm thấy vị trí");
-
-            var normalizedName = request.Name.Trim();
-
-            var exists = await _context.JobPositions
-                .AnyAsync(p => p.Id != id && p.Name.ToLower() == normalizedName.ToLower());
-
-            if (exists)
-                return BadRequest("Tên vị trí đã tồn tại");
-
-            position.Name = normalizedName;
-            await _context.SaveChangesAsync();
-
-            return Ok(position);
+            var result = await _jobPositionService.UpdateJobPositionAsync(id, request);
+            if (!result.IsSuccess)
+            {
+                if (result.Message == "Không tìm thấy vị trí") return NotFound(result.Message);
+                return BadRequest(result.Message);
+            }
+            
+            return Ok(result.Data);
         }
 
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteJobPosition(string id)
+        [HttpPut("{id}/toggle-status")]
+        public async Task<IActionResult> TogglePositionStatus(string id)
         {
-            var position = await _context.JobPositions.FindAsync(id);
-            if (position == null)
-                return NotFound("Không tìm thấy vị trí");
-
-            var isUsed = await _context.Jobs.AnyAsync(j => j.PositionId == id);
-            if (isUsed)
-                return BadRequest("Vị trí đang được sử dụng trong tin tuyển dụng, không thể xóa");
-
-            _context.JobPositions.Remove(position);
-            await _context.SaveChangesAsync();
-
-            return Ok(new { message = "Xóa vị trí thành công" });
+            var result = await _jobPositionService.TogglePositionStatusAsync(id);
+            if (!result.IsSuccess) return NotFound(result.Message);
+            
+            return Ok(result.Data);
         }
     }
 }

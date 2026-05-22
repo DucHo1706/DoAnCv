@@ -3,6 +3,10 @@ from google.genai import types
 import json
 import re
 import os
+import io
+import PyPDF2
+import pytesseract
+from PIL import Image
 from dotenv import load_dotenv
 
 # Tải các biến môi trường từ file .env
@@ -15,6 +19,26 @@ if not GEMINI_API_KEY:
 
 # Khởi tạo client theo thư viện google-genai mới
 client = genai.Client(api_key=GEMINI_API_KEY)
+
+# Đường dẫn đến Tesseract OCR trên Windows (Sửa lại nếu bạn cài ở ổ đĩa khác)
+pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+
+def extract_text_from_file(file_bytes: bytes, filename: str, content_type: str) -> str:
+    text = ""
+    try:
+        # 1. NẾU LÀ FILE PDF -> Dùng PyPDF2 theo đúng yêu cầu đề tài
+        if content_type == "application/pdf" or filename.lower().endswith(".pdf"):
+            pdf_reader = PyPDF2.PdfReader(io.BytesIO(file_bytes))
+            for page in pdf_reader.pages:
+                if page.extract_text():
+                    text += page.extract_text() + "\n"
+        # 2. NẾU LÀ FILE ẢNH -> Dùng Tesseract OCR để bóc tách chữ
+        elif content_type in ["image/png", "image/jpeg", "image/jpg"] or filename.lower().endswith((".png", ".jpg", ".jpeg")):
+            image = Image.open(io.BytesIO(file_bytes))
+            text = pytesseract.image_to_string(image, lang='vie+eng')
+    except Exception as e:
+        print(f"Lỗi bóc tách văn bản: {e}")
+    return text.strip()
 
 def calculate_resume_score(cv_text, jd_text, cv_skills, jd_skills):
     prompt = f"""

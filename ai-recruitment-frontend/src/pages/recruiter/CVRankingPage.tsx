@@ -10,27 +10,68 @@ import {
   Table,
   Tag,
   Typography,
+  message,
 } from "antd";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import PageContainer from "../../components/common/PageContainer";
 import StatCard from "../../components/common/StatCard";
 import TableToolbar from "../../components/common/TableToolbar";
-import { recruiterCandidates } from "../../mock/recruiter";
-import type { RecruiterCandidate } from "../../mock/recruiter";
+import { recruitmentService } from "../../services/recruitmentService";
+import type { ApplicationDto } from "../../services/recruitmentService";
+import { jobService } from "../../services/jobService";
+import type { JobDto } from "../../services/jobService";
 
 const { Paragraph, Text } = Typography;
 
 function CVRankingPage() {
-  const [selectedCandidate, setSelectedCandidate] =
-    useState<RecruiterCandidate | null>(null);
+  const [selectedCandidate, setSelectedCandidate] = useState<ApplicationDto | null>(null);
+  const [applications, setApplications] = useState<ApplicationDto[]>([]);
+  const [jobs, setJobs] = useState<JobDto[]>([]);
+  const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const rankingData = [...recruiterCandidates]
-    .sort((a, b) => b.fitScore - a.fitScore)
-    .map((item, index) => ({
-      ...item,
-      rank: index + 1,
-      key: item.id,
-    }));
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const [appData, jobData] = await Promise.all([
+          recruitmentService.getHrApplications(),
+          jobService.getMyJobs()
+        ]);
+        setApplications(Array.isArray(appData) ? appData : (appData as any)?.$values || []);
+        setJobs(Array.isArray(jobData) ? jobData : (jobData as any)?.$values || []);
+      } catch (error) {
+        message.error("Lỗi khi tải dữ liệu xếp hạng");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  const rankingData = useMemo(() => {
+    let filtered = applications;
+    if (selectedJobId) {
+      filtered = filtered.filter(a => a.jobId === selectedJobId);
+    }
+    return [...filtered]
+      .sort((a, b) => b.aiScore - a.aiScore)
+      .map((item, index) => ({
+        ...item,
+        rank: index + 1,
+        key: item.id,
+      }));
+  }, [applications, selectedJobId]);
+
+  const parseSkills = (jsonStr: string) => {
+    if (!jsonStr) return [];
+    try {
+      const parsed = JSON.parse(jsonStr);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  };
 
   const columns = [
     {
@@ -43,30 +84,24 @@ function CVRankingPage() {
     },
     {
       title: "Ứng viên",
-      dataIndex: "name",
-      key: "name",
+      dataIndex: "candidateName",
+      key: "candidateName",
     },
     {
       title: "Vị trí",
-      dataIndex: "position",
-      key: "position",
+      dataIndex: "jobTitle",
+      key: "jobTitle",
     },
     {
       title: "Điểm phù hợp",
-      dataIndex: "fitScore",
-      key: "fitScore",
+      dataIndex: "aiScore",
+      key: "aiScore",
       render: (value: number) => <Text strong>{value}/100</Text>,
-    },
-    {
-      title: "Trạng thái",
-      dataIndex: "status",
-      key: "status",
-      render: (value: string) => <Tag color="blue">{value}</Tag>,
     },
     {
       title: "Thao tác",
       key: "actions",
-      render: (_: unknown, record: RecruiterCandidate) => (
+      render: (_: unknown, record: ApplicationDto) => (
         <Button icon={<EyeOutlined />} onClick={() => setSelectedCandidate(record)}>
           Xem giải thích
         </Button>
@@ -81,38 +116,31 @@ function CVRankingPage() {
     >
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
         <Col xs={24} sm={8}>
-          <StatCard title="Top 1 hiện tại" value={rankingData[0]?.name || "-"} subtitle="Ứng viên dẫn đầu" />
+          <StatCard title="Top 1 hiện tại" value={rankingData[0]?.candidateName || "-"} subtitle="Ứng viên dẫn đầu" />
         </Col>
         <Col xs={24} sm={8}>
-          <StatCard title="Điểm cao nhất" value={`${rankingData[0]?.fitScore || 0}/100`} subtitle="Best fit score" />
+          <StatCard title="Điểm cao nhất" value={`${rankingData[0]?.aiScore || 0}/100`} subtitle="Best fit score" />
         </Col>
         <Col xs={24} sm={8}>
-          <StatCard title="Top 3 nổi bật" value={3} subtitle="Ưu tiên review trước" icon={<TrophyOutlined />} />
+          <StatCard title="Số lượng hồ sơ" value={rankingData.length} subtitle={selectedJobId ? "Của công việc này" : "Tất cả công việc"} icon={<TrophyOutlined />} />
         </Col>
       </Row>
 
       <Card>
         <TableToolbar
-          searchPlaceholder="Tìm theo tên ứng viên..."
+          searchPlaceholder="Tìm kiếm..."
           extra={
             <>
               <Select
-                placeholder="Vị trí"
-                style={{ width: 180 }}
-                options={[
-                  { label: "Frontend Developer", value: "frontend" },
-                  { label: "Backend Developer", value: "backend" },
-                  { label: "Business Analyst", value: "ba" },
-                ]}
-              />
-              <Select
-                placeholder="Khoảng điểm"
-                style={{ width: 180 }}
-                options={[
-                  { label: "90 - 100", value: "90-100" },
-                  { label: "80 - 89", value: "80-89" },
-                  { label: "70 - 79", value: "70-79" },
-                ]}
+                placeholder="Lọc theo tin tuyển dụng..."
+                style={{ width: 300 }}
+                allowClear
+                value={selectedJobId}
+                onChange={setSelectedJobId}
+                options={jobs.map(j => ({
+                  label: `${j.position?.name || 'Vị trí'} (${j.branch?.name || 'Chi nhánh'})`,
+                  value: j.id
+                }))}
               />
             </>
           }
@@ -121,6 +149,7 @@ function CVRankingPage() {
         <Table
           columns={columns}
           dataSource={rankingData}
+          loading={loading}
           pagination={{ pageSize: 6 }}
         />
       </Card>
@@ -128,45 +157,53 @@ function CVRankingPage() {
       <Drawer
         title="Giải thích điểm chấm AI"
         placement="right"
-        width={460}
+        width={500}
         open={!!selectedCandidate}
         onClose={() => setSelectedCandidate(null)}
       >
         {selectedCandidate ? (
           <>
             <Paragraph>
-              <Text strong>Ứng viên:</Text> {selectedCandidate.name}
+              <Text strong>Ứng viên:</Text> {selectedCandidate.candidateName}
             </Paragraph>
             <Paragraph>
-              <Text strong>Vị trí:</Text> {selectedCandidate.position}
+              <Text strong>Vị trí:</Text> {selectedCandidate.jobTitle}
             </Paragraph>
             <Paragraph>
-              <Text strong>Điểm phù hợp:</Text> {selectedCandidate.fitScore}/100
+              <Text strong>Điểm phù hợp:</Text> <Text type={selectedCandidate.aiScore >= 75 ? "success" : "warning"} strong>{selectedCandidate.aiScore}/100</Text>
             </Paragraph>
 
             <div style={{ marginTop: 16 }}>
               <Text strong>Tóm tắt của AI</Text>
-              <Paragraph style={{ marginTop: 8 }}>
-                {selectedCandidate.aiSummary}
+              <Paragraph style={{ marginTop: 8, padding: 12, background: "#f5f5f5", borderRadius: 6 }}>
+                {selectedCandidate.aiReason}
               </Paragraph>
             </div>
 
             <div style={{ marginTop: 16 }}>
-              <Text strong>Điểm mạnh</Text>
-              {selectedCandidate.strengths.map((item) => (
-                <Paragraph key={item} style={{ marginBottom: 8 }}>
-                  • {item}
-                </Paragraph>
-              ))}
+              <Text strong>Điểm mạnh (Kỹ năng khớp)</Text>
+              <div style={{ marginTop: 8 }}>
+                {parseSkills(selectedCandidate.matchedSkills).length > 0 ? (
+                  parseSkills(selectedCandidate.matchedSkills).map((item) => (
+                    <Tag color="success" key={item} style={{ marginBottom: 8 }}>{item}</Tag>
+                  ))
+                ) : (
+                  <Text type="secondary">Không tìm thấy kỹ năng khớp</Text>
+                )}
+              </div>
             </div>
 
             <div style={{ marginTop: 16 }}>
-              <Text strong>Khoảng thiếu</Text>
-              {selectedCandidate.gaps.map((item) => (
-                <Paragraph key={item} style={{ marginBottom: 8 }}>
-                  • {item}
-                </Paragraph>
-              ))}
+              <Text strong>Khoảng thiếu (Kỹ năng thiếu)</Text>
+              <div style={{ marginTop: 8 }}>
+                {parseSkills(selectedCandidate.missingSkills).length > 0 ? (
+                  parseSkills(selectedCandidate.missingSkills).map((item) => (
+                    <Tag color="error" key={item} style={{ marginBottom: 8 }}>{item}</Tag>
+                  ))
+                ) : (
+                  <Text type="secondary">Đã đáp ứng đủ kỹ năng yêu cầu</Text>
+                )}
+              </div>
             </div>
           </>
         ) : null}

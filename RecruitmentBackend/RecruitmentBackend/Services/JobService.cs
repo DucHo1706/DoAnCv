@@ -1,8 +1,7 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿﻿﻿﻿﻿﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using RecruitmentBackend.Data;
 using RecruitmentBackend.DTOs.Requests;
-using RecruitmentBackend.DTOs.Responses;
 using RecruitmentBackend.Interfaces;
 using RecruitmentBackend.Models;
 
@@ -21,153 +20,204 @@ namespace RecruitmentBackend.Services
             _logger = logger;
         }
 
-        public async Task<string> CreatePendingJobAsync(CreateJobRequest request)
+        public async Task<string> CreatePendingJobAsync(CreateJobRequest request, string accountId)
         {
-            var position = await _context.JobPositions
-                .FirstOrDefaultAsync(p => p.Id == request.PositionId);
-            if (position == null)
-                throw new Exception("Vị trí không tồn tại");
+            var recruiter = await _context.Recruiters.FirstOrDefaultAsync(r => r.AccountID == accountId);
+            if (recruiter == null) throw new Exception("Không tìm thấy thông tin Nhà tuyển dụng hợp lệ!");
 
-            var branch = await _context.Branches
-                .FirstOrDefaultAsync(b => b.Id == request.BranchId);
-            if (branch == null)
-                throw new Exception("Chi nhánh không tồn tại");
-
-            List<Category> categories = new();
-            if (request.CategoryIds != null && request.CategoryIds.Count > 0)
+            var position = await _context.Positions.FindAsync(request.PositionId);
+            if (position == null) throw new Exception("Vị trí không tồn tại");
+            
+            decimal minSal = 0, maxSal = 0;
+            if (!string.IsNullOrWhiteSpace(request.SalaryRange))
             {
-                categories = await _context.Categories
-                    .Where(c => request.CategoryIds.Contains(c.Id))
-                    .ToListAsync();
+                
+                var cleanText = request.SalaryRange.Replace(",", "").Replace(".", "");
+                
+                var matches = System.Text.RegularExpressions.Regex.Matches(cleanText, @"\d+");
+                
+                if (matches.Count >= 2)
+                {
+                    decimal.TryParse(matches[0].Value, out minSal);
+                    decimal.TryParse(matches[1].Value, out maxSal);
+                    if (minSal > maxSal) { var temp = minSal; minSal = maxSal; maxSal = temp; }
+                }
+                else if (matches.Count == 1)
+                {
+                    decimal.TryParse(matches[0].Value, out minSal);
+                }
 
-                if (categories.Count != request.CategoryIds.Count)
-                    throw new Exception("Một hoặc nhiều lĩnh vực không tồn tại");
+                if (minSal >= 1000) minSal /= 1000000;
+                if (maxSal >= 1000) maxSal /= 1000000;
             }
 
-            var newJob = new Job
+            var newJob = new JobPosting
             {
-                Id = Guid.NewGuid().ToString(),
-                PositionId = request.PositionId,
-                Description = request.Description,
-                Requirements = request.Requirements,
-                BranchId = request.BranchId,
-                SalaryRange = request.SalaryRange,
-                CreatedAt = DateTime.UtcNow,
+                JobID = Guid.NewGuid().ToString(),
+                PositionID = request.PositionId,
+                BranchID = request.BranchId,
+                RecruiterID = recruiter.RecruiterID,
+                JobDescription = request.Description,
+                JobRequirement = request.Requirements,
+                SalaryMin = minSal, 
+                SalaryMax = maxSal,
                 StartDate = request.StartDate,
-                Deadline = request.Deadline,
                 MaxCandidates = request.MaxCandidates,
-                IsActive = true,
-                IsApproved = false,
-                Categories = categories
+                Deadline = request.Deadline ?? DateTime.Now.AddDays(30),
+                Status = "Pending",
+                RejectReason = "",
+                ApprovedBy = "",
+                JDExtractedSkills = "[]"
             };
 
-            _context.Jobs.Add(newJob);
+            _context.JobPostings.Add(newJob);
             await _context.SaveChangesAsync();
 
-            return newJob.Id;
+            return newJob.JobID;
         }
 
-        public async Task<JobReviewDto?> ReviewJobAsync(string jobId)
+        public async Task<IEnumerable<object>> GetJobsByRecruiterAsync(string accountId)
         {
-            var job = await _context.Jobs
-                .Include(j => j.Position)
-                .Include(j => j.Branch)
-                .Include(j => j.Categories)
-                .FirstOrDefaultAsync(j => j.Id == jobId);
-            if (job == null) return null;
+            var recruiter = await _context.Recruiters.FirstOrDefaultAsync(r => r.AccountID == accountId);
+            if (recruiter == null) return new List<object>();
 
-            var inputSkills = job.Requirements
-                                 .Split(new[] { ',', '\n' }, StringSplitOptions.RemoveEmptyEntries)
-                                 .Select(s => s.Trim().ToLower())
-                                 .ToList();
+            return await (from j in _context.JobPostings
+                          join p in _context.Positions on j.PositionID equals p.PositionID into pj
+                          from p in pj.DefaultIfEmpty()
+                          join b in _context.Branches on j.BranchID equals b.BranchID into bj
+                          from b in bj.DefaultIfEmpty()
+                          where j.RecruiterID == recruiter.RecruiterID
+                          orderby j.CreatedAt descending
+                          select new {
+                              id = j.JobID,
+                              description = j.JobDescription,
+                              salaryRange = (j.SalaryMin == 0 && j.SalaryMax == 0) ? "Thỏa thuận" : (j.SalaryMax == 0 ? j.SalaryMin + " triệu" : j.SalaryMin + " - " + j.SalaryMax + " triệu"),
+                              createdAt = j.CreatedAt,
+                              deadline = j.Deadline,
+                              startDate = j.StartDate,
+                              maxCandidates = j.MaxCandidates,
+                              status = j.Status,
+                              isApproved = j.Status == "Published",
+                              position = p != null ? new { name = p.PositionName } : null,
+                              branch = b != null ? new { name = b.BranchName } : null
+                          }).ToListAsync();
+        }
 
-            var knownSkills = await _context.Skills.Select(s => s.Name.ToLower()).ToListAsync();
-            var unknownSkills = inputSkills.Except(knownSkills).ToList();
+        public async Task<IEnumerable<object>> GetAdminJobsAsync()
+        {
+            return await (from j in _context.JobPostings
+                          join p in _context.Positions on j.PositionID equals p.PositionID into pj
+                          from p in pj.DefaultIfEmpty()
+                          join b in _context.Branches on j.BranchID equals b.BranchID into bj
+                          from b in bj.DefaultIfEmpty()
+                          orderby j.CreatedAt descending
+                          select new {
+                              id = j.JobID,
+                              salaryRange = (j.SalaryMin == 0 && j.SalaryMax == 0) ? "Thỏa thuận" : (j.SalaryMax == 0 ? j.SalaryMin + " triệu" : j.SalaryMin + " - " + j.SalaryMax + " triệu"),
+                              createdAt = j.CreatedAt,
+                              deadline = j.Deadline,
+                              startDate = j.StartDate,
+                              maxCandidates = j.MaxCandidates,
+                              status = j.Status,
+                              position = p != null ? new { name = p.PositionName } : null,
+                              branch = b != null ? new { name = b.BranchName } : null
+                          }).ToListAsync();
+        }
 
-            return new JobReviewDto
-            {
-                JobInfo = job,
-                WordsToHighlight = unknownSkills
+        public async Task<bool> ToggleJobStatusAsync(string jobId)
+        {
+            var job = await _context.JobPostings.FindAsync(jobId);
+            if (job == null || job.Status == "Pending") return false;
+
+            // Nếu đang mở thì khóa, nếu đang khóa thì mở lại
+            job.Status = job.Status == "Published" ? "Closed" : "Published";
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<object> ReviewJobAsync(string jobId)
+        {
+            var query = from j in _context.JobPostings
+                        join p in _context.Positions on j.PositionID equals p.PositionID into pj
+                        from p in pj.DefaultIfEmpty()
+                        join b in _context.Branches on j.BranchID equals b.BranchID into bj
+                        from b in bj.DefaultIfEmpty()
+                        where j.JobID == jobId
+                        select new {
+                            id = j.JobID,
+                            description = j.JobDescription,
+                            requirements = j.JobRequirement,
+                            salaryRange = (j.SalaryMin == 0 && j.SalaryMax == 0) ? "Thỏa thuận" : (j.SalaryMax == 0 ? j.SalaryMin + " triệu" : j.SalaryMin + " - " + j.SalaryMax + " triệu"),
+                            createdAt = j.CreatedAt,
+                            deadline = j.Deadline,
+                            startDate = j.StartDate,
+                            maxCandidates = j.MaxCandidates,
+                            status = j.Status,
+                            isApproved = j.Status == "Published",
+                            position = p != null ? new { name = p.PositionName } : null,
+                            branch = b != null ? new { name = b.BranchName } : null
+                        };
+
+            var jobInfo = await query.FirstOrDefaultAsync();
+            if (jobInfo == null) return null;
+
+            return new {
+                jobInfo = jobInfo,
+                wordsToHighlight = new List<string>() // Tạm thời rỗng, chờ AI bóc tách
             };
         }
 
         public async Task<bool> ApproveJobAndSyncAiAsync(string jobId)
         {
-            var job = await _context.Jobs.FindAsync(jobId);
-            if (job == null || job.IsApproved) return false;
+            var job = await _context.JobPostings.FindAsync(jobId);
+            if (job == null || job.Status == "Published") return false;
 
-            job.IsApproved = true;
-            job.IsActive = true;
-
-            var inputSkills = (job.Requirements ?? string.Empty)
-                .Split(new[] { ',', '\n', ';' }, StringSplitOptions.RemoveEmptyEntries)
-                .Select(s => s.Trim().ToLower())
-                .Where(s => !string.IsNullOrWhiteSpace(s))
-                .Where(s => s.Length <= 100)
-                .Distinct()
-                .ToList();
-
-            var knownSkills = await _context.Skills
-                .Select(s => s.Name.ToLower())
-                .ToListAsync();
-
-            var newSkills = inputSkills.Except(knownSkills).ToList();
-
-            var isAiNeedUpdate = false;
-
-            foreach (var skill in newSkills)
-            {
-                _context.Skills.Add(new Skill
-                {
-                    Name = skill,
-                    IsApproved = true
-                });
-
-                isAiNeedUpdate = true;
-            }
-
-            // Lưu trạng thái approve trước
+            job.Status = "Published";
+            job.ApprovedAt = DateTime.Now;
             await _context.SaveChangesAsync();
-
-            // Sync AI là bước phụ, lỗi ở đây không được làm fail approve
-            if (isAiNeedUpdate)
-            {
-                try
-                {
-                    var allSkills = await _context.Skills
-                        .Select(s => s.Name)
-                        .ToListAsync();
-
-                    await _aiService.SyncSkillsToAiAsync(allSkills);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "Job {JobId} approved successfully but AI sync failed.", jobId);
-                }
-            }
-
             return true;
         }
-        public async Task<IEnumerable<Job>> GetAllJobsAsync()
+
+        public async Task<IEnumerable<object>> GetAllJobsAsync()
         {
-            return await _context.Jobs
-                .Include(j => j.Position)
-                .Include(j => j.Branch)
-                .Include(j => j.Categories)
-                .Where(j => j.IsActive)
-                .OrderByDescending(j => j.CreatedAt)
-                .ToListAsync();
+            return await (from j in _context.JobPostings
+                          join p in _context.Positions on j.PositionID equals p.PositionID into pj
+                          from p in pj.DefaultIfEmpty()
+                          join b in _context.Branches on j.BranchID equals b.BranchID into bj
+                          from b in bj.DefaultIfEmpty()
+                          where j.Status == "Published"
+                          orderby j.CreatedAt descending
+                          select new {
+                              id = j.JobID,
+                              description = j.JobDescription,
+                              requirements = j.JobRequirement,
+                              salaryRange = (j.SalaryMin == 0 && j.SalaryMax == 0) ? "Thỏa thuận" : (j.SalaryMax == 0 ? j.SalaryMin + " triệu" : j.SalaryMin + " - " + j.SalaryMax + " triệu"),
+                              createdAt = j.CreatedAt,
+                              deadline = j.Deadline,
+                              startDate = j.StartDate,
+                              maxCandidates = j.MaxCandidates,
+                              position = p != null ? new { name = p.PositionName } : null,
+                              branch = b != null ? new { name = b.BranchName } : null
+                          }).ToListAsync();
         }
 
-        public async Task<IEnumerable<Job>> GetPendingJobsAsync()
+        public async Task<IEnumerable<object>> GetPendingJobsAsync()
         {
-            return await _context.Jobs
-                                 .Include(j => j.Position)
-                                 .Include(j => j.Branch)
-                                 .Include(j => j.Categories)
-                                 .Where(j => !j.IsApproved && j.IsActive)
-                                 .OrderByDescending(j => j.CreatedAt)
-                                 .ToListAsync();
+            return await (from j in _context.JobPostings
+                          join p in _context.Positions on j.PositionID equals p.PositionID into pj
+                          from p in pj.DefaultIfEmpty()
+                          join b in _context.Branches on j.BranchID equals b.BranchID into bj
+                          from b in bj.DefaultIfEmpty()
+                          where j.Status == "Pending"
+                          orderby j.CreatedAt descending
+                          select new {
+                              id = j.JobID,
+                              salaryRange = (j.SalaryMin == 0 && j.SalaryMax == 0) ? "Thỏa thuận" : (j.SalaryMax == 0 ? j.SalaryMin + " triệu" : j.SalaryMin + " - " + j.SalaryMax + " triệu"),
+                              createdAt = j.CreatedAt,
+                              deadline = j.Deadline,
+                              position = p != null ? new { name = p.PositionName } : null,
+                              branch = b != null ? new { name = b.BranchName } : null
+                          }).ToListAsync();
         }
     }
 }

@@ -10,15 +10,18 @@ import MainLayout from "./pages/recruiter/MainLayout";
 
 // Recruiter pages
 import JobManagementPage from "./pages/recruiter/JobManagementPage";
+import CreateJobPage from "./pages/recruiter/CreateJobPage"; 
 import RecruiterDashboardPage from "./pages/recruiter/RecruiterDashboardPage";
 import CandidateListPage from "./pages/recruiter/CandidateListPage";
 import CandidateDetailPage from "./pages/recruiter/CandidateDetailPage";
+import ApplicationManagementPage from "./pages/recruiter/ApplicationManagementPage";
 import CVRankingPage from "./pages/recruiter/CVRankingPage";
 import PublicLayout from "./pages/recruiter/PublicLayout";
 import HomePage from "./pages/recruiter/HomePage";
 
 // Candidate pages
 import CandidateJobPage from "./pages/candidate/CandidateJobPage";
+import ApplicationStatusPage from "./pages/candidate/ApplicationStatusPage";
 
 // Admin pages
 import AdminDashboardPage from "./pages/admin/AdminDashboardPage";
@@ -29,6 +32,7 @@ import RolePermissionPage from "./pages/admin/RolePermissionPage";
 import BranchManagementPage from "./pages/admin/BranchManagementPage";
 import CategoryManagementPage from "./pages/admin/CategoryManagementPage";
 import JobPositionManagementPage from "./pages/admin/JobPositionManagementPage";
+import JobLevelManagementPage from "./pages/admin/JobLevelManagementPage";
 
 function App() {
   return (
@@ -43,15 +47,19 @@ function App() {
         <Route path="/" element={<PublicLayout />}>
           <Route index element={<HomePage />} />
           <Route path="jobs" element={<CandidateJobPage />} />
+          <Route path="my-applications" element={<ApplicationStatusPage />} />
         </Route>
 
         {/* Recruiter */}
         <Route path="/recruiter" element={<MainLayout />}>
           <Route path="dashboard" element={<RecruiterDashboardPage />} />
           <Route path="jobs" element={<JobManagementPage />} />
+          <Route path="jobs/create" element={<CreateJobPage />} /> {/* <--- Thêm dòng này */}
+          <Route path="applications" element={<ApplicationManagementPage />} />
           <Route path="candidates" element={<CandidateListPage />} />
           <Route path="candidates/:id" element={<CandidateDetailPage />} />
           <Route path="ranking" element={<CVRankingPage />} />
+
         </Route>
 
         {/* Admin */}
@@ -63,6 +71,7 @@ function App() {
           <Route path="reports" element={<ReportsPage />} />
           <Route path="branches" element={<BranchManagementPage />} />
           <Route path="categories" element={<CategoryManagementPage />} />
+          <Route path="job-levels" element={<JobLevelManagementPage />} />
           <Route path="job-positions" element={<JobPositionManagementPage />} />
         </Route>
 

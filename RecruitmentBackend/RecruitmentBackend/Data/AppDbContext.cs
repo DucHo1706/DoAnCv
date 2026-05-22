@@ -1,6 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿﻿﻿﻿using Microsoft.EntityFrameworkCore;
 using RecruitmentBackend.Models;
-using System.Net;
 
 namespace RecruitmentBackend.Data
 {
@@ -8,20 +7,49 @@ namespace RecruitmentBackend.Data
     {
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
-        public DbSet<Job> Jobs { get; set; }
-        public DbSet<CandidateProfile> CandidateProfiles { get; set; }
-        public DbSet<Skill> Skills { get; set; }
-        public DbSet<Category> Categories { get; set; }
+        // 1. Module Account
+        public DbSet<Account> Accounts { get; set; }
+        public DbSet<Candidate> Candidates { get; set; }
+        public DbSet<Recruiter> Recruiters { get; set; }
+        public DbSet<RecruiterBranch> RecruiterBranches { get; set; }
+
+        // 2. Module System
         public DbSet<Branch> Branches { get; set; }
-        public DbSet<JobPosition> JobPositions { get; set; }
+        public DbSet<Category> Categories { get; set; }
+        public DbSet<JobLevel> JobLevels { get; set; }
+        public DbSet<Position> Positions { get; set; }
+
+        // 3. Module Recruitment
+        public DbSet<JobPosting> JobPostings { get; set; }
+        public DbSet<CandidateCV> CandidateCVs { get; set; }
+        public DbSet<Application> Applications { get; set; }
+        public DbSet<AIEvaluation> AIEvaluations { get; set; }
+        public DbSet<JobCriterion> JobCriteria { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            modelBuilder.Entity<CandidateProfile>()
-                .HasOne(c => c.Job)
-                .WithMany(j => j.Candidates)
-                .HasForeignKey(c => c.JobId)
-                .OnDelete(DeleteBehavior.Restrict);
+            base.OnModelCreating(modelBuilder);
+
+            // Cấu hình Khóa chính phức hợp (Composite Key) cho bảng trung gian HR - Chi Nhánh
+            modelBuilder.Entity<RecruiterBranch>()
+                .HasKey(rb => new { rb.RecruiterID, rb.BranchID });
+
+            // Liên kết 1-1 giữa Application và AIEvaluation
+            modelBuilder.Entity<Application>()
+                .HasOne(a => a.AIEvaluation)
+                .WithOne()
+                .HasForeignKey<AIEvaluation>(ai => ai.ApplicationID)
+                .OnDelete(DeleteBehavior.Cascade); // Nếu xóa đơn ứng tuyển thì tự động xóa luôn kết quả đánh giá AI
+            modelBuilder.Entity<Category>()
+             .HasOne(c => c.ParentCategory)
+             .WithMany(c => c.SubCategories)
+             .HasForeignKey(c => c.ParentId)
+             .OnDelete(DeleteBehavior.Restrict);
+            modelBuilder.Entity<JobLevel>()
+    .HasOne(l => l.ParentLevel)
+    .WithMany(l => l.SubLevels)
+    .HasForeignKey(l => l.ParentId)
+    .OnDelete(DeleteBehavior.Restrict);
         }
     }
 }

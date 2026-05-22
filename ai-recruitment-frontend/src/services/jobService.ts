@@ -8,6 +8,7 @@ export interface JobDto {
   branch: BranchDto;
   salaryRange: string;
   isActive: boolean;
+  status: string;
   isApproved: boolean;
   createdAt: string;
   startDate?: string | null;
@@ -18,16 +19,19 @@ export interface JobDto {
 export interface CategoryDto {
   id: string;
   name: string;
+  isActive: boolean;
 }
 
 export interface JobPositionDto {
   id: string;
   name: string;
+  isActive: boolean;
 }
 
 export interface BranchDto {
   id: string;
   name: string;
+  isActive: boolean;
 }
 
 export interface CreateJobPayload {
@@ -39,7 +43,6 @@ export interface CreateJobPayload {
   startDate?: string | null;
   deadline?: string | null;
   maxCandidates?: number | null;
-  categoryIds: string[];
 }
 
 export interface JobReviewResponse {
@@ -50,6 +53,11 @@ export interface JobReviewResponse {
 export const jobService = {
   async getJobs() {
     const response = await axiosClient.get<JobDto[]>("/jobs");
+    return response.data;
+  },
+
+  async getMyJobs() {
+    const response = await axiosClient.get<JobDto[]>("/jobs/my-jobs");
     return response.data;
   },
 
@@ -87,6 +95,16 @@ export const jobService = {
     const response = await axiosClient.get<JobDto[]>("/jobs/pending");
     return response.data;
   },
+
+  async getAdminJobs() {
+    const response = await axiosClient.get<JobDto[]>("/jobs/admin/all");
+    return response.data;
+  },
+
+  async toggleJobStatus(id: string) {
+    const response = await axiosClient.put(`/jobs/${id}/toggle-status`);
+    return response.data;
+  },
 };
 
 export interface BranchPayload {
@@ -111,6 +129,11 @@ export const branchService = {
 
   async deleteBranch(id: string) {
     const response = await axiosClient.delete(`/branches/${id}`);
+    return response.data;
+  },
+
+  async toggleBranchStatus(id: string) {
+    const response = await axiosClient.put(`/branches/${id}/toggle-status`);
     return response.data;
   },
 };
@@ -139,6 +162,11 @@ export const categoryService = {
     const response = await axiosClient.delete(`/categories/${id}`);
     return response.data;
   },
+
+  async toggleCategoryStatus(id: string) {
+    const response = await axiosClient.put(`/categories/${id}/toggle-status`);
+    return response.data;
+  },
 };
 
 export interface JobPositionPayload {
@@ -163,6 +191,11 @@ export const jobPositionService = {
 
   async deleteJobPosition(id: string) {
     const response = await axiosClient.delete(`/jobpositions/${id}`);
+    return response.data;
+  },
+
+  async toggleJobPositionStatus(id: string) {
+    const response = await axiosClient.put(`/jobpositions/${id}/toggle-status`);
     return response.data;
   },
 };

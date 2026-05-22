@@ -1,4 +1,4 @@
-import { CheckOutlined, EyeOutlined } from "@ant-design/icons";
+import { CheckOutlined, EyeOutlined, LockOutlined, UnlockOutlined } from "@ant-design/icons";
 import {
   Button,
   Card,
@@ -8,6 +8,7 @@ import {
   message,
   Modal,
   Row,
+  Popconfirm,
   Space,
   Table,
   Tag,
@@ -49,11 +50,10 @@ function JobApprovalPage() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [jobDetail, setJobDetail] = useState<JobReviewResponse | null>(null);
 
-  const fetchPendingJobs = async () => {
+  const fetchAdminJobs = async () => {
     try {
       setLoading(true);
-      const data: any = await jobService.getPendingJobs();
-      // Bảo vệ giao diện: Chống sập White Screen nếu API trả về Object lỗi
+      const data: any = await jobService.getAdminJobs();
       setJobs(Array.isArray(data) ? data : (data?.$values || []));
     } catch (error) {
       console.error(error);
@@ -64,7 +64,7 @@ function JobApprovalPage() {
   };
 
   useEffect(() => {
-    fetchPendingJobs();
+    fetchAdminJobs();
   }, []);
 
   const tableData: PendingJobTableItem[] = useMemo(() => {
@@ -107,14 +107,7 @@ function JobApprovalPage() {
       setDetailOpen(false);
       setJobDetail(null);
     }
-    jobService
-      .getPendingJobs()
-      .then((data) => {
-        setJobs(data);
-      })
-      .catch((refreshError) => {
-        console.error("Refresh pending jobs failed:", refreshError);
-      });
+    fetchAdminJobs();
   } catch (error: any) {
     console.error("Approve error:", error);
     console.error("Response data:", error?.response?.data);
@@ -131,6 +124,20 @@ function JobApprovalPage() {
     setApprovingId(null);
   }
 };
+
+  const handleToggleStatus = async (id: string) => {
+    try {
+      await jobService.toggleJobStatus(id);
+      message.success("Cập nhật trạng thái thành công");
+      fetchAdminJobs();
+      if (jobDetail?.jobInfo.id === id) {
+        setDetailOpen(false);
+        setJobDetail(null);
+      }
+    } catch (error: any) {
+      message.error("Lỗi khi thay đổi trạng thái!");
+    }
+  };
 
   const columns = [
     {
@@ -163,7 +170,12 @@ function JobApprovalPage() {
     {
       title: "Trạng thái",
       key: "status",
-      render: () => <Tag color="gold">Chờ duyệt</Tag>,
+      render: (_: any, record: any) => {
+        const st = record.raw.status;
+        if (st === "Published") return <Tag color="green">Đã duyệt</Tag>;
+        if (st === "Closed" || st === "Locked") return <Tag color="red">Đã khóa</Tag>;
+        return <Tag color="gold">Chờ duyệt</Tag>;
+      },
     },
     {
       title: "Thao tác",
@@ -173,15 +185,32 @@ function JobApprovalPage() {
           <Button icon={<EyeOutlined />} onClick={() => handleViewJob(record)}>
             Xem
           </Button>
-          <Button
-            type="primary"
-            icon={<CheckOutlined />}
-            loading={approvingId === record.id}
-            disabled={approvingId !== null}
-            onClick={() => handleApproveJob(record)}
-          >
-            Duyệt
-          </Button>
+          {record.raw.status === "Pending" && (
+            <Button
+              type="primary"
+              icon={<CheckOutlined />}
+              loading={approvingId === record.id}
+              disabled={approvingId !== null}
+              onClick={() => handleApproveJob(record)}
+            >
+              Duyệt
+            </Button>
+          )}
+          {(record.raw.status === "Published" || record.raw.status === "Closed") && (
+            <Popconfirm
+              title={record.raw.status === "Published" ? "Bạn có chắc muốn khóa tin này?" : "Mở khóa tin này?"}
+              onConfirm={() => handleToggleStatus(record.id)}
+              okText="Đồng ý"
+              cancelText="Hủy"
+            >
+              <Button
+                icon={record.raw.status === "Published" ? <LockOutlined /> : <UnlockOutlined />}
+                danger={record.raw.status === "Published"}
+              >
+                {record.raw.status === "Published" ? "Khóa" : "Mở khóa"}
+              </Button>
+            </Popconfirm>
+          )}
         </Space>
       ),
     },
@@ -195,15 +224,15 @@ function JobApprovalPage() {
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
         <Col xs={24} sm={12}>
           <StatCard
-            title="Tin chờ duyệt"
+            title="Tổng tin tuyển dụng"
             value={tableData.length}
-            subtitle="Danh sách hiện tại cần xử lý"
+            subtitle="Tất cả các bài đăng"
           />
         </Col>
         <Col xs={24} sm={12}>
           <StatCard
             title="Tin đã duyệt"
-            value={tableData.length}
+            value={tableData.filter((j) => j.raw.status === "Published").length}
             subtitle="Danh sách tin đang được công khai"
           />
         </Col>
@@ -227,7 +256,7 @@ function JobApprovalPage() {
           setJobDetail(null);
         }}
         footer={
-          jobDetail
+          jobDetail && jobDetail.jobInfo.status === "Pending"
             ? [
                 <Button
                   key="approve"
@@ -259,7 +288,13 @@ function JobApprovalPage() {
         {jobDetail && (
           <>
             <Space style={{ marginBottom: 16 }}>
-              <Tag color="gold">Chờ duyệt</Tag>
+              {jobDetail.jobInfo.status === "Published" ? (
+                <Tag color="green">Đã duyệt</Tag>
+              ) : jobDetail.jobInfo.status === "Closed" ? (
+                <Tag color="red">Đã khóa</Tag>
+              ) : (
+                <Tag color="gold">Chờ duyệt</Tag>
+              )}
               <Text type="secondary">
                 Tạo lúc: {formatDate(jobDetail.jobInfo.createdAt)}
               </Text>
@@ -281,8 +316,8 @@ function JobApprovalPage() {
               <Descriptions.Item label="Ngày kết thúc">
                 {formatDate(jobDetail.jobInfo.deadline)}
               </Descriptions.Item>
-              <Descriptions.Item label="Số lượng ứng viên tối đa" span={2}>
-                {jobDetail.jobInfo.maxCandidates ?? "Chưa cập nhật"}
+              <Descriptions.Item label="Số lượng cần tuyển" span={2}>
+                {jobDetail.jobInfo.maxCandidates ?? "Không giới hạn"}
               </Descriptions.Item>
             </Descriptions>
 

@@ -1,8 +1,8 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using RecruitmentBackend.Data;
+using Microsoft.AspNetCore.Authorization;
 using RecruitmentBackend.Interfaces;
-using System;
+using System.Security.Claims;
 using System.Threading.Tasks;
 
 namespace RecruitmentBackend.Controllers
@@ -17,18 +17,15 @@ namespace RecruitmentBackend.Controllers
     [ApiController]
     public class RecruitmentController : ControllerBase
     {
-        private readonly AppDbContext _context;
-        private readonly IAiService _aiService;
-        private readonly IFileService _fileService;
+        private readonly IRecruitmentService _recruitmentService;
 
-        public RecruitmentController(AppDbContext context, IAiService aiService, IFileService fileService)
+        public RecruitmentController(IRecruitmentService recruitmentService)
         {
-            _context = context;
-            _aiService = aiService;
-            _fileService = fileService;
+            _recruitmentService = recruitmentService;
         }
 
         [HttpPost("apply")]
+        [Authorize(Roles = "Candidate")]
         public async Task<IActionResult> ApplyJob([FromForm] ApplyJobRequest request)
         {
             var cvFile = request?.CvFile;
@@ -40,55 +37,39 @@ namespace RecruitmentBackend.Controllers
             if (string.IsNullOrEmpty(jobId))
                 return BadRequest("Mã công việc (JobId) không hợp lệ.");
 
-            try
+            var result = await _recruitmentService.ApplyJobAsync(request, User);
+
+            if (!result.IsSuccess)
             {
-                // 1. Lấy thông tin JD (Job Description) từ Database để AI so khớp
-                var job = await _context.Jobs.FindAsync(jobId);
-                
-                // DÙNG JD GIẢ LẬP ĐỂ TEST GIAO DIỆN:
-                // Nếu DB chưa có Job này (vì đang dùng mock data ở Frontend), ta lấy 1 JD mặc định để AI có cái so sánh.
-                string requirements = job != null 
-                    ? job.Requirements 
-                    : "Tuyển dụng Kỹ sư phần mềm. Yêu cầu thành thạo ReactJS, TypeScript ở Frontend và C#, ASP.NET Core ở Backend. Có kinh nghiệm với SQL Server. Kỹ năng làm việc nhóm tốt.";
-
-                // 2. Upload file CV lên Cloudinary (Trả về link URL an toàn)
-                var cvUrl = await _fileService.SaveFileAsync(cvFile);
-
-                // 3. Gửi file CV sang Python (Gemini AI) để chấm điểm và phân tích
-                var aiResult = await _aiService.GetMatchingScoreAsync(cvFile, requirements);
-
-                // 4. Lưu thông tin ứng viên và kết quả AI vào Database (Chỉ lưu nếu công việc CÓ THẬT trong DB)
-                if (job != null)
-                {
-                    var candidate = new RecruitmentBackend.Models.CandidateProfile
-                    {
-                        Id = Guid.NewGuid().ToString(),
-                        FullName = "Chưa cập nhật", 
-                        Email = aiResult.CandidateInfo?.Email ?? "Chưa có email",
-                        Phone = aiResult.CandidateInfo?.Phone ?? "Chưa có SĐT",
-                        CvFilePath = cvUrl,
-                        JobId = jobId,
-                        // AiScore = aiResult.MatchingResult.Score,
-                        // AiExplanation = aiResult.MatchingResult.Explanation
-                    };
-                    _context.Add(candidate);
-                    await _context.SaveChangesAsync();
-                }
-
-                // 5. Trả kết quả về cho Frontend React để in ra thông báo
-                return Ok(new
-                {
-                    message = "Nộp CV thành công! Trí tuệ nhân tạo đã xử lý xong hồ sơ của bạn.",
-                    cvUrl = cvUrl,
-                    aiAnalysis = aiResult
-                });
+                // Service đã xử lý lỗi, chỉ cần trả về cho client
+                return StatusCode(500, new { message = result.Message });
             }
-            catch (Exception ex)
-            {
-                // Lấy lỗi chi tiết (InnerException) nếu có để dễ gỡ lỗi DB
-                var innerError = ex.InnerException != null ? ex.InnerException.Message : ex.Message;
-                return StatusCode(500, new { message = "Lỗi hệ thống khi xử lý CV", error = innerError });
-            }
+            
+            return Ok(result.Data);
+        }
+
+        // API lấy danh sách Đơn ứng tuyển dành cho HR
+        [HttpGet("hr/applications")]
+        [Authorize(Roles = "Recruiter")]
+        public async Task<IActionResult> GetHrApplications()
+        {
+            var result = await _recruitmentService.GetHrApplicationsAsync(User);
+
+            if (!result.IsSuccess) return Unauthorized(new { message = result.Message });
+            
+            return Ok(result.Data);
+        }
+
+        // API lấy danh sách Đơn ứng tuyển của chính Ứng viên đang đăng nhập
+        [HttpGet("my-applications")]
+        [Authorize(Roles = "Candidate")]
+        public async Task<IActionResult> GetMyApplications()
+        {
+            var result = await _recruitmentService.GetMyApplicationsAsync(User);
+
+            if (!result.IsSuccess) return Unauthorized(new { message = result.Message });
+            
+            return Ok(result.Data);
         }
     }
 }

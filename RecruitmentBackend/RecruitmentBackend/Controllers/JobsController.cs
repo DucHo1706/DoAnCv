@@ -1,6 +1,8 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿﻿﻿﻿﻿﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using RecruitmentBackend.DTOs.Requests;
 using RecruitmentBackend.Interfaces;
+using System.Security.Claims;
 using System.Threading.Tasks;
 using System.Linq;
 
@@ -22,28 +24,12 @@ namespace RecruitmentBackend.Controllers
         public async Task<IActionResult> GetJobs()
         {
             var jobs = await _jobService.GetAllJobsAsync();
-
-            // Ngắt vòng lặp vô hạn (Circular Reference) của Entity Framework
-            var safeJobs = jobs.Select(j => new {
-                id = j.Id,
-                description = j.Description,
-                requirements = j.Requirements,
-                salaryRange = j.SalaryRange,
-                isActive = j.IsActive,
-                isApproved = j.IsApproved,
-                createdAt = j.CreatedAt,
-                startDate = j.StartDate,
-                deadline = j.Deadline,
-                maxCandidates = j.MaxCandidates,
-                position = j.Position != null ? new { id = j.Position.Id, name = j.Position.Name } : null,
-                branch = j.Branch != null ? new { id = j.Branch.Id, name = j.Branch.Name } : null,
-                categories = j.Categories.Select(c => new { id = c.Id, name = c.Name })
-            });
-            return Ok(safeJobs);
+            return Ok(jobs);
         }
 
         // 2. Tạo Job mới (HR tạo tin tuyển dụng)
         [HttpPost]
+        [Authorize(Roles = "Recruiter,Admin")]
         public async Task<IActionResult> CreateJob([FromBody] CreateJobRequest request)
         {
             if (!ModelState.IsValid)
@@ -51,7 +37,8 @@ namespace RecruitmentBackend.Controllers
 
             try
             {
-                var jobId = await _jobService.CreatePendingJobAsync(request);
+                var accountId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var jobId = await _jobService.CreatePendingJobAsync(request, accountId);
                 return Ok(new { message = "Tạo tin tuyển dụng thành công!", id = jobId });
             }
             catch (Exception ex)
@@ -60,31 +47,23 @@ namespace RecruitmentBackend.Controllers
             }
         }
 
+        // API dành riêng cho HR xem danh sách việc làm của chính mình
+        [HttpGet("my-jobs")]
+        [Authorize(Roles = "Recruiter")]
+        public async Task<IActionResult> GetMyJobs()
+        {
+            var accountId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var jobs = await _jobService.GetJobsByRecruiterAsync(accountId);
+            return Ok(jobs);
+        }
+
         // 3. Lấy chi tiết Job cho Modal "Xem chi tiết" của HR
         [HttpGet("{id}/review")]
         public async Task<IActionResult> GetJobReview(string id)
         {
             var reviewResult = await _jobService.ReviewJobAsync(id);
             if (reviewResult == null) return NotFound("Không tìm thấy công việc");
-
-            var j = reviewResult.JobInfo;
-            var safeJobInfo = new
-            {
-                id = j.Id,
-                description = j.Description,
-                requirements = j.Requirements,
-                salaryRange = j.SalaryRange,
-                isActive = j.IsActive,
-                isApproved = j.IsApproved,
-                createdAt = j.CreatedAt,
-                startDate = j.StartDate,
-                deadline = j.Deadline,
-                maxCandidates = j.MaxCandidates,
-                position = j.Position != null ? new { id = j.Position.Id, name = j.Position.Name } : null,
-                branch = j.Branch != null ? new { id = j.Branch.Id, name = j.Branch.Name } : null,
-                categories = j.Categories.Select(c => new { id = c.Id, name = c.Name })
-            };
-            return Ok(new { jobInfo = safeJobInfo, wordsToHighlight = reviewResult.WordsToHighlight });
+            return Ok(reviewResult);
         }
 
         // 4. Duyệt Job và đồng bộ từ khóa cho AI
@@ -92,9 +71,9 @@ namespace RecruitmentBackend.Controllers
         public async Task<IActionResult> ApproveJob(string id)
         {
             var success = await _jobService.ApproveJobAndSyncAiAsync(id);
-            if (!success) return BadRequest("Không thể duyệt công việc này hoặc công việc đã được duyệt.");
+            if (!success) return BadRequest("Không thể duyệt công việc này hoặc đã được duyệt.");
 
-            return Ok(new { message = "Đã duyệt bài đăng! AI đã cập nhật thêm các từ khóa mới." });
+            return Ok(new { message = "Đã duyệt bài đăng thành công!" });
         }
 
         // 5. Lấy danh sách Job đang chờ duyệt
@@ -102,24 +81,26 @@ namespace RecruitmentBackend.Controllers
         public async Task<IActionResult> GetPendingJobs()
         {
             var jobs = await _jobService.GetPendingJobsAsync();
+            return Ok(jobs);
+        }
 
-            // Ngắt vòng lặp vô hạn (Circular Reference) của Entity Framework
-            var safeJobs = jobs.Select(j => new {
-                id = j.Id,
-                description = j.Description,
-                requirements = j.Requirements,
-                salaryRange = j.SalaryRange,
-                isActive = j.IsActive,
-                isApproved = j.IsApproved,
-                createdAt = j.CreatedAt,
-                startDate = j.StartDate,
-                deadline = j.Deadline,
-                maxCandidates = j.MaxCandidates,
-                position = j.Position != null ? new { id = j.Position.Id, name = j.Position.Name } : null,
-                branch = j.Branch != null ? new { id = j.Branch.Id, name = j.Branch.Name } : null,
-                categories = j.Categories.Select(c => new { id = c.Id, name = c.Name })
-            });
-            return Ok(safeJobs);
+        // 6. Lấy toàn bộ Job cho Admin (Gồm cả duyệt và chưa duyệt)
+        [HttpGet("admin/all")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetAdminJobs()
+        {
+            var jobs = await _jobService.GetAdminJobsAsync();
+            return Ok(jobs);
+        }
+
+        // 7. Khóa / Mở khóa Job
+        [HttpPut("{id}/toggle-status")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> ToggleJobStatus(string id)
+        {
+            var success = await _jobService.ToggleJobStatusAsync(id);
+            if (!success) return BadRequest("Không thể thay đổi trạng thái của công việc này.");
+            return Ok(new { message = "Cập nhật trạng thái thành công!" });
         }
     }
 }

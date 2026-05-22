@@ -1,8 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using RecruitmentBackend.Data;
 using RecruitmentBackend.DTOs.Requests;
-using RecruitmentBackend.Models;
+using RecruitmentBackend.Interfaces;
+using System.Threading.Tasks;
 
 namespace RecruitmentBackend.Controllers
 {
@@ -10,20 +9,17 @@ namespace RecruitmentBackend.Controllers
     [ApiController]
     public class BranchesController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        private readonly IBranchService _branchService;
 
-        public BranchesController(AppDbContext context)
+        public BranchesController(IBranchService branchService)
         {
-            _context = context;
+            _branchService = branchService;
         }
 
         [HttpGet]
         public async Task<IActionResult> GetBranches()
         {
-            var branches = await _context.Branches
-                .OrderBy(b => b.Name)
-                .ToListAsync();
-
+            var branches = await _branchService.GetBranchesAsync();
             return Ok(branches);
         }
 
@@ -33,24 +29,11 @@ namespace RecruitmentBackend.Controllers
             if (!ModelState.IsValid || string.IsNullOrWhiteSpace(request.Name))
                 return BadRequest("Tên chi nhánh không được để trống");
 
-            var normalizedName = request.Name.Trim();
-
-            var exists = await _context.Branches
-                .AnyAsync(b => b.Name.ToLower() == normalizedName.ToLower());
-
-            if (exists)
-                return BadRequest("Chi nhánh đã tồn tại");
-
-            var branch = new Branch
-            {
-                Id = Guid.NewGuid().ToString(),
-                Name = normalizedName
-            };
-
-            _context.Branches.Add(branch);
-            await _context.SaveChangesAsync();
-
-            return Ok(branch);
+            var result = await _branchService.CreateBranchAsync(request);
+            
+            if (result.IsSuccess == false) return BadRequest(result.Message);
+            
+            return Ok(result.Data);
         }
 
         [HttpPut("{id}")]
@@ -59,39 +42,25 @@ namespace RecruitmentBackend.Controllers
             if (!ModelState.IsValid || string.IsNullOrWhiteSpace(request.Name))
                 return BadRequest("Tên chi nhánh không được để trống");
 
-            var branch = await _context.Branches.FindAsync(id);
-            if (branch == null)
-                return NotFound("Không tìm thấy chi nhánh");
-
-            var normalizedName = request.Name.Trim();
-
-            var exists = await _context.Branches
-                .AnyAsync(b => b.Id != id && b.Name.ToLower() == normalizedName.ToLower());
-
-            if (exists)
-                return BadRequest("Tên chi nhánh đã tồn tại");
-
-            branch.Name = normalizedName;
-            await _context.SaveChangesAsync();
-
-            return Ok(branch);
+            var result = await _branchService.UpdateBranchAsync(id, request);
+            
+            if (result.IsSuccess == false)
+            {
+                if (result.Message == "Không tìm thấy chi nhánh") return NotFound(result.Message);
+                return BadRequest(result.Message);
+            }
+            
+            return Ok(result.Data);
         }
 
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteBranch(string id)
+        [HttpPut("{id}/toggle-status")]
+        public async Task<IActionResult> ToggleBranchStatus(string id)
         {
-            var branch = await _context.Branches.FindAsync(id);
-            if (branch == null)
-                return NotFound("Không tìm thấy chi nhánh");
-
-            var isUsed = await _context.Jobs.AnyAsync(j => j.BranchId == id);
-            if (isUsed)
-                return BadRequest("Chi nhánh đang được sử dụng trong tin tuyển dụng, không thể xóa");
-
-            _context.Branches.Remove(branch);
-            await _context.SaveChangesAsync();
-
-            return Ok(new { message = "Xóa chi nhánh thành công" });
+            var result = await _branchService.ToggleBranchStatusAsync(id);
+            
+            if (result.IsSuccess == false) return NotFound(result.Message);
+            
+            return Ok(result.Data);
         }
     }
 }

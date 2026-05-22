@@ -1,15 +1,82 @@
-import { Card, Typography } from "antd";
+import { RobotOutlined } from "@ant-design/icons";
+import { Card, Typography, Table, Tag, message } from "antd";
+import { useEffect, useState } from "react";
+import { recruitmentService } from "../../services/recruitmentService";
+import PageContainer from "../../components/common/PageContainer";
 
 const { Title, Paragraph } = Typography;
 
 function ApplicationStatusPage() {
+  const [applications, setApplications] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchMyApps = async () => {
+      try {
+        setLoading(true);
+        const data: any = await recruitmentService.getMyApplications();
+        setApplications(Array.isArray(data) ? data : data?.$values || []);
+      } catch (error) {
+        message.error("Không tải được lịch sử ứng tuyển.");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchMyApps();
+  }, []);
+
+  const columns = [
+    {
+      title: "Vị trí ứng tuyển",
+      dataIndex: "jobTitle",
+      key: "jobTitle",
+      render: (text: string) => <Text strong>{text}</Text>,
+    },
+    {
+      title: "Điểm AI Đánh giá",
+      dataIndex: "aiScore",
+      key: "aiScore",
+      render: (score: number) => {
+        let color = "success";
+        if (score < 50) color = "error";
+        else if (score < 75) color = "warning";
+        return (
+          <Tag color={color} style={{ fontSize: "14px", padding: "4px 8px" }}>
+            <RobotOutlined style={{ marginRight: 4 }} />
+            {score}/100
+          </Tag>
+        );
+      },
+    },
+    {
+      title: "Nhận xét của AI",
+      dataIndex: "aiReason",
+      key: "aiReason",
+      render: (text: string) => <Text type="secondary" ellipsis={{ tooltip: text }} style={{ maxWidth: 350 }}>{text}</Text>,
+    },
+    {
+      title: "Trạng thái",
+      key: "status",
+      render: () => <Tag color="blue">Đã gửi tới HR</Tag>,
+    }
+  ];
+
   return (
-    <div style={{ padding: 24 }}>
+    <PageContainer
+      title="Lịch sử Ứng tuyển"
+      subtitle="Theo dõi các công việc bạn đã nộp CV và xem lại đánh giá chi tiết từ AI."
+    >
       <Card>
-        <Title level={2}>Trạng thái ứng tuyển</Title>
-        <Paragraph>Trang trạng thái ứng tuyển base.</Paragraph>
+        <Table 
+          columns={columns} 
+          dataSource={applications} 
+          rowKey="id" 
+          loading={loading}
+          pagination={{ pageSize: 10 }}
+          locale={{ emptyText: "Bạn chưa nộp CV vào vị trí nào." }}
+        />
       </Card>
-    </div>
+    </PageContainer>
   );
 }
 

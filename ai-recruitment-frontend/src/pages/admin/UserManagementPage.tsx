@@ -3,22 +3,55 @@ import { LockOutlined, EditOutlined, PlusOutlined, UnlockOutlined, DeleteOutline
 import { useState } from "react";
 import PageContainer from "../../components/common/PageContainer";
 import TableToolbar from "../../components/common/TableToolbar";
+import { userService } from "../../services/userService";
+import { branchService } from "../../services/jobService";
+import { useEffect } from "react";
 
 const { Text } = Typography;
 
-const mockUsers = [
-  { id: "1", name: "Nguyễn Văn Admin", email: "admin@recruitment.com", role: "Admin", status: "Active", branches: [] },
-  { id: "2", name: "Trần Thị HR", email: "hr_tran@company.com", role: "Recruiter", status: "Active", branches: ["Trụ sở Hồ Chí Minh", "Chi nhánh Đà Nẵng"] },
-  { id: "3", name: "Lê Minh HR 2", email: "leminh_hr@company.com", role: "Recruiter", status: "Active", branches: ["Chi nhánh Hà Nội"] },
-  { id: "4", name: "Phạm Văn Tuyển Dụng", email: "phamvan@hr.com", role: "Recruiter", status: "Banned", branches: ["Chi nhánh Đà Nẵng"] },
-  { id: "5", name: "Hoàng Ứng Viên", email: "hoang_candidate@gmail.com", role: "Candidate", status: "Active", branches: [] },
-];
-
 function UserManagementPage() {
-  const [users, setUsers] = useState(mockUsers);
+  const [users, setUsers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<any>(null);
+  const [branches, setBranches] = useState<any[]>([]);
   const [form] = Form.useForm();
+
+  const fetchUsers = async () => {
+    setLoading(true);
+    try {
+      const data = await userService.getUsers();
+      // Đảm bảo data là một mảng trước khi dùng .map() (Xử lý trường hợp C# bọc bằng $values)
+      const actualData = Array.isArray(data) ? data : (data?.$values || []);
+      // Map dữ liệu từ Backend C# sang đúng cấu trúc Frontend đang dùng
+      const formattedData = actualData.map((item: any) => ({
+        id: item.id,
+        name: item.fullName || "Chưa cập nhật",
+        email: item.email,
+        role: item.role,
+        status: item.status,
+        branches: item.branchIds || []
+      }));
+      setUsers(formattedData);
+    } catch (error) {
+      console.error(error);
+      message.error("Lỗi khi tải danh sách người dùng!");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchBranches = async () => {
+    try {
+      const data = await branchService.getBranches();
+      setBranches(data);
+    } catch (e) { }
+  };
+
+  useEffect(() => {
+    fetchUsers();
+    fetchBranches();
+  }, []);
 
   // Mở Form Thêm Mới
   const handleOpenCreate = () => {
@@ -39,24 +72,41 @@ function UserManagementPage() {
     try {
       const values = await form.validateFields();
       if (editingUser) {
-        setUsers(users.map((u) => (u.id === editingUser.id ? { ...u, ...values } : u)));
-        message.success("Cập nhật thông tin thành công!");
+        const payload = {
+          name: values.name,
+          branchIds: values.branches || []
+        };
+        await userService.updateUser(editingUser.id, payload);
+        message.success("Cập nhật thông tin tài khoản thành công!");
+        setIsModalOpen(false);
+        fetchUsers(); // Tải lại danh sách
       } else {
-        const newUser = { id: Date.now().toString(), status: "Active", ...values };
-        setUsers([newUser, ...users]);
-        message.success("Tạo tài khoản thành công!");
+        const payload = {
+          name: values.name,
+          email: values.email,
+          password: values.password,
+          role: values.role,
+          branchIds: values.branches || []
+        };
+        await userService.createUser(payload);
+        message.success("Tạo tài khoản thành công! Dữ liệu đã được lưu vào hệ thống.");
+        setIsModalOpen(false);
+        fetchUsers(); // Refresh danh sách
       }
-      setIsModalOpen(false);
     } catch (error) {
-      console.error("Validation Failed:", error);
+      message.error((error as any).response?.data?.message || "Lỗi khi lưu dữ liệu");
     }
   };
 
   // Xử lý Khóa/Mở khóa tài khoản
-  const handleToggleStatus = (id: string, currentStatus: string) => {
-    const newStatus = currentStatus === "Active" ? "Banned" : "Active";
-    setUsers(users.map((u) => (u.id === id ? { ...u, status: newStatus } : u)));
-    message.success(`Đã ${newStatus === "Active" ? "mở khóa" : "khóa"} tài khoản!`);
+  const handleToggleStatus = async (id: string, currentStatus: string) => {
+    try {
+      const result = await userService.toggleUserStatus(id);
+      setUsers(users.map((u) => (u.id === id ? { ...u, status: result.newStatus } : u)));
+      message.success(result.message || "Thao tác thành công!");
+    } catch (error: any) {
+      message.error(error.response?.data?.message || "Lỗi khi thay đổi trạng thái!");
+    }
   };
 
   const columns = [
@@ -95,11 +145,14 @@ function UserManagementPage() {
       title: "Chi nhánh phụ trách",
       dataIndex: "branches",
       key: "branches",
-      render: (branches: string[], record: any) => {
+      render: (branchIds: string[], record: any) => {
         if (record.role !== "Recruiter") return <Text type="secondary">Không áp dụng</Text>;
-        if (!branches || branches.length === 0) return <Text type="secondary">Chưa phân công</Text>;
+        if (!branchIds || branchIds.length === 0) return <Text type="secondary">Chưa phân công</Text>;
         return <Space wrap size={[0, 4]}>
-          {branches.map((b) => <Tag key={b} color="blue">{b}</Tag>)}
+          {branchIds.map((id) => {
+            const bName = branches.find(b => b.id === id)?.name || "Chi nhánh ẩn";
+            return <Tag key={id} color="blue">{bName}</Tag>;
+          })}
         </Space>;
       },
     },
@@ -189,6 +242,7 @@ function UserManagementPage() {
           columns={columns} 
           dataSource={users} 
           rowKey="id" 
+          loading={loading}
           pagination={{ pageSize: 5 }}
         />
       </Card>
@@ -207,8 +261,8 @@ function UserManagementPage() {
           <Form.Item label="Họ và tên" name="name" rules={[{ required: true, message: "Vui lòng nhập họ tên" }]}>
             <Input placeholder="Nhập họ và tên..." />
           </Form.Item>
-          <Form.Item label="Email" name="email" rules={[{ required: true, type: "email", message: "Vui lòng nhập email hợp lệ" }]}>
-            <Input placeholder="Nhập địa chỉ email..." />
+        <Form.Item label="Email" name="email" rules={[{ required: true, type: "email", message: "Vui lòng nhập email hợp lệ" }]}>
+          <Input placeholder="Nhập địa chỉ email..." disabled={!!editingUser} />
           </Form.Item>
           {!editingUser && (
             <Form.Item label="Mật khẩu" name="password" rules={[{ required: true, message: "Vui lòng nhập mật khẩu" }]}>
@@ -216,7 +270,7 @@ function UserManagementPage() {
             </Form.Item>
           )}
           <Form.Item label="Vai trò" name="role" rules={[{ required: true, message: "Vui lòng chọn vai trò" }]}>
-            <Select placeholder="Chọn vai trò">
+          <Select placeholder="Chọn vai trò" disabled={!!editingUser}>
               <Select.Option value="Admin">Quản trị viên (Admin)</Select.Option>
               <Select.Option value="Recruiter">Nhà tuyển dụng (HR)</Select.Option>
               <Select.Option value="Candidate">Ứng viên (Candidate)</Select.Option>
@@ -230,9 +284,9 @@ function UserManagementPage() {
               getFieldValue("role") === "Recruiter" ? (
                 <Form.Item label="Chi nhánh phụ trách (Có thể chọn nhiều)" name="branches" rules={[{ required: true, message: "Vui lòng chọn ít nhất 1 chi nhánh" }]}>
                   <Select mode="multiple" placeholder="Chọn chi nhánh">
-                    <Select.Option value="Trụ sở Hồ Chí Minh">Trụ sở Hồ Chí Minh</Select.Option>
-                    <Select.Option value="Chi nhánh Hà Nội">Chi nhánh Hà Nội</Select.Option>
-                    <Select.Option value="Chi nhánh Đà Nẵng">Chi nhánh Đà Nẵng</Select.Option>
+                    {branches.filter(b => b.isActive).map(b => (
+                      <Select.Option key={b.id} value={b.id}>{b.name}</Select.Option>
+                    ))}
                   </Select>
                 </Form.Item>
               ) : null

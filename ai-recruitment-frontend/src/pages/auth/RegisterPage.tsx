@@ -6,23 +6,49 @@ import {
 } from "@ant-design/icons";
 import { Button, Form, Input, Typography, message } from "antd";
 import { useNavigate } from "react-router-dom";
+import { userService } from "../../services/userService";
+import { useState } from "react";
 
 const { Title, Paragraph, Link, Text } = Typography;
 
 function RegisterPage() {
   const navigate = useNavigate();
   const [messageApi, contextHolder] = message.useMessage();
+  const [loading, setLoading] = useState(false);
 
-  const handleRegister = () => {
-    messageApi.success("Đăng ký thành công (demo). Vui lòng đăng nhập.");
-    navigate("/login");
+  const handleRegister = async (values: any) => {
+    setLoading(true);
+    try {
+      await userService.registerCandidate({
+        name: values.fullName,
+        email: values.email,
+        password: values.password,
+        role: "Candidate", // Bổ sung vai trò mặc định để vượt qua Validation
+        branchIds: [],     // Bổ sung mảng rỗng vì Ứng viên không cần chi nhánh
+      });
+      messageApi.success("Đăng ký thành công! Vui lòng đăng nhập hệ thống.");
+      navigate("/login");
+    } catch (error: any) {
+      const responseData = error.response?.data;
+      if (responseData?.errors) {
+        // Lấy danh sách các lỗi validation từ ASP.NET Core và gom thành chuỗi
+        const errorMessages = Object.values(responseData.errors).flat().join(' - ');
+        messageApi.error(errorMessages);
+      } else {
+        // Bắt lỗi logic từ Service (Ví dụ: Email đã tồn tại)
+        messageApi.error(responseData?.message || responseData || "Đăng ký thất bại. Vui lòng kiểm tra lại.");
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <>
       {contextHolder}
 
-      <div>
+      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "100vh", background: "#f8fafc" }}>
+        <div style={{ background: "#fff", padding: "40px", borderRadius: "12px", boxShadow: "0 4px 12px rgba(0,0,0,0.05)", width: "100%", maxWidth: "420px" }}>
         <Text
           style={{
             color: "#2563EB",
@@ -75,18 +101,6 @@ function RegisterPage() {
           </Form.Item>
 
           <Form.Item
-            label="Vai trò"
-            name="role"
-            rules={[{ required: true, message: "Vui lòng nhập vai trò" }]}
-          >
-            <Input
-              size="large"
-              prefix={<TeamOutlined style={{ color: "#94A3B8" }} />}
-              placeholder="Ví dụ: Candidate / Recruiter"
-            />
-          </Form.Item>
-
-          <Form.Item
             label="Mật khẩu"
             name="password"
             rules={[
@@ -127,7 +141,7 @@ function RegisterPage() {
           </Form.Item>
 
           <Form.Item style={{ marginBottom: 16 }}>
-            <Button type="primary" htmlType="submit" block size="large">
+            <Button type="primary" htmlType="submit" block size="large" loading={loading}>
               Đăng ký
             </Button>
           </Form.Item>
@@ -137,6 +151,7 @@ function RegisterPage() {
           Đã có tài khoản?{" "}
           <Link onClick={() => navigate("/login")}>Đăng nhập ngay</Link>
         </Paragraph>
+        </div>
       </div>
     </>
   );

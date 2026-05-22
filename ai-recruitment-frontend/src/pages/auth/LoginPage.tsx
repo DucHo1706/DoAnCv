@@ -1,19 +1,36 @@
 import { LockOutlined, MailOutlined } from "@ant-design/icons";
 import { Button, Form, Input, Typography, message } from "antd";
 import { useNavigate } from "react-router-dom";
+import { authService } from "../../services/authService";
+import { useState } from "react";
 
 const { Title, Paragraph, Link, Text } = Typography;
 
 function LoginPage() {
   const navigate = useNavigate();
   const [messageApi, contextHolder] = message.useMessage();
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = (values: any) => {
-    console.log("Thông tin đăng nhập:", values);
-    messageApi.success("Đăng nhập thành công! Đang chuyển vào hệ thống...");
-    
-    // Chuyển hướng vào trang quản lý của HR
-    navigate("/recruiter/dashboard");
+  const handleLogin = async (values: any) => {
+    setLoading(true);
+    try {
+      const response = await authService.login(values);
+      messageApi.success("Đăng nhập thành công! Đang chuyển vào hệ thống...");
+      
+      // Kiểm tra Vai trò (Role) do Backend trả về để điều hướng cho đúng
+      if (response.role === "Admin") {
+        navigate("/admin/dashboard");
+      } else if (response.role === "Recruiter") {
+        navigate("/recruiter/dashboard");
+      } else {
+        navigate("/"); // Trở về trang chủ nếu là Candidate
+      }
+    } catch (error: any) {
+      console.error("Lỗi đăng nhập:", error);
+      messageApi.error(error.response?.data?.message || "Đăng nhập thất bại. Vui lòng kiểm tra lại.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -63,7 +80,9 @@ function LoginPage() {
             </Form.Item>
 
             <Form.Item style={{ marginBottom: 16 }}>
-              <Button type="primary" htmlType="submit" block size="large">Đăng nhập</Button>
+              <Button type="primary" htmlType="submit" block size="large" loading={loading}>
+                Đăng nhập
+              </Button>
             </Form.Item>
 
             <Button block size="large" type="link" onClick={() => navigate("/forgot-password")} style={{ marginBottom: 8 }}>Quên mật khẩu?</Button>

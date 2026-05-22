@@ -1,4 +1,4 @@
-import { EditOutlined, EyeOutlined, PlusOutlined } from "@ant-design/icons";
+import { EditOutlined, EyeOutlined, PlusOutlined, DeleteOutlined } from "@ant-design/icons";
 import {
   Button,
   Card,
@@ -6,9 +6,6 @@ import {
   DatePicker,
   Descriptions,
   Divider,
-  Form,
-  Input,
-  InputNumber,
   message,
   Modal,
   Row,
@@ -19,7 +16,8 @@ import {
   Typography,
 } from "antd";
 import dayjs from "dayjs";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import PageContainer from "../../components/common/PageContainer";
 import StatCard from "../../components/common/StatCard";
 import TableToolbar from "../../components/common/TableToolbar";
@@ -31,7 +29,6 @@ import {
 import type {
   BranchDto,
   CategoryDto,
-  CreateJobPayload,
   JobDto,
   JobPositionDto,
   JobReviewResponse,
@@ -69,27 +66,22 @@ function getStatusMeta(status: JobStatus) {
 }
 
 function JobManagementPage() {
-  const [openModal, setOpenModal] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
   const [jobs, setJobs] = useState<JobDtoExtended[]>([]);
-  const [form] = Form.useForm();
+  const navigate = useNavigate();
 
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
   const [jobDetail, setJobDetail] = useState<JobReviewResponse | null>(null);
 
   // Dropdown data từ API
-  const [categories, setCategories] = useState<CategoryDto[]>([]);
-  const [positions, setPositions] = useState<JobPositionDto[]>([]);
-  const [branches, setBranches] = useState<BranchDto[]>([]);
-  const [dropdownLoading, setDropdownLoading] = useState(false);
+  const [categories, setCategories] = useState<CategoryDto[]>([]); // For filter dropdown
 
   // ── Fetch danh sách tin ────────────────────────────────
   const fetchJobs = async () => {
     try {
       setLoading(true);
-      const data: any = await jobService.getJobs();
+      const data: any = await jobService.getMyJobs(); // Chỉ lấy công việc của HR này
       setJobs(Array.isArray(data) ? data : (data?.$values || []));
     } catch {
       message.error("Không tải được danh sách tin tuyển dụng");
@@ -98,98 +90,32 @@ function JobManagementPage() {
     }
   };
 
-  // ── Fetch dropdown data khi mở modal tạo tin ──────────
-  const fetchDropdownData = async () => {
-    try {
-      setDropdownLoading(true);
-      const [posData, branchData, cateData] = await Promise.all([
-        jobPositionService.getJobPositions(),
-        branchService.getBranches(),
-        jobService.getCategories(),
-      ]);
-      setPositions(posData);
-      setBranches(branchData);
-      setCategories(cateData);
-    } catch {
-      message.error("Không tải được dữ liệu dropdown");
-    } finally {
-      setDropdownLoading(false);
-    }
-  };
-
   useEffect(() => {
     fetchJobs();
+    // Fetch categories for filter dropdown
+    jobService.getCategories().then(data => setCategories(data)).catch(() => message.error("Lỗi tải danh sách lĩnh vực"));
   }, []);
 
-  const handleOpenCreateModal = () => {
-    form.resetFields();
-    setOpenModal(true);
-    fetchDropdownData();
-  };
-
   // ── Table data ─────────────────────────────────────────
-  const tableData: JobTableItem[] = useMemo(() => {
-    return jobs.map((job) => {
-      const status: JobStatus = job.isApproved ? "approved" : "pending";
-      const categoryNames =
-        job.categories && job.categories.length > 0
-          ? job.categories.map((c) => c.name).join(", ")
-          : "Chưa cập nhật";
+  const tableData: JobTableItem[] = jobs.map((job) => {
+    const status: JobStatus = job.isApproved ? "approved" : "pending";
+    const categoryNames =
+      job.categories && job.categories.length > 0
+        ? job.categories.map((c) => c.name).join(", ")
+        : "Chưa cập nhật";
 
-      return {
-        id: job.id,
-        title: job.position?.name || "Chưa cập nhật",
-        field: categoryNames,
-        location: job.branch?.name || "Chưa cập nhật",
-        status,
-        raw: job,
-      };
-    });
-  }, [jobs]);
+    return {
+      id: job.id,
+      title: job.position?.name || "Chưa cập nhật",
+      field: categoryNames,
+      location: job.branch?.name || "Chưa cập nhật",
+      status,
+      raw: job,
+    };
+  });
 
   const approvedJobs = tableData.filter((j) => j.status === "approved").length;
   const pendingJobs = tableData.filter((j) => j.status === "pending").length;
-
-  // ── Tạo tin tuyển dụng ────────────────────────────────
-  const handleCreateJob = async () => {
-    try {
-      const values = await form.validateFields();
-
-      const payload: CreateJobPayload = {
-        positionId: values.positionId,
-        branchId: values.branchId,
-        description: values.description,
-        requirements: values.requirements,
-        salaryRange: values.salaryRange,
-        startDate: values.startDate
-          ? dayjs(values.startDate).toISOString()
-          : null,
-        deadline: values.deadline
-          ? dayjs(values.deadline).toISOString()
-          : null,
-        maxCandidates: values.maxCandidates ?? null,
-        categoryIds: values.categoryIds || [],
-      };
-
-      setSubmitting(true);
-      await jobService.createJob(payload);
-      message.success("Tạo tin tuyển dụng thành công, bài đang chờ duyệt");
-
-      form.resetFields();
-      setOpenModal(false);
-      await fetchJobs();
-    } catch (error: any) {
-      if (error?.response) {
-        const msg =
-          error.response.data?.message ||
-          error.response.data ||
-          "Tạo tin tuyển dụng thất bại";
-        message.error(typeof msg === "string" ? msg : "Tạo tin tuyển dụng thất bại");
-      }
-    } finally {
-      setSubmitting(false);
-    }
-  };
 
   // ── Xem chi tiết ──────────────────────────────────────
   const handleViewJob = async (record: JobTableItem) => {
@@ -261,7 +187,7 @@ function JobManagementPage() {
         <Button
           type="primary"
           icon={<PlusOutlined />}
-          onClick={handleOpenCreateModal}
+          onClick={() => navigate("/recruiter/jobs/create")}
         >
           Tạo tin tuyển dụng
         </Button>
@@ -327,121 +253,6 @@ function JobManagementPage() {
         />
       </Card>
 
-      {/* ── Modal tạo tin ── */}
-      <Modal
-        title="Tạo tin tuyển dụng"
-        open={openModal}
-        onCancel={() => setOpenModal(false)}
-        onOk={handleCreateJob}
-        confirmLoading={submitting}
-        okText="Gửi duyệt"
-        cancelText="Hủy"
-        width={640}
-      >
-        <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
-          <Form.Item
-            label="Vị trí tuyển dụng"
-            name="positionId"
-            rules={[{ required: true, message: "Vui lòng chọn vị trí" }]}
-          >
-            <Select
-              placeholder="Chọn vị trí tuyển dụng"
-              showSearch
-              loading={dropdownLoading}
-              filterOption={(input, option) =>
-                (option?.label ?? "")
-                  .toLowerCase()
-                  .includes(input.toLowerCase())
-              }
-              options={positions.map((p) => ({
-                label: p.name,
-                value: p.id,
-              }))}
-            />
-          </Form.Item>
-
-          <Form.Item label="Lĩnh vực" name="categoryIds">
-            <Select
-              mode="multiple"
-              placeholder="Chọn lĩnh vực (không bắt buộc)"
-              loading={dropdownLoading}
-              options={categories.map((c) => ({
-                label: c.name,
-                value: c.id,
-              }))}
-            />
-          </Form.Item>
-
-          <Form.Item
-            label="Địa điểm"
-            name="branchId"
-            rules={[{ required: true, message: "Vui lòng chọn chi nhánh" }]}
-          >
-            <Select
-              placeholder="Chọn chi nhánh làm việc"
-              loading={dropdownLoading}
-              options={branches.map((b) => ({
-                label: b.name,
-                value: b.id,
-              }))}
-            />
-          </Form.Item>
-
-          <Form.Item
-            label="Mức lương"
-            name="salaryRange"
-            rules={[{ required: true, message: "Vui lòng nhập mức lương" }]}
-          >
-            <Input placeholder="Ví dụ: 15 - 25 triệu" />
-          </Form.Item>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item label="Ngày bắt đầu nhận CV" name="startDate">
-                <DatePicker
-                  style={{ width: "100%" }}
-                  format="DD/MM/YYYY"
-                  placeholder="Chọn ngày bắt đầu"
-                />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item label="Hạn chót nộp CV" name="deadline">
-                <DatePicker
-                  style={{ width: "100%" }}
-                  format="DD/MM/YYYY"
-                  placeholder="Chọn hạn chót"
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Form.Item label="Số lượng ứng viên tối đa" name="maxCandidates">
-            <InputNumber
-              style={{ width: "100%" }}
-              min={1}
-              placeholder="Ví dụ: 20"
-            />
-          </Form.Item>
-
-          <Form.Item
-            label="Mô tả công việc"
-            name="description"
-            rules={[{ required: true, message: "Vui lòng nhập mô tả công việc" }]}
-          >
-            <Input.TextArea rows={4} placeholder="Nhập mô tả công việc..." />
-          </Form.Item>
-
-          <Form.Item
-            label="Yêu cầu"
-            name="requirements"
-            rules={[{ required: true, message: "Vui lòng nhập yêu cầu" }]}
-          >
-            <Input.TextArea rows={4} placeholder="Nhập yêu cầu công việc..." />
-          </Form.Item>
-        </Form>
-      </Modal>
-
       {/* ── Modal xem chi tiết ── */}
       <Modal
         title="Chi tiết tin tuyển dụng"
@@ -483,7 +294,7 @@ function JobManagementPage() {
               <Descriptions.Item label="Hạn chót">
                 {formatDate(jobDetail.jobInfo.deadline)}
               </Descriptions.Item>
-              <Descriptions.Item label="Số lượng tối đa" span={2}>
+              <Descriptions.Item label="Số lượng cần tuyển" span={2}>
                 {jobDetail.jobInfo.maxCandidates ?? "Không giới hạn"}
               </Descriptions.Item>
             </Descriptions>
@@ -520,6 +331,26 @@ function JobManagementPage() {
                 )}
               </div>
             </div>
+
+            {/* Hiển thị tiêu chí đánh giá nếu có */}
+            {(jobDetail.jobInfo as any).criteria?.length > 0 && (
+              <div style={{ marginTop: 24 }}>
+                <Text strong>Tiêu chí đánh giá AI (Trọng số %)</Text>
+                <div style={{ marginTop: 8 }}>
+                  <Table 
+                    size="small" 
+                    columns={[
+                      { title: "Tên tiêu chí", dataIndex: "name", key: "name" },
+                      { title: "Trọng số", dataIndex: "weight", key: "weight", render: (val) => <Tag color="blue">{val}%</Tag> }
+                    ]} 
+                    dataSource={(jobDetail.jobInfo as any).criteria} 
+                    rowKey="name" 
+                    pagination={false} 
+                    bordered
+                  />
+                </div>
+              </div>
+            )}
           </>
         )}
       </Modal>

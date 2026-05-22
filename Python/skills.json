@@ -1,7 +1,3 @@
 [
-  "python",
-  "react",
-  "langchain",
-  "pinecone",
-  "fastapi"
+  "string"
 ]

@@ -1,12 +1,30 @@
 import { Layout, Menu, Typography } from "antd";
-import { Link, Outlet, useLocation } from "react-router-dom";
+import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { authService } from "../../services/authService";
+import { useEffect, useState } from "react";
 
 const { Header, Content, Footer, Sider } = Layout;
 const { Title } = Typography;
 
 function MainLayout() {
   const location = useLocation();
+  const navigate = useNavigate();
   const isAdminRoute = location.pathname.startsWith('/admin');
+  const [currentUser, setCurrentUser] = useState<any>(null);
+
+  useEffect(() => {
+    const user = authService.getCurrentUser();
+    if (!user) {
+      navigate("/login");
+    } else {
+      setCurrentUser(user);
+    }
+  }, [navigate]);
+
+  const handleLogout = (e: any) => {
+    e.preventDefault();
+    authService.logout();
+  };
 
   const hrMenuItems = [
     {
@@ -16,6 +34,10 @@ function MainLayout() {
     {
       key: "/recruiter/jobs",
       label: <Link to="/recruiter/jobs">Quản lý Tin Tuyển Dụng</Link>,
+    },
+    {
+      key: "/recruiter/applications",
+      label: <Link to="/recruiter/applications">Quản lý Hồ sơ Ứng tuyển</Link>,
     },
     {
       key: "/recruiter/candidates",
@@ -47,6 +69,10 @@ function MainLayout() {
   {
     key: "/admin/categories",
     label: <Link to="/admin/categories">Quản lý Lĩnh Vực</Link>,
+  },
+  {
+    key: "/admin/job-levels",
+    label: <Link to="/admin/job-levels">Quản lý Cấp Bậc</Link>,
   },
   {
     key: "/admin/job-positions",
@@ -81,8 +107,10 @@ function MainLayout() {
       <Layout>
         <Header style={{ background: "#fff", padding: "0 24px", borderBottom: "1px solid #f0f0f0" }}>
           <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", height: "100%" }}>
-            <span style={{ marginRight: "16px" }}>Xin chào, Người dùng</span>
-            <Link to="/login" style={{ color: "#ff4d4f" }}>Đăng xuất</Link>
+            <span style={{ marginRight: "16px", fontWeight: 500 }}>
+              Xin chào, {currentUser?.fullName || "Người dùng"}
+            </span>
+            <a href="#" onClick={handleLogout} style={{ color: "#ff4d4f" }}>Đăng xuất</a>
           </div>
         </Header>
         <Content style={{ margin: "24px 16px", padding: 24, background: "#fff", minHeight: 280 }}>

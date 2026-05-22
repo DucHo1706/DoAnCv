@@ -49,12 +49,15 @@ async def score_cv(
     file: UploadFile = File(...),
     job_description: str = Form(...)
 ):
-    temp_filename = f"temp_{file.filename}"
-    with open(temp_filename, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
-        
     try:
-        cv_text = pdf_extractor.extract_text_from_pdf(temp_filename)
+        # Đọc byte của file trực tiếp trên RAM (rất nhanh)
+        file_bytes = await file.read()
+        
+        # Gọi hàm đa năng hỗ trợ cả PDF và OCR Ảnh
+        cv_text = ml_scorer.extract_text_from_file(file_bytes, file.filename, file.content_type)
+        
+        if not cv_text:
+             return {"status": "error", "message": "Lỗi: Không thể trích xuất chữ từ file Ảnh/PDF này. Vui lòng chọn file rõ nét hơn."}
         
         extracted_info = nlp_processor.extract_information(cv_text)
         cv_skills = extracted_info["skills"]
@@ -81,10 +84,6 @@ async def score_cv(
 
     except Exception as e:
         return {"status": "error", "message": str(e)}
-    
-    finally:
-        if os.path.exists(temp_filename):
-            os.remove(temp_filename)
 
 if __name__ == "__main__":
     uvicorn.run(app, host="127.0.0.1", port=8000)
