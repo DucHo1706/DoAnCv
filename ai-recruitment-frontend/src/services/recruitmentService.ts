@@ -1,5 +1,15 @@
 import axiosClient from "./axiosClient";
 
+export interface CriteriaResultDto {
+  criterion_name?: string;
+  criterionName?: string;
+  weight: number;
+  score: number;
+  max_score?: number;
+  maxScore?: number;
+  comment: string;
+}
+
 export interface ApplicationDto {
   id: string;
   jobId: string;
@@ -12,6 +22,8 @@ export interface ApplicationDto {
   aiReason: string;
   matchedSkills: string;
   missingSkills: string;
+  classification?: string;
+  criteriaResults?: CriteriaResultDto[];
 }
 
 export const recruitmentService = {

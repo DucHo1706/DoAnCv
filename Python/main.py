@@ -47,21 +47,88 @@ async def update_skills(request: SkillUpdateRequest):
 @app.post("/score-cv")
 async def score_cv(
     file: UploadFile = File(...),
-    job_description: str = Form(...)
+    job_description: str = Form(...),
+    criteria: str = Form(...)
 ):
     try:
-        # Đọc byte của file trực tiếp trên RAM (rất nhanh)
+        try:
+            criteria_list = json.loads(criteria)
+        except Exception:
+            return {
+                "status": "error",
+                "message": "Danh sách tiêu chí đánh giá không đúng định dạng JSON."
+            }
+
+        if not isinstance(criteria_list, list):
+            return {
+                "status": "error",
+                "message": "Danh sách tiêu chí đánh giá phải là một mảng JSON."
+            }
+
+        if len(criteria_list) == 0:
+            return {
+                "status": "error",
+                "message": "Vui lòng truyền ít nhất 1 tiêu chí đánh giá."
+            }
+
+        total_weight = 0
+
+        for criterion in criteria_list:
+            if "name" not in criterion or "weight" not in criterion:
+                return {
+                    "status": "error",
+                    "message": "Mỗi tiêu chí phải có name và weight."
+                }
+
+            criterion_name = str(criterion["name"]).strip()
+
+            if criterion_name == "":
+                return {
+                    "status": "error",
+                    "message": "Tên tiêu chí không được để trống."
+                }
+
+            try:
+                criterion_weight = int(criterion["weight"])
+            except Exception:
+                return {
+                    "status": "error",
+                    "message": "Trọng số tiêu chí phải là số nguyên."
+                }
+
+            if criterion_weight <= 0 or criterion_weight > 100:
+                return {
+                    "status": "error",
+                    "message": "Trọng số mỗi tiêu chí phải từ 1 đến 100."
+                }
+
+            total_weight = total_weight + criterion_weight
+
+        if total_weight != 100:
+            return {
+                "status": "error",
+                "message": "Tổng trọng số tiêu chí phải bằng 100%. Hiện tại đang là " + str(total_weight) + "%."
+            }
+
+        # Đọc byte của file trực tiếp trên RAM
         file_bytes = await file.read()
-        
-        # Gọi hàm đa năng hỗ trợ cả PDF và OCR Ảnh
-        cv_text = ml_scorer.extract_text_from_file(file_bytes, file.filename, file.content_type)
-        
+
+        # Gọi hàm đa năng hỗ trợ cả PDF và OCR ảnh
+        cv_text = ml_scorer.extract_text_from_file(
+            file_bytes,
+            file.filename,
+            file.content_type
+        )
+
         if not cv_text:
-             return {"status": "error", "message": "Lỗi: Không thể trích xuất chữ từ file Ảnh/PDF này. Vui lòng chọn file rõ nét hơn."}
-        
+            return {
+                "status": "error",
+                "message": "Lỗi: Không thể trích xuất chữ từ file Ảnh/PDF này. Vui lòng chọn file rõ nét hơn."
+            }
+
         extracted_info = nlp_processor.extract_information(cv_text)
         cv_skills = extracted_info["skills"]
-        
+
         jd_info = nlp_processor.extract_information(job_description)
         jd_skills = jd_info["skills"]
 
@@ -69,9 +136,10 @@ async def score_cv(
             cv_text=cv_text,
             jd_text=job_description,
             cv_skills=cv_skills,
-            jd_skills=jd_skills
+            jd_skills=jd_skills,
+            criteria_list=criteria_list
         )
-        
+
         return {
             "status": "success",
             "candidate_info": {
@@ -82,8 +150,11 @@ async def score_cv(
             "matching_result": scoring_result
         }
 
-    except Exception as e:
-        return {"status": "error", "message": str(e)}
+    except Exception as exception:
+        return {
+            "status": "error",
+            "message": str(exception)
+        }
 
 if __name__ == "__main__":
     uvicorn.run(app, host="127.0.0.1", port=8000)

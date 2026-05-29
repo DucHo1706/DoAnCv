@@ -70,9 +70,35 @@ namespace RecruitmentBackend.Services
                 JDExtractedSkills = "[]"
             };
 
-            _context.JobPostings.Add(newJob);
-            await _context.SaveChangesAsync();
+            // Kiểm tra danh sách tiêu chí
+            if (request.Criteria == null || !request.Criteria.Any())
+            {
+                throw new Exception("Vui lòng thêm ít nhất 1 tiêu chí đánh giá CV.");
+            }
 
+            var totalWeight = request.Criteria.Sum(c => c.Weight);
+            if (totalWeight != 100)
+            {
+                throw new Exception($"Tổng trọng số tiêu chí phải bằng 100%. Hiện tại đang là {totalWeight}%.");
+            }
+
+            if (request.Criteria.Any(c => string.IsNullOrWhiteSpace(c.Name)))
+            {
+                throw new Exception("Tên tiêu chí đánh giá không được để trống.");
+            }
+
+            _context.JobPostings.Add(newJob);
+
+            var criteriaEntities = request.Criteria.Select(c => new JobCriterion
+            {
+                CriterionID = Guid.NewGuid().ToString(),
+                JobID = newJob.JobID,
+                Name = c.Name.Trim(),
+                Weight = c.Weight
+            }).ToList();
+
+            _context.JobCriteria.AddRange(criteriaEntities);
+            await _context.SaveChangesAsync();
             return newJob.JobID;
         }
 
@@ -161,9 +187,36 @@ namespace RecruitmentBackend.Services
             var jobInfo = await query.FirstOrDefaultAsync();
             if (jobInfo == null) return null;
 
-            return new {
-                jobInfo = jobInfo,
-                wordsToHighlight = new List<string>() // Tạm thời rỗng, chờ AI bóc tách
+            var criteria = await _context.JobCriteria
+                .Where(c => c.JobID == jobId)
+                .OrderByDescending(c => c.Weight)
+                .Select(c => new
+                {
+                    id = c.CriterionID,
+                    name = c.Name,
+                    weight = c.Weight
+                })
+                .ToListAsync();
+
+            return new
+            {
+                jobInfo = new
+                {
+                    jobInfo.id,
+                    jobInfo.description,
+                    jobInfo.requirements,
+                    jobInfo.salaryRange,
+                    jobInfo.createdAt,
+                    jobInfo.deadline,
+                    jobInfo.startDate,
+                    jobInfo.maxCandidates,
+                    jobInfo.status,
+                    jobInfo.isApproved,
+                    jobInfo.position,
+                    jobInfo.branch,
+                    criteria = criteria
+                },
+                wordsToHighlight = new List<string>()
             };
         }
 

@@ -34,6 +34,11 @@ export interface BranchDto {
   isActive: boolean;
 }
 
+export interface JobCriterionPayload {
+  name: string;
+  weight: number;
+}
+
 export interface CreateJobPayload {
   positionId: string;
   description: string;
@@ -43,6 +48,7 @@ export interface CreateJobPayload {
   startDate?: string | null;
   deadline?: string | null;
   maxCandidates?: number | null;
+  criteria: JobCriterionPayload[];
 }
 
 export interface JobReviewResponse {

@@ -1,4 +1,4 @@
-﻿﻿using CloudinaryDotNet;
+﻿using CloudinaryDotNet;
 using CloudinaryDotNet.Actions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
@@ -20,40 +20,70 @@ namespace RecruitmentBackend.Services
                 config["Cloudinary:ApiKey"],
                 config["Cloudinary:ApiSecret"]
             );
+
             _cloudinary = new Cloudinary(account);
         }
 
         public async Task<string> SaveFileAsync(IFormFile file)
         {
-            if (file == null || file.Length == 0) return null;
+            if (file == null || file.Length == 0)
+            {
+                return null;
+            }
+
+            string fileExtension = Path.GetExtension(file.FileName).ToLower();
+            string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(file.FileName);
+            string publicId = $"{Guid.NewGuid()}_{fileNameWithoutExtension}";
 
             using var stream = file.OpenReadStream();
-            
-            // ĐỔI SANG ImageUploadParams: Cloudinary sẽ cho phép xem trực tiếp file PDF trên trình duyệt thay vì ép tải xuống
-            var uploadParams = new ImageUploadParams()
+
+            if (fileExtension == ".png" || fileExtension == ".jpg" || fileExtension == ".jpeg")
+            {
+                var imageUploadParams = new ImageUploadParams()
+                {
+                    File = new FileDescription(file.FileName, stream),
+                    Folder = "cv_uploads",
+                    PublicId = publicId,
+                    Type = "upload"
+                };
+
+                var imageUploadResult = await _cloudinary.UploadAsync(imageUploadParams);
+
+                if (imageUploadResult.Error != null)
+                {
+                    throw new Exception($"Lỗi upload Cloudinary: {imageUploadResult.Error.Message}");
+                }
+
+                return imageUploadResult.SecureUrl?.ToString();
+            }
+
+            var rawUploadParams = new RawUploadParams()
             {
                 File = new FileDescription(file.FileName, stream),
                 Folder = "cv_uploads",
-                PublicId = $"{Guid.NewGuid()}_{Path.GetFileNameWithoutExtension(file.FileName)}"
+                PublicId = publicId,
+                Type = "upload"
             };
 
-            var uploadResult = await _cloudinary.UploadAsync(uploadParams);
-            
-            if (uploadResult.Error != null)
+            var rawUploadResult = await _cloudinary.UploadAsync(rawUploadParams);
+
+            if (rawUploadResult.Error != null)
             {
-                throw new Exception($"Lỗi upload Cloudinary: {uploadResult.Error.Message}. Vui lòng kiểm tra lại cấu hình Cloudinary trong appsettings.json!");
+                throw new Exception($"Lỗi upload Cloudinary: {rawUploadResult.Error.Message}");
             }
 
-            return uploadResult.SecureUrl?.ToString();
+            return rawUploadResult.SecureUrl?.ToString();
         }
 
         public async Task<bool> DeleteFileAsync(string publicId)
         {
             var deletionParams = new DeletionParams(publicId)
             {
-                ResourceType = ResourceType.Image
+                ResourceType = ResourceType.Raw
             };
+
             var result = await _cloudinary.DestroyAsync(deletionParams);
+
             return result.Result == "ok";
         }
     }

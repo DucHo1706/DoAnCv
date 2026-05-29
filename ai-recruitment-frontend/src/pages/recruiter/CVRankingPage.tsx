@@ -17,7 +17,7 @@ import PageContainer from "../../components/common/PageContainer";
 import StatCard from "../../components/common/StatCard";
 import TableToolbar from "../../components/common/TableToolbar";
 import { recruitmentService } from "../../services/recruitmentService";
-import type { ApplicationDto } from "../../services/recruitmentService";
+import type { ApplicationDto, CriteriaResultDto } from "../../services/recruitmentService";
 import { jobService } from "../../services/jobService";
 import type { JobDto } from "../../services/jobService";
 
@@ -73,6 +73,56 @@ function CVRankingPage() {
     }
   };
 
+  const getCriterionName = (record: CriteriaResultDto) => {
+    if (record.criterionName) {
+      return record.criterionName;
+    }
+
+    if (record.criterion_name) {
+      return record.criterion_name;
+    }
+    return "Chưa có tên tiêu chí";
+  };
+
+  const getCriterionMaxScore = (record: CriteriaResultDto) => {
+    if (record.maxScore !== undefined && record.maxScore !== null) {
+      return record.maxScore;
+    }
+
+    if (record.max_score !== undefined && record.max_score !== null) {
+      return record.max_score;
+    }
+    return 0;
+  };
+
+  const getClassificationColor = (classification?: string) => {
+  if (!classification) {
+    return "default";
+  }
+
+  if (classification.includes("Phù hợp cao")) {
+    return "green";
+  }
+
+  if (classification === "Phù hợp") {
+    return "blue";
+  }
+
+  if (classification.includes("Nên xem xét")) {
+    return "gold";
+  }
+
+  if (classification.includes("Chưa phù hợp")) {
+    return "orange";
+  }
+
+  if (classification.includes("Không phù hợp")) {
+    return "red";
+  }
+
+  return "default";
+};
+
   const columns = [
     {
       title: "Hạng",
@@ -97,6 +147,16 @@ function CVRankingPage() {
       dataIndex: "aiScore",
       key: "aiScore",
       render: (value: number) => <Text strong>{value}/100</Text>,
+    },
+    {
+      title: "Phân loại",
+      dataIndex: "classification",
+      key: "classification",
+      render: (value: string | undefined) => (
+        <Tag color={getClassificationColor(value)}>
+          {value || "Chưa phân loại"}
+        </Tag>
+      ),
     },
     {
       title: "Thao tác",
@@ -157,7 +217,7 @@ function CVRankingPage() {
       <Drawer
         title="Giải thích điểm chấm AI"
         placement="right"
-        width={500}
+        width={760}
         open={!!selectedCandidate}
         onClose={() => setSelectedCandidate(null)}
       >
@@ -172,14 +232,62 @@ function CVRankingPage() {
             <Paragraph>
               <Text strong>Điểm phù hợp:</Text> <Text type={selectedCandidate.aiScore >= 75 ? "success" : "warning"} strong>{selectedCandidate.aiScore}/100</Text>
             </Paragraph>
-
+            <Paragraph>
+              <Text strong>Phân loại:</Text>{" "}
+              <Tag color={getClassificationColor(selectedCandidate.classification)}>
+                {selectedCandidate.classification || "Chưa phân loại"}
+              </Tag>
+            </Paragraph>
             <div style={{ marginTop: 16 }}>
               <Text strong>Tóm tắt của AI</Text>
               <Paragraph style={{ marginTop: 8, padding: 12, background: "#f5f5f5", borderRadius: 6 }}>
                 {selectedCandidate.aiReason}
               </Paragraph>
             </div>
+            
+            <div style={{ marginTop: 16 }}>
+              <Text strong>Bảng điểm từng tiêu chí</Text>
 
+              <Table
+                style={{ marginTop: 8 }}
+                size="small"
+                pagination={false}
+                rowKey={(record) => getCriterionName(record)}
+                dataSource={selectedCandidate.criteriaResults || []}
+                columns={[
+                  {
+                    title: "Tiêu chí",
+                    key: "criterionName",
+                    render: (_: unknown, record: CriteriaResultDto) => getCriterionName(record),
+                  },
+                  {
+                    title: "Trọng số",
+                    dataIndex: "weight",
+                    key: "weight",
+                    width: 90,
+                    render: (value: number) => `${value}`,
+                  },
+                  {
+                    title: "Điểm",
+                    key: "score",
+                    width: 90,
+                    render: (_: unknown, record: CriteriaResultDto) => {
+                      const maxScore = getCriterionMaxScore(record);
+                      return `${record.score}/${maxScore}`;
+                    },
+                  },
+                  {
+                    title: "Nhận xét",
+                    dataIndex: "comment",
+                    key: "comment",
+                  },
+                ]}
+                locale={{
+                  emptyText: "Chưa có dữ liệu điểm theo tiêu chí",
+                }}
+              />
+            </div>
+                
             <div style={{ marginTop: 16 }}>
               <Text strong>Điểm mạnh (Kỹ năng khớp)</Text>
               <div style={{ marginTop: 8 }}>

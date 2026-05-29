@@ -8,6 +8,9 @@ using System.Security.Claims;
 using System.Text.Json;
 using System.Threading.Tasks;
 using RecruitmentBackend.Controllers; // For ApplyJobRequest
+using RecruitmentBackend.DTOs.Responses;
+using System.Text.Encodings.Web;
+using System.Text.Json;
 
 namespace RecruitmentBackend.Services
 {
@@ -45,11 +48,76 @@ namespace RecruitmentBackend.Services
                 // 2. Upload file CV lên Cloudinary
                 var cvUrl = await _fileService.SaveFileAsync(request.CvFile);
 
-                // 3. Gửi file CV sang Python (Gemini AI) để chấm điểm
-                var aiResult = await _aiService.GetMatchingScoreAsync(request.CvFile, job.JobRequirement);
+                // 3. Lấy danh sách tiêu chí đánh giá CV của tin tuyển dụng
+                var jobCriteria = await _context.JobCriteria
+                    .Where(jobCriterion => jobCriterion.JobID == request.JobId)
+                    .ToListAsync();
 
-                // 4. Lưu tất cả thông tin vào Database trong một giao dịch (transaction)
-                // A. Lưu file CV
+                if (jobCriteria == null || jobCriteria.Count == 0)
+                {
+                    return (false, "Tin tuyển dụng này chưa có tiêu chí đánh giá CV.", null);
+                }
+
+                var criteriaForAi = new List<object>();
+
+                foreach (var criterion in jobCriteria)
+                {
+                    var criterionItem = new
+                    {
+                        name = criterion.Name,
+                        weight = criterion.Weight
+                    };
+
+                    criteriaForAi.Add(criterionItem);
+                }
+
+                string criteriaJson = JsonSerializer.Serialize(criteriaForAi);
+
+                string jobDescriptionForAi = "";
+
+                if (string.IsNullOrWhiteSpace(job.JobDescription) == false)
+                {
+                    jobDescriptionForAi = jobDescriptionForAi + job.JobDescription;
+                }
+
+                if (string.IsNullOrWhiteSpace(job.JobRequirement) == false)
+                {
+                    if (string.IsNullOrWhiteSpace(jobDescriptionForAi) == false)
+                    {
+                        jobDescriptionForAi = jobDescriptionForAi + "\n";
+                    }
+
+                    jobDescriptionForAi = jobDescriptionForAi + job.JobRequirement;
+                }
+
+                // 4. Gửi file CV + JD + Criteria sang Python AI để chấm điểm
+                var aiResult = await _aiService.GetMatchingScoreAsync(
+                    request.CvFile,
+                    jobDescriptionForAi,
+                    criteriaJson
+                );
+
+                // 5. Lưu tất cả thông tin vào Database trong một giao dịch (transaction)
+                // A. Kiểm tra ứng viên đã nộp CV cho tin tuyển dụng này chưa
+                var candidateCvList = await _context.CandidateCVs
+                    .Where(cv => cv.CandidateID == candidate.CandidateID)
+                    .Select(cv => cv.CVID)
+                    .ToListAsync();
+
+                if (candidateCvList.Count > 0)
+                {
+                    var existingApplication = await _context.Applications
+                        .FirstOrDefaultAsync(application =>
+                            candidateCvList.Contains(application.CVID) &&
+                            application.JobID == request.JobId);
+
+                    if (existingApplication != null)
+                    {
+                        return (false, "Bạn đã nộp CV cho tin tuyển dụng này rồi.", null);
+                    }
+                }
+
+                // B. Lưu file CV
                 var newCv = new CandidateCV
                 {
                     CVID = Guid.NewGuid().ToString(),
@@ -58,38 +126,92 @@ namespace RecruitmentBackend.Services
                     RawText = "", // Sẽ cập nhật sau nếu cần
                     CVExtractedSkills = "[]" // Sẽ cập nhật sau nếu cần
                 };
+
                 _context.CandidateCVs.Add(newCv);
 
-                // B. Ghi nhận đơn ứng tuyển
+                // C. Ghi nhận đơn ứng tuyển
                 var newApplication = new Application
                 {
                     ApplicationID = Guid.NewGuid().ToString(),
                     JobID = request.JobId,
                     CVID = newCv.CVID
                 };
+
                 _context.Applications.Add(newApplication);
 
                 // C. Lưu kết quả chấm điểm của AI
                 var matchingResult = aiResult.MatchingResult;
+
+                double totalScore = 0;
+                string aiReason = "AI không đưa ra giải thích";
+
+                List<string> matchedSkills = new List<string>();
+                List<string> missingSkills = new List<string>();
+
+                if (matchingResult != null)
+                {
+                    if (matchingResult.TotalScore.HasValue == true)
+                    {
+                        totalScore = matchingResult.TotalScore.Value;
+                    }
+                    else if (matchingResult.Score.HasValue == true)
+                    {
+                        totalScore = matchingResult.Score.Value;
+                    }
+
+                    if (string.IsNullOrWhiteSpace(matchingResult.Summary) == false)
+                    {
+                        aiReason = matchingResult.Summary;
+                    }
+                    else if (string.IsNullOrWhiteSpace(matchingResult.Explanation) == false)
+                    {
+                        aiReason = matchingResult.Explanation;
+                    }
+
+                    if (matchingResult.MatchedSkills != null)
+                    {
+                        matchedSkills = matchingResult.MatchedSkills;
+                    }
+
+                    if (matchingResult.MissingSkills != null)
+                    {
+                        missingSkills = matchingResult.MissingSkills;
+                    }
+                }
+
+                var jsonSerializeOptions = new JsonSerializerOptions
+                {
+                    Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+                };
+
                 var newEvaluation = new AIEvaluation
                 {
                     EvaluationID = Guid.NewGuid().ToString(),
                     ApplicationID = newApplication.ApplicationID,
-                    FitScore = (decimal)(matchingResult?.Score ?? 0),
-                    Reason = matchingResult?.Explanation ?? "AI không đưa ra giải thích",
-                    MatchedSkills = JsonSerializer.Serialize(matchingResult?.MatchedSkills ?? new System.Collections.Generic.List<string>()),
-                    MissingSkills = JsonSerializer.Serialize(matchingResult?.MissingSkills ?? new System.Collections.Generic.List<string>())
+                    FitScore = (decimal)totalScore,
+                    Reason = aiReason,
+                    MatchedSkills = JsonSerializer.Serialize(matchedSkills, jsonSerializeOptions),
+                    MissingSkills = JsonSerializer.Serialize(missingSkills, jsonSerializeOptions),
+                    Classification = matchingResult?.Classification,
+                    CriteriaResultsJson = JsonSerializer.Serialize(matchingResult?.CriteriaResults ?? new List<CriteriaScoreResult>(), jsonSerializeOptions)
                 };
                 _context.AIEvaluations.Add(newEvaluation);
 
                 await _context.SaveChangesAsync();
 
-                // 5. Trả kết quả về cho Controller
+                // 6. Trả kết quả đã chuẩn hóa về cho Controller
                 var dataToReturn = new
                 {
                     message = "Nộp CV thành công! Trí tuệ nhân tạo đã xử lý xong hồ sơ của bạn.",
-                    cvUrl,
-                    aiAnalysis = aiResult
+                    applicationId = newApplication.ApplicationID,
+                    jobId = newApplication.JobID,
+                    cvUrl = cvUrl,
+                    aiScore = totalScore,
+                    aiReason = aiReason,
+                    matchedSkills = matchedSkills,
+                    missingSkills = missingSkills,
+                    classification = matchingResult?.Classification,
+                    criteriaResults = matchingResult?.CriteriaResults
                 };
 
                 return (true, "Nộp CV thành công", dataToReturn);
@@ -105,23 +227,90 @@ namespace RecruitmentBackend.Services
         public async Task<(bool IsSuccess, string Message, object Data)> GetHrApplicationsAsync(ClaimsPrincipal user)
         {
             string accountId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
             var recruiter = await _context.Recruiters.FirstOrDefaultAsync(r => r.AccountID == accountId);
+
             if (recruiter == null)
             {
                 return (false, "Không tìm thấy thông tin Nhà tuyển dụng.", null);
             }
 
-            var applications = await (from app in _context.Applications
-                                     join job in _context.JobPostings on app.JobID equals job.JobID
-                                     where job.RecruiterID == recruiter.RecruiterID
-                                     join cv in _context.CandidateCVs on app.CVID equals cv.CVID
-                                     join cand in _context.Candidates on cv.CandidateID equals cand.CandidateID
-                                     join acc in _context.Accounts on cand.AccountID equals acc.AccountID
-                                     join ai in _context.AIEvaluations on app.ApplicationID equals ai.ApplicationID into aiGrp
-                                     from ai in aiGrp.DefaultIfEmpty()
-                                     join pos in _context.Positions on job.PositionID equals pos.PositionID into posGrp
-                                     from pos in posGrp.DefaultIfEmpty()
-                                     select new { id = app.ApplicationID, jobId = job.JobID, jobTitle = pos != null ? pos.PositionName : "Chưa cập nhật", candidateName = cand.FullName, email = acc.Email, phone = cand.Phone, cvUrl = cv.FilePath, aiScore = ai != null ? ai.FitScore : 0, aiReason = ai != null ? ai.Reason : "Chưa có đánh giá", matchedSkills = ai != null ? ai.MatchedSkills : "[]", missingSkills = ai != null ? ai.MissingSkills : "[]" }).ToListAsync();
+            var rawApplications = await (
+                from app in _context.Applications
+                join job in _context.JobPostings on app.JobID equals job.JobID
+                where job.RecruiterID == recruiter.RecruiterID
+                join cv in _context.CandidateCVs on app.CVID equals cv.CVID
+                join cand in _context.Candidates on cv.CandidateID equals cand.CandidateID
+                join acc in _context.Accounts on cand.AccountID equals acc.AccountID
+                join ai in _context.AIEvaluations on app.ApplicationID equals ai.ApplicationID into aiGrp
+                from ai in aiGrp.DefaultIfEmpty()
+                join pos in _context.Positions on job.PositionID equals pos.PositionID into posGrp
+                from pos in posGrp.DefaultIfEmpty()
+                orderby ai != null ? ai.FitScore : 0m descending
+                select new
+                {
+                    id = app.ApplicationID,
+                    jobId = job.JobID,
+                    jobTitle = pos != null ? pos.PositionName : "Chưa cập nhật",
+                    candidateName = cand.FullName,
+                    email = acc.Email,
+                    phone = cand.Phone,
+                    cvUrl = cv.FilePath,
+                    aiScore = ai != null ? ai.FitScore : 0,
+                    aiReason = ai != null ? ai.Reason : "Chưa có đánh giá",
+                    matchedSkills = ai != null ? ai.MatchedSkills : "[]",
+                    missingSkills = ai != null ? ai.MissingSkills : "[]",
+                    classification = ai != null ? ai.Classification : null,
+                    criteriaResultsJson = ai != null ? ai.CriteriaResultsJson : null
+                }
+            ).ToListAsync();
+
+            var applications = new List<object>();
+
+            foreach (var application in rawApplications)
+            {
+                List<CriteriaScoreResult> criteriaResults = new List<CriteriaScoreResult>();
+
+                if (string.IsNullOrWhiteSpace(application.criteriaResultsJson) == false)
+                {
+                    try
+                    {
+                        var parsedCriteriaResults = JsonSerializer.Deserialize<List<CriteriaScoreResult>>(
+                            application.criteriaResultsJson
+                        );
+
+                        if (parsedCriteriaResults != null)
+                        {
+                            criteriaResults = parsedCriteriaResults;
+                        }
+                    }
+                    catch
+                    {
+                        criteriaResults = new List<CriteriaScoreResult>();
+                    }
+                }
+
+                var applicationItem = new
+                {
+                    id = application.id,
+                    jobId = application.jobId,
+                    jobTitle = application.jobTitle,
+                    candidateName = application.candidateName,
+                    email = application.email,
+                    phone = application.phone,
+                    cvUrl = application.cvUrl,
+                    aiScore = application.aiScore,
+                    aiReason = application.aiReason,
+                    matchedSkills = application.matchedSkills,
+                    missingSkills = application.missingSkills,
+                    classification = string.IsNullOrWhiteSpace(application.classification) == false
+                        ? application.classification
+                        : "Chưa phân loại",
+                    criteriaResults = criteriaResults
+                };
+
+                applications.Add(applicationItem);
+            }
 
             return (true, "Lấy dữ liệu thành công", applications);
         }
