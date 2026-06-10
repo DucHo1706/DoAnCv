@@ -9,6 +9,7 @@ import type { ItemType } from "antd/es/menu/interface";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import AppHeader from "../components/common/AppHeader";
 import AppSidebar from "../components/common/AppSidebar";
+import CandidateChatbot from "../components/common/CandidateChatbot";
 
 const { Content } = Layout;
 
@@ -53,6 +54,7 @@ function CandidateLayout() {
             <Outlet />
           </div>
         </Content>
+        <CandidateChatbot />
       </Layout>
     </Layout>
   );

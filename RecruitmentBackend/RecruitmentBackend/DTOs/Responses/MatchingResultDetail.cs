@@ -9,5 +9,6 @@ namespace RecruitmentBackend.DTOs.Responses
 
         [JsonPropertyName("explanation")]
         public string Explanation { get; set; } //  giải thích chi tiết về điểm số matching
+
     }
 }

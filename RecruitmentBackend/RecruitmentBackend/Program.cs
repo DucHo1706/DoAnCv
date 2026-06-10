@@ -72,6 +72,10 @@ builder.Services.AddScoped<IRecruitmentService, RecruitmentService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<IBranchService, BranchService>();
 builder.Services.AddScoped<IJobLevelService, JobLevelService>();
+builder.Services.AddScoped<IDashboardService, DashboardService>();
+builder.Services.AddHttpClient<IChatbotService, ChatbotService>();
+
+
 var jwtSettings = builder.Configuration.GetSection("Jwt");
 var key = Encoding.ASCII.GetBytes(jwtSettings["Key"]);
 

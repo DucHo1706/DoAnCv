@@ -39,7 +39,7 @@ type JobStatus = "approved" | "pending";
 
 // Thêm categories vào JobDto (bổ sung phía frontend)
 type JobDtoExtended = JobDto & {
-  categories?: CategoryDto[];
+  category?: { name: string };
 };
 
 type JobTableItem = {
@@ -99,10 +99,7 @@ function JobManagementPage() {
   // ── Table data ─────────────────────────────────────────
   const tableData: JobTableItem[] = jobs.map((job) => {
     const status: JobStatus = job.isApproved ? "approved" : "pending";
-    const categoryNames =
-      job.categories && job.categories.length > 0
-        ? job.categories.map((c) => c.name).join(", ")
-        : "Chưa cập nhật";
+    const categoryNames = job.category?.name || "Chưa cập nhật";
 
     return {
       id: job.id,

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.ComponentModel.DataAnnotations;
 
 namespace RecruitmentBackend.Models
@@ -11,8 +11,13 @@ namespace RecruitmentBackend.Models
         
         public string FilePath { get; set; }
         public string RawText { get; set; } 
-        public string CVExtractedSkills { get; set; } 
-        
+        public string CVExtractedSkills { get; set; }
+        public string? Degree { get; set; }
+        public string? Major { get; set; }
+        public string? University { get; set; }
+        public double? YearsOfExperience { get; set; }
+        public string? Certificates { get; set; } // Lưu chuỗi JSON
+
         public DateTime CreatedAt { get; set; } = DateTime.Now;
     }
 }

@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 using RecruitmentBackend.Data;
 using RecruitmentBackend.DTOs.Requests;
+using RecruitmentBackend.DTOs.Responses;
 using RecruitmentBackend.Interfaces;
 using RecruitmentBackend.Models;
 
@@ -110,6 +111,8 @@ namespace RecruitmentBackend.Services
             return await (from j in _context.JobPostings
                           join p in _context.Positions on j.PositionID equals p.PositionID into pj
                           from p in pj.DefaultIfEmpty()
+                          join c in _context.Categories on p.CategoryID equals c.CategoryID into cj
+                          from c in cj.DefaultIfEmpty()
                           join b in _context.Branches on j.BranchID equals b.BranchID into bj
                           from b in bj.DefaultIfEmpty()
                           where j.RecruiterID == recruiter.RecruiterID
@@ -125,7 +128,8 @@ namespace RecruitmentBackend.Services
                               status = j.Status,
                               isApproved = j.Status == "Published",
                               position = p != null ? new { name = p.PositionName } : null,
-                              branch = b != null ? new { name = b.BranchName } : null
+                              branch = b != null ? new { name = b.BranchName } : null,
+                              category = c != null ? new { name = c.Name } : null
                           }).ToListAsync();
         }
 
@@ -271,6 +275,131 @@ namespace RecruitmentBackend.Services
                               position = p != null ? new { name = p.PositionName } : null,
                               branch = b != null ? new { name = b.BranchName } : null
                           }).ToListAsync();
+        }
+
+        public async Task<PagedResult<JobSummaryDto>> GetPublishedJobsAsync(JobFilterRequest request)
+        {
+            // 1. Sử dụng LINQ Join thay vì .Include()
+            var query = from j in _context.JobPostings
+                        join p in _context.Positions on j.PositionID equals p.PositionID into pj
+                        from p in pj.DefaultIfEmpty()
+                        join b in _context.Branches on j.BranchID equals b.BranchID into bj
+                        from b in bj.DefaultIfEmpty()
+                        where j.Status == "Published"
+                        select new { j, p, b };
+
+            // 2. Áp dụng các Bộ Lọc (Filter)
+            if (!string.IsNullOrWhiteSpace(request.Keyword))
+            {
+                var kw = request.Keyword.ToLower();
+                query = query.Where(x => 
+                    (x.p != null && x.p.PositionName.ToLower().Contains(kw)) ||
+                    (x.b != null && x.b.BranchName.ToLower().Contains(kw)));
+            }
+
+            if (!string.IsNullOrWhiteSpace(request.Location))
+            {
+                var loc = request.Location.ToLower();
+                query = query.Where(x => x.b != null && x.b.BranchName.ToLower().Contains(loc));
+            }
+
+            // Lọc theo Lĩnh vực công việc
+            if (!string.IsNullOrWhiteSpace(request.CategoryId))
+            {
+                query = query.Where(x => x.p != null && x.p.CategoryID == request.CategoryId);
+            }
+
+            // Lọc theo Cấp bậc
+            if (!string.IsNullOrWhiteSpace(request.JobLevelId))
+            {
+                query = query.Where(x => x.j.JobLevelID == request.JobLevelId);
+            }
+
+            // Lọc theo Mức lương
+            if (request.SalaryMin.HasValue)
+            {
+                query = query.Where(x => x.j.SalaryMax >= request.SalaryMin.Value || (x.j.SalaryMin == 0 && x.j.SalaryMax == 0));
+            }
+            if (request.SalaryMax.HasValue)
+            {
+                query = query.Where(x => x.j.SalaryMin <= request.SalaryMax.Value || (x.j.SalaryMin == 0 && x.j.SalaryMax == 0));
+            }
+
+            var totalCount = await query.CountAsync();
+
+            // 4. Phân trang & Chuyển đổi dữ liệu
+            var jobs = await query
+                .OrderByDescending(x => x.j.CreatedAt)
+                .Skip((request.PageIndex - 1) * request.PageSize)
+                .Take(request.PageSize)
+                .Select(x => new JobSummaryDto
+                {
+                    Id = x.j.JobID,
+                    Title = x.p != null ? x.p.PositionName : "Vị trí chưa cập nhật",
+                    Company = "Công Ty AI Recruitment", 
+                    Salary = (x.j.SalaryMin == 0 && x.j.SalaryMax == 0) ? "Thỏa thuận" : $"{x.j.SalaryMin:N0} - {x.j.SalaryMax:N0} triệu",
+                    Location = x.b != null ? x.b.BranchName : "Chưa cập nhật",
+                    Type = "Toàn thời gian", 
+                    UpdatedAt = x.j.ApprovedAt ?? x.j.CreatedAt,
+                    Logo = "https://cdn-icons-png.flaticon.com/512/3061/3061341.png", // Logo mặc định
+                    Description = x.j.JobDescription != null && x.j.JobDescription.Length > 200 
+                                    ? x.j.JobDescription.Substring(0, 200) + "..." 
+                                    : x.j.JobDescription ?? "",
+                    Skills = new List<string> { "Đang tuyển dụng" },
+                    AiScore = 0 // Tương lai có thể tích hợp chấm điểm tự động tại đây
+                })
+                .ToListAsync();
+
+            return new PagedResult<JobSummaryDto>
+            {
+                Items = jobs,
+                TotalCount = totalCount,
+                PageIndex = request.PageIndex,
+                PageSize = request.PageSize
+            };
+        }
+
+        public async Task<object?> GetPublishedJobByIdAsync(string jobId)
+        {
+            var query = from j in _context.JobPostings
+                        join p in _context.Positions on j.PositionID equals p.PositionID into pj
+                        from p in pj.DefaultIfEmpty()
+                        join b in _context.Branches on j.BranchID equals b.BranchID into bj
+                        from b in bj.DefaultIfEmpty()
+                        where j.JobID == jobId && j.Status == "Published"
+                        select new {
+                            id = j.JobID,
+                            title = p != null ? p.PositionName : "Vị trí chưa cập nhật",
+                            company = "Công Ty AI Recruitment", 
+                            salary = (j.SalaryMin == 0 && j.SalaryMax == 0) ? "Thỏa thuận" : $"{j.SalaryMin:N0} - {j.SalaryMax:N0} triệu",
+                            location = b != null ? b.BranchName : "Chưa cập nhật",
+                            type = "Toàn thời gian", 
+                            updatedAt = j.ApprovedAt ?? j.CreatedAt,
+                            deadline = j.Deadline,
+                            maxCandidates = j.MaxCandidates,
+                            description = j.JobDescription,
+                            requirements = j.JobRequirement,
+                            logo = "https://cdn-icons-png.flaticon.com/512/3061/3061341.png"
+                        };
+
+            return await query.FirstOrDefaultAsync();
+        }
+
+        public async Task<IEnumerable<object>> GetTrendingCategoriesAsync(int limit = 8)
+        {
+            // Gom nhóm các công việc đã duyệt theo Lĩnh vực (Category) và đếm số lượng
+            var query = await (from j in _context.JobPostings
+                               join p in _context.Positions on j.PositionID equals p.PositionID
+                               join c in _context.Categories on p.CategoryID equals c.CategoryID
+                               where j.Status == "Published"
+                               group j by new { c.CategoryID, c.Name } into g
+                               orderby g.Count() descending
+                               select new {
+                                   id = g.Key.CategoryID,
+                                   name = g.Key.Name,
+                                   count = g.Count()
+                               }).Take(limit).ToListAsync();
+            return query;
         }
     }
 }

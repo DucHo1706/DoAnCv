@@ -19,7 +19,6 @@ function RecruiterLayout() {
   const menuItems: ItemType[] = [
     { key: "/recruiter/dashboard", icon: <DashboardOutlined />, label: "Dashboard" },
     { key: "/recruiter/jobs", icon: <FileTextOutlined />, label: "Tin tuyển dụng" },
-    { key: "/recruiter/candidates", icon: <TeamOutlined />, label: "Danh sách ứng viên" },
     { key: "/recruiter/cv-ranking", icon: <FileSearchOutlined />, label: "Xếp hạng CV" },
   ];
 

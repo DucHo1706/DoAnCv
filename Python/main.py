@@ -1,6 +1,6 @@
 from fastapi import FastAPI, UploadFile, File, Form
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 import shutil
 import os
 import uvicorn
@@ -41,6 +41,35 @@ async def update_skills(request: SkillUpdateRequest):
             "status": "success", 
             "message": f"Đã học xong! Hiện có {count} kỹ năng trong não bộ."
         }
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+class ChatMessageModel(BaseModel):
+    role: str
+    text: str
+
+@app.post("/chat")
+async def chat_bot(
+    prompt: str = Form(...),
+    history: str = Form("[]"),
+    job_description: str = Form(""),
+    system_knowledge: str = Form(""),
+    file: Optional[UploadFile] = File(None)
+):
+    try:
+        try:
+            history_list = json.loads(history)
+            history_objs = [ChatMessageModel(**msg) for msg in history_list]
+        except Exception:
+            history_objs = []
+
+        file_text = ""
+        if file is not None and file.filename != "":
+            file_bytes = await file.read()
+            file_text = ml_scorer.extract_text_from_file(file_bytes, file.filename, file.content_type)
+
+        reply = ml_scorer.chat_with_candidate(prompt, history_objs, job_description, file_text, system_knowledge)
+        return {"status": "success", "reply": reply, "extracted_text": file_text}
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
@@ -145,7 +174,10 @@ async def score_cv(
             "candidate_info": {
                 "email": extracted_info["email"],
                 "phone": extracted_info["phone"],
-                "extracted_skills": cv_skills
+                "extracted_skills": cv_skills,
+                "raw_text": cv_text,
+                "ExtractedSkills": cv_skills,
+                "RawText": cv_text
             },
             "matching_result": scoring_result
         }

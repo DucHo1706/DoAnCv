@@ -37,15 +37,11 @@ function MainLayout() {
     },
     {
       key: "/recruiter/applications",
-      label: <Link to="/recruiter/applications">Quản lý Hồ sơ Ứng tuyển</Link>,
+      label: <Link to="/recruiter/applications">Hồ sơ & Xếp hạng AI</Link>,
     },
     {
-      key: "/recruiter/candidates",
-      label: <Link to="/recruiter/candidates">Danh sách Ứng viên</Link>,
-    },
-    {
-      key: "/recruiter/ranking",
-      label: <Link to="/recruiter/ranking">Xếp hạng CV (AI)</Link>,
+      key: "/recruiter/talent-pool",
+      label: <Link to="/recruiter/talent-pool">Ngân hàng Ứng viên</Link>,
     },
   ];
 

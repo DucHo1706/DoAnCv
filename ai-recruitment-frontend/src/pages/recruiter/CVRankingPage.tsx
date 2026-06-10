@@ -1,4 +1,4 @@
-import { EyeOutlined, TrophyOutlined } from "@ant-design/icons";
+import { EyeOutlined, TrophyOutlined, UserOutlined } from "@ant-design/icons";
 import {
   Button,
   Card,
@@ -13,6 +13,7 @@ import {
   message,
 } from "antd";
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import PageContainer from "../../components/common/PageContainer";
 import StatCard from "../../components/common/StatCard";
 import TableToolbar from "../../components/common/TableToolbar";
@@ -24,6 +25,7 @@ import type { JobDto } from "../../services/jobService";
 const { Paragraph, Text } = Typography;
 
 function CVRankingPage() {
+  const navigate = useNavigate();
   const [selectedCandidate, setSelectedCandidate] = useState<ApplicationDto | null>(null);
   const [applications, setApplications] = useState<ApplicationDto[]>([]);
   const [jobs, setJobs] = useState<JobDto[]>([]);
@@ -162,9 +164,14 @@ function CVRankingPage() {
       title: "Thao tác",
       key: "actions",
       render: (_: unknown, record: ApplicationDto) => (
-        <Button icon={<EyeOutlined />} onClick={() => setSelectedCandidate(record)}>
-          Xem giải thích
-        </Button>
+        <Space>
+          <Button icon={<EyeOutlined />} onClick={() => setSelectedCandidate(record)}>
+            Xem nhanh AI
+          </Button>
+          <Button type="primary" icon={<UserOutlined />} onClick={() => navigate(`/recruiter/candidates/${record.id}`)}>
+            Hồ sơ chi tiết
+          </Button>
+        </Space>
       ),
     },
   ];

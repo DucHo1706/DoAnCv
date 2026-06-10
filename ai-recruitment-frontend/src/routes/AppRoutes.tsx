@@ -22,7 +22,6 @@ import BranchManagementPage from "../pages/admin/BranchManagementPage";
 import CategoryManagementPage from "../pages/admin/CategoryManagementPage";
 import JobPositionManagementPage from "../pages/admin/JobPositionManagementPage";
 
-import CandidateListPage from "../pages/recruiter/CandidateListPage";
 import CVRankingPage from "../pages/recruiter/CVRankingPage";
 import JobManagementPage from "../pages/recruiter/JobManagementPage";
 import RecruiterDashboardPage from "../pages/recruiter/RecruiterDashboardPage";
@@ -43,7 +42,6 @@ function AppRoutes() {
         <Route path="/recruiter" element={<RecruiterLayout />}>
           <Route path="dashboard" element={<RecruiterDashboardPage />} />
           <Route path="jobs" element={<JobManagementPage />} />
-          <Route path="candidates" element={<CandidateListPage />} />
           <Route path="cv-ranking" element={<CVRankingPage />} />
           <Route path="candidates/:id" element={<CandidateDetailPage />} />
         </Route>

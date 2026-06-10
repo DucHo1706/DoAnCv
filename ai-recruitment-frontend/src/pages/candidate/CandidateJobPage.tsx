@@ -1,499 +1,405 @@
-import { Alert, Button, Card, Col, message, Modal, Row, Tag, Typography, Upload, Spin, Input, Select, Space } from "antd";
-import { useEffect, useState, useMemo } from "react";
-import { jobService } from "../../services/jobService";
-import type { JobDto } from "../../services/jobService";
+import React, { useState, useEffect } from "react";
+import { Input, Button, Row, Col, Card, Typography, Select, Space, Checkbox, Tag, Pagination, Divider, Radio, InputNumber } from "antd";
+import { SearchOutlined, EnvironmentOutlined, DollarOutlined, ClockCircleOutlined, FireOutlined, RobotOutlined } from "@ant-design/icons";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import axiosClient from "../../services/axiosClient";
-import { useNavigate } from "react-router-dom";
-import { authService } from "../../services/authService";
 
-const { Title, Paragraph, Text } = Typography;
+const { Title, Text, Paragraph } = Typography;
+const { Option } = Select;
 
-function CandidateJobPage() {
-  const [jobs, setJobs] = useState<JobDto[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedJob, setSelectedJob] = useState<JobDto | null>(null);
-  const [fileList, setFileList] = useState<any[]>([]);
-  const [uploading, setUploading] = useState(false);
+
+export default function CandidateJobPage() {
   const navigate = useNavigate();
-  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-  const [selectedDetailJob, setSelectedDetailJob] = useState<JobDto | null>(null);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedBranch, setSelectedBranch] = useState<string | null>(null);
-  const [selectedSalary, setSelectedSalary] = useState<string | null>(null);
+  const [searchParams] = useSearchParams();
 
-  const getClassificationColor = (classification?: string) => {
-    if (!classification) {
-      return "default";
+  // Khởi tạo giá trị mặc định từ URL (Nếu có truyền từ trang chủ sang)
+  const [keyword, setKeyword] = useState(searchParams.get("keyword") || "");
+  const [location, setLocation] = useState(searchParams.get("location") || "all");
+  const [jobs, setJobs] = useState<any[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [pageIndex, setPageIndex] = useState(1);
+  const [loading, setLoading] = useState(false);
+
+  // State cho Bộ lọc nâng cao
+  const [categoryId, setCategoryId] = useState("all");
+  const [jobLevelId, setJobLevelId] = useState("all");
+  const [salaryMin, setSalaryMin] = useState<number | null>(null);
+  const [salaryMax, setSalaryMax] = useState<number | null>(null);
+  const [categories, setCategories] = useState<any[]>([]);
+  const [jobLevels, setJobLevels] = useState<any[]>([]);
+
+  // Fetch Metadata lúc mới mở trang
+  useEffect(() => {
+    const fetchMetadata = async () => {
+      try {
+        const catRes = await axiosClient.get("/Metadata/categories");
+        const levelRes = await axiosClient.get("/Metadata/job-levels");
+        setCategories(catRes.data?.$values || catRes.data || []);
+        setJobLevels(levelRes.data?.$values || levelRes.data || []);
+      } catch (error) {
+        console.error("Lỗi lấy metadata:", error);
+      }
+    };
+    fetchMetadata();
+  }, []);
+
+  const fetchJobs = async () => {
+    setLoading(true);
+    try {
+      const res = await axiosClient.get("/Jobs/published", {
+        params: {
+          Keyword: keyword,
+          Location: location === "all" ? "" : location,
+          CategoryId: categoryId === "all" ? "" : categoryId,
+          JobLevelId: jobLevelId === "all" ? "" : jobLevelId,
+          SalaryMin: salaryMin,
+          SalaryMax: salaryMax,
+          PageIndex: pageIndex,
+          PageSize: 10
+        }
+      });
+      const items = res.data.items?.$values || res.data.items || [];
+      setJobs(items);
+      setTotalCount(res.data.totalCount || 0);
+    } catch (error) {
+      console.error("Lỗi lấy danh sách việc làm:", error);
+    } finally {
+      setLoading(false);
     }
-
-    if (classification.includes("Phù hợp cao")) {
-      return "green";
-    }
-
-    if (classification === "Phù hợp") {
-      return "blue";
-    }
-
-    if (classification.includes("Nên xem xét")) {
-      return "gold";
-    }
-
-    if (classification.includes("Chưa phù hợp")) {
-      return "orange";
-    }
-
-    if (classification.includes("Không phù hợp")) {
-      return "red";
-    }
-
-    return "default";
-  };
-
-  const renderSkillList = (skills: string[]) => {
-    if (skills.length === 0) {
-      return <Paragraph style={{ marginTop: 8 }}>Không có</Paragraph>;
-    }
-
-    return (
-      <ul style={{ marginTop: 8, paddingLeft: 22 }}>
-        {skills.map((skill: string, index: number) => (
-          <li key={index} style={{ marginBottom: 6 }}>
-            {skill}
-          </li>
-        ))}
-      </ul>
-    );
   };
 
   useEffect(() => {
-    const fetchPublicJobs = async () => {
-      try {
-        const data: any = await jobService.getJobs();
+    fetchJobs();
+  }, [pageIndex]);
 
-        // Ở đây ta có thể lọc thêm điều kiện chỉ hiển thị Job đã duyệt (isApproved === true)
-        // Bảo vệ UI: Đảm bảo data luôn là mảng để không sập màn hình trắng (White Screen)
-        setJobs(Array.isArray(data) ? data : (data?.$values || []));
-      } catch (error) {
-        message.error("Lỗi khi tải danh sách công việc");
-      } finally {
-        setLoading(false);
-      }
-    };
+  // Tự động gọi Tìm kiếm khi người dùng đổi Category hoặc Level
+  useEffect(() => {
+    handleSearch();
+  }, [categoryId, jobLevelId]);
 
-    fetchPublicJobs();
-  }, []);
+  const handleSearch = () => {
+    // Cập nhật lại thanh URL để người dùng có thể copy link chia sẻ
+    const params = new URLSearchParams(searchParams);
+    if (keyword) params.set("keyword", keyword);
+    else params.delete("keyword");
+    if (location && location !== "all") params.set("location", location);
+    else params.delete("location");
+    navigate(`/jobs?${params.toString()}`, { replace: true });
 
-  const handleApplyClick = (job: JobDto) => {
-    // 1. Kiểm tra đăng nhập trước khi cho phép nộp CV
-    const user = authService.getCurrentUser();
-
-    if (!user) {
-      message.warning("Vui lòng đăng nhập hoặc đăng ký để ứng tuyển!");
-      navigate("/login");
-      return;
-    }
-
-    // 2. Chặn HR/Admin nộp CV nhầm
-    if (user.role && user.role !== "Candidate") {
-      message.warning("Chỉ tài khoản Ứng viên mới có thể nộp CV!");
-      return;
-    }
-
-    setSelectedJob(job);
-    setIsModalOpen(true);
+    if (pageIndex === 1) fetchJobs();
+    else setPageIndex(1); // Set state = 1 sẽ tự động trigger useEffect
   };
 
-  const handleViewDetail = (job: JobDto) => {
-    setSelectedDetailJob(job);
-    setIsDetailModalOpen(true);
+  const handleClearFilter = () => {
+    setKeyword("");
+    setLocation("all");
+    setCategoryId("all");
+    setJobLevelId("all");
+    setSalaryMin(null);
+    setSalaryMax(null);
+    setPageIndex(1);
+    navigate("/jobs", { replace: true });
+    setTimeout(() => fetchJobs(), 50); // Fetch lại ngay sau khi reset
   };
-
-  const handleUpload = async () => {
-    if (fileList.length === 0) {
-      message.warning("Vui lòng chọn CV (file PDF, Word hoặc Ảnh) của bạn!");
-      return;
-    }
-
-    // Lấy đúng file (Ant Design có lúc lưu ở originFileObj, có lúc lưu trực tiếp ở object)
-    const fileToUpload = fileList[0].originFileObj || fileList[0];
-
-    const formData = new FormData();
-    formData.append("CvFile", fileToUpload); // Viết hoa chữ cái đầu cho khớp hoàn toàn với C#
-    formData.append("JobId", selectedJob!.id);
-
-    setUploading(true);
-
-    try {
-      const response = await axiosClient.post("/Recruitment/apply", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-        timeout: 60000, // Tăng thời gian chờ lên 60s để AI kịp bóc tách chữ từ ảnh (OCR)
-      });
-
-      if (response.data) {
-        const result = response.data;
-
-        const aiScore = result.aiScore ?? 0;
-        const aiReason = result.aiReason || "Không có nhận xét";
-        const matchedSkills = Array.isArray(result.matchedSkills) ? result.matchedSkills : [];
-        const missingSkills = Array.isArray(result.missingSkills) ? result.missingSkills : [];
-        const classification = result.classification || "";
-
-        // 3. Xử lý logic gợi ý việc làm khác (Random 2 công việc khác với công việc vừa nộp)
-        const otherJobs = jobs.filter((j) => j.id !== selectedJob!.id);
-        const recommendedJobs = otherJobs.sort(() => 0.5 - Math.random()).slice(0, 2);
-
-        message.success("Nộp CV thành công! AI đã chấm điểm hồ sơ của bạn.");
-
-        Modal.success({
-          title: "Kết quả phân tích AI",
-          okText: "Đóng",
-          content: (
-            <div style={{ marginTop: 16 }}>
-              <Alert
-                type="success"
-                showIcon
-                message="Chúc mừng! Hồ sơ của bạn đã được gửi tới Nhà tuyển dụng thành công."
-                description="Dưới đây là phân tích nhanh từ AI về mức độ phù hợp của bạn."
-                style={{ marginBottom: 16 }}
-              />
-
-              <p>
-                <b>Điểm phù hợp:</b>{" "}
-                <Text type="success" strong>
-                  {aiScore}/100
-                </Text>
-              </p>
-
-              <p>
-                <b>Phân loại:</b>{" "}
-                <Tag color={getClassificationColor(classification)}>
-                  {classification || "Chưa phân loại"}
-                </Tag>
-              </p>
-
-              <div style={{ marginTop: 12 }}>
-                <b>Kỹ năng khớp:</b>
-                {renderSkillList(matchedSkills)}
-              </div>
-
-              <div style={{ marginTop: 12 }}>
-                <b>Điểm cần cải thiện:</b>
-
-                {missingSkills.length > 0 ? (
-                  <ul style={{ marginTop: 8, paddingLeft: 22, color: "#cf1322" }}>
-                    {missingSkills.map((skill: string, index: number) => (
-                      <li key={index} style={{ marginBottom: 6 }}>
-                        {skill}
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <Paragraph style={{ marginTop: 8 }}>
-                    Chưa phát hiện điểm cần cải thiện rõ ràng.
-                  </Paragraph>
-                )}
-              </div>
-
-              <p style={{ marginTop: 12 }}>
-                <b>Nhận xét của AI:</b> {aiReason}
-              </p>
-
-              {recommendedJobs.length > 0 && (
-                <div style={{ marginTop: 24, borderTop: "1px solid #f0f0f0", paddingTop: 16 }}>
-                  <Text strong style={{ color: "#1890ff" }}>
-                    🌟 Có thể bạn sẽ quan tâm các vị trí khác:
-                  </Text>
-
-                  <ul style={{ paddingLeft: 20, marginTop: 8 }}>
-                    {recommendedJobs.map((j) => (
-                      <li key={j.id} style={{ marginBottom: 8 }}>
-                        <Text strong>{j.position?.name || "Vị trí chưa cập nhật"}</Text>
-                        <br />
-                        <Text type="secondary" style={{ fontSize: 12 }}>
-                          {j.branch?.name || "Đang cập nhật"} • {j.salaryRange || "Thỏa thuận"}
-                        </Text>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-          ),
-          width: 600,
-        });
-
-        setIsModalOpen(false);
-        setFileList([]);
-      }
-    } catch (error: any) {
-      if (error?.response?.status === 401) {
-        message.warning("Vui lòng đăng nhập với tài khoản Ứng viên để nộp CV!");
-        navigate("/login");
-        return;
-      }
-
-      // Bắt mọi loại lỗi để hiển thị rõ ràng trên màn hình
-      const responseData = error?.response?.data;
-
-      if (responseData?.errors) {
-        const errorMessages = Object.values(responseData.errors).flat().join(" - ");
-        message.error(errorMessages);
-      } else if (responseData?.message || responseData?.error) {
-        message.error(`${responseData.message || ""} ${responseData.error ? `(${responseData.error})` : ""}`);
-      } else if (error.message) {
-        message.error(`Lỗi đường truyền/AI: ${error.message}`);
-      } else {
-        message.error("Không thể nộp CV, vui lòng thử lại.");
-      }
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const uploadProps = {
-    onRemove: () => setFileList([]),
-    beforeUpload: (file: any) => {
-      setFileList([file]);
-      return false; // Ngăn upload tự động
-    },
-    fileList,
-    accept: ".pdf,.doc,.docx,.png,.jpg,.jpeg",
-  };
-
-  // Tạo danh sách lọc tự động từ dữ liệu jobs
-  const uniqueBranches = useMemo(
-    () => Array.from(new Set(jobs.map((job) => job.branch?.name).filter(Boolean))),
-    [jobs]
-  );
-
-  const uniqueSalaries = useMemo(
-    () => Array.from(new Set(jobs.map((job) => job.salaryRange).filter(Boolean))),
-    [jobs]
-  );
-
-  // Lọc dữ liệu công việc
-  const filteredJobs = useMemo(() => {
-    return jobs.filter((job) => {
-      const matchSearch = (job.position?.name || "").toLowerCase().includes(searchTerm.toLowerCase());
-      const matchBranch = selectedBranch ? job.branch?.name === selectedBranch : true;
-      const matchSalary = selectedSalary ? job.salaryRange === selectedSalary : true;
-
-      return matchSearch && matchBranch && matchSalary;
-    });
-  }, [jobs, searchTerm, selectedBranch, selectedSalary]);
 
   return (
-    <div style={{ maxWidth: 1200, margin: "0 auto" }}>
-      <div style={{ textAlign: "center", marginBottom: 40 }}>
-        <Title level={2}>Cơ Hội Việc Làm Mới Nhất</Title>
-        <Paragraph style={{ fontSize: 16 }}>
-          Khám phá các vị trí tuyển dụng đang mở và nộp CV để AI đánh giá ngay!
-        </Paragraph>
+    <div style={{ background: "#f4f5f5", minHeight: "100vh", paddingBottom: 60 }}>
+      {/* 1. KHU VỰC TÌM KIẾM (SEARCH HERO SECTION) */}
+      <div style={{ background: "linear-gradient(135deg, #1677ff 0%, #0050b3 100%)", padding: "40px 20px" }}>
+        <div style={{ maxWidth: "94%", margin: "0 auto" }}>
+          <Title level={2} style={{ color: "#fff", marginBottom: 24 }}>
+            Tìm kiếm công việc mơ ước tiếp theo của bạn
+          </Title>
+          
+          <div style={{ background: "#fff", padding: 12, borderRadius: 12, display: "flex", gap: 8, boxShadow: "0 10px 30px rgba(0,0,0,0.1)" }}>
+            <Input 
+              size="large"
+              placeholder="Nhập tên vị trí, kỹ năng, công ty..."
+              prefix={<SearchOutlined style={{ color: "#bfbfbf", fontSize: 20 }} />}
+              bordered={false}
+              style={{ flex: 2, fontSize: 18 }}
+              value={keyword}
+              onChange={(e) => setKeyword(e.target.value)}
+              onPressEnter={handleSearch}
+            />
+            <Divider type="vertical" style={{ height: "auto", margin: "8px 0" }} />
+            <Select 
+              size="large"
+              showSearch
+              placeholder="Tất cả địa điểm"
+              bordered={false}
+              style={{ flex: 1, fontSize: 16 }}
+              suffixIcon={<EnvironmentOutlined />}
+              value={location}
+              onChange={(val) => setLocation(val)}
+            >
+              <Option value="hn">Hà Nội</Option>
+              <Option value="hcm">Hồ Chí Minh</Option>
+              <Option value="dn">Đà Nẵng</Option>
+            </Select>
+            <Button type="primary" size="large" onClick={handleSearch} style={{ borderRadius: 8, padding: "0 40px", fontSize: 18, height: 50 }}>
+              Tìm kiếm
+            </Button>
+          </div>
+        </div>
       </div>
 
-      <Card style={{ marginBottom: 24, borderRadius: 12, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
-        <Space wrap size="middle" style={{ display: "flex", justifyContent: "center" }}>
-          <Input.Search
-            placeholder="Tìm kiếm theo vị trí..."
-            allowClear
-            size="large"
-            onSearch={setSearchTerm}
-            onChange={(event) => setSearchTerm(event.target.value)}
-            style={{ width: 300 }}
-          />
-
-          <Select
-            size="large"
-            allowClear
-            placeholder="Lọc theo chi nhánh"
-            style={{ width: 200 }}
-            onChange={setSelectedBranch}
-            value={selectedBranch}
-          >
-            {uniqueBranches.map((branch) => (
-              <Select.Option key={branch as string} value={branch as string}>
-                {branch as string}
-              </Select.Option>
-            ))}
-          </Select>
-
-          <Select
-            size="large"
-            allowClear
-            placeholder="Lọc theo mức lương"
-            style={{ width: 200 }}
-            onChange={setSelectedSalary}
-            value={selectedSalary}
-          >
-            {uniqueSalaries.map((salary) => (
-              <Select.Option key={salary as string} value={salary as string}>
-                {salary as string}
-              </Select.Option>
-            ))}
-          </Select>
-        </Space>
-      </Card>
-
-      {loading ? (
-        <div style={{ textAlign: "center", padding: 50 }}>
-          <Spin size="large" />
-        </div>
-      ) : (
-        <Row gutter={[24, 24]}>
-          {filteredJobs.map((job) => (
-            <Col xs={24} md={12} lg={8} key={job.id}>
-              <Card hoverable style={{ height: "100%", display: "flex", flexDirection: "column" }}>
-                <Title level={4}>{job.position?.name || "Chưa cập nhật vị trí"}</Title>
-
-                <div style={{ marginBottom: 16 }}>
-                  <Tag color="blue">{job.branch?.name || "Chưa cập nhật chi nhánh"}</Tag>
-                  <Tag color="green">{job.salaryRange || "Thỏa thuận"}</Tag>
+      {/* 2. KHU VỰC NỘI DUNG CHÍNH */}
+      <div style={{ maxWidth: "94%", margin: "32px auto 0", padding: "0 20px" }}>
+        <Row gutter={24}>
+          
+          {/* Cột trái: Bộ lọc (Sidebar Filters) - REFACTOR: Chuyển dọc thay vì ngang như TopCV */}
+          <Col xs={24} lg={6} xl={5}>
+            <Card 
+              title="Lọc nâng cao" 
+              style={{ borderRadius: 12, position: "sticky", top: 100 }}
+              bodyStyle={{ padding: "16px 20px", maxHeight: "calc(100vh - 120px)", overflowY: "auto" }}
+              extra={
+                <Space size={8} align="center">
+                  <Button type="link" size="small" danger style={{ padding: 0 }} onClick={handleClearFilter}>Xóa lọc</Button>
+                  <Divider type="vertical" style={{ margin: 0 }} />
+                  <Button type="link" size="small" style={{ padding: 0 }} onClick={handleSearch}>Áp dụng</Button>
+                </Space>
+              }
+            >
+              <Space direction="vertical" size="middle" style={{ width: "100%" }}>
+                
+                {/* Nghỉ thứ 7 */}
+                <div>
+                  <Text strong style={{ display: "block", marginBottom: 12, fontSize: 16 }}>Nghỉ thứ 7</Text>
+                  <Radio.Group defaultValue="all" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    <Radio value="all" style={{ fontSize: 15 }}>Không lọc</Radio>
+                    <Radio value="work" style={{ fontSize: 15 }}>Làm thứ 7</Radio>
+                    <Radio value="off" style={{ fontSize: 15 }}>Nghỉ thứ 7</Radio>
+                    <Radio value="na" style={{ fontSize: 15 }}>Tin đăng không đề cập</Radio>
+                  </Radio.Group>
                 </div>
 
-                <Paragraph type="secondary" ellipsis={{ rows: 3 }}>
-                  {job.description}
-                </Paragraph>
+                <Divider style={{ margin: 0 }} />
 
-                <div style={{ marginTop: "auto", paddingTop: 16 }}>
-                  <div style={{ display: "flex", gap: "8px" }}>
-                    <Button style={{ flex: 1 }} onClick={() => handleViewDetail(job)}>
-                      Xem chi tiết
-                    </Button>
-
-                    <Button type="primary" style={{ flex: 1 }} onClick={() => handleApplyClick(job)}>
-                      Ứng tuyển
-                    </Button>
+                {/* Theo danh mục nghề */}
+                <div>
+                  <Text strong style={{ display: "block", marginBottom: 12, fontSize: 16 }}>Theo danh mục nghề</Text>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                    <Checkbox style={{ fontSize: 15 }}>Kế toán</Checkbox> <Text type="secondary" style={{ fontSize: 14 }}>(4495)</Text>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                    <Checkbox style={{ fontSize: 15 }}>Marketing</Checkbox> <Text type="secondary" style={{ fontSize: 14 }}>(4113)</Text>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                    <Checkbox style={{ fontSize: 15 }}>Quản lý dự án xây dựng</Checkbox> <Text type="secondary" style={{ fontSize: 14 }}>(1875)</Text>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                    <Checkbox style={{ fontSize: 15 }}>Nhân sự</Checkbox> <Text type="secondary" style={{ fontSize: 14 }}>(1517)</Text>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <Checkbox style={{ fontSize: 15 }}>Thiết kế và Kiến trúc</Checkbox> <Text type="secondary" style={{ fontSize: 14 }}>(1501)</Text>
                   </div>
                 </div>
-              </Card>
-            </Col>
-          ))}
 
-          {filteredJobs.length === 0 && (
-            <Col span={24}>
-              <Card>
-                <div style={{ textAlign: "center", color: "#888" }}>
-                  Không tìm thấy công việc nào phù hợp với bộ lọc.
+                <Divider style={{ margin: 0 }} />
+
+                {/* Kinh nghiệm */}
+                <div>
+                  <Text strong style={{ display: "block", marginBottom: 12, fontSize: 16 }}>Kinh nghiệm</Text>
+                  <Select size="large" placeholder="Chọn kinh nghiệm" style={{ width: '100%' }} mode="multiple" maxTagCount="responsive" defaultValue={['all']}>
+                    <Option value="all">Tất cả</Option>
+                    <Option value="none">Không yêu cầu</Option>
+                    <Option value="under_1">Dưới 1 năm</Option>
+                    <Option value="1">1 năm</Option>
+                    <Option value="2">2 năm</Option>
+                    <Option value="3">3 năm</Option>
+                    <Option value="4">4 năm</Option>
+                    <Option value="5">5 năm</Option>
+                    <Option value="over_5">Trên 5 năm</Option>
+                  </Select>
                 </div>
-              </Card>
-            </Col>
-          )}
+
+                <Divider style={{ margin: 0 }} />
+                
+                {/* Lĩnh vực công ty */}
+                <div>
+                  <Text strong style={{ display: "block", marginBottom: 12, fontSize: 16 }}>Lĩnh vực công ty</Text>
+                  <Select size="large" defaultValue="all" style={{ width: '100%' }} showSearch>
+                    <Option value="all">Tất cả lĩnh vực</Option>
+                    <Option value="it">IT - Phần mềm</Option>
+                    <Option value="finance">Tài chính - Ngân hàng</Option>
+                    <Option value="education">Giáo dục / Đào tạo</Option>
+                  </Select>
+                </div>
+
+                <Divider style={{ margin: 0 }} />
+
+                {/* Lĩnh vực công việc */}
+                <div>
+                  <Text strong style={{ display: "block", marginBottom: 12, fontSize: 16 }}>Lĩnh vực công việc</Text>
+                  <Select size="large" value={categoryId} onChange={setCategoryId} style={{ width: '100%' }} showSearch filterOption={(input, option) => (option?.children as unknown as string).toLowerCase().includes(input.toLowerCase())}>
+                    <Option value="all">Tất cả lĩnh vực</Option>
+                    {categories.map(c => (
+                      <Option key={c.id} value={c.id}>{c.name}</Option>
+                    ))}
+                  </Select>
+                </div>
+
+                <Divider style={{ margin: 0 }} />
+
+                {/* Loại công ty */}
+                <div>
+                  <Text strong style={{ display: "block", marginBottom: 12, fontSize: 16 }}>Loại công ty</Text>
+                  <Radio.Group defaultValue="all" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    <Radio value="all" style={{ fontSize: 15 }}>Tất cả</Radio>
+                    <Radio value="pro" style={{ fontSize: 15 }}>Pro Company</Radio>
+                  </Radio.Group>
+                </div>
+
+                <Divider style={{ margin: 0 }} />
+
+                {/* Mức lương */}
+                <div>
+                  <Text strong style={{ display: "block", marginBottom: 12, fontSize: 16 }}>Mức lương</Text>
+                  <Space direction="vertical" size="middle" style={{ width: '100%', marginBottom: 16 }}>
+                    <Checkbox defaultChecked style={{ fontSize: 15 }}>Tất cả</Checkbox>
+                    <Checkbox style={{ fontSize: 15 }}>Dưới 10 triệu</Checkbox>
+                    <Checkbox style={{ fontSize: 15 }}>10 - 15 triệu</Checkbox>
+                    <Checkbox style={{ fontSize: 15 }}>15 - 20 triệu</Checkbox>
+                    <Checkbox style={{ fontSize: 15 }}>20 - 25 triệu</Checkbox>
+                    <Checkbox style={{ fontSize: 15 }}>25 - 30 triệu</Checkbox>
+                    <Checkbox style={{ fontSize: 15 }}>30 - 50 triệu</Checkbox>
+                    <Checkbox style={{ fontSize: 15 }}>Trên 50 triệu</Checkbox>
+                    <Checkbox style={{ fontSize: 15 }}>Thoả thuận</Checkbox>
+                  </Space>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <InputNumber size="large" placeholder="Từ" style={{ width: '100%' }} value={salaryMin} onChange={setSalaryMin} onPressEnter={handleSearch} />
+                    <span>-</span>
+                    <InputNumber size="large" placeholder="Đến" style={{ width: '100%' }} value={salaryMax} onChange={setSalaryMax} onPressEnter={handleSearch} />
+                    <span>triệu</span>
+                  </div>
+                </div>
+
+                <Divider style={{ margin: 0 }} />
+
+                {/* Cấp bậc */}
+                <div>
+                  <Text strong style={{ display: "block", marginBottom: 12, fontSize: 16 }}>Cấp bậc</Text>
+                  <Select size="large" value={jobLevelId} onChange={setJobLevelId} style={{ width: '100%' }} showSearch filterOption={(input, option) => (option?.children as unknown as string).toLowerCase().includes(input.toLowerCase())}>
+                    <Option value="all">Tất cả cấp bậc</Option>
+                    {jobLevels.map(l => (
+                      <Option key={l.id} value={l.id}>{l.name}</Option>
+                    ))}
+                  </Select>
+                </div>
+
+                <Divider style={{ margin: 0 }} />
+
+                {/* Loại hình làm việc */}
+                <div>
+                  <Text strong style={{ display: "block", marginBottom: 12, fontSize: 16 }}>Loại hình làm việc</Text>
+                  <Space direction="vertical" size="middle" style={{ width: "100%" }}>
+                    <Checkbox defaultChecked style={{ fontSize: 15 }}>Tất cả</Checkbox>
+                    <Checkbox style={{ fontSize: 15 }}>Toàn thời gian</Checkbox>
+                    <Checkbox style={{ fontSize: 15 }}>Bán thời gian</Checkbox>
+                    <Checkbox style={{ fontSize: 15 }}>Thực tập</Checkbox>
+                    <Checkbox style={{ fontSize: 15 }}>Khác</Checkbox>
+                  </Space>
+                </div>
+
+              </Space>
+            </Card>
+          </Col>
+
+          {/* Cột phải: Danh sách việc làm */}
+          <Col xs={24} lg={18} xl={19}>
+            <div style={{ background: "#fff", padding: "20px 24px", borderRadius: 12, marginBottom: 24, display: "flex", justifyContent: "space-between", alignItems: "center", boxShadow: "0 2px 8px rgba(0,0,0,0.03)", border: "1px solid #f0f0f0" }}>
+              <Title level={4} style={{ margin: 0, fontSize: 20 }}>Tìm thấy <span style={{ color: "#1677ff" }}>{totalCount}</span> việc làm phù hợp</Title>
+              
+              <Space size="large" wrap>
+                <Space>
+                  <Text type="secondary" style={{ fontSize: 15 }}>Tìm kiếm theo:</Text>
+                  <Select defaultValue="all" style={{ width: 160 }} size="large">
+                    <Option value="all">Tất cả</Option>
+                    <Option value="jobName">Tên việc làm</Option>
+                    <Option value="companyName">Tên công ty</Option>
+                  </Select>
+                </Space>
+                <Space>
+                  <Text type="secondary" style={{ fontSize: 15 }}>Sắp xếp theo:</Text>
+                  <Select defaultValue="ai" style={{ width: 220 }} size="large">
+                    <Option value="ai"><RobotOutlined style={{ color: "#1677ff" }} /> Gợi ý từ AI Toppy</Option>
+                    <Option value="new">Mới cập nhật</Option>
+                    <Option value="salary">Lương cao đến thấp</Option>
+                  </Select>
+                </Space>
+              </Space>
+            </div>
+
+            {/* Map danh sách công việc */}
+            <Space direction="vertical" size="middle" style={{ width: "100%" }}>
+              {jobs.map(job => (
+                <Card 
+                  key={job.id} 
+                  hoverable 
+                  style={{ borderRadius: 16, overflow: "hidden", border: "1px solid #e8e8e8", marginBottom: 16 }}
+                  bodyStyle={{ padding: 32 }}
+                >
+                  <Row gutter={32} wrap={false} align="middle">
+                    <Col flex="120px">
+                      <img src={job.logo} alt="company" style={{ width: 120, height: 120, objectFit: "contain", borderRadius: 12, border: "1px solid #f0f0f0", padding: 8, background: "#fff" }} />
+                    </Col>
+                    <Col flex="auto" style={{ minWidth: 0 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16 }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <Title level={3} style={{ margin: 0, color: "#1f2937", cursor: "pointer", fontSize: 24, lineHeight: 1.4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} onClick={() => navigate(`/jobs/${job.id}`)}>
+                            {job.title}
+                          </Title>
+                          <Text style={{ color: "#595959", fontSize: 18, marginTop: 8, display: "block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{job.company}</Text>
+                        </div>
+                        <div style={{ textAlign: "right", flexShrink: 0 }}>
+                          <Text strong style={{ color: "#00b14f", fontSize: 22, display: "block" }}>{job.salary}</Text>
+                          <Tag icon={<RobotOutlined />} color={job.aiScore > 0 ? (job.aiScore > 80 ? "green" : "orange") : "default"} style={{ marginTop: 12, fontSize: 16, padding: "6px 12px", borderRadius: 6 }}>
+                            AI Match: {job.aiScore > 0 ? `${job.aiScore}%` : "Chưa chấm"}
+                          </Tag>
+                        </div>
+                      </div>
+
+                      <Space size="large" style={{ marginTop: 24, color: "#595959", fontSize: 16 }}>
+                        <span><EnvironmentOutlined style={{ marginRight: 6 }}/>{job.location}</span>
+                        <span><ClockCircleOutlined style={{ marginRight: 6 }}/>{job.updatedAt}</span>
+                        <Tag color="blue" style={{ fontSize: 15, padding: "4px 10px", borderRadius: 6 }}>{job.type}</Tag>
+                      </Space>
+
+                      {/* Phân cách và hiển thị Mô tả + Kỹ năng để tăng chiều cao */}
+                      <div style={{ marginTop: 24, paddingTop: 16, borderTop: "1px dashed #f0f0f0" }}>
+                        <Text type="secondary" style={{ fontSize: 16, display: "block", marginBottom: 12, lineHeight: 1.6 }}>
+                          {job.description || "Chưa có mô tả chi tiết."}
+                        </Text>
+                        <Space wrap size={[0, 8]}>
+                          {job.skills?.map((skill: string) => (
+                            <Tag key={skill} style={{ fontSize: 14, padding: "4px 12px", background: "#f5f5f5", border: "none", color: "#595959" }}>
+                              {skill}
+                            </Tag>
+                          ))}
+                        </Space>
+                      </div>
+                    </Col>
+                  </Row>
+                </Card>
+              ))}
+            </Space>
+
+            {/* Phân trang */}
+            <div style={{ textAlign: "center", marginTop: 40 }}>
+              <Pagination 
+                current={pageIndex} 
+                total={totalCount} 
+                pageSize={10} 
+                showSizeChanger={false} 
+                onChange={(page) => setPageIndex(page)}
+              />
+            </div>
+
+          </Col>
         </Row>
-      )}
-
-      <Modal
-        title={`Ứng tuyển: ${selectedJob?.position?.name}`}
-        open={isModalOpen}
-        onCancel={() => {
-          setIsModalOpen(false);
-          setFileList([]);
-        }}
-        footer={[
-          <Button key="back" onClick={() => setIsModalOpen(false)}>
-            Hủy
-          </Button>,
-          <Button key="submit" type="primary" loading={uploading} onClick={handleUpload}>
-            Nộp hồ sơ
-          </Button>,
-        ]}
-      >
-        <div style={{ padding: "20px 0" }}>
-          <Text strong style={{ display: "block", marginBottom: 8 }}>
-            Tải lên CV của bạn (PDF, Word, Ảnh):
-          </Text>
-
-          <Upload {...uploadProps}>
-            <Button>Chọn file CV từ máy tính</Button>
-          </Upload>
-        </div>
-      </Modal>
-
-      {/* Modal Chi tiết công việc */}
-      <Modal
-        title={
-          <Text strong style={{ fontSize: 20 }}>
-            Chi tiết công việc
-          </Text>
-        }
-        open={isDetailModalOpen}
-        onCancel={() => setIsDetailModalOpen(false)}
-        footer={[
-          <Button key="back" onClick={() => setIsDetailModalOpen(false)}>
-            Đóng
-          </Button>,
-          <Button
-            key="apply"
-            type="primary"
-            onClick={() => {
-              setIsDetailModalOpen(false);
-              handleApplyClick(selectedDetailJob!);
-            }}
-          >
-            Ứng tuyển ngay
-          </Button>,
-        ]}
-        width={800}
-      >
-        {selectedDetailJob && (
-          <div style={{ padding: "10px 0" }}>
-            <Title level={3} style={{ color: "#1890ff", marginBottom: 16 }}>
-              {selectedDetailJob.position?.name || "Chưa cập nhật vị trí"}
-            </Title>
-
-            <div style={{ marginBottom: 24 }}>
-              <Tag color="blue" style={{ fontSize: 14, padding: "4px 8px", marginBottom: 8 }}>
-                {selectedDetailJob.branch?.name || "Chưa cập nhật chi nhánh"}
-              </Tag>
-
-              <Tag color="green" style={{ fontSize: 14, padding: "4px 8px", marginBottom: 8 }}>
-                {selectedDetailJob.salaryRange || "Thỏa thuận"}
-              </Tag>
-
-              <Tag color="purple" style={{ fontSize: 14, padding: "4px 8px", marginBottom: 8 }}>
-                Hạn nộp:{" "}
-                {selectedDetailJob.deadline
-                  ? new Date(selectedDetailJob.deadline).toLocaleDateString("vi-VN")
-                  : "Không giới hạn"}
-              </Tag>
-            </div>
-
-            <Title level={5}>Mô tả công việc</Title>
-            <div
-              style={{
-                background: "#f9f9f9",
-                padding: 16,
-                borderRadius: 8,
-                marginBottom: 24,
-                whiteSpace: "pre-line",
-              }}
-            >
-              {selectedDetailJob.description || "Chưa có mô tả"}
-            </div>
-
-            <Title level={5}>Yêu cầu ứng viên</Title>
-            <div
-              style={{
-                background: "#f9f9f9",
-                padding: 16,
-                borderRadius: 8,
-                marginBottom: 24,
-                whiteSpace: "pre-line",
-              }}
-            >
-              {selectedDetailJob.requirements || "Chưa có yêu cầu"}
-            </div>
-
-            {selectedDetailJob.maxCandidates && (
-              <Paragraph type="secondary">* Số lượng tuyển: {selectedDetailJob.maxCandidates} người</Paragraph>
-            )}
-          </div>
-        )}
-      </Modal>
+      </div>
     </div>
   );
 }
-
-export default CandidateJobPage;

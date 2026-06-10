@@ -25,7 +25,7 @@ namespace RecruitmentBackend.Data
         public DbSet<Application> Applications { get; set; }
         public DbSet<AIEvaluation> AIEvaluations { get; set; }
         public DbSet<JobCriterion> JobCriteria { get; set; }
-
+        public DbSet<ChatMessage> ChatMessages { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);

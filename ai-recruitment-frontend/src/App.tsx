@@ -12,16 +12,20 @@ import MainLayout from "./pages/recruiter/MainLayout";
 import JobManagementPage from "./pages/recruiter/JobManagementPage";
 import CreateJobPage from "./pages/recruiter/CreateJobPage"; 
 import RecruiterDashboardPage from "./pages/recruiter/RecruiterDashboardPage";
-import CandidateListPage from "./pages/recruiter/CandidateListPage";
 import CandidateDetailPage from "./pages/recruiter/CandidateDetailPage";
 import ApplicationManagementPage from "./pages/recruiter/ApplicationManagementPage";
 import CVRankingPage from "./pages/recruiter/CVRankingPage";
+import EmailCandidatePage from "./pages/recruiter/EmailCandidatePage";
+import TalentPoolPage from "./pages/recruiter/TalentPoolPage";
+import InviteCandidatePage from "./pages/recruiter/InviteCandidatePage";
 import PublicLayout from "./pages/recruiter/PublicLayout";
 import HomePage from "./pages/recruiter/HomePage";
 
 // Candidate pages
 import CandidateJobPage from "./pages/candidate/CandidateJobPage";
 import ApplicationStatusPage from "./pages/candidate/ApplicationStatusPage";
+import CandidateProfilePage from "./pages/candidate/CandidateProfilePage";
+import CandidateJobDetailPage from "./pages/candidate/CandidateJobDetailPage";
 
 // Admin pages
 import AdminDashboardPage from "./pages/admin/AdminDashboardPage";
@@ -47,7 +51,9 @@ function App() {
         <Route path="/" element={<PublicLayout />}>
           <Route index element={<HomePage />} />
           <Route path="jobs" element={<CandidateJobPage />} />
+          <Route path="jobs/:id" element={<CandidateJobDetailPage />} />
           <Route path="my-applications" element={<ApplicationStatusPage />} />
+          <Route path="profile" element={<CandidateProfilePage />} />
         </Route>
 
         {/* Recruiter */}
@@ -56,9 +62,11 @@ function App() {
           <Route path="jobs" element={<JobManagementPage />} />
           <Route path="jobs/create" element={<CreateJobPage />} /> {/* <--- Thêm dòng này */}
           <Route path="applications" element={<ApplicationManagementPage />} />
-          <Route path="candidates" element={<CandidateListPage />} />
           <Route path="candidates/:id" element={<CandidateDetailPage />} />
+          <Route path="candidates/:id/email" element={<EmailCandidatePage />} />
           <Route path="ranking" element={<CVRankingPage />} />
+          <Route path="talent-pool" element={<TalentPoolPage />} />
+          <Route path="talent-pool/invite/:id" element={<InviteCandidatePage />} />
 
         </Route>
 

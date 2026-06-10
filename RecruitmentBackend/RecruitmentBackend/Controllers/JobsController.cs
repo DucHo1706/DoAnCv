@@ -102,5 +102,47 @@ namespace RecruitmentBackend.Controllers
             if (!success) return BadRequest("Không thể thay đổi trạng thái của công việc này.");
             return Ok(new { message = "Cập nhật trạng thái thành công!" });
         }
+
+        // 8. Lấy danh sách việc làm đã duyệt (Có phân trang, tìm kiếm)
+        [HttpGet("published")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetPublishedJobs([FromQuery] JobFilterRequest request)
+        {
+            try
+            {
+                var result = await _jobService.GetPublishedJobsAsync(request);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Lỗi khi lấy danh sách việc làm: " + ex.Message });
+            }
+        }
+
+        // 9. Lấy chi tiết 1 công việc đã duyệt cho ứng viên xem
+        [HttpGet("published/{id}")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetPublishedJobById(string id)
+        {
+            var job = await _jobService.GetPublishedJobByIdAsync(id);
+            if (job == null) return NotFound(new { message = "Không tìm thấy công việc này hoặc đã hết hạn." });
+            return Ok(job);
+        }
+
+        // 10. Lấy danh sách Top Ngành nghề nổi bật cho Trang chủ
+        [HttpGet("trending-categories")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetTrendingCategories()
+        {
+            try
+            {
+                var result = await _jobService.GetTrendingCategoriesAsync(8);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Lỗi khi lấy danh sách ngành nghề: " + ex.Message });
+            }
+        }
     }
 }

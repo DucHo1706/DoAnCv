@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
+
 namespace RecruitmentBackend.DTOs.Responses
 {
     public class AiMatchingResponse
@@ -16,6 +17,8 @@ namespace RecruitmentBackend.DTOs.Responses
 
         [JsonPropertyName("matching_result")]
         public MatchingResult MatchingResult { get; set; }
+
+      
     }
 
     public class CandidateInfo
@@ -28,6 +31,7 @@ namespace RecruitmentBackend.DTOs.Responses
 
         [JsonPropertyName("extracted_skills")]
         public List<string> ExtractedSkills { get; set; } = new List<string>();
+        public string RawText { get; set; }
     }
 
     public class MatchingResult
@@ -57,6 +61,9 @@ namespace RecruitmentBackend.DTOs.Responses
 
         [JsonPropertyName("explanation")]
         public string? Explanation { get; set; }
+
+        [JsonPropertyName("extracted_info")]
+        public ExtractedInfoResponse? ExtractedInfo { get; set; }
     }
 
     public class CriteriaScoreResult
@@ -75,5 +82,7 @@ namespace RecruitmentBackend.DTOs.Responses
 
         [JsonPropertyName("comment")]
         public string Comment { get; set; }
+
     }
+
 }

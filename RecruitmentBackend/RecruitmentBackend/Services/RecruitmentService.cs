@@ -117,14 +117,27 @@ namespace RecruitmentBackend.Services
                     }
                 }
 
+                var jsonSerializeOptions = new JsonSerializerOptions
+                {
+                    Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+                };
+
+                var certs = aiResult.MatchingResult?.ExtractedInfo?.Certificates;
+                string certsJson = certs != null ? JsonSerializer.Serialize(certs) : "[]";
+
                 // B. Lưu file CV
                 var newCv = new CandidateCV
                 {
                     CVID = Guid.NewGuid().ToString(),
                     CandidateID = candidate.CandidateID,
                     FilePath = cvUrl,
-                    RawText = "", // Sẽ cập nhật sau nếu cần
-                    CVExtractedSkills = "[]" // Sẽ cập nhật sau nếu cần
+                    RawText = aiResult.CandidateInfo?.RawText ?? "",
+                    CVExtractedSkills = aiResult.CandidateInfo?.ExtractedSkills != null ? JsonSerializer.Serialize(aiResult.CandidateInfo.ExtractedSkills, jsonSerializeOptions) : "[]",
+                    Degree = aiResult.MatchingResult?.ExtractedInfo?.Degree,
+                    Major = aiResult.MatchingResult?.ExtractedInfo?.Major,
+                    University = aiResult.MatchingResult?.ExtractedInfo?.University,
+                    YearsOfExperience = aiResult.MatchingResult?.ExtractedInfo?.YearsOfExperience ?? 0,
+                    Certificates = certsJson
                 };
 
                 _context.CandidateCVs.Add(newCv);
@@ -178,11 +191,6 @@ namespace RecruitmentBackend.Services
                         missingSkills = matchingResult.MissingSkills;
                     }
                 }
-
-                var jsonSerializeOptions = new JsonSerializerOptions
-                {
-                    Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
-                };
 
                 var newEvaluation = new AIEvaluation
                 {
@@ -250,6 +258,7 @@ namespace RecruitmentBackend.Services
                 select new
                 {
                     id = app.ApplicationID,
+                    candidateId = cand.CandidateID,
                     jobId = job.JobID,
                     jobTitle = pos != null ? pos.PositionName : "Chưa cập nhật",
                     candidateName = cand.FullName,
@@ -270,6 +279,8 @@ namespace RecruitmentBackend.Services
             foreach (var application in rawApplications)
             {
                 List<CriteriaScoreResult> criteriaResults = new List<CriteriaScoreResult>();
+                List<string> matchedSkillsList = new List<string>();
+                List<string> missingSkillsList = new List<string>();
 
                 if (string.IsNullOrWhiteSpace(application.criteriaResultsJson) == false)
                 {
@@ -290,9 +301,29 @@ namespace RecruitmentBackend.Services
                     }
                 }
 
+                if (string.IsNullOrWhiteSpace(application.matchedSkills) == false)
+                {
+                    try
+                    {
+                        var parsedMatched = JsonSerializer.Deserialize<List<string>>(application.matchedSkills);
+                        if (parsedMatched != null) matchedSkillsList = parsedMatched;
+                    }
+                    catch { }
+                }
+                if (string.IsNullOrWhiteSpace(application.missingSkills) == false)
+                {
+                    try
+                    {
+                        var parsedMissing = JsonSerializer.Deserialize<List<string>>(application.missingSkills);
+                        if (parsedMissing != null) missingSkillsList = parsedMissing;
+                    }
+                    catch { }
+                }
+
                 var applicationItem = new
                 {
                     id = application.id,
+                    candidateId = application.candidateId,
                     jobId = application.jobId,
                     jobTitle = application.jobTitle,
                     candidateName = application.candidateName,
@@ -301,8 +332,8 @@ namespace RecruitmentBackend.Services
                     cvUrl = application.cvUrl,
                     aiScore = application.aiScore,
                     aiReason = application.aiReason,
-                    matchedSkills = application.matchedSkills,
-                    missingSkills = application.missingSkills,
+                    matchedSkills = matchedSkillsList,
+                    missingSkills = missingSkillsList,
                     classification = string.IsNullOrWhiteSpace(application.classification) == false
                         ? application.classification
                         : "Chưa phân loại",
@@ -324,7 +355,44 @@ namespace RecruitmentBackend.Services
                 return (false, "Không tìm thấy thông tin Ứng viên.", null);
             }
 
-            var applications = await (from app in _context.Applications join cv in _context.CandidateCVs on app.CVID equals cv.CVID where cv.CandidateID == candidate.CandidateID join job in _context.JobPostings on app.JobID equals job.JobID join ai in _context.AIEvaluations on app.ApplicationID equals ai.ApplicationID into aiGrp from ai in aiGrp.DefaultIfEmpty() join pos in _context.Positions on job.PositionID equals pos.PositionID into posGrp from pos in posGrp.DefaultIfEmpty() orderby job.CreatedAt descending select new { id = app.ApplicationID, jobTitle = pos != null ? pos.PositionName : "Chưa cập nhật", aiScore = ai != null ? ai.FitScore : 0, aiReason = ai != null ? ai.Reason : "Đang chờ phân tích", matchedSkills = ai != null ? ai.MatchedSkills : "[]", missingSkills = ai != null ? ai.MissingSkills : "[]" }).ToListAsync();
+            var rawApplications = await (from app in _context.Applications join cv in _context.CandidateCVs on app.CVID equals cv.CVID where cv.CandidateID == candidate.CandidateID join job in _context.JobPostings on app.JobID equals job.JobID join ai in _context.AIEvaluations on app.ApplicationID equals ai.ApplicationID into aiGrp from ai in aiGrp.DefaultIfEmpty() join pos in _context.Positions on job.PositionID equals pos.PositionID into posGrp from pos in posGrp.DefaultIfEmpty() orderby job.CreatedAt descending select new { id = app.ApplicationID, candidateId = cv.CandidateID, jobTitle = pos != null ? pos.PositionName : "Chưa cập nhật", aiScore = ai != null ? ai.FitScore : 0, aiReason = ai != null ? ai.Reason : "Đang chờ phân tích", matchedSkills = ai != null ? ai.MatchedSkills : "[]", missingSkills = ai != null ? ai.MissingSkills : "[]", classification = ai != null ? ai.Classification : null, criteriaResultsJson = ai != null ? ai.CriteriaResultsJson : null }).ToListAsync();
+
+            var applications = new List<object>();
+            foreach (var app in rawApplications)
+            {
+                List<CriteriaScoreResult> criteriaResults = new List<CriteriaScoreResult>();
+                if (!string.IsNullOrWhiteSpace(app.criteriaResultsJson))
+                {
+                    try { criteriaResults = JsonSerializer.Deserialize<List<CriteriaScoreResult>>(app.criteriaResultsJson) ?? new List<CriteriaScoreResult>(); }
+                    catch { }
+                }
+                
+                List<string> matchedSkillsList = new List<string>();
+                if (!string.IsNullOrWhiteSpace(app.matchedSkills))
+                {
+                    try { matchedSkillsList = JsonSerializer.Deserialize<List<string>>(app.matchedSkills) ?? new List<string>(); }
+                    catch { }
+                }
+                
+                List<string> missingSkillsList = new List<string>();
+                if (!string.IsNullOrWhiteSpace(app.missingSkills))
+                {
+                    try { missingSkillsList = JsonSerializer.Deserialize<List<string>>(app.missingSkills) ?? new List<string>(); }
+                    catch { }
+                }
+
+                applications.Add(new {
+                    id = app.id,
+                    candidateId = app.candidateId,
+                    jobTitle = app.jobTitle,
+                    aiScore = app.aiScore,
+                    aiReason = app.aiReason,
+                    matchedSkills = matchedSkillsList,
+                    missingSkills = missingSkillsList,
+                    classification = app.classification ?? "Chưa phân loại",
+                    criteriaResults = criteriaResults
+                });
+            }
 
             return (true, "Lấy dữ liệu thành công", applications);
         }

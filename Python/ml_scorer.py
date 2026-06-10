@@ -40,6 +40,49 @@ def extract_text_from_file(file_bytes: bytes, filename: str, content_type: str) 
         print(f"Lỗi bóc tách văn bản: {e}")
     return text.strip()
 
+def chat_with_candidate(user_message, history=None, job_description="", file_text="", system_knowledge=""):
+    system_instruction = """Bạn là trợ lý ảo AI Recruitment Assistant chuyên nghiệp của hệ thống tuyển dụng AI Recruitment.
+Nhiệm vụ của bạn là trả lời câu hỏi của người dùng tuân thủ NGHIÊM NGẶT các quy tắc ưu tiên sau:
+
+1. ƯU TIÊN SỐ 1 (Ngữ cảnh & Dữ liệu hệ thống): LUÔN tìm kiếm câu trả lời dựa trên các thông tin được cung cấp trong ngữ cảnh (Lịch sử trò chuyện, Mô tả công việc JD, Nội dung CV đính kèm, Dữ liệu bổ sung). Nếu có thông tin phù hợp, hãy trả lời dựa trên đó.
+2. ƯU TIÊN SỐ 2 (Kiến thức chuyên môn): Nếu ngữ cảnh KHÔNG CÓ thông tin, bạn được phép dùng kiến thức của mình để hỗ trợ, NHƯNG CHỈ ĐƯỢC PHÉP nói về các chủ đề: Tuyển dụng, Nhân sự, Tìm việc làm, Viết CV, Phỏng vấn, Xu hướng nghề nghiệp.
+3. TỪ CHỐI NGOÀI LỀ (Out of scope): Tuyệt đối KHÔNG trả lời bất kỳ câu hỏi nào ngoài các chủ đề trên (ví dụ: không viết code, không giải toán, không làm thơ, không nói chuyện chính trị, giải trí...). Nếu người dùng hỏi ngoài lề, hãy trả lời mặc định: "Xin lỗi, tôi là trợ lý ảo chuyên về lĩnh vực Tuyển dụng và Việc làm. Tôi không thể hỗ trợ bạn vấn đề này."
+
+Yêu cầu định dạng và phong cách:
+- Đi thẳng vào vấn đề, súc tích (dưới 300 chữ).
+- LUÔN LUÔN IN ĐẬM (sử dụng cú pháp **từ khóa**) các từ khóa quan trọng, tên kỹ năng, để người dùng dễ đọc.
+- Nếu người dùng cung cấp CV hoặc JD, hãy phân tích điểm mạnh/yếu một cách chuyên nghiệp và thân thiện."""
+
+    contents = []
+    if history:
+        for msg in history:
+            role = "model" if msg.role == "ai" else "user"
+            contents.append({"role": role, "parts": [{"text": msg.text}]})
+            
+    context_text = ""
+    if system_knowledge:
+        context_text += f"\n\n--- DỮ LIỆU TỪ DATABASE CỦA HỆ THỐNG ---\n{system_knowledge}"
+    if job_description:
+        context_text += f"\n\n--- THÔNG TIN JD (MÔ TẢ CÔNG VIỆC) ---\n{job_description}"
+    if file_text:
+        context_text += f"\n\n--- NỘI DUNG FILE CV ĐÍNH KÈM ---\n{file_text}"
+
+    final_user_message = user_message + context_text
+    contents.append({"role": "user", "parts": [{"text": final_user_message}]})
+
+    try:
+        response = client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=contents,
+            config=types.GenerateContentConfig(
+                system_instruction=system_instruction
+            )
+        )
+        return response.text
+    except Exception as e:
+        print(f"Lỗi Chatbot AI: {e}")
+        return "Xin lỗi, mình đang gặp sự cố kết nối. Bạn vui lòng thử lại sau nhé."
+
 def calculate_resume_score(cv_text, jd_text, cv_skills, jd_skills, criteria_list):
     criteria_json = json.dumps(criteria_list, ensure_ascii=False, indent=2)
 
@@ -47,6 +90,7 @@ def calculate_resume_score(cv_text, jd_text, cv_skills, jd_skills, criteria_list
 Bạn là một chuyên gia tuyển dụng nhân sự cấp cao.
 
 Nhiệm vụ của bạn là đánh giá mức độ phù hợp giữa Hồ sơ ứng viên (CV) và Mô tả công việc (JD).
+Đồng thời bóc tách các thông tin cơ bản của ứng viên từ CV.
 
 Bạn KHÔNG được tự tạo tiêu chí mới.
 Bạn chỉ được chấm điểm dựa trên danh sách tiêu chí do HR cung cấp.
@@ -86,6 +130,7 @@ Yêu cầu bắt buộc:
 8. score là số nguyên, không vượt quá max_score.
 9. total_score phải bằng tổng score của criteria_results.
 10. Nhận xét bằng tiếng Việt, ngắn gọn, dễ hiểu cho HR.
+11. Bóc tách degree (bằng cấp), major (chuyên ngành), university (tên trường), years_of_experience (số năm kinh nghiệm), certificates (mảng các chuỗi tên chứng chỉ ứng viên có, ví dụ ["IELTS 7.0", "AWS Certified"]). Nếu không có thông tin, trả về null hoặc 0 hoặc mảng rỗng.
 
 Cấu trúc JSON bắt buộc:
 {{
@@ -102,7 +147,14 @@ Cấu trúc JSON bắt buộc:
     ],
     "matched_skills": [<mảng các chuỗi kỹ năng CV đáp ứng được JD>],
     "missing_skills": [<mảng các chuỗi kỹ năng JD yêu cầu nhưng CV thiếu>],
-    "summary": "<1 đoạn văn ngắn bằng tiếng Việt tổng kết mức độ phù hợp của ứng viên>"
+    "summary": "<1 đoạn văn ngắn bằng tiếng Việt tổng kết mức độ phù hợp của ứng viên>",
+    "extracted_info": {{
+        "degree": "<Bằng cấp>",
+        "major": "<Chuyên ngành>",
+        "university": "<Trường đại học>",
+        "years_of_experience": <số năm kinh nghiệm>,
+        "certificates": ["<chứng chỉ 1>", "<chứng chỉ 2>"]
+    }}
 }}
 """
 
@@ -241,13 +293,40 @@ def normalize_scoring_result(ai_result, criteria_list):
     if not isinstance(summary, str) or summary.strip() == "":
         summary = "Hệ thống đã chấm điểm CV dựa trên các tiêu chí do HR cung cấp."
 
+    extracted_info_raw = ai_result.get("extracted_info", {})
+    degree = extracted_info_raw.get("degree")
+    major = extracted_info_raw.get("major")
+    university = extracted_info_raw.get("university")
+    try:
+        years_of_experience = float(extracted_info_raw.get("years_of_experience", 0))
+    except (ValueError, TypeError):
+        years_of_experience = 0
+        
+    certificates = extracted_info_raw.get("certificates", [])
+    if not isinstance(certificates, list):
+        certificates = []
+
     normalized_result = {
         "total_score": total_score,
         "classification": classification,
         "criteria_results": criteria_results,
         "matched_skills": matched_skills,
         "missing_skills": missing_skills,
-        "summary": summary
+        "summary": summary,
+        "extracted_info": {
+            "degree": degree,
+            "major": major,
+            "university": university,
+            "years_of_experience": years_of_experience,
+            "certificates": certificates
+        },
+        "ExtractedInfo": {
+            "Degree": degree,
+            "Major": major,
+            "University": university,
+            "YearsOfExperience": years_of_experience,
+            "Certificates": certificates
+        }
     }
 
     return normalized_result
@@ -284,5 +363,12 @@ def build_default_scoring_result(criteria_list):
         "criteria_results": criteria_results,
         "matched_skills": [],
         "missing_skills": [],
-        "summary": "Đã xảy ra lỗi trong quá trình AI phân tích. Vui lòng kiểm tra lại kết nối mạng hoặc API Key."
+        "summary": "Đã xảy ra lỗi trong quá trình AI phân tích. Vui lòng kiểm tra lại kết nối mạng hoặc API Key.",
+        "extracted_info": {
+            "degree": None,
+            "major": None,
+            "university": None,
+            "years_of_experience": 0,
+            "certificates": []
+        }
     }
