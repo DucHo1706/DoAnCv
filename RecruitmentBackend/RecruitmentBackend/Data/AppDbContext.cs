@@ -26,6 +26,8 @@ namespace RecruitmentBackend.Data
         public DbSet<AIEvaluation> AIEvaluations { get; set; }
         public DbSet<JobCriterion> JobCriteria { get; set; }
         public DbSet<ChatMessage> ChatMessages { get; set; }
+        public DbSet<TalentPoolCandidate> TalentPoolCandidates { get; set; }
+        public DbSet<TalentPoolInteraction> TalentPoolInteractions { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -41,15 +43,19 @@ namespace RecruitmentBackend.Data
                 .HasForeignKey<AIEvaluation>(ai => ai.ApplicationID)
                 .OnDelete(DeleteBehavior.Cascade); // Nếu xóa đơn ứng tuyển thì tự động xóa luôn kết quả đánh giá AI
             modelBuilder.Entity<Category>()
-             .HasOne(c => c.ParentCategory)
-             .WithMany(c => c.SubCategories)
-             .HasForeignKey(c => c.ParentId)
-             .OnDelete(DeleteBehavior.Restrict);
+                .HasOne(c => c.ParentCategory)
+                .WithMany(c => c.SubCategories)
+                .HasForeignKey(c => c.ParentId)
+                .OnDelete(DeleteBehavior.Restrict);
             modelBuilder.Entity<JobLevel>()
-    .HasOne(l => l.ParentLevel)
-    .WithMany(l => l.SubLevels)
-    .HasForeignKey(l => l.ParentId)
-    .OnDelete(DeleteBehavior.Restrict);
+                .HasOne(l => l.ParentLevel)
+                .WithMany(l => l.SubLevels)
+                .HasForeignKey(l => l.ParentId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<TalentPoolCandidate>()
+                .HasIndex(talentPoolCandidate => talentPoolCandidate.CandidateID)
+                .IsUnique(false);
         }
     }
 }

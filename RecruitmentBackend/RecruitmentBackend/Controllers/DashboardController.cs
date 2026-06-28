@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RecruitmentBackend.Interfaces;
+using System.Security.Claims;
 using System.Threading.Tasks;
 
 namespace RecruitmentBackend.Controllers
@@ -16,21 +17,33 @@ namespace RecruitmentBackend.Controllers
             _dashboardService = dashboardService;
         }
 
-        [HttpGet("stats")]
-        // [Authorize(Roles = "Admin")] // Mở comment này khi đã test xong
-        public async Task<IActionResult> GetDashboardStats([FromQuery] string? jobId, [FromQuery] string? timeRange)
+        [HttpGet("admin-stats")]
+        public async Task<IActionResult> GetAdminDashboardStats(
+            [FromQuery] string? categoryId,
+            [FromQuery] DateTime? fromDate,
+            [FromQuery] DateTime? toDate)
         {
-            var result = await _dashboardService.GetAdminDashboardStatsAsync(jobId, timeRange);
-            return Ok(result);
-        }
-        [HttpGet("hr-stats")]
-        [Authorize] // Bắt buộc HR phải đăng nhập
-        public async Task<IActionResult> GetHrDashboardStats([FromQuery] string? jobId, [FromQuery] string? timeRange)
-        {
-            var accountId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-            var result = await _dashboardService.GetHrDashboardStatsAsync(accountId, jobId, timeRange);
+            var result = await _dashboardService.GetAdminDashboardStatsAsync(categoryId, fromDate, toDate);
             return Ok(result);
         }
 
+        [HttpGet("hr-stats")]
+        [Authorize]
+        public async Task<IActionResult> GetHrDashboardStats([FromQuery] string? jobId, [FromQuery] string? timeRange)
+        {
+            var accountId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (string.IsNullOrWhiteSpace(accountId) == true)
+            {
+                return Unauthorized(new
+                {
+                    isSuccess = false,
+                    message = "Không xác định được tài khoản HR đang đăng nhập."
+                });
+            }
+
+            var result = await _dashboardService.GetHrDashboardStatsAsync(accountId, jobId, timeRange);
+            return Ok(result);
+        }
     }
 }

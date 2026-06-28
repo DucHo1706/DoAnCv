@@ -65,14 +65,57 @@ function CVRankingPage() {
       }));
   }, [applications, selectedJobId]);
 
-  const parseSkills = (jsonStr: string) => {
-    if (!jsonStr) return [];
-    try {
-      const parsed = JSON.parse(jsonStr);
-      return Array.isArray(parsed) ? parsed : [];
-    } catch {
+  const parseSkills = (skillsData?: string[] | string | null): string[] => {
+    if (!skillsData) {
       return [];
     }
+
+    if (Array.isArray(skillsData)) {
+      return skillsData
+        .filter((skill) => typeof skill === "string")
+        .map((skill) => skill.trim())
+        .filter((skill) => skill.length > 0);
+    }
+
+    if (typeof skillsData === "string") {
+      try {
+        const parsedSkills = JSON.parse(skillsData);
+
+        if (Array.isArray(parsedSkills)) {
+          return parsedSkills
+            .map((skillItem) => {
+              if (typeof skillItem === "string") {
+                return skillItem;
+              }
+
+              if (skillItem?.name) {
+                return skillItem.name;
+              }
+
+              if (skillItem?.skillName) {
+                return skillItem.skillName;
+              }
+
+              if (skillItem?.skill) {
+                return skillItem.skill;
+              }
+
+              return "";
+            })
+            .map((skill) => skill.trim())
+            .filter((skill) => skill.length > 0);
+        }
+
+        return [];
+      } catch {
+        return skillsData
+          .split(",")
+          .map((skill) => skill.trim())
+          .filter((skill) => skill.length > 0);
+      }
+    }
+
+    return [];
   };
 
   const getCriterionName = (record: CriteriaResultDto) => {

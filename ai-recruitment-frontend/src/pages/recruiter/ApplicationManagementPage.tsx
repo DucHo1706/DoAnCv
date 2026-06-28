@@ -1,5 +1,5 @@
-import { EyeOutlined, DownloadOutlined, FilePdfOutlined, RobotOutlined, UserOutlined, MailOutlined, AppstoreOutlined, UnorderedListOutlined } from "@ant-design/icons";
-import { Button, Card, Col, message, Drawer, Row, Space, Table, Tag, Typography, Select, Progress, Alert, Radio, Avatar } from "antd";
+import { EyeOutlined, FilePdfOutlined, RobotOutlined, UserOutlined, MailOutlined, AppstoreOutlined, UnorderedListOutlined } from "@ant-design/icons";
+import { Button, Card, Col, message, Drawer, Row, Space, Table, Tag, Typography, Select, Progress, Alert, Radio, Avatar, Modal, Input } from "antd";
 import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import PageContainer from "../../components/common/PageContainer";
@@ -22,8 +22,106 @@ function ApplicationManagementPage() {
   const [selectedApp, setSelectedApp] = useState<ApplicationDto | null>(null);
   const [viewMode, setViewMode] = useState<'table' | 'kanban'>('table');
   
-  // Mockup Kanban Stages
-  const kanbanStages = ["Mới nộp", "Đang xem xét", "Phỏng vấn", "Nhận việc (Offer)", "Đã từ chối"];
+  const applicationStatusStages = [
+    { status: "Applied", label: "Mới nộp" },
+    { status: "Reviewing", label: "Đang xem xét" },
+    { status: "Interview", label: "Phỏng vấn" },
+    { status: "Offer", label: "Nhận việc (Offer)" },
+    { status: "Rejected", label: "Đã từ chối" },
+  ];
+
+  const [rejectModalOpen, setRejectModalOpen] = useState(false);
+  const [rejectTargetApplication, setRejectTargetApplication] = useState<ApplicationDto | null>(null);
+  const [rejectReasonType, setRejectReasonType] = useState<string | undefined>(undefined);
+  const [rejectNote, setRejectNote] = useState("");
+  const [rejectSubmitting, setRejectSubmitting] = useState(false);
+  const rejectReasonOptions = [
+    { value: "Thiếu kinh nghiệm", label: "Thiếu kinh nghiệm" },
+    { value: "Không phù hợp văn hóa", label: "Không phù hợp văn hóa" },
+    { value: "Kỹ năng chưa phù hợp JD", label: "Kỹ năng chưa phù hợp JD" },
+    { value: "Mức lương kỳ vọng chưa phù hợp", label: "Mức lương kỳ vọng chưa phù hợp" },
+    { value: "Ứng viên không phản hồi", label: "Ứng viên không phản hồi" },
+    { value: "Khác", label: "Khác" },
+  ];
+
+  const openRejectModal = (application: ApplicationDto) => {
+    setRejectTargetApplication(application);
+    setRejectReasonType(undefined);
+    setRejectNote("");
+    setRejectModalOpen(true);
+  };
+
+  const handleConfirmReject = async () => {
+    if (!rejectTargetApplication) {
+      message.error("Không tìm thấy hồ sơ cần từ chối.");
+      return;
+    }
+
+    if (!rejectReasonType) {
+      message.warning("Vui lòng chọn lý do từ chối.");
+      return;
+    }
+
+    try {
+      setRejectSubmitting(true);
+
+      await recruitmentService.rejectApplication(rejectTargetApplication.id, {
+        reasonType: rejectReasonType,
+        note: rejectNote,
+      });
+
+      setApplications((previousApplications) =>
+        previousApplications.map((application) => {
+          if (application.id === rejectTargetApplication.id) {
+            return {
+              ...application,
+              status: "Rejected",
+            };
+          }
+
+          return application;
+        })
+      );
+
+      message.success("Đã từ chối hồ sơ và đưa ứng viên vào Talent Pool.");
+
+      setRejectModalOpen(false);
+      setRejectTargetApplication(null);
+      setRejectReasonType(undefined);
+      setRejectNote("");
+    } catch (error: any) {
+      const errorMessage =
+        error?.response?.data?.message || "Không thể từ chối hồ sơ.";
+
+      message.error(errorMessage);
+    } finally {
+      setRejectSubmitting(false);
+    }
+  };
+
+  const getStageLabelByStatus = (status?: string) => {
+    const foundStage = applicationStatusStages.find(
+      (stage) => stage.status === status
+    );
+
+    if (foundStage) {
+      return foundStage.label;
+    }
+
+    return "Mới nộp";
+  };
+
+  const getStatusByStageLabel = (label: string) => {
+    const foundStage = applicationStatusStages.find(
+      (stage) => stage.label === label
+    );
+
+    if (foundStage) {
+      return foundStage.status;
+    }
+
+    return "Applied";
+  };
   // State lưu trữ dữ liệu Kanban để xử lý kéo thả
   const [kanbanData, setKanbanData] = useState<Record<string, ApplicationDto[]>>({});
 
@@ -70,13 +168,23 @@ function ApplicationManagementPage() {
 
   // Mỗi khi dữ liệu lọc thay đổi, reset lại bảng Kanban
   useEffect(() => {
-    setKanbanData({
-      "Mới nộp": filteredApplications,
-      "Đang xem xét": [],
-      "Phỏng vấn": [],
-      "Nhận việc (Offer)": [],
-      "Đã từ chối": []
+    const groupedData: Record<string, ApplicationDto[]> = {};
+
+    applicationStatusStages.forEach((stage) => {
+      groupedData[stage.label] = [];
     });
+
+    filteredApplications.forEach((application) => {
+      const stageLabel = getStageLabelByStatus(application.status);
+
+      if (!groupedData[stageLabel]) {
+        groupedData[stageLabel] = [];
+      }
+
+      groupedData[stageLabel].push(application);
+    });
+
+    setKanbanData(groupedData);
   }, [filteredApplications]);
 
   const columns = [
@@ -84,10 +192,15 @@ function ApplicationManagementPage() {
       title: "Ứng viên",
       dataIndex: "candidateName",
       key: "candidateName",
+      width: 220,
       render: (text: string, record: ApplicationDto) => (
-        <div>
-          <Text strong>{text}</Text>
-          <div style={{ fontSize: "12px", color: "#8c8c8c" }}>{record.email}</div>
+        <div style={{ maxWidth: 200 }}>
+          <Text strong ellipsis style={{ display: "block" }}>
+            {text}
+          </Text>
+          <Text type="secondary" style={{ fontSize: 12 }} ellipsis>
+            {record.email}
+          </Text>
         </div>
       ),
     },
@@ -95,18 +208,36 @@ function ApplicationManagementPage() {
       title: "Vị trí ứng tuyển",
       dataIndex: "jobTitle",
       key: "jobTitle",
-      render: (text: string) => <Tag color="blue">{text}</Tag>,
+      width: 320,
+      render: (text: string) => (
+        <Tag
+          color="blue"
+          style={{
+            maxWidth: 290,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {text}
+        </Tag>
+      ),
     },
     {
       title: "Điểm AI Đánh giá",
       dataIndex: "aiScore",
       key: "aiScore",
+      width: 180,
       sorter: (a: ApplicationDto, b: ApplicationDto) => a.aiScore - b.aiScore,
       render: (score: number) => {
         let color = "success";
-        if (score < 50) color = "error";
-        else if (score < 75) color = "warning";
-        
+
+        if (score < 50) {
+          color = "error";
+        } else if (score < 75) {
+          color = "warning";
+        }
+
         return (
           <Tag color={color} style={{ fontSize: "14px", padding: "4px 8px" }}>
             <RobotOutlined style={{ marginRight: 4 }} />
@@ -116,31 +247,84 @@ function ApplicationManagementPage() {
       },
     },
     {
-      title: "CV File",
-      key: "cv",
-      render: (_: any, record: ApplicationDto) => (
-        <Button 
-          type="link" 
-          icon={<FilePdfOutlined />} 
-          href={record.cvUrl} 
-          target="_blank"
-        >
-          Xem CV
-        </Button>
-      ),
+      title: "Trạng thái",
+      dataIndex: "status",
+      key: "status",
+      width: 220,
+      render: (status: string, record: ApplicationDto) => {
+        const currentStatus = status || "Applied";
+
+        return (
+          <Select
+            value={currentStatus}
+            style={{ width: 170 }}
+            onChange={async (newStatus) => {
+              if (newStatus === "Rejected") {
+                openRejectModal(record);
+                return;
+              }
+
+              try {
+                await recruitmentService.updateApplicationStatus(record.id, newStatus);
+
+                setApplications((previousApplications) =>
+                  previousApplications.map((application) => {
+                    if (application.id === record.id) {
+                      return {
+                        ...application,
+                        status: newStatus,
+                      };
+                    }
+
+                    return application;
+                  })
+                );
+
+                message.success("Cập nhật trạng thái thành công.");
+              } catch (error: any) {
+                const errorMessage =
+                  error?.response?.data?.message || "Không thể cập nhật trạng thái.";
+
+                message.error(errorMessage);
+              }
+            }}
+            options={[
+              { value: "Applied", label: "Mới nộp" },
+              { value: "Reviewing", label: "Đang xem xét" },
+              { value: "Interview", label: "Phỏng vấn" },
+              { value: "Offer", label: "Nhận việc (Offer)" },
+              { value: "Rejected", label: "Đã từ chối" },
+            ]}
+          />
+        );
+      },
     },
     {
       title: "Thao tác",
       key: "action",
+      width: 390,
+      align: "center" as const,
       render: (_: any, record: ApplicationDto) => (
-        <Space>
-          <Button icon={<EyeOutlined />} onClick={() => handleViewDetail(record)} title="Xem nhanh báo cáo AI">
+        <Space size="small" wrap={false}>
+          <Button
+            icon={<EyeOutlined />}
+            onClick={() => handleViewDetail(record)}
+          >
             Xem nhanh AI
           </Button>
-          <Button icon={<MailOutlined />} onClick={() => navigate(`/recruiter/candidates/${record.id}/email`)} title="Gửi Email cho ứng viên">
+
+          <Button
+            icon={<MailOutlined />}
+            onClick={() => navigate(`/recruiter/candidates/${record.id}/email`)}
+          >
             Email
           </Button>
-          <Button type="primary" icon={<UserOutlined />} onClick={() => navigate(`/recruiter/candidates/${record.id}`)}>
+
+          <Button
+            type="primary"
+            icon={<UserOutlined />}
+            onClick={() => navigate(`/recruiter/candidates/${record.id}`)}
+          >
             Hồ sơ chi tiết
           </Button>
         </Space>
@@ -154,30 +338,63 @@ function ApplicationManagementPage() {
     e.dataTransfer.setData("sourceStage", sourceStage);
   };
 
-  const handleDrop = (e: React.DragEvent, targetStage: string) => {
+  const handleDrop = async (e: React.DragEvent, targetStage: string) => {
     e.preventDefault();
+
     const appId = e.dataTransfer.getData("appId");
     const sourceStage = e.dataTransfer.getData("sourceStage");
-    
-    if (sourceStage === targetStage || !appId) return; // Không làm gì nếu thả lại cột cũ
 
-    setKanbanData(prev => {
-      const app = prev[sourceStage].find(a => a.id === appId);
-      if (!app) return prev;
-      return {
-        ...prev,
-        [sourceStage]: prev[sourceStage].filter(a => a.id !== appId),
-        [targetStage]: [...prev[targetStage], app]
-      };
-    });
-    message.success(`Đã chuyển ứng viên sang trạng thái: ${targetStage}`);
+    if (sourceStage === targetStage || !appId) {
+      return;
+    }
+
+    const targetStatus = getStatusByStageLabel(targetStage);
+
+    if (targetStatus === "Rejected") {
+      const targetApplication = applications.find((application) => application.id === appId);
+
+      if (!targetApplication) {
+        message.error("Không tìm thấy hồ sơ cần từ chối.");
+        return;
+      }
+
+      openRejectModal(targetApplication);
+      return;
+    }
+
+    try {
+      await recruitmentService.updateApplicationStatus(appId, targetStatus);
+
+      setApplications((previousApplications) =>
+        previousApplications.map((application) => {
+          if (application.id === appId) {
+            return {
+              ...application,
+              status: targetStatus,
+            };
+          }
+
+          return application;
+        })
+      );
+
+      message.success(`Đã chuyển ứng viên sang trạng thái: ${targetStage}`);
+    } catch (error: any) {
+      const errorMessage =
+        error?.response?.data?.message || "Không thể cập nhật trạng thái hồ sơ.";
+
+      message.error(errorMessage);
+    }
   };
 
   // Render Kanban Board
   const renderKanbanBoard = () => {
     return (
       <div style={{ display: 'flex', gap: 16, overflowX: 'auto', paddingBottom: 16 }}>
-        {kanbanStages.map((stage, idx) => (
+        {applicationStatusStages.map((stageItem) => {
+          const stage = stageItem.label;
+
+          return (
           <div key={stage} onDragOver={(e) => e.preventDefault()} onDrop={(e) => handleDrop(e, stage)} style={{ minWidth: 300, background: '#f5f7fa', padding: 16, borderRadius: 12, border: '1px solid #e2e8f0', minHeight: 400 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
               <Text strong style={{ fontSize: 16 }}>{stage}</Text>
@@ -212,8 +429,9 @@ function ApplicationManagementPage() {
               )}
             </Space>
           </div>
-        ))}
-      </div>
+          );
+        })}
+      </div>  
     );
   };
 
@@ -235,7 +453,7 @@ function ApplicationManagementPage() {
         </Col>
       </Row>
 
-      <Card>
+      <Card style={{ overflow: "hidden" }}>
         <TableToolbar
           searchPlaceholder="Tìm ứng viên (chờ update)..."
           extra={
@@ -268,7 +486,7 @@ function ApplicationManagementPage() {
           }
         />
         {viewMode === 'table' ? (
-          <Table columns={columns} dataSource={filteredApplications} rowKey="id" loading={loading} pagination={{ pageSize: 10 }} />
+          <Table columns={columns} dataSource={filteredApplications} rowKey="id" loading={loading} pagination={{ pageSize: 10 }} scroll={{ x: 1050 }} tableLayout="fixed"/>
         ) : (
           renderKanbanBoard()
         )}
@@ -281,8 +499,8 @@ function ApplicationManagementPage() {
         open={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         extra={
-          <Button type="primary" icon={<DownloadOutlined />} href={selectedApp?.cvUrl} target="_blank">
-            Tải CV này
+          <Button type="primary" icon={<FilePdfOutlined />} href={selectedApp?.cvUrl} target="_blank">
+            Xem CV
           </Button>
         }
         width={760}
@@ -398,6 +616,69 @@ function ApplicationManagementPage() {
           </div>
         )}
       </Drawer>
+      <Modal
+        title="Xác nhận từ chối & Ghi chú"
+        open={rejectModalOpen}
+        onOk={handleConfirmReject}
+        onCancel={() => {
+          setRejectModalOpen(false);
+          setRejectTargetApplication(null);
+          setRejectReasonType(undefined);
+          setRejectNote("");
+        }}
+        okText="Xác nhận từ chối"
+        cancelText="Hủy"
+        confirmLoading={rejectSubmitting}
+        destroyOnClose
+      >
+        <Space direction="vertical" style={{ width: "100%" }} size="middle">
+          <div>
+            <Text strong>Ứng viên</Text>
+            <div style={{ marginTop: 4 }}>
+              {rejectTargetApplication?.candidateName || "Chưa chọn ứng viên"}
+            </div>
+          </div>
+
+          <div>
+            <Text strong>Vị trí ứng tuyển</Text>
+            <div style={{ marginTop: 4 }}>
+              {rejectTargetApplication?.jobTitle || "Chưa cập nhật"}
+            </div>
+          </div>
+
+          <div>
+            <Text strong>
+              Lý do từ chối <span style={{ color: "red" }}>*</span>
+            </Text>
+
+            <Select
+              placeholder="Chọn lý do từ chối"
+              value={rejectReasonType}
+              onChange={setRejectReasonType}
+              options={rejectReasonOptions}
+              style={{ width: "100%", marginTop: 8 }}
+            />
+          </div>
+
+          <div>
+            <Text strong>Ghi chú thêm</Text>
+
+            <Input.TextArea
+              placeholder="Nhập ghi chú để lưu vào Talent Pool..."
+              value={rejectNote}
+              onChange={(event) => setRejectNote(event.target.value)}
+              rows={4}
+              style={{ marginTop: 8 }}
+            />
+          </div>
+
+          <Alert
+            type="info"
+            showIcon
+            message="Sau khi xác nhận, hồ sơ sẽ được chuyển sang trạng thái Đã từ chối và ứng viên sẽ được lưu vào Ngân hàng Ứng viên."
+          />
+        </Space>
+      </Modal>
     </PageContainer>
   );
 }

@@ -3,6 +3,7 @@ using Microsoft.Extensions.FileProviders;
 using RecruitmentBackend.Data;
 using RecruitmentBackend.Interfaces;
 using RecruitmentBackend.Services;
+using RecruitmentBackend.Settings;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -61,6 +62,9 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
+builder.Services.Configure<EmailSettings>(
+    builder.Configuration.GetSection("EmailSettings"));
+
 // 3. Đăng ký các Services
 builder.Services.AddScoped<IFileService, FileService>();
 builder.Services.AddHttpClient<IAiService, AiService>();
@@ -74,6 +78,9 @@ builder.Services.AddScoped<IBranchService, BranchService>();
 builder.Services.AddScoped<IJobLevelService, JobLevelService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddHttpClient<IChatbotService, ChatbotService>();
+builder.Services.AddScoped<IEmailSenderService, EmailSenderService>();
+builder.Services.AddHttpClient<ICandidateEmailAiService, CandidateEmailAiService>();
+builder.Services.AddScoped<ITalentPoolService, TalentPoolService>();
 
 
 var jwtSettings = builder.Configuration.GetSection("Jwt");

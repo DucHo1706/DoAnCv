@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using RecruitmentBackend.Interfaces;
 using System.Security.Claims;
 using System.Threading.Tasks;
+using RecruitmentBackend.DTOs.Requests;
 
 namespace RecruitmentBackend.Controllers
 {
@@ -41,10 +42,21 @@ namespace RecruitmentBackend.Controllers
 
             if (!result.IsSuccess)
             {
-                // Service đã xử lý lỗi, chỉ cần trả về cho client
-                return StatusCode(500, new { message = result.Message });
+                if (result.Data != null)
+                {
+                    return Conflict(new
+                    {
+                        message = result.Message,
+                        data = result.Data
+                    });
+                }
+
+                return BadRequest(new
+                {
+                    message = result.Message
+                });
             }
-            
+
             return Ok(result.Data);
         }
 
@@ -59,7 +71,55 @@ namespace RecruitmentBackend.Controllers
             
             return Ok(result.Data);
         }
+        //API cập nhật trạng thái ứng tuyển
+        [HttpPut("hr/applications/{applicationId}/status")]
+        [Authorize(Roles = "Recruiter")]
+        public async Task<IActionResult> UpdateApplicationStatus(string applicationId, [FromBody] UpdateApplicationStatusRequest request)
+        {
+            var result = await _recruitmentService.UpdateApplicationStatusAsync(
+                applicationId,
+                request,
+                User
+            );
 
+            if (result.IsSuccess == false)
+            {
+                return BadRequest(new
+                {
+                    message = result.Message
+                });
+            }
+
+            return Ok(new
+            {
+                message = result.Message,
+                data = result.Data
+            });
+        }
+        [HttpPost("hr/applications/{applicationId}/reject")]
+        [Authorize(Roles = "Recruiter")]
+        public async Task<IActionResult> RejectApplication(string applicationId, [FromBody] RejectApplicationRequest request)
+        {
+            var result = await _recruitmentService.RejectApplicationAsync(
+                applicationId,
+                request,
+                User
+            );
+
+            if (result.IsSuccess == false)
+            {
+                return BadRequest(new
+                {
+                    message = result.Message
+                });
+            }
+
+            return Ok(new
+            {
+                message = result.Message,
+                data = result.Data
+            });
+        }
         // API lấy danh sách Đơn ứng tuyển của chính Ứng viên đang đăng nhập
         [HttpGet("my-applications")]
         [Authorize(Roles = "Candidate")]

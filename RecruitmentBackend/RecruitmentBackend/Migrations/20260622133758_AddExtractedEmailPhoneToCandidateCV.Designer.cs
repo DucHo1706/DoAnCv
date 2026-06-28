@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using RecruitmentBackend.Data;
 
@@ -11,9 +12,11 @@ using RecruitmentBackend.Data;
 namespace RecruitmentBackend.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260622133758_AddExtractedEmailPhoneToCandidateCV")]
+    partial class AddExtractedEmailPhoneToCandidateCV
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -477,108 +480,6 @@ namespace RecruitmentBackend.Migrations
                     b.HasKey("RecruiterID", "BranchID");
 
                     b.ToTable("RecruiterBranches");
-                });
-
-            modelBuilder.Entity("RecruitmentBackend.Models.TalentPoolCandidate", b =>
-                {
-                    b.Property<string>("TalentPoolCandidateID")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("CandidateID")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("CurrentAvailabilityStatus")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Email")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("FullName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("HighestAiScore")
-                        .HasColumnType("int");
-
-                    b.Property<string>("HighestScoreJobTitle")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("HighlightSkillsJson")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<DateTime?>("LastAppliedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime>("LastUpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("LatestCVID")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Phone")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Source")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("TalentPoolCandidateID");
-
-                    b.HasIndex("CandidateID");
-
-                    b.ToTable("TalentPoolCandidates");
-                });
-
-            modelBuilder.Entity("RecruitmentBackend.Models.TalentPoolInteraction", b =>
-                {
-                    b.Property<string>("InteractionID")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<int?>("AiScore")
-                        .HasColumnType("int");
-
-                    b.Property<string>("ApplicationID")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Content")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("CreatedByRecruiterID")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("JobID")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("StatusSnapshot")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("TalentPoolCandidateID")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Title")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Type")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("InteractionID");
-
-                    b.ToTable("TalentPoolInteractions");
                 });
 
             modelBuilder.Entity("RecruitmentBackend.Models.AIEvaluation", b =>

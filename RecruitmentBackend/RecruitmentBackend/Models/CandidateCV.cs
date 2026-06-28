@@ -10,7 +10,9 @@ namespace RecruitmentBackend.Models
         public string CandidateID { get; set; }
         
         public string FilePath { get; set; }
-        public string RawText { get; set; } 
+        public string RawText { get; set; }
+        public string? ExtractedEmail { get; set; }
+        public string? ExtractedPhone { get; set; }
         public string CVExtractedSkills { get; set; }
         public string? Degree { get; set; }
         public string? Major { get; set; }

@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import ScrollToTop from "./components/common/ScrollToTop";
 
 // Auth
 import LoginPage from "./pages/auth/LoginPage";
@@ -17,7 +18,7 @@ import ApplicationManagementPage from "./pages/recruiter/ApplicationManagementPa
 import CVRankingPage from "./pages/recruiter/CVRankingPage";
 import EmailCandidatePage from "./pages/recruiter/EmailCandidatePage";
 import TalentPoolPage from "./pages/recruiter/TalentPoolPage";
-import InviteCandidatePage from "./pages/recruiter/InviteCandidatePage";
+import TalentPoolDetailPage from "./pages/recruiter/TalentPoolDetailPage";
 import PublicLayout from "./pages/recruiter/PublicLayout";
 import HomePage from "./pages/recruiter/HomePage";
 
@@ -41,6 +42,7 @@ import JobLevelManagementPage from "./pages/admin/JobLevelManagementPage";
 function App() {
   return (
     <BrowserRouter>
+      <ScrollToTop />
       <Routes>
         {/* Auth */}
         <Route path="/login" element={<LoginPage />} />
@@ -66,8 +68,7 @@ function App() {
           <Route path="candidates/:id/email" element={<EmailCandidatePage />} />
           <Route path="ranking" element={<CVRankingPage />} />
           <Route path="talent-pool" element={<TalentPoolPage />} />
-          <Route path="talent-pool/invite/:id" element={<InviteCandidatePage />} />
-
+          <Route path="talent-pool/:id" element={<TalentPoolDetailPage />} />
         </Route>
 
         {/* Admin */}

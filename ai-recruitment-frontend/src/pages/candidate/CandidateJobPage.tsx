@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Input, Button, Row, Col, Card, Typography, Select, Space, Checkbox, Tag, Pagination, Divider, Radio, InputNumber } from "antd";
-import { SearchOutlined, EnvironmentOutlined, DollarOutlined, ClockCircleOutlined, FireOutlined, RobotOutlined } from "@ant-design/icons";
+import { SearchOutlined, EnvironmentOutlined, LoadingOutlined, CheckCircleOutlined,ExclamationCircleOutlined, ClockCircleOutlined, RobotOutlined } from "@ant-design/icons";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import axiosClient from "../../services/axiosClient";
 
@@ -19,6 +19,7 @@ export default function CandidateJobPage() {
   const [totalCount, setTotalCount] = useState(0);
   const [pageIndex, setPageIndex] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [myApplications, setMyApplications] = useState<any[]>([]);
 
   // State cho Bộ lọc nâng cao
   const [categoryId, setCategoryId] = useState("all");
@@ -42,6 +43,172 @@ export default function CandidateJobPage() {
     };
     fetchMetadata();
   }, []);
+
+  const normalizeArrayData = (data: any) => {
+  if (Array.isArray(data)) {
+    return data;
+  }
+
+  return data?.$values || [];
+};
+
+const getJobId = (job: any) => {
+  return job?.id || job?.jobId || job?.jobID || "";
+};
+
+const getApplicationJobId = (application: any) => {
+  return application?.jobId || application?.jobID || "";
+};
+
+const findApplicationByJobId = (jobId: string) => {
+  return myApplications.find((application) => {
+    return getApplicationJobId(application) === jobId;
+  });
+};
+
+const isApplicationAiReady = (application: any) => {
+  if (!application) {
+    return false;
+  }
+
+  if (application.aiStatus === "Completed") {
+    return true;
+  }
+
+  if (application.hasAiEvaluation === true && application.classification !== "AI_ERROR") {
+    return true;
+  }
+
+  return false;
+};
+
+const isApplicationAiProcessing = (application: any) => {
+  if (!application) {
+    return false;
+  }
+
+  if (application.aiStatus === "Processing") {
+    return true;
+  }
+
+  if (application.hasAiEvaluation === false) {
+    return true;
+  }
+
+  return false;
+};
+
+const isApplicationAiFailed = (application: any) => {
+  if (!application) {
+    return false;
+  }
+
+  if (application.aiStatus === "Failed") {
+    return true;
+  }
+
+  if (application.classification === "AI_ERROR") {
+    return true;
+  }
+
+  return false;
+};
+
+const getAiScoreText = (application: any) => {
+  if (!application) {
+    return "Chưa chấm";
+  }
+
+  if (isApplicationAiProcessing(application) === true) {
+    return "Đang phân tích";
+  }
+
+  if (isApplicationAiFailed(application) === true) {
+    return "AI lỗi";
+  }
+
+  if (isApplicationAiReady(application) === true) {
+    return `${Math.round(Number(application.aiScore || 0))}/100`;
+  }
+
+  return "Chưa chấm";
+};
+
+const getAiTagColor = (application: any) => {
+  if (!application) {
+    return "default";
+  }
+
+  if (isApplicationAiProcessing(application) === true) {
+    return "processing";
+  }
+
+  if (isApplicationAiFailed(application) === true) {
+    return "red";
+  }
+
+  const score = Number(application.aiScore || 0);
+
+  if (score >= 80) {
+    return "green";
+  }
+
+  if (score >= 50) {
+    return "orange";
+  }
+
+  return "red";
+};
+
+const renderAiMatchTag = (job: any) => {
+  const jobId = getJobId(job);
+  const application = findApplicationByJobId(jobId);
+
+  let icon = <RobotOutlined />;
+
+  if (isApplicationAiProcessing(application) === true) {
+    icon = <LoadingOutlined />;
+  } else if (isApplicationAiFailed(application) === true) {
+    icon = <ExclamationCircleOutlined />;
+  } else if (isApplicationAiReady(application) === true) {
+    icon = <CheckCircleOutlined />;
+  }
+
+  return (
+    <Tag
+      icon={icon}
+      color={getAiTagColor(application)}
+      style={{
+        marginTop: 12,
+        fontSize: 16,
+        padding: "6px 12px",
+        borderRadius: 6,
+      }}
+    >
+      AI Match: {getAiScoreText(application)}
+    </Tag>
+  );
+  };
+
+  const fetchMyApplications = async () => {
+  try {
+    const response = await axiosClient.get("/Recruitment/my-applications");
+    const applications = normalizeArrayData(response.data);
+
+    setMyApplications(applications);
+
+    return applications;
+  } catch (error: any) {
+    if (error?.response?.status === 401 || error?.response?.status === 403) {
+      setMyApplications([]);
+      return [];
+    }
+
+    console.error("Lỗi lấy lịch sử ứng tuyển:", error);
+    setMyApplications([]);
+    return [];
+  }
+};
 
   const fetchJobs = async () => {
     setLoading(true);
@@ -70,6 +237,7 @@ export default function CandidateJobPage() {
 
   useEffect(() => {
     fetchJobs();
+    fetchMyApplications();
   }, [pageIndex]);
 
   // Tự động gọi Tìm kiếm khi người dùng đổi Category hoặc Level
@@ -355,9 +523,7 @@ export default function CandidateJobPage() {
                         </div>
                         <div style={{ textAlign: "right", flexShrink: 0 }}>
                           <Text strong style={{ color: "#00b14f", fontSize: 22, display: "block" }}>{job.salary}</Text>
-                          <Tag icon={<RobotOutlined />} color={job.aiScore > 0 ? (job.aiScore > 80 ? "green" : "orange") : "default"} style={{ marginTop: 12, fontSize: 16, padding: "6px 12px", borderRadius: 6 }}>
-                            AI Match: {job.aiScore > 0 ? `${job.aiScore}%` : "Chưa chấm"}
-                          </Tag>
+                          {renderAiMatchTag(job)}
                         </div>
                       </div>
 

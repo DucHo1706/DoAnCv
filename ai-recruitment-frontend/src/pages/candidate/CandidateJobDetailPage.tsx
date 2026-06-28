@@ -4,7 +4,9 @@ import { Row, Col, Card, Typography, Button, Space, Divider, Spin, message, Brea
 import { 
   EnvironmentOutlined, DollarOutlined, ClockCircleOutlined, 
   TeamOutlined, SendOutlined, HeartOutlined, HomeOutlined,
-  BankOutlined, StarOutlined, RobotOutlined, UploadOutlined
+  BankOutlined, StarOutlined, RobotOutlined, UploadOutlined,
+  TrophyOutlined, BarChartOutlined, ArrowRightOutlined,
+  CheckCircleOutlined, EyeOutlined,
 } from "@ant-design/icons";
 import axiosClient from "../../services/axiosClient";
 
@@ -18,12 +20,20 @@ export default function CandidateJobDetailPage() {
   const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
   const [applyFile, setApplyFile] = useState<any>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isApplySuccessModalOpen, setIsApplySuccessModalOpen] = useState(false);
+  const [submittedApplicationId, setSubmittedApplicationId] = useState<string | null>(null);
+  const [appliedApplication, setAppliedApplication] = useState<any>(null);
 
   useEffect(() => {
     const fetchJobDetail = async () => {
       try {
         const res = await axiosClient.get(`/Jobs/published/${id}`);
         setJob(res.data);
+        const currentJobId = getJobId(res.data);
+
+        if (currentJobId) {
+          await fetchAppliedApplication(currentJobId);
+        }
       } catch (error) {
         message.error("Không thể tải chi tiết công việc hoặc tin đã hết hạn.");
         navigate("/jobs");
@@ -33,6 +43,56 @@ export default function CandidateJobDetailPage() {
     };
     fetchJobDetail();
   }, [id, navigate]);
+
+  const normalizeArrayData = (data: any) => {
+  if (Array.isArray(data)) {
+    return data;
+  }
+
+  return data?.$values || [];
+};
+
+const getJobId = (jobItem: any) => {
+  return jobItem?.id || jobItem?.jobId || jobItem?.jobID || "";
+};
+
+const getApplicationJobId = (application: any) => {
+  return application?.jobId || application?.jobID || "";
+};
+
+const getApplicationId = (application: any) => {
+  return (
+    application?.applicationId ||
+    application?.id ||
+    application?.applicationID ||
+    ""
+  );
+};
+
+const fetchAppliedApplication = async (currentJobId: string) => {
+  try {
+    const response = await axiosClient.get("/Recruitment/my-applications");
+    const applications = normalizeArrayData(response.data);
+
+    const foundApplication = applications.find((application: any) => {
+      return getApplicationJobId(application) === currentJobId;
+    });
+
+    if (foundApplication) {
+      setAppliedApplication(foundApplication);
+    } else {
+      setAppliedApplication(null);
+    }
+  } catch (error: any) {
+    if (error?.response?.status === 401 || error?.response?.status === 403) {
+      setAppliedApplication(null);
+      return;
+    }
+
+    console.error("Lỗi kiểm tra trạng thái ứng tuyển:", error);
+    setAppliedApplication(null);
+  }
+};
 
   const handleApplyWithAI = () => {
     // Tuyệt chiêu: Kích hoạt event để Chatbot tự động mở lên và gán job này vào
@@ -51,33 +111,114 @@ export default function CandidateJobDetailPage() {
     setApplyFile(null);
   };
 
-  const handleDirectApply = async () => {
-    if (!applyFile) {
-      message.error("Vui lòng chọn file CV của bạn!");
+  const handleGoToAiEvaluation = () => {
+    setIsApplySuccessModalOpen(false);
+
+    if (submittedApplicationId) {
+      navigate(`/my-applications?showAiDetail=${submittedApplicationId}`);
       return;
     }
-    setIsSubmitting(true);
-    try {
-      const formData = new FormData();
-      const prompt = `Tôi muốn ứng tuyển vào vị trí ${job.title} với CV đính kèm.`;
-      formData.append("Prompt", prompt);
-      formData.append("JobId", job.id);
-      formData.append("File", applyFile);
-      
-      await axiosClient.post("/Chatbot/chat", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
+
+    navigate("/my-applications");
+  };
+
+  const handleViewAppliedAiEvaluation = () => {
+  if (!appliedApplication) {
+    message.info("Chưa tìm thấy hồ sơ ứng tuyển của bạn cho vị trí này.");
+    return;
+  }
+
+  const applicationId = getApplicationId(appliedApplication);
+
+  if (!applicationId) {
+    message.info("Không tìm thấy mã hồ sơ ứng tuyển.");
+    return;
+  }
+
+  navigate(`/my-applications?showAiDetail=${applicationId}`);
+  };
+
+  const handleDirectApply = async () => {
+  if (!applyFile) {
+    message.error("Vui lòng chọn file CV của bạn!");
+    return;
+  }
+
+  if (!job || !job.id) {
+    message.error("Không tìm thấy thông tin tin tuyển dụng.");
+    return;
+  }
+
+  setIsSubmitting(true);
+
+  try {
+    const formData = new FormData();
+
+    formData.append("JobId", job.id);
+    formData.append("CvFile", applyFile);
+
+    const response = await axiosClient.post("/Recruitment/apply", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+
+    const applicationId =
+      response.data?.applicationId ||
+      response.data?.data?.applicationId ||
+      null;
+
+      const currentJobId = getJobId(job);
+
+        setAppliedApplication({
+        id: applicationId,
+        applicationId: applicationId,
+        jobId: currentJobId,
+        aiStatus: "Processing",
+        hasAiEvaluation: false,
       });
 
-      message.success("Nộp hồ sơ thành công! AI đang xử lý, bạn có thể xem kết quả ở trang Lịch sử ứng tuyển.");
+    setSubmittedApplicationId(applicationId);
+    setIsApplyModalOpen(false);
+    setApplyFile(null);
+
+    message.success("Nộp hồ sơ thành công!");
+    setIsApplySuccessModalOpen(true);
+  } catch (error: any) {
+    console.log("Lỗi nộp CV:", error);
+    console.log("Response lỗi:", error?.response);
+
+    const errorMessage =
+      error?.response?.data?.message ||
+      error?.response?.data ||
+      "Đã có lỗi xảy ra khi nộp hồ sơ. Vui lòng thử lại.";
+
+    const existingApplicationId =
+      error?.response?.data?.data?.applicationId ||
+      error?.response?.data?.applicationId ||
+      null;
+
+    if (error?.response?.status === 409 && existingApplicationId) {
+      const currentJobId = getJobId(job);
+
+      setAppliedApplication({
+        id: existingApplicationId,
+        applicationId: existingApplicationId,
+        jobId: currentJobId,
+      });
+
+      setSubmittedApplicationId(existingApplicationId);
       setIsApplyModalOpen(false);
       setApplyFile(null);
-
-    } catch (error) {
-      message.error("Đã có lỗi xảy ra khi nộp hồ sơ. Vui lòng thử lại.");
-    } finally {
-      setIsSubmitting(false);
+      setIsApplySuccessModalOpen(true);
+      return;
     }
-  };
+
+    message.error(errorMessage);
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   const uploadProps = { onRemove: () => { setApplyFile(null); }, beforeUpload: (file: any) => { setApplyFile(file); return false; }, fileList: applyFile ? [applyFile] : [], maxCount: 1 };
 
@@ -134,9 +275,14 @@ export default function CandidateJobDetailPage() {
             </Col>
             <Col>
               <Space direction="vertical" style={{ width: "100%" }}>
-                <Button type="primary" size="large" icon={<SendOutlined />} onClick={showApplyModal} style={{ width: 240, height: 50, fontSize: 18, borderRadius: 8 }}>
-                  Ứng tuyển ngay
+                <Button type={appliedApplication ? "default" : "primary"} size="large" icon={appliedApplication ? <CheckCircleOutlined /> : <SendOutlined />} onClick={appliedApplication ? undefined : showApplyModal} disabled={!!appliedApplication} style={{ width: 240, height: 50, fontSize: 18, borderRadius: 8, background: appliedApplication ? "#f5f5f5" : undefined, color: appliedApplication ? "#8c8c8c" : undefined, borderColor: appliedApplication ? "#d9d9d9" : undefined }}>
+                  {appliedApplication ? "Đã ứng tuyển" : "Ứng tuyển ngay"}
                 </Button>
+                {appliedApplication && (
+                  <Button size="large" icon={<EyeOutlined />} onClick={handleViewAppliedAiEvaluation} style={{ width: 240, height: 50, fontSize: 16, borderRadius: 8,}}>
+                    Xem AI đánh giá
+                  </Button>
+                )}
                 <Button size="large" icon={<RobotOutlined />} onClick={handleApplyWithAI} style={{ width: 240, height: 50, fontSize: 16, borderRadius: 8 }}>
                   Chat với AI & Ứng tuyển
                 </Button>
@@ -238,6 +384,164 @@ export default function CandidateJobDetailPage() {
               <Button icon={<UploadOutlined />}>Chọn file CV của bạn</Button>
           </Upload>
         </Modal>
+
+        <Modal
+  open={isApplySuccessModalOpen}
+  onCancel={() => setIsApplySuccessModalOpen(false)}
+  footer={null}
+  centered
+  width={520}
+>
+  <div style={{ textAlign: "center", padding: "16px 8px 4px" }}>
+    <div
+      style={{
+        width: 72,
+        height: 72,
+        borderRadius: "50%",
+        background: "#f0fdf4",
+        border: "1px solid #bbf7d0",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        margin: "0 auto 18px",
+      }}
+    >
+      <TrophyOutlined style={{ fontSize: 34, color: "#22c55e" }} />
+    </div>
+
+    <Title level={4} style={{ marginBottom: 8 }}>
+      Hồ sơ của bạn đã được gửi thành công!
+    </Title>
+
+    <Text type="secondary">
+      Chúc mừng! Tuyển Dụng AI đã nhận được CV của bạn và sẽ gửi đến nhà tuyển dụng sớm nhất.
+    </Text>
+
+    <div
+      style={{
+        marginTop: 24,
+        padding: 18,
+        border: "1px solid #dbeafe",
+        background: "#f8fbff",
+        borderRadius: 12,
+        textAlign: "left",
+      }}
+    >
+      <Space align="start">
+        <div
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: "50%",
+            background: "#eff6ff",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "#2563eb",
+            flexShrink: 0,
+          }}
+        >
+          <BarChartOutlined />
+        </div>
+
+        <div>
+          <Text strong>Cải thiện CV với AI Insights</Text>
+
+          <div style={{ marginTop: 4 }}>
+            <Text type="secondary">
+              Xem phân tích chi tiết mức độ phù hợp của bạn.
+            </Text>
+          </div>
+
+          <div style={{ marginTop: 14 }}>
+            <Text type="secondary">
+              Hệ thống AI đang phân tích CV của bạn dựa trên tiêu chí tuyển dụng.
+              Kết quả sẽ sẵn sàng sau vài giây.
+            </Text>
+          </div>
+
+          <div
+            style={{
+              marginTop: 16,
+              padding: 14,
+              border: "1px dashed #d9e3f0",
+              borderRadius: 10,
+              background: "#ffffff",
+            }}
+          >
+            <Text type="secondary">Đang đọc CV và đối chiếu kỹ năng...</Text>
+
+            <div
+              style={{
+                height: 6,
+                background: "#e5e7eb",
+                borderRadius: 999,
+                marginTop: 12,
+                overflow: "hidden",
+              }}
+            >
+              <div
+                style={{
+                  width: "58%",
+                  height: "100%",
+                  background: "#2563eb",
+                  borderRadius: 999,
+                }}
+              />
+            </div>
+
+            <Space style={{ marginTop: 12 }}>
+              <Text
+                style={{
+                  background: "#ecfdf5",
+                  color: "#16a34a",
+                  padding: "2px 8px",
+                  borderRadius: 999,
+                  fontSize: 12,
+                }}
+              >
+                Điểm mạnh
+              </Text>
+
+              <Text
+                style={{
+                  background: "#eff6ff",
+                  color: "#2563eb",
+                  padding: "2px 8px",
+                  borderRadius: 999,
+                  fontSize: 12,
+                }}
+              >
+                Kỹ năng phù hợp
+              </Text>
+            </Space>
+          </div>
+        </div>
+      </Space>
+    </div>
+
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "flex-end",
+        gap: 12,
+        marginTop: 24,
+      }}
+    >
+      <Button onClick={() => setIsApplySuccessModalOpen(false)}>
+        Đóng
+      </Button>
+
+      <Button
+        type="primary"
+        icon={<ArrowRightOutlined />}
+        onClick={handleGoToAiEvaluation}
+      >
+        Xem AI đánh giá
+      </Button>
+    </div>
+  </div>
+</Modal>
 
       </div>
     </div>

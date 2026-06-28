@@ -48,6 +48,19 @@ class ChatMessageModel(BaseModel):
     role: str
     text: str
 
+class GenerateEmailRequest(BaseModel):
+    email_type: str
+    candidate_name: str
+    job_title: str
+    company_name: Optional[str] = "AI Recruitment"
+    fit_score: int = 0
+    classification: Optional[str] = ""
+    summary: Optional[str] = ""
+    matched_skills: Optional[List[str]] = []
+    missing_skills: Optional[List[str]] = []
+    reject_reason: Optional[str] = None
+    email_context: Optional[str] = ""
+
 @app.post("/chat")
 async def chat_bot(
     prompt: str = Form(...),
@@ -72,6 +85,62 @@ async def chat_bot(
         return {"status": "success", "reply": reply, "extracted_text": file_text}
     except Exception as e:
         return {"status": "error", "message": str(e)}
+
+@app.post("/generate-email")
+async def generate_email(request: GenerateEmailRequest):
+    try:
+        email_type = request.email_type.strip().lower()
+
+        if email_type not in ["invite", "reject"]:
+            return {
+                "status": "error",
+                "message": "email_type chỉ được là invite hoặc reject."
+            }
+
+        if request.candidate_name.strip() == "":
+            return {
+                "status": "error",
+                "message": "Tên ứng viên không được để trống."
+            }
+
+        if request.job_title.strip() == "":
+            return {
+                "status": "error",
+                "message": "Tên vị trí ứng tuyển không được để trống."
+            }
+
+        if email_type == "reject":
+            if request.reject_reason is None or request.reject_reason.strip() == "":
+                return {
+                    "status": "error",
+                    "message": "Vui lòng truyền lý do từ chối khi email_type là reject."
+                }
+
+        result = ml_scorer.generate_candidate_email(
+            email_type=email_type,
+            candidate_name=request.candidate_name,
+            job_title=request.job_title,
+            company_name=request.company_name,
+            fit_score=request.fit_score,
+            classification=request.classification,
+            summary=request.summary,
+            matched_skills=request.matched_skills,
+            missing_skills=request.missing_skills,
+            reject_reason=request.reject_reason,
+            email_context=request.email_context
+        )
+
+        return {
+            "status": "success",
+            "subject": result["subject"],
+            "body": result["body"]
+        }
+
+    except Exception as exception:
+        return {
+            "status": "error",
+            "message": str(exception)
+        }
 
 @app.post("/score-cv")
 async def score_cv(
