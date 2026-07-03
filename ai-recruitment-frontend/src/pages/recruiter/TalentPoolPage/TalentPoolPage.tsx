@@ -1,16 +1,5 @@
-import React, { useEffect, useMemo, useState } from "react";
-import {
-  Avatar,
-  Button,
-  Card,
-  Input,
-  Space,
-  Table,
-  Tag,
-  Tooltip,
-  Typography,
-  message,
-} from "antd";
+import React from "react";
+import { Avatar, Button, Card, Input, Select, Space, Table, Tag, Tooltip, Typography, message } from "antd";
 import {
   SearchOutlined,
   UserOutlined,
@@ -18,149 +7,28 @@ import {
   MailOutlined,
   TrophyOutlined,
   LockOutlined,
-  ReloadOutlined,
 } from "@ant-design/icons";
-import PageContainer from "../../components/common/PageContainer";
-import { useNavigate } from "react-router-dom";
-import { talentPoolService } from "../../services/talentPoolService";
-import type { TalentPoolCandidateDto } from "../../services/talentPoolService";
+import PageContainer from "../../../components/common/PageContainer";
+import { useTalentPool } from "./hooks/useTalentPool";
+import type { TalentPoolCandidateDto } from "../../../services/talentPoolService";
 
 const { Text } = Typography;
 
 export default function TalentPoolPage() {
-  const navigate = useNavigate();
-
-  const [searchText, setSearchText] = useState("");
-  const [talentPoolCandidates, setTalentPoolCandidates] = useState<
-    TalentPoolCandidateDto[]
-  >([]);
-  const [loading, setLoading] = useState(false);
-
-  const fetchTalentPoolCandidates = async () => {
-    try {
-      setLoading(true);
-
-      const data = await talentPoolService.getTalentPoolCandidates();
-
-      setTalentPoolCandidates(data);
-    } catch (error: any) {
-      const errorMessage =
-        error?.response?.data?.message ||
-        "Không thể tải danh sách Ngân hàng Ứng viên.";
-
-      message.error(errorMessage);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchTalentPoolCandidates();
-  }, []);
-
-  const parseSkills = (skillsData?: string | string[] | null): string[] => {
-  if (!skillsData) {
-    return [];
-  }
-
-  if (Array.isArray(skillsData)) {
-    return skillsData
-      .filter((skill) => typeof skill === "string")
-      .map((skill) => skill.trim())
-      .filter((skill) => skill.length > 0);
-  }
-
-  if (typeof skillsData === "string") {
-    try {
-      const parsedSkills = JSON.parse(skillsData);
-
-      if (Array.isArray(parsedSkills)) {
-        return parsedSkills
-          .map((skillItem) => {
-            if (typeof skillItem === "string") {
-              return skillItem;
-            }
-
-            if (skillItem?.name) {
-              return skillItem.name;
-            }
-
-            if (skillItem?.skillName) {
-              return skillItem.skillName;
-            }
-
-            if (skillItem?.skill) {
-              return skillItem.skill;
-            }
-
-            return "";
-          })
-          .map((skill) => skill.trim())
-          .filter((skill) => skill.length > 0);
-      }
-
-        return [];
-      } catch {
-        return skillsData
-          .split(",")
-          .map((skill) => skill.trim())
-          .filter((skill) => skill.length > 0);
-      }
-    }
-
-    return [];
-  };
-
-  const formatDate = (value?: string) => {
-    if (!value) {
-      return "Chưa cập nhật";
-    }
-
-    const dateValue = new Date(value);
-
-    if (Number.isNaN(dateValue.getTime())) {
-      return "Chưa cập nhật";
-    }
-
-    return dateValue.toLocaleDateString("vi-VN", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
-  };
-
-  const filteredCandidates = useMemo(() => {
-    const keyword = searchText.trim().toLowerCase();
-
-    if (keyword.length === 0) {
-      return talentPoolCandidates;
-    }
-
-    return talentPoolCandidates.filter((candidate) => {
-      const skills = parseSkills(candidate.highlightSkillsJson).join(" ");
-
-      const searchableText = [
-        candidate.fullName,
-        candidate.email,
-        candidate.phone,
-        candidate.highestScoreJobTitle,
-        candidate.currentAvailabilityStatus,
-        skills,
-      ]
-        .join(" ")
-        .toLowerCase();
-
-      return searchableText.includes(keyword);
-    });
-  }, [searchText, talentPoolCandidates]);
-
-  const readyCount = talentPoolCandidates.filter(
-    (candidate) => candidate.isInviteLocked === false
-  ).length;
-
-  const lockedCount = talentPoolCandidates.filter(
-    (candidate) => candidate.isInviteLocked === true
-  ).length;
+  const {
+    navigate,
+    searchText,
+    setSearchText,
+    filterStatus,
+    setFilterStatus,
+    talentPoolCandidates,
+    loading,
+    parseSkills,
+    formatDate,
+    filteredCandidates,
+    readyCount,
+    lockedCount,
+  } = useTalentPool();
 
   const columns = [
     {
@@ -170,16 +38,11 @@ export default function TalentPoolPage() {
       width: 260,
       render: (text: string, record: TalentPoolCandidateDto) => (
         <Space>
-          <Avatar
-            icon={<UserOutlined />}
-            style={{ backgroundColor: "#1677ff" }}
-          />
-
+          <Avatar icon={<UserOutlined />} style={{ backgroundColor: "#1677ff" }} />
           <div style={{ maxWidth: 190 }}>
             <Text strong ellipsis style={{ display: "block" }}>
               {text || "Chưa cập nhật"}
             </Text>
-
             <Text type="secondary" style={{ fontSize: 12 }} ellipsis>
               {record.email || "Chưa có email"}
             </Text>
@@ -194,11 +57,9 @@ export default function TalentPoolPage() {
       width: 340,
       render: (skillsJson: string) => {
         const skills = parseSkills(skillsJson);
-
         if (skills.length === 0) {
           return <Text type="secondary">Chưa có kỹ năng</Text>;
         }
-
         return (
           <Space wrap>
             {skills.slice(0, 5).map((skill: string) => (
@@ -206,7 +67,6 @@ export default function TalentPoolPage() {
                 {skill}
               </Tag>
             ))}
-
             {skills.length > 5 && (
               <Tooltip title={skills.slice(5).join(", ")}>
                 <Tag>+{skills.length - 5}</Tag>
@@ -225,7 +85,6 @@ export default function TalentPoolPage() {
           <Text type="secondary" style={{ display: "block", fontSize: 12 }}>
             Từng nộp: {record.highestScoreJobTitle || "Chưa cập nhật"}
           </Text>
-
           <Tag color="green" icon={<TrophyOutlined />} style={{ marginTop: 4 }}>
             AI Điểm cao nhất: {record.highestAiScore || 0}
           </Tag>
@@ -251,7 +110,6 @@ export default function TalentPoolPage() {
             </Tooltip>
           );
         }
-
         return <Tag color="success">Sẵn sàng tìm việc</Tag>;
       },
     },
@@ -287,7 +145,7 @@ export default function TalentPoolPage() {
             title={
               record.isInviteLocked
                 ? record.inviteLockReason ||
-                "Ứng viên đang tham gia quy trình tuyển dụng ở một vị trí khác."
+                  "Ứng viên đang tham gia quy trình tuyển dụng ở một vị trí khác."
                 : "Mời ứng viên ứng tuyển vị trí phù hợp"
             }
           >
@@ -303,30 +161,20 @@ export default function TalentPoolPage() {
                   (record as any).talentPoolCandidateID ||
                   (record as any).TalentPoolCandidateID;
 
-                console.log("TalentPoolCandidateID:", talentPoolCandidateId);
-
                 if (!talentPoolCandidateId) {
                   message.error("Không tìm thấy ID ứng viên Talent Pool.");
                   return;
                 }
-
-                const detailUrl = `/recruiter/talent-pool/${talentPoolCandidateId}`;
-
-                console.log("Navigate to:", detailUrl);
-
-                navigate(detailUrl);
+                navigate(`/recruiter/talent-pool/${talentPoolCandidateId}`);
               }}
             >
               Mời ứng tuyển
             </Button>
           </Tooltip>
-
           <Button
             size="small"
             icon={<MailOutlined />}
-            onClick={() =>
-              navigate(`/recruiter/candidates/${record.candidateId}/email`)
-            }
+            onClick={() => navigate(`/recruiter/candidates/${record.candidateId}/email`)}
           >
             Email
           </Button>
@@ -349,20 +197,14 @@ export default function TalentPoolPage() {
             </div>
             <Text type="secondary">Trong Ngân hàng Ứng viên</Text>
           </Card>
-
           <Card style={{ width: 260, borderRadius: 12 }}>
             <Text type="secondary">Sẵn sàng mời</Text>
-            <div style={{ fontSize: 28, fontWeight: 700, marginTop: 8 }}>
-              {readyCount}
-            </div>
+            <div style={{ fontSize: 28, fontWeight: 700, marginTop: 8 }}>{readyCount}</div>
             <Text type="secondary">Không bị khóa quy trình</Text>
           </Card>
-
           <Card style={{ width: 260, borderRadius: 12 }}>
             <Text type="secondary">Đang trong quy trình khác</Text>
-            <div style={{ fontSize: 28, fontWeight: 700, marginTop: 8 }}>
-              {lockedCount}
-            </div>
+            <div style={{ fontSize: 28, fontWeight: 700, marginTop: 8 }}>{lockedCount}</div>
             <Text type="secondary">Không thể mời ứng tuyển</Text>
           </Card>
         </Space>
@@ -382,20 +224,27 @@ export default function TalentPoolPage() {
                 size="large"
                 placeholder="Tìm kiếm theo kỹ năng, tên, email, vị trí..."
                 prefix={<SearchOutlined />}
-                style={{ width: 420 }}
+                style={{ width: 380 }}
                 value={searchText}
                 onChange={(event) => setSearchText(event.target.value)}
                 allowClear
               />
-
+              <Select
+                placeholder="Lọc trạng thái"
+                style={{ width: 220 }}
+                allowClear
+                value={filterStatus}
+                onChange={setFilterStatus}
+                size="large"
+                options={[
+                  { label: "Sẵn sàng mời", value: "ready" },
+                  { label: "Đang trong quy trình khác", value: "locked" },
+                ]}
+              />
               <Button
                 size="large"
                 type="primary"
-                onClick={() =>
-                  message.info(
-                    "Tìm kiếm AI theo ngữ nghĩa chưa phát triển"
-                  )
-                }
+                onClick={() => message.info("Tìm kiếm AI theo ngữ nghĩa chưa phát triển")}
               >
                 Tìm kiếm AI
               </Button>

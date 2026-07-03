@@ -6,9 +6,7 @@ type EmptyStateProps = {
   description?: string;
 };
 
-function EmptyState({
-  description = "Hiện chưa có dữ liệu để hiển thị.",
-}: EmptyStateProps) {
+function EmptyState({ description = "Hiện chưa có dữ liệu để hiển thị." }: EmptyStateProps) {
   return (
     <div
       style={{

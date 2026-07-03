@@ -59,9 +59,9 @@ function AppRoutes() {
           <Route path="roles" element={<RolePermissionPage />} />
           <Route path="reports" element={<ReportsPage />} />
           <Route path="job-approvals" element={<JobApprovalPage />} />
-          <Route path="branches"       element={<BranchManagementPage />} />
-          <Route path="categories"     element={<CategoryManagementPage />} />
-          <Route path="job-positions"  element={<JobPositionManagementPage />} />
+          <Route path="branches" element={<BranchManagementPage />} />
+          <Route path="categories" element={<CategoryManagementPage />} />
+          <Route path="job-positions" element={<JobPositionManagementPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

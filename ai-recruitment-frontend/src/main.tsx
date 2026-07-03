@@ -43,6 +43,11 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
             darkItemHoverBg: "#1E293B",
             darkItemColor: "#CBD5E1",
             darkItemSelectedColor: "#FFFFFF",
+            fontSize: 16,
+            itemHeight: 46,
+          },
+          Table: {
+            fontSize: 15,
           },
           Card: {
             borderRadiusLG: appTheme.radius.lg,
@@ -65,5 +70,5 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
     >
       <App />
     </ConfigProvider>
-  </React.StrictMode>,
+  </React.StrictMode>
 );

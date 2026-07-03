@@ -14,7 +14,7 @@ if not GEMINI_API_KEY:
 client = genai.Client(api_key=GEMINI_API_KEY)
 
 def generate_synthetic_data(num_samples=10):
-    print(f"\n🤖 ĐANG NHỜ SIÊU MÔ HÌNH GEMINI SINH {num_samples} MẪU CV GIẢ LẬP...")
+    print(f"\n ĐANG NHỜ SIÊU MÔ HÌNH GEMINI SINH {num_samples} MẪU CV GIẢ LẬP...")
     print("-" * 60)
     
     prompt = f"""

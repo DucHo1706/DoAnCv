@@ -1,8 +1,4 @@
-import {
-  LogoutOutlined,
-  SettingOutlined,
-  UserOutlined,
-} from "@ant-design/icons";
+import { LogoutOutlined, SettingOutlined, UserOutlined } from "@ant-design/icons";
 import { Avatar, Dropdown, Space, Typography } from "antd";
 import type { MenuProps } from "antd";
 
@@ -15,12 +11,7 @@ type AppHeaderProps = {
   onLogout?: () => void;
 };
 
-function AppHeader({
-  title,
-  userName,
-  roleLabel,
-  onLogout,
-}: AppHeaderProps) {
+function AppHeader({ title, userName, roleLabel, onLogout }: AppHeaderProps) {
   const userMenuItems: MenuProps["items"] = [
     {
       key: "profile",

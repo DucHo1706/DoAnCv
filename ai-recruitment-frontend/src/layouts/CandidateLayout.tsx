@@ -21,7 +21,11 @@ function CandidateLayout() {
     { key: "/candidate/profile", icon: <ProfileOutlined />, label: "Hồ sơ cá nhân" },
     { key: "/candidate/upload-cv", icon: <UploadOutlined />, label: "Upload CV" },
     { key: "/candidate/job-suggestions", icon: <FileSearchOutlined />, label: "Gợi ý việc làm" },
-    { key: "/candidate/application-status", icon: <SolutionOutlined />, label: "Trạng thái ứng tuyển" },
+    {
+      key: "/candidate/application-status",
+      icon: <SolutionOutlined />,
+      label: "Trạng thái ứng tuyển",
+    },
   ];
 
   return (

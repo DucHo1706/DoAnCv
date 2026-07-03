@@ -1,5 +1,18 @@
 import { EditOutlined, PlusOutlined, LockOutlined, UnlockOutlined } from "@ant-design/icons";
-import { Button, Card, Form, Input, message, Modal, Popconfirm, Space, Table, Tag, TreeSelect, Typography } from "antd";
+import {
+  Button,
+  Card,
+  Form,
+  Input,
+  message,
+  Modal,
+  Popconfirm,
+  Space,
+  Table,
+  Tag,
+  TreeSelect,
+  Typography,
+} from "antd";
 import { useEffect, useState, useMemo } from "react";
 import PageContainer from "../../components/common/PageContainer";
 import TableToolbar from "../../components/common/TableToolbar";
@@ -20,7 +33,7 @@ function JobPositionManagementPage() {
     try {
       const [posRes, catRes] = await Promise.all([
         axiosClient.get("/JobPositions"),
-        axiosClient.get("/Categories")
+        axiosClient.get("/Categories"),
       ]);
       setPositions(Array.isArray(posRes.data) ? posRes.data : posRes.data?.$values || []);
       setCategories(Array.isArray(catRes.data) ? catRes.data : catRes.data?.$values || []);
@@ -115,25 +128,31 @@ function JobPositionManagementPage() {
   };
 
   const columns = [
-    { 
-      title: "Lĩnh vực / Tên vị trí", 
-      dataIndex: "name", 
-      key: "name", 
+    {
+      title: "Lĩnh vực / Tên vị trí",
+      dataIndex: "name",
+      key: "name",
       render: (text: string, record: any) => {
         if (record.isCategoryGroup) {
-          return <Text strong style={{ fontSize: 15, color: "#1677ff" }}>📂 {text}</Text>;
+          return (
+            <Text strong style={{ fontSize: 15, color: "#1677ff" }}>
+              📂 {text}
+            </Text>
+          );
         }
         return <Text style={{ paddingLeft: 16 }}>{text}</Text>;
-      } 
+      },
     },
-    { 
-      title: "Trạng thái", 
-      dataIndex: "isActive", 
-      key: "isActive", 
+    {
+      title: "Trạng thái",
+      dataIndex: "isActive",
+      key: "isActive",
       render: (isActive: boolean, record: any) => {
         if (record.isCategoryGroup) return null;
-        return <Tag color={isActive ? "success" : "error"}>{isActive ? "Hoạt động" : "Đã khóa"}</Tag>;
-      } 
+        return (
+          <Tag color={isActive ? "success" : "error"}>{isActive ? "Hoạt động" : "Đã khóa"}</Tag>
+        );
+      },
     },
     {
       title: "Thao tác",
@@ -141,30 +160,82 @@ function JobPositionManagementPage() {
       render: (_: any, record: any) => {
         if (record.isCategoryGroup) return null;
         return (
-        <Space>
-          <Button type="text" icon={<EditOutlined />} onClick={() => handleOpenEdit(record)} style={{ color: "#1677ff" }}>Sửa</Button>
-          <Popconfirm title={record.isActive ? "Khóa vị trí này?" : "Mở khóa vị trí này?"} onConfirm={() => handleToggleStatus(record.id)}>
-            <Button type="text" icon={record.isActive ? <LockOutlined /> : <UnlockOutlined />} danger={record.isActive} style={!record.isActive ? { color: "#52c41a" } : {}}>{record.isActive ? "Khóa" : "Mở"}</Button>
-          </Popconfirm>
-        </Space>
+          <Space>
+            <Button
+              type="text"
+              icon={<EditOutlined />}
+              onClick={() => handleOpenEdit(record)}
+              style={{ color: "#1677ff" }}
+            >
+              Sửa
+            </Button>
+            <Popconfirm
+              title={record.isActive ? "Khóa vị trí này?" : "Mở khóa vị trí này?"}
+              onConfirm={() => handleToggleStatus(record.id)}
+            >
+              <Button
+                type="text"
+                icon={record.isActive ? <LockOutlined /> : <UnlockOutlined />}
+                danger={record.isActive}
+                style={!record.isActive ? { color: "#52c41a" } : {}}
+              >
+                {record.isActive ? "Khóa" : "Mở"}
+              </Button>
+            </Popconfirm>
+          </Space>
         );
       },
     },
   ];
 
   return (
-    <PageContainer title="Quản lý Vị trí công việc" subtitle="Gán các vị trí công việc cụ thể vào từng Lĩnh vực/Chuyên ngành." extra={<Button type="primary" icon={<PlusOutlined />} onClick={handleOpenCreate}>Thêm Vị trí</Button>}>
+    <PageContainer
+      title="Quản lý Vị trí công việc"
+      subtitle="Gán các vị trí công việc cụ thể vào từng Lĩnh vực/Chuyên ngành."
+      extra={
+        <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenCreate}>
+          Thêm Vị trí
+        </Button>
+      }
+    >
       <Card>
         <TableToolbar searchPlaceholder="Tìm kiếm vị trí..." />
-        <Table columns={columns} dataSource={groupedPositions} rowKey="id" loading={loading} defaultExpandAllRows pagination={false} />
+        <Table
+          columns={columns}
+          dataSource={groupedPositions}
+          rowKey="id"
+          loading={loading}
+          defaultExpandAllRows
+          pagination={false}
+        />
       </Card>
-      <Modal title={editingItem ? "Cập nhật Vị trí" : "Thêm Vị trí mới"} open={isModalOpen} onOk={handleSave} onCancel={() => setIsModalOpen(false)} destroyOnClose>
+      <Modal
+        title={editingItem ? "Cập nhật Vị trí" : "Thêm Vị trí mới"}
+        open={isModalOpen}
+        onOk={handleSave}
+        onCancel={() => setIsModalOpen(false)}
+        destroyOnClose
+      >
         <Form form={form} layout="vertical">
-          <Form.Item label="Tên vị trí" name="name" rules={[{ required: true, message: "Vui lòng nhập tên" }]}>
+          <Form.Item
+            label="Tên vị trí"
+            name="name"
+            rules={[{ required: true, message: "Vui lòng nhập tên" }]}
+          >
             <Input placeholder="Ví dụ: Frontend Developer" />
           </Form.Item>
-          <Form.Item label="Thuộc Lĩnh vực/Chuyên ngành" name="categoryId" rules={[{ required: true, message: "Vui lòng chọn lĩnh vực" }]}>
-            <TreeSelect showSearch treeData={treeData} placeholder="Chọn lĩnh vực..." treeDefaultExpandAll allowClear />
+          <Form.Item
+            label="Thuộc Lĩnh vực/Chuyên ngành"
+            name="categoryId"
+            rules={[{ required: true, message: "Vui lòng chọn lĩnh vực" }]}
+          >
+            <TreeSelect
+              showSearch
+              treeData={treeData}
+              placeholder="Chọn lĩnh vực..."
+              treeDefaultExpandAll
+              allowClear
+            />
           </Form.Item>
         </Form>
       </Modal>

@@ -16,7 +16,7 @@ function LoginPage() {
     try {
       const response = await authService.login(values);
       messageApi.success("Đăng nhập thành công! Đang chuyển vào hệ thống...");
-      
+
       // Kiểm tra Vai trò (Role) do Backend trả về để điều hướng cho đúng
       if (response.role === "Admin") {
         navigate("/admin/dashboard");
@@ -27,7 +27,9 @@ function LoginPage() {
       }
     } catch (error: any) {
       console.error("Lỗi đăng nhập:", error);
-      messageApi.error(error.response?.data?.message || "Đăng nhập thất bại. Vui lòng kiểm tra lại.");
+      messageApi.error(
+        error.response?.data?.message || "Đăng nhập thất bại. Vui lòng kiểm tra lại."
+      );
     } finally {
       setLoading(false);
     }
@@ -37,8 +39,25 @@ function LoginPage() {
     <>
       {contextHolder}
 
-      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "100vh", background: "#f8fafc" }}>
-        <div style={{ background: "#fff", padding: "40px", borderRadius: "12px", boxShadow: "0 4px 12px rgba(0,0,0,0.05)", width: "100%", maxWidth: "420px" }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          minHeight: "100vh",
+          background: "#f8fafc",
+        }}
+      >
+        <div
+          style={{
+            background: "#fff",
+            padding: "40px",
+            borderRadius: "12px",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
+            width: "100%",
+            maxWidth: "420px",
+          }}
+        >
           <Text
             style={{
               color: "#2563EB",
@@ -58,7 +77,7 @@ function LoginPage() {
           <Paragraph type="secondary" style={{ marginBottom: 28, lineHeight: 1.7 }}>
             Nhập email và mật khẩu của bạn để truy cập vào hệ thống quản trị tuyển dụng.
           </Paragraph>
-        
+
           <Form layout="vertical" onFinish={handleLogin} requiredMark={false}>
             <Form.Item
               label="Email"
@@ -68,7 +87,11 @@ function LoginPage() {
                 { type: "email", message: "Email không đúng định dạng" },
               ]}
             >
-              <Input size="large" prefix={<MailOutlined style={{ color: "#94A3B8" }} />} placeholder="admin@recruitment.com" />
+              <Input
+                size="large"
+                prefix={<MailOutlined style={{ color: "#94A3B8" }} />}
+                placeholder="admin@recruitment.com"
+              />
             </Form.Item>
 
             <Form.Item
@@ -76,7 +99,11 @@ function LoginPage() {
               name="password"
               rules={[{ required: true, message: "Vui lòng nhập mật khẩu" }]}
             >
-              <Input.Password size="large" prefix={<LockOutlined style={{ color: "#94A3B8" }} />} placeholder="********" />
+              <Input.Password
+                size="large"
+                prefix={<LockOutlined style={{ color: "#94A3B8" }} />}
+                placeholder="********"
+              />
             </Form.Item>
 
             <Form.Item style={{ marginBottom: 16 }}>
@@ -85,7 +112,15 @@ function LoginPage() {
               </Button>
             </Form.Item>
 
-            <Button block size="large" type="link" onClick={() => navigate("/forgot-password")} style={{ marginBottom: 8 }}>Quên mật khẩu?</Button>
+            <Button
+              block
+              size="large"
+              type="link"
+              onClick={() => navigate("/forgot-password")}
+              style={{ marginBottom: 8 }}
+            >
+              Quên mật khẩu?
+            </Button>
           </Form>
 
           <Paragraph style={{ marginTop: 24, marginBottom: 0, textAlign: "center" }}>

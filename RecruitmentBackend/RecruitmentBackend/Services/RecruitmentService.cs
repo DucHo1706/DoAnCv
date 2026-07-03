@@ -16,6 +16,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using RecruitmentBackend.Constants;
 using RecruitmentBackend.DTOs.Requests;
+using System.Net.Http;
 
 namespace RecruitmentBackend.Services
 {
@@ -25,6 +26,9 @@ namespace RecruitmentBackend.Services
         private readonly IAiService _aiService;
         private readonly IFileService _fileService;
         private readonly IServiceScopeFactory _serviceScopeFactory;
+
+        private static int _cvProcessedCounter = 0;
+        private const int SYNC_EVERY_N_CVS = 5;
 
         public RecruitmentService(
             AppDbContext context,
@@ -427,6 +431,26 @@ namespace RecruitmentBackend.Services
                 await _context.SaveChangesAsync();
 
                 Console.WriteLine("AI đã chấm xong Application: " + applicationId);
+
+                // Batch Sync Skills - call every N CVs to avoid DB overload
+                System.Threading.Interlocked.Increment(ref _cvProcessedCounter);
+                if (_cvProcessedCounter % SYNC_EVERY_N_CVS == 0)
+                {
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            using var scope = _serviceScopeFactory.CreateScope();
+                            var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+                            var aiService = scope.ServiceProvider.GetRequiredService<IAiService>();
+                            await SyncAllSkillsToAiAsync(dbContext, aiService);
+                        }
+                        catch (Exception syncEx)
+                        {
+                            Console.WriteLine("Loi khi sync skills background: " + syncEx.Message);
+                        }
+                    });
+                }
             }
             catch (Exception ex)
             {
@@ -1146,10 +1170,123 @@ namespace RecruitmentBackend.Services
                     )
                 );
 
-                if (!existed)
+                 if (!existed)
                 {
                     targetSkills.Add(cleanedSkill);
                 }
+            }
+        }
+
+        public async Task<(bool IsSuccess, string Message, object Data)> ReEvaluateApplicationAsync(string applicationId, ClaimsPrincipal user)
+        {
+            try
+            {
+                var app = await _context.Applications.FirstOrDefaultAsync(a => a.ApplicationID == applicationId);
+                if (app == null) return (false, "Không tìm thấy hồ sơ ứng tuyển.", null);
+
+                var cv = await _context.CandidateCVs.FirstOrDefaultAsync(c => c.CVID == app.CVID);
+                if (cv == null) return (false, "Không tìm thấy file CV.", null);
+
+                byte[] cvFileBytes;
+                string fileName = Path.GetFileName(cv.FilePath);
+                string contentType = "application/pdf"; 
+                if (fileName.EndsWith(".docx", StringComparison.OrdinalIgnoreCase)) contentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+                else if (fileName.EndsWith(".doc", StringComparison.OrdinalIgnoreCase)) contentType = "application/msword";
+                else if (fileName.EndsWith(".png", StringComparison.OrdinalIgnoreCase)) contentType = "image/png";
+                else if (fileName.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase) || fileName.EndsWith(".jpeg", StringComparison.OrdinalIgnoreCase)) contentType = "image/jpeg";
+
+                if (cv.FilePath.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+                {
+                    using var httpClient = new HttpClient();
+                    cvFileBytes = await httpClient.GetByteArrayAsync(cv.FilePath);
+                }
+                else
+                {
+                    string localPath = Path.Combine(Directory.GetCurrentDirectory(), cv.FilePath.TrimStart('/'));
+                    if (!File.Exists(localPath))
+                    {
+                        localPath = Path.Combine(Directory.GetCurrentDirectory(), "Uploads", fileName);
+                    }
+                    if (!File.Exists(localPath))
+                    {
+                        return (false, "Không tìm thấy file CV vật lý trên server để chấm lại.", null);
+                    }
+                    cvFileBytes = await File.ReadAllBytesAsync(localPath);
+                }
+
+                var oldEvaluation = await _context.AIEvaluations.FirstOrDefaultAsync(e => e.ApplicationID == applicationId);
+                if (oldEvaluation != null)
+                {
+                    _context.AIEvaluations.Remove(oldEvaluation);
+                    await _context.SaveChangesAsync();
+                }
+
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        using var scope = _serviceScopeFactory.CreateScope();
+                        var recruitmentService = scope.ServiceProvider.GetRequiredService<IRecruitmentService>();
+                        await recruitmentService.RunAiEvaluationInBackgroundAsync(
+                            applicationId,
+                            cvFileBytes,
+                            fileName,
+                            contentType
+                        );
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine("Lỗi background AI chấm lại: " + ex.Message);
+                    }
+                });
+
+                return (true, "Yêu cầu AI phân tích lại thành công. Vui lòng chờ vài giây và tải lại trang.", new { aiStatus = "Processing" });
+            }
+            catch (Exception ex)
+            {
+                return (false, $"Lỗi hệ thống khi chấm lại: {ex.Message}", null);
+            }
+        }
+
+        private static async Task SyncAllSkillsToAiAsync(AppDbContext dbContext, IAiService aiService)
+        {
+            try
+            {
+                var allSkillsJson = await dbContext.CandidateCVs
+                    .Where(cv => !string.IsNullOrEmpty(cv.CVExtractedSkills) && cv.CVExtractedSkills != "[]")
+                    .Select(cv => cv.CVExtractedSkills)
+                    .ToListAsync();
+
+                var uniqueSkills = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                foreach (var json in allSkillsJson)
+                {
+                    try
+                    {
+                        var skills = JsonSerializer.Deserialize<List<string>>(json);
+                        if (skills != null)
+                        {
+                            foreach (var skill in skills)
+                            {
+                                if (!string.IsNullOrWhiteSpace(skill))
+                                {
+                                    uniqueSkills.Add(skill.Trim().ToLower());
+                                }
+                            }
+                        }
+                    }
+                    catch { /* skip invalid JSON */ }
+                }
+
+                if (uniqueSkills.Count > 0)
+                {
+                    await aiService.SyncSkillsToAiAsync(uniqueSkills.ToList());
+                    Console.WriteLine($"[AUTO-SYNC] Synced {uniqueSkills.Count} unique skills to Python AI.");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Loi khi thuc hien SyncAllSkillsToAiAsync: " + ex.Message);
             }
         }
     }

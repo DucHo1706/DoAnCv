@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿using Microsoft.AspNetCore.Mvc;
+﻿﻿﻿﻿﻿﻿﻿using Microsoft.AspNetCore.Mvc;
 using RecruitmentBackend.DTOs.Requests;
 using RecruitmentBackend.Interfaces;
 using System.Threading.Tasks;
@@ -24,6 +24,7 @@ namespace RecruitmentBackend.Controllers
         }
 
         [HttpPost]
+        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
         public async Task<IActionResult> CreateCategory([FromBody] CategoryRequest request)
         {
             if (!ModelState.IsValid || string.IsNullOrWhiteSpace(request.Name))
@@ -37,6 +38,7 @@ namespace RecruitmentBackend.Controllers
         }
 
         [HttpPut("{id}")]
+        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
         public async Task<IActionResult> UpdateCategory(string id, [FromBody] CategoryRequest request)
         {
             if (!ModelState.IsValid || string.IsNullOrWhiteSpace(request.Name))
@@ -54,6 +56,7 @@ namespace RecruitmentBackend.Controllers
         }
 
         [HttpPut("{id}/toggle-status")]
+        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
         public async Task<IActionResult> ToggleCategoryStatus(string id)
         {
             var result = await _categoryService.ToggleCategoryStatusAsync(id);
@@ -64,6 +67,7 @@ namespace RecruitmentBackend.Controllers
         }
 
         [HttpDelete("{id}")]
+        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteCategory(string id)
         {
             var result = await _categoryService.DeleteCategoryAsync(id);

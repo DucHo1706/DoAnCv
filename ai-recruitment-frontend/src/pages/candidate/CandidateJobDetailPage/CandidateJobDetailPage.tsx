@@ -1,0 +1,106 @@
+import React from "react";
+import { Breadcrumb, Spin } from "antd";
+import { HomeOutlined } from "@ant-design/icons";
+import { useJobDetail } from "./hooks/useJobDetail";
+import JobDetailContent from "./components/JobDetailContent";
+import JobApplyModal from "./components/JobApplyModal";
+import ApplySuccessModal from "./components/ApplySuccessModal";
+import CvAiPreviewModal from "../../../components/candidate/CvAiPreviewModal";
+import { appTheme } from "../../../constants/theme";
+
+export default function CandidateJobDetailPage() {
+  const {
+    job,
+    loading,
+    isApplyModalOpen,
+    isApplySuccessModalOpen,
+    setIsApplySuccessModalOpen,
+    appliedApplication,
+    isAiPreviewModalOpen,
+    setIsAiPreviewModalOpen,
+    handleApplyWithAI,
+    showApplyModal,
+    handleCancelApplyModal,
+    handleGoToAiEvaluation,
+    handleViewAppliedAiEvaluation,
+    handleDirectApply,
+    uploadProps,
+    navigate,
+    isSubmitting,
+  } = useJobDetail();
+
+  if (loading) {
+    return (
+      <div style={{ textAlign: "center", padding: "100px 0" }}>
+        <Spin size="large" tip="Đang tải chi tiết công việc..." />
+      </div>
+    );
+  }
+
+  if (!job) return null;
+
+  return (
+    <div style={{ background: appTheme.colors.background, minHeight: "100vh", paddingBottom: 60, paddingTop: 24 }}>
+      <div style={{ maxWidth: "94%", margin: "0 auto" }}>
+        {/* Breadcrumb */}
+        <Breadcrumb style={{ marginBottom: 16 }}>
+          <Breadcrumb.Item
+            href="/"
+            onClick={(e) => {
+              e.preventDefault();
+              navigate("/");
+            }}
+          >
+            <HomeOutlined /> Trang chủ
+          </Breadcrumb.Item>
+          <Breadcrumb.Item
+            href="/jobs"
+            onClick={(e) => {
+              e.preventDefault();
+              navigate("/jobs");
+            }}
+          >
+            Việc làm IT
+          </Breadcrumb.Item>
+          <Breadcrumb.Item>{job.title}</Breadcrumb.Item>
+        </Breadcrumb>
+
+        {/* 1. Chi tiết công việc & công ty */}
+        <JobDetailContent
+          job={job}
+          appliedApplication={appliedApplication}
+          showApplyModal={showApplyModal}
+          handleViewAppliedAiEvaluation={handleViewAppliedAiEvaluation}
+          handleApplyWithAI={handleApplyWithAI}
+        />
+
+        {/* 2. Modal nộp hồ sơ */}
+        <JobApplyModal
+          open={isApplyModalOpen}
+          title={job.title || ""}
+          onOk={handleDirectApply}
+          onCancel={handleCancelApplyModal}
+          confirmLoading={isSubmitting}
+          uploadProps={uploadProps}
+        />
+
+        {/* 3. Modal thông báo thành công */}
+        <ApplySuccessModal
+          open={isApplySuccessModalOpen}
+          onCancel={() => setIsApplySuccessModalOpen(false)}
+          onGoToAiEvaluation={handleGoToAiEvaluation}
+        />
+
+        {/* 4. AI Preview Modal */}
+        <CvAiPreviewModal
+          open={isAiPreviewModalOpen}
+          onClose={() => setIsAiPreviewModalOpen(false)}
+          jobId={job.id || ""}
+          jobTitle={job.title || ""}
+          jobDescription={(job.description || "") + "\n" + (job.requirements || "")}
+          companyName={job.company || "AI Recruitment"}
+        />
+      </div>
+    </div>
+  );
+}

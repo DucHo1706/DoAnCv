@@ -1,5 +1,25 @@
-import { Card, Table, Tag, Space, Button, Select, Typography, Avatar, Modal, Form, Input, message, Popconfirm } from "antd";
-import { LockOutlined, EditOutlined, PlusOutlined, UnlockOutlined, DeleteOutlined } from "@ant-design/icons";
+import {
+  Card,
+  Table,
+  Tag,
+  Space,
+  Button,
+  Select,
+  Typography,
+  Avatar,
+  Modal,
+  Form,
+  Input,
+  message,
+  Popconfirm,
+} from "antd";
+import {
+  LockOutlined,
+  EditOutlined,
+  PlusOutlined,
+  UnlockOutlined,
+  DeleteOutlined,
+} from "@ant-design/icons";
 import { useState } from "react";
 import PageContainer from "../../components/common/PageContainer";
 import TableToolbar from "../../components/common/TableToolbar";
@@ -22,7 +42,7 @@ function UserManagementPage() {
     try {
       const data = await userService.getUsers();
       // Đảm bảo data là một mảng trước khi dùng .map() (Xử lý trường hợp C# bọc bằng $values)
-      const actualData = Array.isArray(data) ? data : (data?.$values || []);
+      const actualData = Array.isArray(data) ? data : data?.$values || [];
       // Map dữ liệu từ Backend C# sang đúng cấu trúc Frontend đang dùng
       const formattedData = actualData.map((item: any) => ({
         id: item.id,
@@ -30,7 +50,7 @@ function UserManagementPage() {
         email: item.email,
         role: item.role,
         status: item.status,
-        branches: item.branchIds || []
+        branches: item.branchIds || [],
       }));
       setUsers(formattedData);
     } catch (error) {
@@ -45,7 +65,7 @@ function UserManagementPage() {
     try {
       const data = await branchService.getBranches();
       setBranches(data);
-    } catch (e) { }
+    } catch (e) {}
   };
 
   useEffect(() => {
@@ -74,7 +94,7 @@ function UserManagementPage() {
       if (editingUser) {
         const payload = {
           name: values.name,
-          branchIds: values.branches || []
+          branchIds: values.branches || [],
         };
         await userService.updateUser(editingUser.id, payload);
         message.success("Cập nhật thông tin tài khoản thành công!");
@@ -86,7 +106,7 @@ function UserManagementPage() {
           email: values.email,
           password: values.password,
           role: values.role,
-          branchIds: values.branches || []
+          branchIds: values.branches || [],
         };
         await userService.createUser(payload);
         message.success("Tạo tài khoản thành công! Dữ liệu đã được lưu vào hệ thống.");
@@ -116,13 +136,16 @@ function UserManagementPage() {
       key: "name",
       render: (name: string, record: any) => {
         // Đổi màu Avatar theo Role cho trực quan
-        const avatarColor = record.role === "Admin" ? "#f5222d" : record.role === "Recruiter" ? "#1677ff" : "#52c41a";
+        const avatarColor =
+          record.role === "Admin" ? "#f5222d" : record.role === "Recruiter" ? "#1677ff" : "#52c41a";
         return (
           <Space>
-            <Avatar style={{ backgroundColor: avatarColor, verticalAlign: 'middle' }}>
+            <Avatar style={{ backgroundColor: avatarColor, verticalAlign: "middle" }}>
               {name.charAt(0).toUpperCase()}
             </Avatar>
-            <Text strong style={{ color: "#1f2937" }}>{name}</Text>
+            <Text strong style={{ color: "#1f2937" }}>
+              {name}
+            </Text>
           </Space>
         );
       },
@@ -138,7 +161,11 @@ function UserManagementPage() {
       key: "role",
       render: (role: string) => {
         let color = role === "Admin" ? "volcano" : role === "Recruiter" ? "geekblue" : "cyan";
-        return <Tag color={color} style={{ borderRadius: "4px" }}>{role}</Tag>;
+        return (
+          <Tag color={color} style={{ borderRadius: "4px" }}>
+            {role}
+          </Tag>
+        );
       },
     },
     {
@@ -147,13 +174,20 @@ function UserManagementPage() {
       key: "branches",
       render: (branchIds: string[], record: any) => {
         if (record.role !== "Recruiter") return <Text type="secondary">Không áp dụng</Text>;
-        if (!branchIds || branchIds.length === 0) return <Text type="secondary">Chưa phân công</Text>;
-        return <Space wrap size={[0, 4]}>
-          {branchIds.map((id) => {
-            const bName = branches.find(b => b.id === id)?.name || "Chi nhánh ẩn";
-            return <Tag key={id} color="blue">{bName}</Tag>;
-          })}
-        </Space>;
+        if (!branchIds || branchIds.length === 0)
+          return <Text type="secondary">Chưa phân công</Text>;
+        return (
+          <Space wrap size={[0, 4]}>
+            {branchIds.map((id) => {
+              const bName = branches.find((b) => b.id === id)?.name || "Chi nhánh ẩn";
+              return (
+                <Tag key={id} color="blue">
+                  {bName}
+                </Tag>
+              );
+            })}
+          </Space>
+        );
       },
     },
     {
@@ -161,8 +195,8 @@ function UserManagementPage() {
       dataIndex: "status",
       key: "status",
       render: (status: string) => (
-        <Tag 
-          color={status === "Active" ? "success" : "error"} 
+        <Tag
+          color={status === "Active" ? "success" : "error"}
           style={{ borderRadius: "12px", padding: "2px 10px", fontWeight: 500 }}
         >
           {status === "Active" ? "Hoạt động" : "Đã khóa"}
@@ -174,25 +208,33 @@ function UserManagementPage() {
       key: "action",
       render: (_: any, record: any) => (
         <Space size="middle">
-          <Button 
-            icon={<EditOutlined />} 
-            type="text" 
+          <Button
+            icon={<EditOutlined />}
+            type="text"
             style={{ color: "#1677ff", background: "#e6f4ff" }}
             onClick={() => handleOpenEdit(record)}
           >
             Sửa
           </Button>
           <Popconfirm
-            title={record.status === "Active" ? "Bạn có chắc muốn khóa tài khoản này?" : "Mở khóa tài khoản này?"}
+            title={
+              record.status === "Active"
+                ? "Bạn có chắc muốn khóa tài khoản này?"
+                : "Mở khóa tài khoản này?"
+            }
             onConfirm={() => handleToggleStatus(record.id, record.status)}
             okText="Đồng ý"
             cancelText="Hủy"
           >
-            <Button 
-              icon={record.status === "Active" ? <LockOutlined /> : <UnlockOutlined />} 
-              type="text" 
+            <Button
+              icon={record.status === "Active" ? <LockOutlined /> : <UnlockOutlined />}
+              type="text"
               danger={record.status === "Active"}
-              style={record.status !== "Active" ? { color: "#52c41a", background: "#f6ffed" } : { background: "#fff2f0" }}
+              style={
+                record.status !== "Active"
+                  ? { color: "#52c41a", background: "#f6ffed" }
+                  : { background: "#fff2f0" }
+              }
             >
               {record.status === "Active" ? "Khóa" : "Mở"}
             </Button>
@@ -238,10 +280,10 @@ function UserManagementPage() {
             </>
           }
         />
-        <Table 
-          columns={columns} 
-          dataSource={users} 
-          rowKey="id" 
+        <Table
+          columns={columns}
+          dataSource={users}
+          rowKey="id"
           loading={loading}
           pagination={{ pageSize: 5 }}
         />
@@ -258,35 +300,59 @@ function UserManagementPage() {
         destroyOnClose
       >
         <Form form={form} layout="vertical" style={{ marginTop: 24 }}>
-          <Form.Item label="Họ và tên" name="name" rules={[{ required: true, message: "Vui lòng nhập họ tên" }]}>
+          <Form.Item
+            label="Họ và tên"
+            name="name"
+            rules={[{ required: true, message: "Vui lòng nhập họ tên" }]}
+          >
             <Input placeholder="Nhập họ và tên..." />
           </Form.Item>
-        <Form.Item label="Email" name="email" rules={[{ required: true, type: "email", message: "Vui lòng nhập email hợp lệ" }]}>
-          <Input placeholder="Nhập địa chỉ email..." disabled={!!editingUser} />
+          <Form.Item
+            label="Email"
+            name="email"
+            rules={[{ required: true, type: "email", message: "Vui lòng nhập email hợp lệ" }]}
+          >
+            <Input placeholder="Nhập địa chỉ email..." disabled={!!editingUser} />
           </Form.Item>
           {!editingUser && (
-            <Form.Item label="Mật khẩu" name="password" rules={[{ required: true, message: "Vui lòng nhập mật khẩu" }]}>
+            <Form.Item
+              label="Mật khẩu"
+              name="password"
+              rules={[{ required: true, message: "Vui lòng nhập mật khẩu" }]}
+            >
               <Input.Password placeholder="Nhập mật khẩu..." />
             </Form.Item>
           )}
-          <Form.Item label="Vai trò" name="role" rules={[{ required: true, message: "Vui lòng chọn vai trò" }]}>
-          <Select placeholder="Chọn vai trò" disabled={!!editingUser}>
+          <Form.Item
+            label="Vai trò"
+            name="role"
+            rules={[{ required: true, message: "Vui lòng chọn vai trò" }]}
+          >
+            <Select placeholder="Chọn vai trò" disabled={!!editingUser}>
               <Select.Option value="Admin">Quản trị viên (Admin)</Select.Option>
               <Select.Option value="Recruiter">Nhà tuyển dụng (HR)</Select.Option>
               <Select.Option value="Candidate">Ứng viên (Candidate)</Select.Option>
             </Select>
           </Form.Item>
-          <Form.Item 
-            noStyle 
+          <Form.Item
+            noStyle
             shouldUpdate={(prevValues, currentValues) => prevValues.role !== currentValues.role}
           >
             {({ getFieldValue }) =>
               getFieldValue("role") === "Recruiter" ? (
-                <Form.Item label="Chi nhánh phụ trách (Có thể chọn nhiều)" name="branches" rules={[{ required: true, message: "Vui lòng chọn ít nhất 1 chi nhánh" }]}>
+                <Form.Item
+                  label="Chi nhánh phụ trách (Có thể chọn nhiều)"
+                  name="branches"
+                  rules={[{ required: true, message: "Vui lòng chọn ít nhất 1 chi nhánh" }]}
+                >
                   <Select mode="multiple" placeholder="Chọn chi nhánh">
-                    {branches.filter(b => b.isActive).map(b => (
-                      <Select.Option key={b.id} value={b.id}>{b.name}</Select.Option>
-                    ))}
+                    {branches
+                      .filter((b) => b.isActive)
+                      .map((b) => (
+                        <Select.Option key={b.id} value={b.id}>
+                          {b.name}
+                        </Select.Option>
+                      ))}
                   </Select>
                 </Form.Item>
               ) : null

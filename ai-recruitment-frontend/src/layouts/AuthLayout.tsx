@@ -92,8 +92,8 @@ function AuthLayout() {
                   maxWidth: 480,
                 }}
               >
-                Nền tảng hỗ trợ tuyển dụng thông minh, giúp nhà tuyển dụng đánh
-                giá CV hiệu quả hơn và hỗ trợ ứng viên tiếp cận cơ hội phù hợp.
+                Nền tảng hỗ trợ tuyển dụng thông minh, giúp nhà tuyển dụng đánh giá CV hiệu quả hơn
+                và hỗ trợ ứng viên tiếp cận cơ hội phù hợp.
               </Paragraph>
             </div>
 
@@ -138,9 +138,7 @@ function AuthLayout() {
                     >
                       {item.title}
                     </Text>
-                    <Text style={{ color: "rgba(255,255,255,0.84)" }}>
-                      {item.description}
-                    </Text>
+                    <Text style={{ color: "rgba(255,255,255,0.84)" }}>{item.description}</Text>
                   </div>
                 </div>
               ))}
@@ -157,8 +155,8 @@ function AuthLayout() {
               <Space align="start">
                 <CheckCircleFilled style={{ color: "#BFDBFE", marginTop: 4 }} />
                 <Text style={{ color: "rgba(255,255,255,0.9)" }}>
-                  Giao diện base được thiết kế để dễ mở rộng cho recruiter,
-                  candidate và admin ở các bước tiếp theo.
+                  Giao diện base được thiết kế để dễ mở rộng cho recruiter, candidate và admin ở các
+                  bước tiếp theo.
                 </Text>
               </Space>
             </div>

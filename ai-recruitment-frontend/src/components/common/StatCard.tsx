@@ -13,10 +13,7 @@ type StatCardProps = {
 function StatCard({ title, value, icon, subtitle }: StatCardProps) {
   return (
     <Card>
-      <Space
-        align="start"
-        style={{ width: "100%", justifyContent: "space-between" }}
-      >
+      <Space align="start" style={{ width: "100%", justifyContent: "space-between" }}>
         <div>
           <Text type="secondary">{title}</Text>
           <Title level={3} style={{ margin: "8px 0 4px" }}>

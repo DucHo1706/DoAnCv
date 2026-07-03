@@ -24,5 +24,5 @@ export const userService = {
   async registerCandidate(payload: any) {
     const response = await axiosClient.post("/users/register", payload);
     return response.data;
-  }
+  },
 };

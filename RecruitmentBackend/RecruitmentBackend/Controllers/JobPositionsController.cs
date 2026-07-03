@@ -24,6 +24,7 @@ namespace RecruitmentBackend.Controllers
         }
 
         [HttpPost]
+        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
         public async Task<IActionResult> CreateJobPosition([FromBody] JobPositionRequest request)
         {
             if (!ModelState.IsValid || string.IsNullOrWhiteSpace(request.Name) || string.IsNullOrWhiteSpace(request.CategoryId))
@@ -36,6 +37,7 @@ namespace RecruitmentBackend.Controllers
         }
 
         [HttpPut("{id}")]
+        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
         public async Task<IActionResult> UpdateJobPosition(string id, [FromBody] JobPositionRequest request)
         {
             if (!ModelState.IsValid || string.IsNullOrWhiteSpace(request.Name) || string.IsNullOrWhiteSpace(request.CategoryId))
@@ -52,6 +54,7 @@ namespace RecruitmentBackend.Controllers
         }
 
         [HttpPut("{id}/toggle-status")]
+        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
         public async Task<IActionResult> TogglePositionStatus(string id)
         {
             var result = await _jobPositionService.TogglePositionStatusAsync(id);

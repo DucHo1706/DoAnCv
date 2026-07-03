@@ -70,14 +70,8 @@ export const talentPoolService = {
     return response.data;
   },
 
-  async addTalentPoolNote(
-    talentPoolCandidateId: string,
-    request: AddTalentPoolNoteRequest
-  ) {
-    const response = await axiosClient.post(
-      `/TalentPool/${talentPoolCandidateId}/notes`,
-      request
-    );
+  async addTalentPoolNote(talentPoolCandidateId: string, request: AddTalentPoolNoteRequest) {
+    const response = await axiosClient.post(`/TalentPool/${talentPoolCandidateId}/notes`, request);
 
     return response.data;
   },
@@ -89,5 +83,4 @@ export const talentPoolService = {
 
     return response.data;
   },
-  
 };

@@ -3,16 +3,16 @@ import axiosClient from "./axiosClient";
 export const authService = {
   async login(payload: { email: string; password: string }) {
     const response = await axiosClient.post("/auth/login", payload);
-    
+
     if (response.data?.token) {
       localStorage.setItem("token", response.data.token);
       localStorage.setItem("user", JSON.stringify(response.data));
       if (response.data?.expiresIn) {
-        const expiryTime = Date.now() + (response.data.expiresIn * 1000);
+        const expiryTime = Date.now() + response.data.expiresIn * 1000;
         localStorage.setItem("tokenExpiry", expiryTime.toString());
       }
     }
-    
+
     return response.data;
   },
 
@@ -40,5 +40,5 @@ export const authService = {
 
   isAuthenticated() {
     return !!this.getToken() && !!this.getCurrentUser();
-  }
+  },
 };

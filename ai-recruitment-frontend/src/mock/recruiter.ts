@@ -1,9 +1,4 @@
-export type CandidateStatus =
-  | "New"
-  | "Reviewed"
-  | "Interview"
-  | "Shortlisted"
-  | "Rejected";
+export type CandidateStatus = "New" | "Reviewed" | "Interview" | "Shortlisted" | "Rejected";
 
 export type RecruiterCandidate = {
   id: string;
@@ -91,11 +86,7 @@ export const recruiterCandidates: RecruiterCandidate[] = [
     appliedDate: "2026-03-08",
     aiSummary:
       "Ứng viên phù hợp cao với vị trí Frontend Developer nhờ kinh nghiệm ReactJS tốt, làm việc với TypeScript và UI framework thành thạo.",
-    strengths: [
-      "Kinh nghiệm ReactJS tốt",
-      "Có TypeScript",
-      "Phù hợp stack UI hiện tại",
-    ],
+    strengths: ["Kinh nghiệm ReactJS tốt", "Có TypeScript", "Phù hợp stack UI hiện tại"],
     gaps: ["Thiếu kinh nghiệm testing automation"],
   },
   {
@@ -112,11 +103,7 @@ export const recruiterCandidates: RecruiterCandidate[] = [
     appliedDate: "2026-03-07",
     aiSummary:
       "Ứng viên có nền tảng backend tốt, phù hợp với hệ thống sử dụng ASP.NET Core và cơ sở dữ liệu quan hệ.",
-    strengths: [
-      "ASP.NET Core tốt",
-      "Có kinh nghiệm database",
-      "Quen API design",
-    ],
+    strengths: ["ASP.NET Core tốt", "Có kinh nghiệm database", "Quen API design"],
     gaps: ["Thiếu kinh nghiệm AI integration"],
   },
   {

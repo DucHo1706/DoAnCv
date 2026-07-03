@@ -54,7 +54,7 @@ function JobApprovalPage() {
     try {
       setLoading(true);
       const data: any = await jobService.getAdminJobs();
-      setJobs(Array.isArray(data) ? data : (data?.$values || []));
+      setJobs(Array.isArray(data) ? data : data?.$values || []);
     } catch (error) {
       console.error(error);
       message.error("Không tải được danh sách tin chờ duyệt");
@@ -95,35 +95,35 @@ function JobApprovalPage() {
   };
 
   const handleApproveJob = async (record: PendingJobTableItem) => {
-  if (approvingId) return;
+    if (approvingId) return;
 
-  setApprovingId(record.id);
+    setApprovingId(record.id);
 
-  try {
-    const response = await jobService.approveJob(record.id);
-    message.success(response?.message || "Duyệt tin tuyển dụng thành công");
-    setJobs((prev) => prev.filter((job) => job.id !== record.id));
-    if (jobDetail?.jobInfo.id === record.id) {
-      setDetailOpen(false);
-      setJobDetail(null);
+    try {
+      const response = await jobService.approveJob(record.id);
+      message.success(response?.message || "Duyệt tin tuyển dụng thành công");
+      setJobs((prev) => prev.filter((job) => job.id !== record.id));
+      if (jobDetail?.jobInfo.id === record.id) {
+        setDetailOpen(false);
+        setJobDetail(null);
+      }
+      fetchAdminJobs();
+    } catch (error: any) {
+      console.error("Approve error:", error);
+      console.error("Response data:", error?.response?.data);
+      console.error("Status:", error?.response?.status);
+
+      const errorMessage =
+        error?.response?.data?.message ||
+        error?.response?.data ||
+        error?.message ||
+        "Duyệt tin tuyển dụng thất bại";
+
+      message.error(errorMessage);
+    } finally {
+      setApprovingId(null);
     }
-    fetchAdminJobs();
-  } catch (error: any) {
-    console.error("Approve error:", error);
-    console.error("Response data:", error?.response?.data);
-    console.error("Status:", error?.response?.status);
-
-    const errorMessage =
-      error?.response?.data?.message ||
-      error?.response?.data ||
-      error?.message ||
-      "Duyệt tin tuyển dụng thất bại";
-
-    message.error(errorMessage);
-  } finally {
-    setApprovingId(null);
-  }
-};
+  };
 
   const handleToggleStatus = async (id: string) => {
     try {
@@ -198,7 +198,11 @@ function JobApprovalPage() {
           )}
           {(record.raw.status === "Published" || record.raw.status === "Closed") && (
             <Popconfirm
-              title={record.raw.status === "Published" ? "Bạn có chắc muốn khóa tin này?" : "Mở khóa tin này?"}
+              title={
+                record.raw.status === "Published"
+                  ? "Bạn có chắc muốn khóa tin này?"
+                  : "Mở khóa tin này?"
+              }
               onConfirm={() => handleToggleStatus(record.id)}
               okText="Đồng ý"
               cancelText="Hủy"
@@ -295,9 +299,7 @@ function JobApprovalPage() {
               ) : (
                 <Tag color="gold">Chờ duyệt</Tag>
               )}
-              <Text type="secondary">
-                Tạo lúc: {formatDate(jobDetail.jobInfo.createdAt)}
-              </Text>
+              <Text type="secondary">Tạo lúc: {formatDate(jobDetail.jobInfo.createdAt)}</Text>
             </Space>
 
             <Descriptions bordered column={2} size="middle">

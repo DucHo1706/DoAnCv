@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿using Microsoft.AspNetCore.Mvc;
+﻿﻿﻿﻿﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using RecruitmentBackend.DTOs.Requests;
 using RecruitmentBackend.Interfaces;
@@ -68,6 +68,7 @@ namespace RecruitmentBackend.Controllers
 
         // 4. Duyệt Job và đồng bộ từ khóa cho AI
         [HttpPost("{id}/approve")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> ApproveJob(string id)
         {
             var success = await _jobService.ApproveJobAndSyncAiAsync(id);
@@ -78,6 +79,7 @@ namespace RecruitmentBackend.Controllers
 
         // 5. Lấy danh sách Job đang chờ duyệt
         [HttpGet("pending")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetPendingJobs()
         {
             var jobs = await _jobService.GetPendingJobsAsync();

@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using Microsoft.AspNetCore.Http;
+﻿﻿﻿﻿﻿﻿﻿﻿﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using RecruitmentBackend.Interfaces;
@@ -130,6 +130,15 @@ namespace RecruitmentBackend.Controllers
             if (!result.IsSuccess) return Unauthorized(new { message = result.Message });
             
             return Ok(result.Data);
+        }
+
+        [HttpPost("hr/applications/{applicationId}/re-evaluate")]
+        [Authorize(Roles = "Recruiter")]
+        public async Task<IActionResult> ReEvaluateApplication(string applicationId)
+        {
+            var result = await _recruitmentService.ReEvaluateApplicationAsync(applicationId, User);
+            if (!result.IsSuccess) return BadRequest(new { message = result.Message });
+            return Ok(new { message = result.Message, data = result.Data });
         }
     }
 }

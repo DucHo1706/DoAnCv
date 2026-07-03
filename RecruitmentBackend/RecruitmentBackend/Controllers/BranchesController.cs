@@ -24,6 +24,7 @@ namespace RecruitmentBackend.Controllers
         }
 
         [HttpPost]
+        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
         public async Task<IActionResult> CreateBranch([FromBody] NameOnlyRequest request)
         {
             if (!ModelState.IsValid || string.IsNullOrWhiteSpace(request.Name))
@@ -37,6 +38,7 @@ namespace RecruitmentBackend.Controllers
         }
 
         [HttpPut("{id}")]
+        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
         public async Task<IActionResult> UpdateBranch(string id, [FromBody] NameOnlyRequest request)
         {
             if (!ModelState.IsValid || string.IsNullOrWhiteSpace(request.Name))
@@ -53,6 +55,7 @@ namespace RecruitmentBackend.Controllers
             return Ok(result.Data);
         }
 
+        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
         [HttpPut("{id}/toggle-status")]
         public async Task<IActionResult> ToggleBranchStatus(string id)
         {

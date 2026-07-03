@@ -65,19 +65,14 @@ export interface RejectApplicationRequest {
 
 export const recruitmentService = {
   async getHrApplications() {
-    const response = await axiosClient.get<ApplicationDto[]>(
-      "/Recruitment/hr/applications"
-    );
+    const response = await axiosClient.get<ApplicationDto[]>("/Recruitment/hr/applications");
     return response.data;
   },
 
   async updateApplicationStatus(applicationId: string, status: string) {
-    const response = await axiosClient.put(
-      `/Recruitment/hr/applications/${applicationId}/status`,
-      {
-        status: status,
-      }
-    );
+    const response = await axiosClient.put(`/Recruitment/hr/applications/${applicationId}/status`, {
+      status: status,
+    });
 
     return response.data;
   },
@@ -131,6 +126,13 @@ export const recruitmentService = {
 
   async getMyApplications() {
     const response = await axiosClient.get("/Recruitment/my-applications");
+    return response.data;
+  },
+
+  async reEvaluateApplication(applicationId: string) {
+    const response = await axiosClient.post(
+      `/Recruitment/hr/applications/${applicationId}/re-evaluate`
+    );
     return response.data;
   },
 };

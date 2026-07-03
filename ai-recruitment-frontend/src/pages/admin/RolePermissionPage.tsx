@@ -1,4 +1,17 @@
-import { Card, Table, Tag, Space, Button, Modal, Form, Input, message, Select, Typography, Popconfirm } from "antd";
+import {
+  Card,
+  Table,
+  Tag,
+  Space,
+  Button,
+  Modal,
+  Form,
+  Input,
+  message,
+  Select,
+  Typography,
+  Popconfirm,
+} from "antd";
 import { EditOutlined, PlusOutlined, DeleteOutlined } from "@ant-design/icons";
 import { useState } from "react";
 import PageContainer from "../../components/common/PageContainer";
@@ -7,9 +20,24 @@ import TableToolbar from "../../components/common/TableToolbar";
 const { Title, Paragraph } = Typography;
 
 const mockRoles = [
-  { id: "1", name: "Admin", description: "Quản trị viên toàn quyền hệ thống", permissions: ["manage_users", "approve_jobs", "manage_branches", "view_reports"] },
-  { id: "2", name: "Recruiter", description: "Nhà tuyển dụng (HR)", permissions: ["create_jobs", "view_candidates", "view_ai_scores"] },
-  { id: "3", name: "Candidate", description: "Ứng viên tìm việc", permissions: ["apply_jobs", "view_jobs", "manage_profile"] },
+  {
+    id: "1",
+    name: "Admin",
+    description: "Quản trị viên toàn quyền hệ thống",
+    permissions: ["manage_users", "approve_jobs", "manage_branches", "view_reports"],
+  },
+  {
+    id: "2",
+    name: "Recruiter",
+    description: "Nhà tuyển dụng (HR)",
+    permissions: ["create_jobs", "view_candidates", "view_ai_scores"],
+  },
+  {
+    id: "3",
+    name: "Candidate",
+    description: "Ứng viên tìm việc",
+    permissions: ["apply_jobs", "view_jobs", "manage_profile"],
+  },
 ];
 
 const allPermissions = [
@@ -61,7 +89,7 @@ function RolePermissionPage() {
   };
 
   const handleDelete = (id: string) => {
-    setRoles(roles.filter(r => r.id !== id));
+    setRoles(roles.filter((r) => r.id !== id));
     message.success("Đã xóa vai trò!");
   };
 
@@ -70,7 +98,7 @@ function RolePermissionPage() {
       title: "Tên vai trò",
       dataIndex: "name",
       key: "name",
-      render: (text: string) => <Typography.Text strong>{text}</Typography.Text>
+      render: (text: string) => <Typography.Text strong>{text}</Typography.Text>,
     },
     {
       title: "Mô tả",
@@ -83,21 +111,39 @@ function RolePermissionPage() {
       key: "permissions",
       render: (perms: string[]) => (
         <Space wrap size={[0, 4]}>
-          {perms?.map(p => {
-            const permLabel = allPermissions.find(ap => ap.value === p)?.label || p;
-            return <Tag key={p} color="cyan">{permLabel}</Tag>;
+          {perms?.map((p) => {
+            const permLabel = allPermissions.find((ap) => ap.value === p)?.label || p;
+            return (
+              <Tag key={p} color="cyan">
+                {permLabel}
+              </Tag>
+            );
           })}
         </Space>
-      )
+      ),
     },
     {
       title: "Thao tác",
       key: "action",
       render: (_: any, record: any) => (
         <Space size="middle">
-          <Button icon={<EditOutlined />} type="text" style={{ color: "#1677ff", background: "#e6f4ff" }} onClick={() => handleOpenEdit(record)}>Sửa</Button>
-          <Popconfirm title="Bạn có chắc muốn xóa vai trò này?" onConfirm={() => handleDelete(record.id)} okText="Xóa" cancelText="Hủy">
-            <Button icon={<DeleteOutlined />} type="text" danger style={{ background: "#fff2f0" }}>Xóa</Button>
+          <Button
+            icon={<EditOutlined />}
+            type="text"
+            style={{ color: "#1677ff", background: "#e6f4ff" }}
+            onClick={() => handleOpenEdit(record)}
+          >
+            Sửa
+          </Button>
+          <Popconfirm
+            title="Bạn có chắc muốn xóa vai trò này?"
+            onConfirm={() => handleDelete(record.id)}
+            okText="Xóa"
+            cancelText="Hủy"
+          >
+            <Button icon={<DeleteOutlined />} type="text" danger style={{ background: "#fff2f0" }}>
+              Xóa
+            </Button>
           </Popconfirm>
         </Space>
       ),
@@ -108,7 +154,11 @@ function RolePermissionPage() {
     <PageContainer
       title="Phân quyền & Vai trò"
       subtitle="Tạo và quản lý các vai trò trong hệ thống, thiết lập quyền hạn truy cập chức năng."
-      extra={<Button type="primary" icon={<PlusOutlined />} onClick={handleOpenCreate}>Tạo Vai trò mới</Button>}
+      extra={
+        <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenCreate}>
+          Tạo Vai trò mới
+        </Button>
+      }
     >
       <Card>
         <TableToolbar searchPlaceholder="Tìm kiếm vai trò..." />
@@ -120,12 +170,27 @@ function RolePermissionPage() {
         open={isModalOpen}
         onOk={handleSave}
         onCancel={() => setIsModalOpen(false)}
-        okText="Lưu" cancelText="Hủy" destroyOnClose width={600}
+        okText="Lưu"
+        cancelText="Hủy"
+        destroyOnClose
+        width={600}
       >
         <Form form={form} layout="vertical" style={{ marginTop: 24 }}>
-          <Form.Item label="Tên vai trò" name="name" rules={[{ required: true, message: "Vui lòng nhập tên" }]}><Input placeholder="Ví dụ: Editor, Reviewer..." /></Form.Item>
-          <Form.Item label="Mô tả" name="description"><Input.TextArea placeholder="Mô tả quyền hạn..." rows={2} /></Form.Item>
-          <Form.Item label="Quyền hạn (Permissions)" name="permissions" rules={[{ required: true, message: "Vui lòng chọn ít nhất 1 quyền" }]}>
+          <Form.Item
+            label="Tên vai trò"
+            name="name"
+            rules={[{ required: true, message: "Vui lòng nhập tên" }]}
+          >
+            <Input placeholder="Ví dụ: Editor, Reviewer..." />
+          </Form.Item>
+          <Form.Item label="Mô tả" name="description">
+            <Input.TextArea placeholder="Mô tả quyền hạn..." rows={2} />
+          </Form.Item>
+          <Form.Item
+            label="Quyền hạn (Permissions)"
+            name="permissions"
+            rules={[{ required: true, message: "Vui lòng chọn ít nhất 1 quyền" }]}
+          >
             <Select mode="multiple" placeholder="Chọn các quyền" options={allPermissions} />
           </Form.Item>
         </Form>

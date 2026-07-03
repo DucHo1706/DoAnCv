@@ -10,12 +10,7 @@ type PageContainerProps = {
   children: ReactNode;
 };
 
-function PageContainer({
-  title,
-  subtitle,
-  extra,
-  children,
-}: PageContainerProps) {
+function PageContainer({ title, subtitle, extra, children }: PageContainerProps) {
   return (
     <div>
       <div

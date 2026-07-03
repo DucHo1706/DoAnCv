@@ -1,15 +1,5 @@
 import { EyeOutlined, FilterOutlined, UserOutlined } from "@ant-design/icons";
-import {
-  Button,
-  Card,
-  Descriptions,
-  Drawer,
-  Select,
-  Space,
-  Table,
-  Tag,
-  Typography,
-} from "antd";
+import { Button, Card, Descriptions, Drawer, Select, Space, Table, Tag, Typography } from "antd";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import PageContainer from "../../components/common/PageContainer";
@@ -21,8 +11,7 @@ const { Paragraph, Text } = Typography;
 
 function CandidateListPage() {
   const navigate = useNavigate();
-  const [selectedCandidate, setSelectedCandidate] =
-    useState<RecruiterCandidate | null>(null);
+  const [selectedCandidate, setSelectedCandidate] = useState<RecruiterCandidate | null>(null);
 
   const columns = [
     {
@@ -129,18 +118,10 @@ function CandidateListPage() {
         {selectedCandidate ? (
           <>
             <Descriptions column={1} bordered size="small">
-              <Descriptions.Item label="Họ tên">
-                {selectedCandidate.name}
-              </Descriptions.Item>
-              <Descriptions.Item label="Email">
-                {selectedCandidate.email}
-              </Descriptions.Item>
-              <Descriptions.Item label="Số điện thoại">
-                {selectedCandidate.phone}
-              </Descriptions.Item>
-              <Descriptions.Item label="Vị trí">
-                {selectedCandidate.position}
-              </Descriptions.Item>
+              <Descriptions.Item label="Họ tên">{selectedCandidate.name}</Descriptions.Item>
+              <Descriptions.Item label="Email">{selectedCandidate.email}</Descriptions.Item>
+              <Descriptions.Item label="Số điện thoại">{selectedCandidate.phone}</Descriptions.Item>
+              <Descriptions.Item label="Vị trí">{selectedCandidate.position}</Descriptions.Item>
               <Descriptions.Item label="Kinh nghiệm">
                 {selectedCandidate.experience} năm
               </Descriptions.Item>
@@ -162,9 +143,7 @@ function CandidateListPage() {
 
             <div style={{ marginTop: 16 }}>
               <Text strong>AI Summary</Text>
-              <Paragraph style={{ marginTop: 8 }}>
-                {selectedCandidate.aiSummary}
-              </Paragraph>
+              <Paragraph style={{ marginTop: 8 }}>{selectedCandidate.aiSummary}</Paragraph>
             </div>
 
             <Button

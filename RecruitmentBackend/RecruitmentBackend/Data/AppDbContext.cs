@@ -1,4 +1,4 @@
-﻿﻿﻿﻿using Microsoft.EntityFrameworkCore;
+﻿﻿﻿using Microsoft.EntityFrameworkCore;
 using RecruitmentBackend.Models;
 
 namespace RecruitmentBackend.Data
@@ -18,6 +18,7 @@ namespace RecruitmentBackend.Data
         public DbSet<Category> Categories { get; set; }
         public DbSet<JobLevel> JobLevels { get; set; }
         public DbSet<Position> Positions { get; set; }
+        public DbSet<Skill> Skills { get; set; }
 
         // 3. Module Recruitment
         public DbSet<JobPosting> JobPostings { get; set; }

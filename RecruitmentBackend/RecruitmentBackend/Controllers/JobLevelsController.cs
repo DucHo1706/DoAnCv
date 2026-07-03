@@ -24,6 +24,7 @@ namespace RecruitmentBackend.Controllers
         }
 
         [HttpPost]
+        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
         public async Task<IActionResult> CreateJobLevel([FromBody] JobLevelRequest request)
         {
             if (!ModelState.IsValid || string.IsNullOrWhiteSpace(request.Name))
@@ -37,6 +38,7 @@ namespace RecruitmentBackend.Controllers
         }
 
         [HttpPut("{id}")]
+        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
         public async Task<IActionResult> UpdateJobLevel(string id, [FromBody] JobLevelRequest request)
         {
             if (!ModelState.IsValid || string.IsNullOrWhiteSpace(request.Name))
@@ -54,6 +56,7 @@ namespace RecruitmentBackend.Controllers
         }
 
         [HttpPut("{id}/toggle-status")]
+        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
         public async Task<IActionResult> ToggleJobLevelStatus(string id)
         {
             var result = await _jobLevelService.ToggleJobLevelStatusAsync(id);
@@ -64,6 +67,7 @@ namespace RecruitmentBackend.Controllers
         }
 
         [HttpDelete("{id}")]
+        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteJobLevel(string id)
         {
             var result = await _jobLevelService.DeleteJobLevelAsync(id);

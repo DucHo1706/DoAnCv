@@ -479,6 +479,27 @@ namespace RecruitmentBackend.Migrations
                     b.ToTable("RecruiterBranches");
                 });
 
+            modelBuilder.Entity("RecruitmentBackend.Models.Skill", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("IsApproved")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Skills");
+                });
+
             modelBuilder.Entity("RecruitmentBackend.Models.TalentPoolCandidate", b =>
                 {
                     b.Property<string>("TalentPoolCandidateID")

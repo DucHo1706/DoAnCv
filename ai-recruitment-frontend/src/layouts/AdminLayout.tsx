@@ -21,17 +21,17 @@ function AdminLayout() {
   const location = useLocation();
 
   const menuItems: ItemType[] = [
-    { key: "/admin/dashboard",      icon: <DashboardOutlined />,        label: "Dashboard" },
-    { key: "/admin/users",          icon: <TeamOutlined />,             label: "Quản lý người dùng" },
-    { key: "/admin/job-approvals",  icon: <FileSearchOutlined />,       label: "Duyệt tin tuyển dụng" },
-    
+    { key: "/admin/dashboard", icon: <DashboardOutlined />, label: "Dashboard" },
+    { key: "/admin/users", icon: <TeamOutlined />, label: "Quản lý người dùng" },
+    { key: "/admin/job-approvals", icon: <FileSearchOutlined />, label: "Duyệt tin tuyển dụng" },
+
     // Lôi 3 mục này ra khỏi dropdown "Danh mục"
-    { key: "/admin/branches",       icon: <BranchesOutlined />,         label: "Quản lý Chi nhánh" },
-    { key: "/admin/categories",     icon: <TagsOutlined />,             label: "Quản lý Lĩnh vực" },
-    { key: "/admin/job-positions",  icon: <SolutionOutlined />,         label: "Quản lý Vị trí" },
-    
-    { key: "/admin/roles",          icon: <SafetyCertificateOutlined />, label: "Phân quyền" },
-    { key: "/admin/reports",        icon: <BarChartOutlined />,          label: "Báo cáo" },
+    { key: "/admin/branches", icon: <BranchesOutlined />, label: "Quản lý Chi nhánh" },
+    { key: "/admin/categories", icon: <TagsOutlined />, label: "Quản lý Lĩnh vực" },
+    { key: "/admin/job-positions", icon: <SolutionOutlined />, label: "Quản lý Vị trí" },
+
+    { key: "/admin/roles", icon: <SafetyCertificateOutlined />, label: "Phân quyền" },
+    { key: "/admin/reports", icon: <BarChartOutlined />, label: "Báo cáo" },
   ];
 
   return (

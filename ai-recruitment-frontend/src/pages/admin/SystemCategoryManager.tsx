@@ -1,9 +1,4 @@
-import {
-  EditOutlined,
-  LockOutlined,
-  PlusOutlined,
-  UnlockOutlined,
-} from "@ant-design/icons";
+import { EditOutlined, LockOutlined, PlusOutlined, UnlockOutlined } from "@ant-design/icons";
 import {
   Button,
   Card,
@@ -104,7 +99,9 @@ export default function SystemCategoryManager({
   const handleToggleStatus = async (record: any) => {
     try {
       const res = await toggleStatusApi(record.id);
-      setData((prev) => prev.map((item) => item.id === record.id ? { ...item, isActive: res.isActive } : item));
+      setData((prev) =>
+        prev.map((item) => (item.id === record.id ? { ...item, isActive: res.isActive } : item))
+      );
       message.success(res.message || "Thao tác thành công!");
     } catch (error: any) {
       message.error("Lỗi khi thay đổi trạng thái!");
@@ -116,13 +113,25 @@ export default function SystemCategoryManager({
       title: `Tên ${entityName.toLowerCase()}`,
       dataIndex: "name",
       key: "name",
-      render: (text: string) => (<Typography.Text strong><span style={{ marginRight: 6, color: "#1677ff" }}>{icon}</span>{text}</Typography.Text>),
+      render: (text: string) => (
+        <Typography.Text strong>
+          <span style={{ marginRight: 6, color: "#1677ff" }}>{icon}</span>
+          {text}
+        </Typography.Text>
+      ),
     },
     {
       title: "Trạng thái",
       dataIndex: "isActive",
       key: "isActive",
-      render: (isActive: boolean) => (<Tag color={isActive ? "success" : "error"} style={{ borderRadius: "12px", padding: "2px 10px", fontWeight: 500 }}>{isActive ? "Hoạt động" : "Đã khóa"}</Tag>),
+      render: (isActive: boolean) => (
+        <Tag
+          color={isActive ? "success" : "error"}
+          style={{ borderRadius: "12px", padding: "2px 10px", fontWeight: 500 }}
+        >
+          {isActive ? "Hoạt động" : "Đã khóa"}
+        </Tag>
+      ),
     },
     {
       title: "Thao tác",
@@ -130,9 +139,36 @@ export default function SystemCategoryManager({
       width: 200,
       render: (_: unknown, record: any) => (
         <Space size="middle">
-          <Button icon={<EditOutlined />} type="text" style={{ color: "#1677ff", background: "#e6f4ff" }} onClick={() => handleOpenEdit(record)}>Sửa</Button>
-          <Popconfirm title={record.isActive ? `Khóa ${entityName.toLowerCase()} này?` : `Mở khóa ${entityName.toLowerCase()} này?`} onConfirm={() => handleToggleStatus(record)} okText="Đồng ý" cancelText="Hủy">
-            <Button icon={record.isActive ? <LockOutlined /> : <UnlockOutlined />} type="text" danger={record.isActive} style={!record.isActive ? { color: "#52c41a", background: "#f6ffed" } : { background: "#fff2f0" }}>{record.isActive ? "Khóa" : "Mở"}</Button>
+          <Button
+            icon={<EditOutlined />}
+            type="text"
+            style={{ color: "#1677ff", background: "#e6f4ff" }}
+            onClick={() => handleOpenEdit(record)}
+          >
+            Sửa
+          </Button>
+          <Popconfirm
+            title={
+              record.isActive
+                ? `Khóa ${entityName.toLowerCase()} này?`
+                : `Mở khóa ${entityName.toLowerCase()} này?`
+            }
+            onConfirm={() => handleToggleStatus(record)}
+            okText="Đồng ý"
+            cancelText="Hủy"
+          >
+            <Button
+              icon={record.isActive ? <LockOutlined /> : <UnlockOutlined />}
+              type="text"
+              danger={record.isActive}
+              style={
+                !record.isActive
+                  ? { color: "#52c41a", background: "#f6ffed" }
+                  : { background: "#fff2f0" }
+              }
+            >
+              {record.isActive ? "Khóa" : "Mở"}
+            </Button>
           </Popconfirm>
         </Space>
       ),
@@ -140,14 +176,46 @@ export default function SystemCategoryManager({
   ];
 
   return (
-    <PageContainer title={title} subtitle={subtitle} extra={<Button type="primary" icon={<PlusOutlined />} onClick={handleOpenCreate}>Thêm {entityName}</Button>}>
+    <PageContainer
+      title={title}
+      subtitle={subtitle}
+      extra={
+        <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenCreate}>
+          Thêm {entityName}
+        </Button>
+      }
+    >
       <Card>
         <TableToolbar searchPlaceholder={`Tìm kiếm ${entityName.toLowerCase()}...`} />
-        <Table columns={columns} dataSource={data} rowKey="id" loading={loading} pagination={{ pageSize: 10 }} />
+        <Table
+          columns={columns}
+          dataSource={data}
+          rowKey="id"
+          loading={loading}
+          pagination={{ pageSize: 10 }}
+        />
       </Card>
-      <Modal title={editingItem ? `Cập nhật ${entityName}` : `Thêm ${entityName} mới`} open={isModalOpen} onOk={handleSave} onCancel={() => setIsModalOpen(false)} confirmLoading={submitting} okText="Lưu" cancelText="Hủy" destroyOnClose>
+      <Modal
+        title={editingItem ? `Cập nhật ${entityName}` : `Thêm ${entityName} mới`}
+        open={isModalOpen}
+        onOk={handleSave}
+        onCancel={() => setIsModalOpen(false)}
+        confirmLoading={submitting}
+        okText="Lưu"
+        cancelText="Hủy"
+        destroyOnClose
+      >
         <Form form={form} layout="vertical" style={{ marginTop: 24 }}>
-          <Form.Item label={`Tên ${entityName.toLowerCase()}`} name="name" rules={[{ required: true, message: `Vui lòng nhập tên ${entityName.toLowerCase()}` }, { whitespace: true, message: "Tên không được chỉ có khoảng trắng" }]}><Input placeholder={`Ví dụ tên ${entityName.toLowerCase()}...`} /></Form.Item>
+          <Form.Item
+            label={`Tên ${entityName.toLowerCase()}`}
+            name="name"
+            rules={[
+              { required: true, message: `Vui lòng nhập tên ${entityName.toLowerCase()}` },
+              { whitespace: true, message: "Tên không được chỉ có khoảng trắng" },
+            ]}
+          >
+            <Input placeholder={`Ví dụ tên ${entityName.toLowerCase()}...`} />
+          </Form.Item>
         </Form>
       </Modal>
     </PageContainer>

@@ -11,7 +11,7 @@ import MainLayout from "./pages/recruiter/MainLayout";
 
 // Recruiter pages
 import JobManagementPage from "./pages/recruiter/JobManagementPage";
-import CreateJobPage from "./pages/recruiter/CreateJobPage"; 
+import CreateJobPage from "./pages/recruiter/CreateJobPage";
 import RecruiterDashboardPage from "./pages/recruiter/RecruiterDashboardPage";
 import CandidateDetailPage from "./pages/recruiter/CandidateDetailPage";
 import ApplicationManagementPage from "./pages/recruiter/ApplicationManagementPage";
@@ -27,6 +27,7 @@ import CandidateJobPage from "./pages/candidate/CandidateJobPage";
 import ApplicationStatusPage from "./pages/candidate/ApplicationStatusPage";
 import CandidateProfilePage from "./pages/candidate/CandidateProfilePage";
 import CandidateJobDetailPage from "./pages/candidate/CandidateJobDetailPage";
+import CvAnalysisResultPage from "./pages/candidate/CvAnalysisResultPage";
 
 // Admin pages
 import AdminDashboardPage from "./pages/admin/AdminDashboardPage";
@@ -54,6 +55,7 @@ function App() {
           <Route index element={<HomePage />} />
           <Route path="jobs" element={<CandidateJobPage />} />
           <Route path="jobs/:id" element={<CandidateJobDetailPage />} />
+          <Route path="jobs/:id/cv-analysis" element={<CvAnalysisResultPage />} />
           <Route path="my-applications" element={<ApplicationStatusPage />} />
           <Route path="profile" element={<CandidateProfilePage />} />
         </Route>

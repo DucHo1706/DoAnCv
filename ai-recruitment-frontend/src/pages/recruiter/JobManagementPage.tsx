@@ -21,11 +21,7 @@ import { useNavigate } from "react-router-dom";
 import PageContainer from "../../components/common/PageContainer";
 import StatCard from "../../components/common/StatCard";
 import TableToolbar from "../../components/common/TableToolbar";
-import {
-  jobService,
-  jobPositionService,
-  branchService,
-} from "../../services/jobService";
+import { jobService, jobPositionService, branchService } from "../../services/jobService";
 import type {
   BranchDto,
   CategoryDto,
@@ -74,6 +70,11 @@ function JobManagementPage() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [jobDetail, setJobDetail] = useState<JobReviewResponse | null>(null);
 
+  // Filter states
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterStatus, setFilterStatus] = useState<string | undefined>(undefined);
+  const [filterCategory, setFilterCategory] = useState<string | undefined>(undefined);
+
   // Dropdown data từ API
   const [categories, setCategories] = useState<CategoryDto[]>([]); // For filter dropdown
 
@@ -82,7 +83,7 @@ function JobManagementPage() {
     try {
       setLoading(true);
       const data: any = await jobService.getMyJobs(); // Chỉ lấy công việc của HR này
-      setJobs(Array.isArray(data) ? data : (data?.$values || []));
+      setJobs(Array.isArray(data) ? data : data?.$values || []);
     } catch {
       message.error("Không tải được danh sách tin tuyển dụng");
     } finally {
@@ -93,7 +94,10 @@ function JobManagementPage() {
   useEffect(() => {
     fetchJobs();
     // Fetch categories for filter dropdown
-    jobService.getCategories().then(data => setCategories(data)).catch(() => message.error("Lỗi tải danh sách lĩnh vực"));
+    jobService
+      .getCategories()
+      .then((data) => setCategories(data))
+      .catch(() => message.error("Lỗi tải danh sách lĩnh vực"));
   }, []);
 
   // ── Table data ─────────────────────────────────────────
@@ -113,6 +117,13 @@ function JobManagementPage() {
 
   const approvedJobs = tableData.filter((j) => j.status === "approved").length;
   const pendingJobs = tableData.filter((j) => j.status === "pending").length;
+
+  const filteredTableData = tableData.filter((item) => {
+    const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus = filterStatus ? item.status === filterStatus : true;
+    const matchesCategory = filterCategory ? item.field === filterCategory : true;
+    return matchesSearch && matchesStatus && matchesCategory;
+  });
 
   // ── Xem chi tiết ──────────────────────────────────────
   const handleViewJob = async (record: JobTableItem) => {
@@ -192,18 +203,10 @@ function JobManagementPage() {
     >
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
         <Col xs={24} sm={8}>
-          <StatCard
-            title="Tin công khai"
-            value={approvedJobs}
-            subtitle="Đã được Admin duyệt"
-          />
+          <StatCard title="Tin công khai" value={approvedJobs} subtitle="Đã được Admin duyệt" />
         </Col>
         <Col xs={24} sm={8}>
-          <StatCard
-            title="Tin chờ duyệt"
-            value={pendingJobs}
-            subtitle="Đang chờ Admin xét duyệt"
-          />
+          <StatCard title="Tin chờ duyệt" value={pendingJobs} subtitle="Đang chờ Admin xét duyệt" />
         </Col>
         <Col xs={24} sm={8}>
           <StatCard
@@ -217,12 +220,16 @@ function JobManagementPage() {
       <Card>
         <TableToolbar
           searchPlaceholder="Tìm theo tên vị trí..."
+          searchValue={searchQuery}
+          onSearchChange={setSearchQuery}
           extra={
             <>
               <Select
                 placeholder="Lọc trạng thái"
                 style={{ width: 180 }}
                 allowClear
+                value={filterStatus}
+                onChange={setFilterStatus}
                 options={[
                   { label: "Đã duyệt", value: "approved" },
                   { label: "Chờ duyệt", value: "pending" },
@@ -232,9 +239,11 @@ function JobManagementPage() {
                 placeholder="Lọc lĩnh vực"
                 style={{ width: 220 }}
                 allowClear
+                value={filterCategory}
+                onChange={setFilterCategory}
                 options={categories.map((c) => ({
                   label: c.name,
-                  value: c.id,
+                  value: c.name,
                 }))}
               />
             </>
@@ -244,7 +253,7 @@ function JobManagementPage() {
         <Table
           rowKey="id"
           columns={columns}
-          dataSource={tableData}
+          dataSource={filteredTableData}
           loading={loading}
           pagination={{ pageSize: 5 }}
         />
@@ -262,17 +271,13 @@ function JobManagementPage() {
         width={820}
         confirmLoading={detailLoading}
       >
-        {detailLoading && (
-          <Text type="secondary">Đang tải dữ liệu...</Text>
-        )}
+        {detailLoading && <Text type="secondary">Đang tải dữ liệu...</Text>}
 
         {jobDetail && (
           <>
             <Space style={{ marginBottom: 16 }}>
               <Tag color={detailStatusMeta.color}>{detailStatusMeta.label}</Tag>
-              <Text type="secondary">
-                Tạo lúc: {formatDate(jobDetail.jobInfo.createdAt)}
-              </Text>
+              <Text type="secondary">Tạo lúc: {formatDate(jobDetail.jobInfo.createdAt)}</Text>
             </Space>
 
             <Descriptions bordered column={2} size="middle">
@@ -334,15 +339,20 @@ function JobManagementPage() {
               <div style={{ marginTop: 24 }}>
                 <Text strong>Tiêu chí đánh giá AI (Trọng số %)</Text>
                 <div style={{ marginTop: 8 }}>
-                  <Table 
-                    size="small" 
+                  <Table
+                    size="small"
                     columns={[
                       { title: "Tên tiêu chí", dataIndex: "name", key: "name" },
-                      { title: "Trọng số", dataIndex: "weight", key: "weight", render: (val) => <Tag color="blue">{val}%</Tag> }
-                    ]} 
-                    dataSource={(jobDetail.jobInfo as any).criteria} 
-                    rowKey="name" 
-                    pagination={false} 
+                      {
+                        title: "Trọng số",
+                        dataIndex: "weight",
+                        key: "weight",
+                        render: (val) => <Tag color="blue">{val}%</Tag>,
+                      },
+                    ]}
+                    dataSource={(jobDetail.jobInfo as any).criteria}
+                    rowKey="name"
+                    pagination={false}
                     bordered
                   />
                 </div>

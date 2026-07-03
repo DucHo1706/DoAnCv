@@ -1,6 +1,27 @@
 import { useState, useRef, useEffect } from "react";
-import { FloatButton, Input, Button, Typography, Spin, Space, Avatar, Upload, Select, message, Popconfirm, Tag } from "antd";
-import { RobotOutlined, SendOutlined, UserOutlined, CloseOutlined, DragOutlined, PaperClipOutlined, DeleteOutlined } from "@ant-design/icons";
+import {
+  FloatButton,
+  Input,
+  Button,
+  Typography,
+  Spin,
+  Space,
+  Avatar,
+  Upload,
+  Select,
+  message,
+  Popconfirm,
+  Tag,
+} from "antd";
+import {
+  RobotOutlined,
+  SendOutlined,
+  UserOutlined,
+  CloseOutlined,
+  DragOutlined,
+  PaperClipOutlined,
+  DeleteOutlined,
+} from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import axiosClient from "../../services/axiosClient";
 import { jobService } from "../../services/jobService";
@@ -11,7 +32,7 @@ const { Text } = Typography;
 export default function CandidateChatbot() {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
-  
+
   // Khởi tạo Session ID để lưu lịch sử
   const [sessionId] = useState(() => {
     let sid = localStorage.getItem("chatSessionId");
@@ -22,7 +43,7 @@ export default function CandidateChatbot() {
     return sid;
   });
 
-  const [messages, setMessages] = useState<{role: string, text: string}[]>([]);
+  const [messages, setMessages] = useState<{ role: string; text: string }[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -37,7 +58,14 @@ export default function CandidateChatbot() {
 
   const [size, setSize] = useState({ width: 380, height: 600 });
   const [isResizing, setIsResizing] = useState(false);
-  const resizeInfo = useRef({ startWidth: 0, startHeight: 0, startX: 0, startY: 0, startPosX: 0, startPosY: 0 });
+  const resizeInfo = useRef({
+    startWidth: 0,
+    startHeight: 0,
+    startX: 0,
+    startY: 0,
+    startPosX: 0,
+    startPosY: 0,
+  });
 
   // Load lịch sử từ LocalStorage để không bị xoá khi người dùng F5 tải lại trang
   useEffect(() => {
@@ -45,7 +73,12 @@ export default function CandidateChatbot() {
     if (savedMsgs) {
       setMessages(JSON.parse(savedMsgs));
     } else {
-      setMessages([{ role: "ai", text: "Chào bạn! Mình là Trợ lý AI của AI Recruitment. Mình có thể giúp bạn phân tích xu hướng việc làm, tối ưu CV, hoặc giải đáp các thắc mắc về tuyển dụng. Bạn cần mình hỗ trợ gì nào?" }]);
+      setMessages([
+        {
+          role: "ai",
+          text: "Chào bạn! Mình là Trợ lý AI của AI Recruitment. Mình có thể giúp bạn phân tích xu hướng việc làm, tối ưu CV, hoặc giải đáp các thắc mắc về tuyển dụng. Bạn cần mình hỗ trợ gì nào?",
+        },
+      ]);
     }
   }, [sessionId]);
 
@@ -66,7 +99,7 @@ export default function CandidateChatbot() {
     const fetchJobs = async () => {
       try {
         const data: any = await jobService.getJobs();
-        setJobs(Array.isArray(data) ? data : (data?.$values || []));
+        setJobs(Array.isArray(data) ? data : data?.$values || []);
       } catch (error) {
         console.error("Lỗi lấy danh sách việc làm cho Chatbot", error);
       }
@@ -76,7 +109,12 @@ export default function CandidateChatbot() {
 
   const handleClearChat = () => {
     localStorage.removeItem(`chat_history_${sessionId}`);
-    setMessages([{ role: "ai", text: "Chào bạn! Mình là Trợ lý AI của AI Recruitment. Mình có thể giúp bạn phân tích xu hướng việc làm, tối ưu CV, hoặc giải đáp các thắc mắc về tuyển dụng. Bạn cần mình hỗ trợ gì nào?" }]);
+    setMessages([
+      {
+        role: "ai",
+        text: "Chào bạn! Mình là Trợ lý AI của AI Recruitment. Mình có thể giúp bạn phân tích xu hướng việc làm, tối ưu CV, hoặc giải đáp các thắc mắc về tuyển dụng. Bạn cần mình hỗ trợ gì nào?",
+      },
+    ]);
     message.success("Đã xóa lịch sử trò chuyện!");
   };
 
@@ -86,7 +124,9 @@ export default function CandidateChatbot() {
       setOpen(true);
       if (event.detail?.jobId) {
         setSelectedJobId(event.detail.jobId);
-        setInput(`Hãy đánh giá mức độ phù hợp của CV đính kèm với vị trí ${event.detail.jobTitle || 'này'}. Điểm mạnh, điểm yếu là gì và tôi nên cải thiện thế nào để trúng tuyển?`);
+        setInput(
+          `Hãy đánh giá mức độ phù hợp của CV đính kèm với vị trí ${event.detail.jobTitle || "này"}. Điểm mạnh, điểm yếu là gì và tôi nên cải thiện thế nào để trúng tuyển?`
+        );
       }
     };
 
@@ -104,10 +144,10 @@ export default function CandidateChatbot() {
       } else if (isResizing) {
         const deltaX = e.clientX - resizeInfo.current.startX;
         const deltaY = e.clientY - resizeInfo.current.startY;
-        
+
         const newWidth = Math.max(300, resizeInfo.current.startWidth + deltaX);
         const newHeight = Math.max(400, resizeInfo.current.startHeight + deltaY);
-        
+
         const actualDeltaX = newWidth - resizeInfo.current.startWidth;
         const actualDeltaY = newHeight - resizeInfo.current.startHeight;
 
@@ -139,11 +179,12 @@ export default function CandidateChatbot() {
     if (!input.trim() && fileList.length === 0) return;
 
     const userMsg = input.trim() || "Hãy xem xét CV đính kèm của tôi.";
-    const currentHistory = messages.filter(m => m.role !== "system");
+    const currentHistory = messages.filter((m) => m.role !== "system");
 
-    const displayMsg = userMsg + (fileList.length > 0 ? `\n📎 [Đã đính kèm file: ${fileList[0].name}]` : "");
+    const displayMsg =
+      userMsg + (fileList.length > 0 ? `\n📎 [Đã đính kèm file: ${fileList[0].name}]` : "");
     setMessages((prev) => [...prev, { role: "user", text: displayMsg }]);
-    
+
     setInput("");
     setLoading(true);
 
@@ -152,9 +193,9 @@ export default function CandidateChatbot() {
       formData.append("SessionId", sessionId);
       formData.append("Prompt", userMsg);
       formData.append("HistoryJson", JSON.stringify(currentHistory));
-      
+
       if (selectedJobId) formData.append("JobId", selectedJobId);
-      
+
       if (fileList.length > 0) {
         const fileToUpload = fileList[0].originFileObj || fileList[0];
         formData.append("File", fileToUpload);
@@ -162,16 +203,18 @@ export default function CandidateChatbot() {
 
       const res = await axiosClient.post("/Chatbot/chat", formData, {
         headers: { "Content-Type": "multipart/form-data" },
-        timeout: 60000 // Tăng thời gian chờ lên 60s để AI kịp đọc File
+        timeout: 60000, // Tăng thời gian chờ lên 60s để AI kịp đọc File
       });
       const aiText = res.data.reply;
 
       setMessages((prev) => [...prev, { role: "ai", text: aiText }]);
       setLoading(false);
       setFileList([]); // Xoá file sau khi gửi xong
-
     } catch (error) {
-      setMessages((prev) => [...prev, { role: "ai", text: "Xin lỗi, hiện tại API AI đang bận. Bạn vui lòng thử lại sau nhé." }]);
+      setMessages((prev) => [
+        ...prev,
+        { role: "ai", text: "Xin lỗi, hiện tại API AI đang bận. Bạn vui lòng thử lại sau nhé." },
+      ]);
       setLoading(false);
     }
   };
@@ -218,7 +261,7 @@ export default function CandidateChatbot() {
         tooltip="Chat với Trợ lý AI"
         badge={{ dot: true }}
       />
-      
+
       {open && (
         <div
           style={{
@@ -247,126 +290,228 @@ export default function CandidateChatbot() {
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
-              userSelect: "none"
+              userSelect: "none",
             }}
           >
             <Space>
-              <Avatar icon={<RobotOutlined />} style={{ backgroundColor: '#ffffff', color: '#1677ff' }} />
-              <Text strong style={{ fontSize: 16, color: "#fff" }}>AI Career Assistant</Text>
+              <Avatar
+                icon={<RobotOutlined />}
+                style={{ backgroundColor: "#ffffff", color: "#1677ff" }}
+              />
+              <Text strong style={{ fontSize: 16, color: "#fff" }}>
+                AI Career Assistant
+              </Text>
             </Space>
             <Space>
               <DragOutlined style={{ fontSize: 18, color: "rgba(255,255,255,0.7)" }} />
-              <Button type="text" icon={<CloseOutlined style={{ color: "#fff" }} />} onClick={() => setOpen(false)} />
+              <Button
+                type="text"
+                icon={<CloseOutlined style={{ color: "#fff" }} />}
+                onClick={() => setOpen(false)}
+              />
             </Space>
           </div>
 
           <div style={{ flex: 1, padding: 16, overflowY: "auto", background: "#f5f7fa" }}>
-          {messages.map((msg, idx) => (
-            <div key={idx} style={{ marginBottom: 16, display: "flex", flexDirection: msg.role === "user" ? "row-reverse" : "row", gap: 8 }}>
-              <Avatar icon={msg.role === "user" ? <UserOutlined /> : <RobotOutlined />} style={{ backgroundColor: msg.role === "user" ? "#87d068" : "#1677ff", flexShrink: 0 }} />
-              <div style={{ display: "inline-block", padding: "10px 14px", borderRadius: 12, background: msg.role === "user" ? "#1677ff" : "#ffffff", color: msg.role === "user" ? "#fff" : "#0f172a", boxShadow: "0 2px 6px rgba(0,0,0,0.05)", maxWidth: "80%", borderTopRightRadius: msg.role === "user" ? 2 : 12, borderTopLeftRadius: msg.role === "ai" ? 2 : 12 }}>
-                <div style={{ color: 'inherit', wordBreak: "break-word", lineHeight: 1.6 }}>
-                  {msg.text.split('\n').map((line, lineIdx) => {
-                    if (!line.trim()) return <div key={lineIdx} style={{ height: 8 }} />;
-                    
-                    const parseInline = (text: string) => {
-                      return text.split(/(\*\*.*?\*\*|\[.*?\]\(.*?\))/g).map((part, i) => {
-                        if (part.startsWith('**') && part.endsWith('**')) {
-                          return <strong key={i} style={{ color: msg.role === 'ai' ? '#0f172a' : 'inherit' }}>{part.slice(2, -2)}</strong>;
-                        }
-                        const linkMatch = part.match(/\[(.*?)\]\((.*?)\)/);
-                        if (linkMatch) {
-                          const linkText = linkMatch[1];
-                          const url = linkMatch[2];
-                          const isInternal = url.startsWith('/');
-                          return (
-                            <a 
-                              key={i} 
-                              href={url}
-                              onClick={(e) => {
-                                if (isInternal) {
-                                  e.preventDefault();
-                                  navigate(url);
-                                  setOpen(false);
-                                }
-                              }}
-                              target={isInternal ? "_self" : "_blank"}
-                              rel={isInternal ? "" : "noopener noreferrer"}
-                              style={{ 
-                                color: msg.role === 'ai' ? '#1677ff' : '#fff', 
-                                textDecoration: 'none', 
-                                fontWeight: 600,
-                                background: msg.role === 'ai' ? '#e6f4ff' : 'rgba(255,255,255,0.2)',
-                                padding: '4px 12px',
-                                borderRadius: 6,
-                                display: 'inline-block',
-                                marginTop: 6,
-                                marginBottom: 2,
-                                boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
-                                border: msg.role === 'ai' ? "1px solid #91caff" : "none"
+            {messages.map((msg, idx) => (
+              <div
+                key={idx}
+                style={{
+                  marginBottom: 16,
+                  display: "flex",
+                  flexDirection: msg.role === "user" ? "row-reverse" : "row",
+                  gap: 8,
+                }}
+              >
+                <Avatar
+                  icon={msg.role === "user" ? <UserOutlined /> : <RobotOutlined />}
+                  style={{
+                    backgroundColor: msg.role === "user" ? "#87d068" : "#1677ff",
+                    flexShrink: 0,
+                  }}
+                />
+                <div
+                  style={{
+                    display: "inline-block",
+                    padding: "10px 14px",
+                    borderRadius: 12,
+                    background: msg.role === "user" ? "#1677ff" : "#ffffff",
+                    color: msg.role === "user" ? "#fff" : "#0f172a",
+                    boxShadow: "0 2px 6px rgba(0,0,0,0.05)",
+                    maxWidth: "80%",
+                    borderTopRightRadius: msg.role === "user" ? 2 : 12,
+                    borderTopLeftRadius: msg.role === "ai" ? 2 : 12,
+                  }}
+                >
+                  <div style={{ color: "inherit", wordBreak: "break-word", lineHeight: 1.6 }}>
+                    {msg.text.split("\n").map((line, lineIdx) => {
+                      if (!line.trim()) return <div key={lineIdx} style={{ height: 8 }} />;
+
+                      const parseInline = (text: string) => {
+                        return text.split(/(\*\*.*?\*\*|\[.*?\]\(.*?\))/g).map((part, i) => {
+                          if (part.startsWith("**") && part.endsWith("**")) {
+                            return (
+                              <strong
+                                key={i}
+                                style={{ color: msg.role === "ai" ? "#0f172a" : "inherit" }}
+                              >
+                                {part.slice(2, -2)}
+                              </strong>
+                            );
+                          }
+                          const linkMatch = part.match(/\[(.*?)\]\((.*?)\)/);
+                          if (linkMatch) {
+                            const linkText = linkMatch[1];
+                            const url = linkMatch[2];
+                            const isInternal = url.startsWith("/");
+                            return (
+                              <a
+                                key={i}
+                                href={url}
+                                onClick={(e) => {
+                                  if (isInternal) {
+                                    e.preventDefault();
+                                    navigate(url);
+                                    setOpen(false);
+                                  }
+                                }}
+                                target={isInternal ? "_self" : "_blank"}
+                                rel={isInternal ? "" : "noopener noreferrer"}
+                                style={{
+                                  color: msg.role === "ai" ? "#1677ff" : "#fff",
+                                  textDecoration: "none",
+                                  fontWeight: 600,
+                                  background:
+                                    msg.role === "ai" ? "#e6f4ff" : "rgba(255,255,255,0.2)",
+                                  padding: "4px 12px",
+                                  borderRadius: 6,
+                                  display: "inline-block",
+                                  marginTop: 6,
+                                  marginBottom: 2,
+                                  boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
+                                  border: msg.role === "ai" ? "1px solid #91caff" : "none",
+                                }}
+                              >
+                                {linkText}
+                              </a>
+                            );
+                          }
+                          return <span key={i}>{part}</span>;
+                        });
+                      };
+
+                      const numberedMatch = line.match(/^(\d+\.)\s+(.*)/);
+                      if (numberedMatch) {
+                        return (
+                          <div
+                            key={lineIdx}
+                            style={{
+                              display: "flex",
+                              marginTop: 12,
+                              marginBottom: 4,
+                              padding: "8px 12px",
+                              background: msg.role === "ai" ? "#f8fafc" : "transparent",
+                              borderRadius: 8,
+                              border: msg.role === "ai" ? "1px solid #e2e8f0" : "none",
+                            }}
+                          >
+                            <span
+                              style={{
+                                fontWeight: "bold",
+                                marginRight: 12,
+                                color: msg.role === "ai" ? "#1677ff" : "#fff",
+                                fontSize: 16,
                               }}
                             >
-                              {linkText}
-                            </a>
-                          );
-                        }
-                        return <span key={i}>{part}</span>;
-                      });
-                    };
+                              {numberedMatch[1]}
+                            </span>
+                            <span style={{ fontWeight: 500 }}>{parseInline(numberedMatch[2])}</span>
+                          </div>
+                        );
+                      }
 
-                    const numberedMatch = line.match(/^(\d+\.)\s+(.*)/);
-                    if (numberedMatch) {
+                      const bulletMatch = line.match(/^[\*\-]\s+(.*)/);
+                      if (bulletMatch) {
+                        return (
+                          <div
+                            key={lineIdx}
+                            style={{
+                              display: "flex",
+                              marginLeft: 16,
+                              marginBottom: 6,
+                              opacity: 0.9,
+                            }}
+                          >
+                            <span
+                              style={{
+                                marginRight: 12,
+                                color: msg.role === "ai" ? "#1677ff" : "#fff",
+                              }}
+                            >
+                              •
+                            </span>
+                            <span>{parseInline(bulletMatch[1])}</span>
+                          </div>
+                        );
+                      }
+
                       return (
-                        <div key={lineIdx} style={{ display: 'flex', marginTop: 12, marginBottom: 4, padding: "8px 12px", background: msg.role === 'ai' ? "#f8fafc" : "transparent", borderRadius: 8, border: msg.role === 'ai' ? "1px solid #e2e8f0" : "none" }}>
-                          <span style={{ fontWeight: 'bold', marginRight: 12, color: msg.role === 'ai' ? '#1677ff' : '#fff', fontSize: 16 }}>{numberedMatch[1]}</span>
-                          <span style={{ fontWeight: 500 }}>{parseInline(numberedMatch[2])}</span>
+                        <div key={lineIdx} style={{ marginBottom: 6 }}>
+                          {parseInline(line)}
                         </div>
                       );
-                    }
-
-                    const bulletMatch = line.match(/^[\*\-]\s+(.*)/);
-                    if (bulletMatch) {
-                      return (
-                        <div key={lineIdx} style={{ display: 'flex', marginLeft: 16, marginBottom: 6, opacity: 0.9 }}>
-                          <span style={{ marginRight: 12, color: msg.role === 'ai' ? '#1677ff' : '#fff' }}>•</span>
-                          <span>{parseInline(bulletMatch[1])}</span>
-                        </div>
-                      );
-                    }
-
-                    return (
-                      <div key={lineIdx} style={{ marginBottom: 6 }}>
-                        {parseInline(line)}
-                      </div>
-                    );
-                  })}
+                    })}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
-          {loading && (
-            <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-              <Avatar icon={<RobotOutlined />} style={{ backgroundColor: '#1677ff', flexShrink: 0 }} />
-              <div style={{ padding: "10px 14px", borderRadius: 12, background: "#ffffff", boxShadow: "0 2px 6px rgba(0,0,0,0.05)", borderTopLeftRadius: 2 }}>
-                <Spin size="small" /> <Text type="secondary" style={{ marginLeft: 8 }}>AI đang suy nghĩ...</Text>
+            ))}
+            {loading && (
+              <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+                <Avatar
+                  icon={<RobotOutlined />}
+                  style={{ backgroundColor: "#1677ff", flexShrink: 0 }}
+                />
+                <div
+                  style={{
+                    padding: "10px 14px",
+                    borderRadius: 12,
+                    background: "#ffffff",
+                    boxShadow: "0 2px 6px rgba(0,0,0,0.05)",
+                    borderTopLeftRadius: 2,
+                  }}
+                >
+                  <Spin size="small" />{" "}
+                  <Text type="secondary" style={{ marginLeft: 8 }}>
+                    AI đang suy nghĩ...
+                  </Text>
+                </div>
               </div>
-            </div>
-          )}
-          <div ref={messagesEndRef} />
-        </div>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
 
           <div style={{ padding: 16, borderTop: "1px solid #f0f0f0", background: "#fff" }}>
-            <div style={{ marginBottom: 8, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-              <Select 
-                size="small" 
-                placeholder="Gắn kèm tin tuyển dụng để so sánh (Tùy chọn)..." 
-                allowClear 
+            <div
+              style={{
+                marginBottom: 8,
+                display: "flex",
+                gap: 8,
+                flexWrap: "wrap",
+                alignItems: "center",
+              }}
+            >
+              <Select
+                size="small"
+                placeholder="Gắn kèm tin tuyển dụng để so sánh (Tùy chọn)..."
+                allowClear
                 style={{ flex: 1, minWidth: 200 }}
                 value={selectedJobId}
                 onChange={setSelectedJobId}
               >
-                {jobs.map(j => (
-                  <Select.Option key={j.id} value={j.id}>{j.position?.name || 'Vị trí'} - {j.branch?.name || 'Chi nhánh'}</Select.Option>
+                {jobs.map((j) => (
+                  <Select.Option key={j.id} value={j.id}>
+                    {j.position?.name || "Vị trí"} - {j.branch?.name || "Chi nhánh"}
+                  </Select.Option>
                 ))}
               </Select>
               {fileList.length > 0 && (
@@ -375,8 +520,13 @@ export default function CandidateChatbot() {
                 </Tag>
               )}
             </div>
-            <Space.Compact style={{ width: '100%' }}>
-              <Popconfirm title="Bạn có chắc muốn xóa lịch sử?" onConfirm={handleClearChat} okText="Xóa" cancelText="Hủy">
+            <Space.Compact style={{ width: "100%" }}>
+              <Popconfirm
+                title="Bạn có chắc muốn xóa lịch sử?"
+                onConfirm={handleClearChat}
+                okText="Xóa"
+                cancelText="Hủy"
+              >
                 <Button size="large" icon={<DeleteOutlined />} title="Xóa lịch sử trò chuyện" />
               </Popconfirm>
               <Upload {...uploadProps}>
@@ -390,7 +540,13 @@ export default function CandidateChatbot() {
                 onPressEnter={handleSend}
                 disabled={loading}
               />
-              <Button size="large" type="primary" icon={<SendOutlined />} onClick={handleSend} loading={loading} />
+              <Button
+                size="large"
+                type="primary"
+                icon={<SendOutlined />}
+                onClick={handleSend}
+                loading={loading}
+              />
             </Space.Compact>
           </div>
 

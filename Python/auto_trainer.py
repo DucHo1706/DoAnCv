@@ -18,7 +18,7 @@ if not GEMINI_API_KEY:
 client = genai.Client(api_key=GEMINI_API_KEY)
 
 def auto_train_model():
-    print("\n🚀 BẮT ĐẦU QUY TRÌNH TỰ ĐỘNG HUẤN LUYỆN AI (AUTO FINE-TUNING)")
+    print("\nBẮT ĐẦU QUY TRÌNH TỰ ĐỘNG HUẤN LUYỆN AI (AUTO FINE-TUNING)")
     print("-" * 60)
     
     print("1. Đang gọi API sang C# để rút trích dữ liệu CV ẩn danh...")
@@ -34,7 +34,7 @@ def auto_train_model():
             f.write(response.content)
         print(f"   -> Thành công! Đã lưu file dữ liệu: {file_path}")
     except Exception as e:
-        print(f"❌ Lỗi khi tải dữ liệu từ C#: {e}")
+        print(f"Lỗi khi tải dữ liệu từ C#: {e}")
         return
 
     print("\n2. Đang tự động Upload dữ liệu lên Đám mây Google AI...")
@@ -53,8 +53,8 @@ def auto_train_model():
     )
     
     print(f"   -> Đã khởi tạo Job Huấn Luyện Thành Công! Job Name: {tuning_job.name}")
-    print("\n🎉 Hệ thống siêu máy tính của Google đang tự động học từ dữ liệu của bạn.")
-    print("⏳ Hãy chờ khoảng 15-30 phút, sau đó lên trang chủ Google AI Studio để lấy mã Model mới nhé!\n")
+    print("\n Hệ thống siêu máy tính của Google đang tự động học từ dữ liệu của bạn.")
+    print(" Hãy chờ khoảng 15-30 phút, sau đó lên trang chủ Google AI Studio để lấy mã Model mới nhé!\n")
 
 if __name__ == "__main__":
     auto_train_model()

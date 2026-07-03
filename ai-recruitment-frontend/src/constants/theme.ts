@@ -19,10 +19,10 @@ export const appTheme = {
 
   font: {
     family: `'Inter', 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif`,
-    size: 14,
-    sizeSm: 12,
-    sizeLg: 16,
-    sizeXl: 20,
+    size: 15,
+    sizeSm: 13,
+    sizeLg: 17,
+    sizeXl: 22,
     weightNormal: 400,
     weightMedium: 500,
     weightSemibold: 600,
