@@ -1,95 +1,53 @@
 from .gemini_service import generate_content_with_retry
 from .ml_service import calculate_scikit_similarity, HAS_SKLEARN
+from prompts.scoring_prompts import get_scoring_prompt, get_cv_validation_prompt, get_deep_analysis_prompt
+from prompts.language_prompts import get_language_review_prompt
+from utils.logger import logger
 import json
 
 def chat_with_candidate(user_message, history=None, job_description="", file_text="", system_knowledge=""):
-    system_instruction = """Bạn là trợ lý ảo AI Recruitment Assistant chuyên nghiệp của hệ thống tuyển dụng AI Recruitment.
-Nhiệm vụ của bạn là trả lời câu hỏi của người dùng tuân thủ NGHIÊM NGẶT các quy tắc ưu tiên sau:
+    """
+    Chatbot tu van tuyen dung ho tro ung vien va HR
+    """
+    system_instruction = """Ban la tro ly ao AI Recruitment Assistant chuyen nghiep cua he thong tuyen dung AI Recruitment.
+Nhiem vu cua ban la tra loi cau hoi cua nguoi dung tuan thu NGHIEM NGAC cac quy tac uu tien sau:
 
-1. ƯU TIÊN SỐ 1 (Ngữ cảnh & Dữ liệu hệ thống): LUÔN tìm kiếm câu trả lời dựa trên các thông tin được cung cấp trong ngữ cảnh (Lịch sử trò chuyện, Mô tả công việc JD, Nội dung CV đính kèm, Dữ liệu bổ sung). Nếu có thông tin phù hợp, hãy trả lời dựa trên đó.
-2. ƯU TIÊN SỐ 2 (Kiến thức chuyên môn): Nếu ngữ cảnh KHÔNG CÓ thông tin, bạn được phép dùng kiến thức của mình để hỗ trợ, NHƯNG CHỈ ĐƯỢC PHÉP nói về các chủ đề: Tuyển dụng, Nhân sự, Tìm việc làm, Viết CV, Phỏng vấn, Xu hướng nghề nghiệp.
-3. TỪ CHỐI NGOÀI LỀ (Out of scope): Tuyệt đối KHÔNG trả lời bất kỳ câu hỏi nào ngoài các chủ đề trên (ví dụ: không viết code, không giải toán, không làm thơ, không nói chuyện chính trị, giải trí...). Nếu người dùng hỏi ngoài lề, hãy trả lời mặc định: "Xin lỗi, tôi là trợ lý ảo chuyên về lĩnh vực Tuyển dụng và Việc làm. Tôi không thể hỗ trợ bạn vấn đề này."
+1. UU TIEN SO 1 (Ngu canh & Du lieu he thong): LUON tim kiem cau tra loi dua tren cac thong tin duoc cung cap trong ngu canh (Lich su tro chuyen, Mo ta cong viec JD, Noi dung CV dinh kem, Du lieu bo sung). Neu co thong tin phu hop, hay tra loi dua tren do.
+2. UU TIEN SO 2 (Kien thuc chuyen mon): Neu ngu canh KHONG CO thong tin, ban duoc phep dung kien thuc cua minh de ho tro, NHUNG CHI DUOC PHEP noi ve cac chu de: Tuyen dung, Nhan su, Tim viec lam, Viet CV, Phong van, Xu huong nghe nghiep.
+3. TU CHOI NGOAI LE (Out of scope): Tuyet doi KHONG tra loi bat ky cau hoi nao ngoai cac chu de tren (vi du: khong viet code, khong giai toan, khong lam tho, khong noi chuyen chinh tri, giai tri...). Neu ngu dung hoi ngoai le, hay tra loi mac dinh: "Xin loi, toi la tro ly ao chuyen ve linh vuc Tuyen dung va Viec lam. Toi khong the ho tro ban van de nay."
 """
     prompt = f"""
 {system_instruction}
 
---- DỮ LIỆU BỔ SUNG ---
+--- DU LIEU BO SUNG ---
 {system_knowledge}
 
---- MÔ TẢ CÔNG VIỆC (JD) ---
+--- MO TA CONG VIEC (JD) ---
 {job_description}
 
---- NỘI DUNG CV ĐĨNH KÈM ---
+--- NOI DUNG CV DINH KEM ---
 {file_text}
 
---- LỊCH SỬ TRÒ CHUYỆN ---
+--- LICH SU TRO CHUYEN ---
 {json.dumps(history) if history else "[]"}
 
---- CÂU HỎI MỚI CỦA NGƯỜI DÙNG ---
+--- CAU HOI MOI CUA NGUOI DUNG ---
 {user_message}
 """
     try:
         return generate_content_with_retry(prompt, is_json=False)
     except Exception as e:
-        return f"Xin lỗi, trợ lý AI đang quá tải hệ thống. Vui lòng hỏi lại sau ít giây. Chi tiết: {str(e)}"
+        logger.error(f"Loi chatbot: {e}")
+        return f"Xin loi, he thong dang qua tai. Vui long thu lai sau. Chi tiet: {str(e)}"
 
 def calculate_resume_score(cv_text: str, jd_text: str, cv_skills: list, jd_skills: list, criteria_list: list) -> dict:
-    cv_skills_text = ", ".join(cv_skills) if cv_skills else "Chưa trích xuất được"
-    jd_skills_text = ", ".join(jd_skills) if jd_skills else "Chưa trích xuất được"
+    """
+    Cham diem CV dua tren ma so khop tieu chi
+    """
+    cv_skills_text = ", ".join(cv_skills) if cv_skills else "Chua trich xuat duoc"
+    jd_skills_text = ", ".join(jd_skills) if jd_skills else "Chua trich xuat duoc"
 
-    prompt = f"""
-Bạn là chuyên gia tuyển dụng cao cấp.
-Nhiệm vụ: Hãy phân tích CV so với mô tả công việc (JD) và chấm điểm chi tiết dựa trên danh sách tiêu chí HR yêu cầu.
-
---- DANH SÁCH TIÊU CHÍ HR CUNG CẤP ---
-{json.dumps(criteria_list, ensure_ascii=False)}
-
---- NỘI DUNG JD ---
-{jd_text}
-Kỹ năng JD yêu cầu: {jd_skills_text}
-
---- NỘI DUNG CV ---
-{cv_text}
-Kỹ năng CV có: {cv_skills_text}
-
-Yêu cầu bắt buộc:
-1. Trả về ĐÚNG 1 JSON duy nhất.
-2. Không thêm markdown.
-3. Không dùng ```json.
-4. Không thêm chữ giải thích ngoài JSON.
-5. criteria_results phải có đủ tất cả tiêu chí HR đã cung cấp.
-6. criterion_name phải giữ đúng tên tiêu chí HR đã cung cấp.
-7. weight và max_score phải bằng trọng số HR cung cấp.
-8. score là số nguyên, không vượt quá max_score.
-9. total_score phải bằng tổng score của criteria_results.
-10. Nhận xét bằng tiếng Việt, ngắn gọn, dễ hiểu cho HR.
-11. Bóc tách degree, major, university, years_of_experience, certificates. Nếu không có thông tin, trả về null hoặc 0 hoặc mảng rỗng.
-
-Cấu trúc JSON bắt buộc:
-{{
-    "total_score": <số nguyên từ 0 đến 100>,
-    "classification": "<Phù hợp hoặc Nên xem xét hoặc Chưa phù hợp>",
-    "criteria_results": [
-        {{
-            "criterion_name": "<tên tiêu chí>",
-            "weight": <trọng số>,
-            "score": <điểm đạt được>,
-            "max_score": <điểm tối đa>,
-            "comment": "<nhận xét ngắn gọn theo tiêu chí này>"
-        }}
-    ],
-    "matched_skills": [<mảng các chuỗi kỹ năng CV đáp ứng được JD>],
-    "missing_skills": [<mảng các chuỗi kỹ năng JD yêu cầu nhưng CV thiếu>],
-    "summary": "<1 đoạn văn ngắn bằng tiếng Việt tổng kết mức độ phù hợp của ứng viên>",
-    "extracted_info": {{
-        "degree": "<Bằng cấp>",
-        "major": "<Chuyên ngành>",
-        "university": "<Trường đại học>",
-        "years_of_experience": <số năm kinh nghiệm>,
-        "certificates": ["<chứng chỉ 1>", "<chứng chỉ 2>"]
-    }}
-}}
-"""
+    prompt = get_scoring_prompt(criteria_list, jd_text, jd_skills_text, cv_text, cv_skills_text)
     try:
         response_text = generate_content_with_retry(
             prompt,
@@ -99,10 +57,13 @@ Cấu trúc JSON bắt buộc:
         ai_result = json.loads(response_text)
         return normalize_scoring_result(ai_result, criteria_list)
     except Exception as e:
-        print(f"Lỗi calculate_resume_score: {e}")
+        logger.error(f"Loi calculate_resume_score: {e}")
         return build_default_scoring_result(criteria_list)
 
 def normalize_scoring_result(ai_result, criteria_list):
+    """
+    Chuan hoa va lam tron cac diem so sau khi AI tra ve
+    """
     criteria_results = []
     total_score = 0
 
@@ -111,7 +72,7 @@ def normalize_scoring_result(ai_result, criteria_list):
         criterion_weight = int(criterion["weight"])
 
         score = 0
-        comment = "AI chưa đánh giá tiêu chí này."
+        comment = "AI chua danh gia tieu chi nay."
 
         ai_criteria = ai_result.get("criteria_results", [])
         matched_ai_criterion = None
@@ -146,7 +107,7 @@ def normalize_scoring_result(ai_result, criteria_list):
 
     if not isinstance(matched_skills, list): matched_skills = []
     if not isinstance(missing_skills, list): missing_skills = []
-    if not summary: summary = "Đã hoàn thành chấm điểm CV."
+    if not summary: summary = "Da hoan thanh cham diem CV."
 
     ext = ai_result.get("extracted_info", {})
     degree = ext.get("degree")
@@ -183,9 +144,9 @@ def normalize_scoring_result(ai_result, criteria_list):
     }
 
 def classify_cv(total_score):
-    if total_score >= 80: return "Phù hợp"
-    if total_score >= 60: return "Nên xem xét"
-    return "Chưa phù hợp"
+    if total_score >= 80: return "Phu hop"
+    if total_score >= 60: return "Nen xem xet"
+    return "Chua phu hop"
 
 def build_default_scoring_result(criteria_list):
     criteria_results = []
@@ -197,15 +158,15 @@ def build_default_scoring_result(criteria_list):
             "weight": criterion_weight,
             "score": 0,
             "max_score": criterion_weight,
-            "comment": "Lỗi AI phân tích."
+            "comment": "Loi phan tich tu AI."
         })
     return {
         "total_score": 0,
-        "classification": "Chưa phù hợp",
+        "classification": "Chua phu hop",
         "criteria_results": criteria_results,
         "matched_skills": [],
         "missing_skills": [],
-        "summary": "Không thể chấm điểm do sự cố kết nối AI.",
+        "summary": "Khong the cham diem CV vi ket noi AI bi loi.",
         "extracted_info": {
             "degree": None,
             "major": None,
@@ -217,102 +178,31 @@ def build_default_scoring_result(criteria_list):
 
 def is_document_a_resume(cv_text: str) -> tuple[bool, str]:
     """
-    Sử dụng Gemini kiểm tra xem file tải lên có phải là CV/Resume hay không.
+    Kiem tra tinh hop le cua tap tin CV tai len
     """
     if not cv_text or len(cv_text.strip()) < 50:
-        return False, "Nội dung văn bản quá ngắn để được xác định là một CV."
-    prompt = f"""
-Hãy xác định xem đoạn văn bản trích xuất từ tài liệu dưới đây có phải là của một hồ sơ xin việc (CV/Resume) hay không.
-Một CV hợp lệ thường chứa các thông tin như: kinh nghiệm làm việc, học vấn, kỹ năng, thông tin liên hệ, mục tiêu nghề nghiệp, dự án đã tham gia.
-
---- NỘI DUNG TÀI LIỆU ---
-{cv_text[:3000]}
-
-Yêu cầu đầu ra:
-1. Trả về ĐÚNG 1 JSON duy nhất.
-2. Không dùng markdown, không dùng ```json.
-Cấu trúc JSON:
-{{
-  "is_resume": <true hoặc false>,
-  "reason": "<lý do cụ thể bằng tiếng Việt nếu không phải là CV>"
-}}
-"""
+        return False, "Noi dung text qua ngan."
+        
+    prompt = get_cv_validation_prompt(cv_text)
     try:
         res = generate_content_with_retry(prompt)
         data = json.loads(res)
         return bool(data.get("is_resume", True)), data.get("reason", "")
     except Exception as e:
-        print(f"Lỗi is_document_a_resume: {e}")
+        logger.error(f"Loi is_document_a_resume: {e}")
         return True, ""
 
 def analyze_cv_deep(cv_text: str, jd_text: str, cv_skills: list, jd_skills: list, job_title: str = "", company_name: str = ""):
     """
-    Phân tích CV chuyên sâu phần chấm điểm cốt lõi (Tab 1).
-    Sinh nhanh điểm số, nhận xét, điểm mạnh/yếu, Red Flags và kỹ năng.
+    Phan tich chuyen sau CV so voi yeu cau JD
     """
-    cv_skills_text = ", ".join(cv_skills) if cv_skills else "Chưa trích xuất được"
-    jd_skills_text = ", ".join(jd_skills) if jd_skills else "Chưa trích xuất được"
+    cv_skills_text = ", ".join(cv_skills) if cv_skills else "Chua trich xuat duoc"
+    jd_skills_text = ", ".join(jd_skills) if jd_skills else "Chua trich xuat duoc"
 
-    # Tính điểm đối sánh bằng Scikit-learn
     scikit_score = calculate_scikit_similarity(cv_text, jd_text)
-    scikit_info = f"- Điểm kiểm định tương thích nền tảng bằng Machine Learning (TF-IDF & Cosine Similarity từ Scikit-learn): {scikit_score:.1f}/100" if HAS_SKLEARN else ""
+    scikit_info = f"- Diem tuong dong TF-IDF Cosine Scikit-learn: {scikit_score:.1f}/100" if HAS_SKLEARN else ""
 
-    prompt = f"""
-Bạn là chuyên gia tuyển dụng nhân sự cao cấp.
-Nhiệm vụ: Chấm điểm và đánh giá hồ sơ xin việc (CV) của ứng viên so với mô tả công việc (JD) dưới đây.
-
-[KẾT QUẢ ĐO LƯỜNG TƯƠNG ĐỒNG NỀN TẢNG MACHINE LEARNING]
-{scikit_info}
-(Hãy tham khảo điểm số tương đồng nền tảng TF-IDF của Scikit-learn ở trên làm cơ sở thô về mặt từ khóa, kết hợp với phân tích ngữ nghĩa sâu của bạn để đưa ra điểm số tổng thể (total_score) phù hợp nhất).
-
---- THÔNG TIN CÔNG VIỆC ---
-Vị trí: {job_title}
-Công ty: {company_name}
-
---- NỘI DUNG JD ---
-{jd_text}
-Kỹ năng JD yêu cầu: {jd_skills_text}
-
---- NỘI DUNG CV ---
-{cv_text}
-Kỹ năng CV có: {cv_skills_text}
-
-Yêu cầu phân tích:
-- Điểm tổng thể (total_score) từ 0-100.
-- Phân loại (classification): "Phù hợp" (>=80), "Nên xem xét" (>=60), "Chưa phù hợp" (<60).
-- Nhận xét tổng quan (summary) 2-3 câu tiếng Việt.
-- Điểm mạnh (strengths): 3-5 điểm mạnh rõ ràng của CV so với JD.
-- Điểm yếu (weaknesses): 3-5 điểm yếu hoặc thiếu sót cần khắc phục.
-- Red Flags (Cảnh báo Red Flag trong CV): tối đa 4 lỗi nghiêm trọng.
-  Mỗi Red Flag gồm:
-  - type: loại lỗi ("KEYWORD_STUFFING", "GENERIC_CV", "CHRONOLOGY_GAP", "MISSING_METRICS", "OTHER")
-  - title: tiêu đề cảnh báo ngắn gọn (ví dụ: 'Nhồi nhét từ khóa', 'Kinh nghiệm chung chung')
-  - description: giải thích tại sao đó là lỗi và cách sửa (1-2 câu)
-
-Yêu cầu đầu ra:
-1. Trả về ĐÚNG 1 JSON duy nhất.
-2. Không dùng markdown, không dùng ```json, không giải thích ngoài JSON.
-
-Cấu trúc JSON bắt buộc:
-{{
-  "score_analysis": {{
-    "total_score": <số nguyên>,
-    "classification": "<Phù hợp|Nên xem xét|Chưa phù hợp>",
-    "summary": "<tóm tắt>",
-    "strengths": ["<điểm mạnh 1>", ...],
-    "weaknesses": ["<điểm yếu 1>", ...],
-    "matched_skills": ["<kỹ năng khớp 1>", ...],
-    "missing_skills": ["<kỹ năng thiếu 1>", ...],
-    "red_flags": [
-      {{
-        "type": "<loại>",
-        "title": "<tiêu đề>",
-        "description": "<mô tả>"
-      }}
-    ]
-  }}
-}}
-"""
+    prompt = get_deep_analysis_prompt(scikit_info, job_title, company_name, jd_text, jd_skills_text, cv_text, cv_skills_text)
     try:
         response_text = generate_content_with_retry(
             prompt,
@@ -321,7 +211,6 @@ Cấu trúc JSON bắt buộc:
         )
         result = json.loads(response_text)
 
-        # Validate và normalize kết quả
         score_analysis = result.get("score_analysis", {})
         total_score = score_analysis.get("total_score", 0)
         try:
@@ -331,17 +220,17 @@ Cấu trúc JSON bắt buộc:
         total_score = max(0, min(100, total_score))
 
         classification = score_analysis.get("classification", "")
-        if classification not in ["Phù hợp", "Nên xem xét", "Chưa phù hợp"]:
+        if classification not in ["Phu hop", "Nen xem xet", "Chua phu hop"]:
             if total_score >= 80:
-                classification = "Phù hợp"
+                classification = "Phu hop"
             elif total_score >= 60:
-                classification = "Nên xem xét"
+                classification = "Nen xem xet"
             else:
-                classification = "Chưa phù hợp"
+                classification = "Chua phu hop"
 
         score_analysis["total_score"] = total_score
         score_analysis["classification"] = classification
-        score_analysis.setdefault("summary", "AI đã hoàn thành phân tích CV.")
+        score_analysis.setdefault("summary", "AI da hoan thanh phan tich CV.")
         score_analysis.setdefault("strengths", [])
         score_analysis.setdefault("weaknesses", [])
         score_analysis.setdefault("red_flags", [])
@@ -354,7 +243,7 @@ Cấu trúc JSON bắt buộc:
             "optimization_tips": [],
             "language_review": {
                 "overall_language_score": 0,
-                "language_comment": "Chưa tải phân tích ngôn ngữ.",
+                "language_comment": "Chua tai phan tich ngon ngu.",
                 "good_action_verbs": [],
                 "weak_phrases": [],
                 "ai_generation_risk": {"detected": False, "section": "", "score": 0, "comment": ""}
@@ -363,14 +252,14 @@ Cấu trúc JSON bắt buộc:
         }
 
     except Exception as ex:
-        print(f"LỖI analyze_cv_deep: {ex}")
+        logger.error(f"Loi analyze_cv_deep: {ex}")
         return {
             "status": "error",
-            "message": f"AI không thể phân tích CV: {str(ex)}",
+            "message": f"AI khong the phan tich CV: {str(ex)}",
             "score_analysis": {
                 "total_score": 0,
-                "classification": "Chưa phù hợp",
-                "summary": f"Đã xảy ra lỗi khi AI phân tích: {str(ex)}",
+                "classification": "Chua phu hop",
+                "summary": f"Da xay ra loi: {str(ex)}",
                 "strengths": [],
                 "weaknesses": [],
                 "red_flags": [],
@@ -380,63 +269,33 @@ Cấu trúc JSON bắt buộc:
             "optimization_tips": [],
             "language_review": {
                 "overall_language_score": 0,
-                "language_comment": "Không thể phân tích ngôn ngữ.",
+                "language_comment": "Khong the phan tich ngon ngu.",
                 "good_action_verbs": [],
                 "weak_phrases": [],
                 "ai_generation_risk": {
                     "detected": False,
                     "section": "",
                     "score": 0,
-                    "comment": "Không thể đánh giá độ chân thực."
+                    "comment": "Khong the danh gia."
                 }
             },
             "mock_interview": []
         }
 
 def generate_cv_language_review(cv_text: str, jd_text: str) -> dict:
-    prompt = f"""
-Bạn là chuyên gia ngôn ngữ học và rà soát lỗi hồ sơ nhân sự.
-Hãy phân tích chất lượng ngôn từ diễn đạt trong CV so với JD dưới đây.
-
---- NỘI DUNG JD ---
-{jd_text}
-
---- NỘI DUNG CV ---
-{cv_text}
-
-Yêu cầu đầu ra:
-1. Trả về ĐÚNG 1 đối tượng JSON duy nhất.
-2. Không dùng markdown, không dùng ```json, không giải thích ngoài JSON.
-
-Cấu trúc JSON bắt buộc:
-{{
-  "overall_language_score": <số nguyên từ 0-100>,
-  "language_comment": "<nhận xét chung 1-2 câu tiếng Việt>",
-  "good_action_verbs": ["<động từ mạnh nên dùng 1>", ...],
-  "weak_phrases": [
-    {{
-      "original": "<từ/cụm từ sáo rỗng, mơ hồ trong CV>",
-      "suggestion": "<gợi ý thay thế mạnh mẽ>",
-      "reason": "<lý do cụ thể tại sao nên thay thế>"
-    }}
-  ],
-  "ai_generation_risk": {{
-    "detected": <true hoặc false>,
-    "section": "<phần nghi ngờ, ví dụ: 'Mục tiêu nghề nghiệp' hoặc 'Kinh nghiệm'>",
-    "score": <phần trăm từ 0-100>,
-    "comment": "<nhận xét và hướng dẫn chỉnh sửa>"
-  }}
-}}
-"""
+    """
+    Review ngon ngu và do chan thuc CV
+    """
+    prompt = get_language_review_prompt(jd_text, cv_text)
     try:
         response_text = generate_content_with_retry(prompt)
         result = json.loads(response_text)
         return result
     except Exception as e:
-        print(f"Lỗi generate_cv_language_review: {e}")
+        logger.error(f"Loi generate_cv_language_review: {e}")
         return {
             "overall_language_score": 70,
-            "language_comment": "Ngôn ngữ tạm ổn, cần cải thiện một số từ sáo rỗng.",
+            "language_comment": "Ngon ngu CV tam on.",
             "good_action_verbs": [],
             "weak_phrases": [],
             "ai_generation_risk": {"detected": False, "section": "", "score": 0, "comment": ""}

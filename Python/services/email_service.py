@@ -1,4 +1,6 @@
 from .gemini_service import generate_content_with_retry
+from prompts.email_prompts import get_email_generation_prompt
+from utils.logger import logger
 import json
 
 def generate_candidate_email(
@@ -14,6 +16,9 @@ def generate_candidate_email(
     reject_reason=None,
     email_context=""
 ):
+    """
+    Soan thao email phan hoi ung vien tu dong
+    """
     if company_name is None or str(company_name).strip() == "":
         company_name = "AI Recruitment"
 
@@ -22,7 +27,7 @@ def generate_candidate_email(
     if missing_skills is None: missing_skills = []
     if email_context is None: email_context = ""
 
-    # Nếu summary là chuỗi JSON do /score-cv đóng gói
+    # Lay phan summary thuc te neu la chuoi JSON tu /score-cv
     raw_summary = summary
     if summary and str(summary).strip().startswith('{'):
         try:
@@ -99,39 +104,19 @@ Lưu ý quan trọng:
 - Nếu lý do là đã tuyển đủ người, hãy nhấn mạnh đây là yếu tố thời điểm/chỉ tiêu tuyển dụng, không phải vì năng lực ứng viên không đạt.
 """
 
-    prompt = f"""
-Bạn là chuyên gia Nhân sự cấp cao, có kỹ năng viết email tuyển dụng chuyên nghiệp.
-Hãy viết email phản hồi ứng viên dựa trên dữ liệu sau:
-
-[THÔNG TIN ỨNG VIÊN]
-- Tên ứng viên: {candidate_name}
-- Vị trí ứng tuyển: {job_title}
-- Công ty: {company_name}
-- Điểm phù hợp: {fit_score}/100
-- Phân loại: {classification}
-- Tóm tắt đánh giá AI: {raw_summary}
-- Bối cảnh email: {email_context_text}
-- Kỹ năng phù hợp: {matched_skills_text}
-- Kỹ năng còn thiếu: {missing_skills_text}
-
-[LOẠI EMAIL]
-{email_type}
-
-[YÊU CẦU]
-{task_instruction}
-
-[RÀNG BUỘC ĐẦU RA]
-Trả về đúng JSON duy nhất.
-Không dùng markdown.
-Không dùng ```json.
-Không thêm giải thích bên ngoài JSON.
-
-Cấu trúc JSON bắt buộc:
-{{
-    "subject": "<tiêu đề email>",
-    "body": "<nội dung email dạng HTML đơn giản, dùng các thẻ p, strong, ul, li nếu cần>"
-}}
-"""
+    prompt = get_email_generation_prompt(
+        candidate_name=candidate_name,
+        job_title=job_title,
+        company_name=company_name,
+        fit_score=fit_score,
+        classification=classification,
+        raw_summary=raw_summary,
+        email_context_text=email_context_text,
+        matched_skills_text=matched_skills_text,
+        missing_skills_text=missing_skills_text,
+        email_type=email_type,
+        task_instruction=task_instruction
+    )
 
     try:
         response_text = generate_content_with_retry(prompt)
@@ -142,9 +127,9 @@ Cấu trúc JSON bắt buộc:
 
         if not isinstance(subject, str) or subject.strip() == "":
             if is_talent_pool_invite:
-                subject = f"[{company_name}] Lời mời ứng tuyển vị trí {job_title}"
+                subject = f"[{company_name}] Loi moi ung tuyen vi tri {job_title}"
             else:
-                subject = f"[{company_name}] Kết quả ứng tuyển vị trí {job_title}"
+                subject = f"[{company_name}] Ket qua ung tuyen vi tri {job_title}"
 
         if not isinstance(body, str) or body.strip() == "":
             body = build_default_email_body(
@@ -161,15 +146,12 @@ Cấu trúc JSON bắt buộc:
         }
 
     except Exception as exception:
-        print("\n" + "=" * 50)
-        print("❌ LỖI AI GENERATE EMAIL:")
-        print(exception)
-        print("=" * 50 + "\n")
+        logger.error(f"Loi AI generate email: {exception}")
 
         if is_talent_pool_invite:
-            fallback_subject = f"[{company_name}] Lời mời ứng tuyển vị trí {job_title}"
+            fallback_subject = f"[{company_name}] Loi moi ung tuyen vi tri {job_title}"
         else:
-            fallback_subject = f"[{company_name}] Kết quả ứng tuyển vị trí {job_title}"
+            fallback_subject = f"[{company_name}] Ket qua ung tuyen vi tri {job_title}"
 
         return {
             "subject": fallback_subject,

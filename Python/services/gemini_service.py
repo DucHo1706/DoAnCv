@@ -5,18 +5,16 @@ import time
 import requests
 import json
 from dotenv import load_dotenv
+from utils.logger import logger
 
-# Tải các biến môi trường từ .env (sử dụng đường dẫn tuyệt đối và ghi đè)
+# Tai cau hinh tu env
 env_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env")
 load_dotenv(dotenv_path=env_path, override=True)
 
-# Cấu hình kết nối LLM Gateway 9Router
 USE_9ROUTER = os.getenv("USE_9ROUTER", "false").lower() == "true"
 NINE_ROUTER_URL = os.getenv("NINE_ROUTER_URL", "http://localhost:20128/v1")
-# Tên Combo hoặc Model được thiết lập sẵn trong 9Router (ví dụ: free-forever)
 NINE_ROUTER_MODEL = os.getenv("NINE_ROUTER_MODEL", "free-forever")
 
-# Lấy danh sách API Keys để xoay vòng khi gọi trực tiếp
 api_keys = []
 primary_key = os.getenv("GEMINI_API_KEY")
 if primary_key:
@@ -29,28 +27,23 @@ extra_keys = os.getenv("GEMINI_API_KEYS")
 if extra_keys:
     api_keys.extend([k.strip() for k in extra_keys.split(",") if k.strip()])
 
-# Loại bỏ trùng lặp nếu có
 api_keys = list(dict.fromkeys(api_keys))
 
 if not api_keys and not USE_9ROUTER:
-    raise ValueError("Không tìm thấy GEMINI_API_KEY hoặc GEMINI_API_KEYS. Vui lòng cấu hình trong file .env")
+    raise ValueError("Khong tim thay khoa API trong env.")
 
-# Khởi tạo genai client cho tất cả các API keys cấu hình trực tiếp
 clients = [genai.Client(api_key=key) for key in api_keys] if api_keys else []
 client = clients[0] if clients else None
 
 def generate_content_with_retry(prompt: str, is_json: bool = True, models: list = None) -> str:
     """
-    Gọi Gemini API với cơ chế tự động thử lại (Exponential Backoff), xoay vòng model và xoay vòng API Keys khi bị rate limit (429/503).
-    Hỗ trợ tích hợp trung gian qua LLM Gateway 9Router nếu được kích hoạt.
+    Goi Gemini API voi co che tu dong thu lai hoac chuyen tiep qua 9Router
     """
-    # 1. Nếu kích hoạt 9Router, ưu tiên gọi qua Gateway
     if USE_9ROUTER:
         try:
             headers = {
                 "Content-Type": "application/json"
             }
-            # Nếu 9Router yêu cầu password/token, có thể truyền qua Authorization
             auth_token = os.getenv("NINE_ROUTER_TOKEN")
             if auth_token:
                 headers["Authorization"] = f"Bearer {auth_token}"
@@ -62,7 +55,7 @@ def generate_content_with_retry(prompt: str, is_json: bool = True, models: list 
                 "stream": False
             }
             
-            print(f"🚀 [9ROUTER] Đang gửi yêu cầu tới Gateway ({NINE_ROUTER_URL}) sử dụng model/combo: {NINE_ROUTER_MODEL}")
+            logger.info(f"Gui yeu cau den Gateway 9Router ({NINE_ROUTER_URL}) su dung model: {NINE_ROUTER_MODEL}")
             response = requests.post(
                 f"{NINE_ROUTER_URL.rstrip('/')}/chat/completions",
                 json=payload,
@@ -71,11 +64,9 @@ def generate_content_with_retry(prompt: str, is_json: bool = True, models: list 
             )
             
             if response.status_code == 200:
-                # Thiết lập mã hóa UTF-8 rõ ràng trước khi đọc text để tránh lỗi font tiếng Việt
                 response.encoding = 'utf-8'
                 response_text = response.text.strip()
                 
-                # Xử lý cắt bỏ phần thừa (như "data: [DONE]") ở cuối nếu 9Router ghép thêm
                 last_brace = response_text.rfind("}")
                 if last_brace != -1:
                     response_text = response_text[:last_brace + 1]
@@ -83,17 +74,15 @@ def generate_content_with_retry(prompt: str, is_json: bool = True, models: list 
                 res_json = json.loads(response_text)
                 return res_json["choices"][0]["message"]["content"]
             else:
-                print(f"⚠️ [9ROUTER] Gateway trả về lỗi ({response.status_code}): {response.text}")
-                print("🔄 Tự động fallback sang gọi trực tiếp Google Gemini API...")
+                logger.warning(f"9Router Gateway tra ve loi ({response.status_code}): {response.text}")
+                logger.info("Chuyen huong sang goi truc tiep Google Gemini API...")
         except Exception as e:
-            print(f"⚠️ [9ROUTER] Lỗi kết nối tới Gateway 9Router: {e}")
-            print("🔄 Tự động fallback sang gọi trực tiếp Google Gemini API...")
+            logger.warning(f"Loi ket noi toi 9Router Gateway: {e}")
+            logger.info("Chuyen huong sang goi truc tiep Google Gemini API...")
 
-    # 2. Cơ chế xoay vòng gọi trực tiếp Google Gemini API (Fallback hoặc cấu hình mặc định)
     if not clients:
-        raise Exception("Không cấu hình API keys để gọi trực tiếp và kết nối 9Router thất bại.")
+        raise Exception("Khong cau hinh API keys truc tiep va ket noi qua 9Router that bai.")
 
-    # Xoay vòng các model khả dụng để tránh bị cạn kiệt quota
     models_to_try = models if models is not None else [
         "gemini-2.5-flash", 
         "gemini-2.0-flash", 
@@ -107,7 +96,6 @@ def generate_content_with_retry(prompt: str, is_json: bool = True, models: list 
 
     last_error = None
     
-    # Xoay vòng qua danh sách API key/client
     for client_idx, active_client in enumerate(clients):
         for model_name in models_to_try:
             for attempt in range(2):
@@ -122,14 +110,13 @@ def generate_content_with_retry(prompt: str, is_json: bool = True, models: list 
                 except Exception as e:
                     last_error = e
                     err_str = str(e).lower()
-                    print(f"⚠️ Lỗi gọi model {model_name} với Key #{client_idx+1} (Lần thử {attempt+1}): {e}")
+                    logger.warning(f"Loi goi model {model_name} voi Key #{client_idx+1} (Lan thu {attempt+1}): {e}")
                     
-                    # Nếu là lỗi quota/rate limit 429 hoặc server 503, nghỉ rồi thử lại/đổi model
                     if "429" in err_str or "503" in err_str or "quota" in err_str or "overloaded" in err_str:
                         time.sleep(2 * (attempt + 1))
                     else:
-                        break # Lỗi logic/cú pháp khác thì không cần thử lại model này
+                        break
                         
-        print(f"🔄 Key #{client_idx+1} bị lỗi hạn mức hoặc quá tải. Đang chuyển sang Key tiếp theo...")
+        logger.warning(f"Key #{client_idx+1} bi loi han muc. Dang chuyen sang Key tiep theo...")
         
-    raise last_error or Exception("Không thể kết nối tới Gemini API sau khi xoay vòng tất cả các API Keys và Models.")
+    raise last_error or Exception("Khong the ket noi den Google Gemini API sau khi xoay vong cac keys.")

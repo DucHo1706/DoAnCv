@@ -7,21 +7,23 @@ import nlp_processor
 from . import doc_parser_service
 from . import scoring_service
 from . import interview_service
+from .skills_sync_service import sync_skills_to_db
+from utils.logger import logger
 
-# Caching structures
+# Cache luu tru cuc bo
 TEXT_CACHE: Dict[str, Any] = {}
 SCORE_CACHE: Dict[Tuple[str, str, str], Any] = {}
 
 def get_bytes_hash(data: bytes) -> str:
-    """Tính mã Hash SHA-256 của tệp bytes"""
+    """Tinh ma hash SHA-256 cua tap tin bytes"""
     return hashlib.sha256(data).hexdigest()
 
 def get_str_hash(text: str) -> str:
-    """Tính mã Hash SHA-256 của chuỗi văn bản"""
+    """Tinh ma hash SHA-256 cua chuoi van ban"""
     return hashlib.sha256(text.encode("utf-8", errors="ignore")).hexdigest()
 
 def clean_cache_if_large():
-    """Tự động xóa bớt phần tử cũ nếu cache quá lớn (tránh tràn RAM)"""
+    """Don dep bo nho dem de tranh day RAM"""
     global TEXT_CACHE, SCORE_CACHE
     if len(TEXT_CACHE) > 500:
         first_key = next(iter(TEXT_CACHE))
@@ -39,8 +41,7 @@ def score_resume_sync(
     criteria_raw_str: str
 ) -> Dict[str, Any]:
     """
-    Xử lý chấm điểm CV theo danh sách tiêu chí.
-    Có tích hợp caching 2 cấp độ.
+    Cham diem CV theo tieu chi HR va JD yeu cau
     """
     cv_hash = get_bytes_hash(file_bytes)
     jd_hash = get_str_hash(job_description)
@@ -48,14 +49,14 @@ def score_resume_sync(
     
     score_key = (cv_hash, jd_hash, criteria_hash)
     
-    # 1. Kiểm tra Cache cấp 2 (Full Score Cache)
+    # 1. Kiem tra Cache cap 2 (Full Score)
     if score_key in SCORE_CACHE:
-        print(f"[SCORE CACHE HIT] Tra ket qua cham diem CV lap tuc (0ms)")
+        logger.info("Lay ket qua cham diem CV tu cache (0ms)")
         return SCORE_CACHE[score_key]
 
-    # 2. Trích xuất text (Check Level 1 Cache)
+    # 2. Trich xuat noi dung (Kiem tra Cache cap 1)
     if cv_hash in TEXT_CACHE and "cv_text" in TEXT_CACHE[cv_hash]:
-        print(f"[TEXT CACHE HIT] Da lay text trich xuat tu cache cho CV {cv_hash}")
+        logger.info(f"Lay van ban CV tu cache: {cv_hash}")
         cv_text = TEXT_CACHE[cv_hash]["cv_text"]
     else:
         cv_text = doc_parser_service.extract_text_from_file(
@@ -70,11 +71,11 @@ def score_resume_sync(
             clean_cache_if_large()
 
     if not cv_text:
-        raise ValueError("Không thể trích xuất chữ từ file Ảnh/PDF này. Vui lòng chọn file rõ nét hơn.")
+        raise ValueError("Khong the trich xuat text tu file CV nay. Vui long chon file khac.")
 
-    # 3. Kiểm tra tính hợp lệ của CV (Check Level 1 Cache)
+    # 3. Kiem dinh tinh hop le cua CV
     if cv_hash in TEXT_CACHE and "validation" in TEXT_CACHE[cv_hash]:
-        print(f"[VALIDATION CACHE HIT] Lay ket qua kiem dinh CV tu cache cho {cv_hash}")
+        logger.info(f"Lay ket qua kiem dinh CV tu cache: {cv_hash}")
         is_resume, reason = TEXT_CACHE[cv_hash]["validation"]
     else:
         is_resume, reason = scoring_service.is_document_a_resume(cv_text)
@@ -84,16 +85,16 @@ def score_resume_sync(
         clean_cache_if_large()
 
     if not is_resume:
-        raise ValueError(f"Tệp tải lên không phải là một CV hợp lệ. {reason}")
+        raise ValueError(f"Tai lieu tai len khong phai la CV hop le. Chi tiet: {reason}")
 
-    # Trích xuất kỹ năng
+    # Trich xuat ky nang bang NLP
     extracted_info = nlp_processor.extract_information(cv_text)
     cv_skills = extracted_info["skills"]
 
     jd_info = nlp_processor.extract_information(job_description)
     jd_skills = jd_info["skills"]
 
-    # Tính điểm tiêu chuẩn
+    # Tinh diem khop va tao bao cao
     scoring_result = scoring_service.calculate_resume_score(
         cv_text=cv_text,
         jd_text=job_description,
@@ -102,7 +103,7 @@ def score_resume_sync(
         criteria_list=criteria_list
     )
 
-    # Phân tích sâu ngầm
+    # Chạy các tác vụ phân tích chuyên sâu
     try:
         deep_res = scoring_service.analyze_cv_deep(
             cv_text=cv_text,
@@ -115,7 +116,7 @@ def score_resume_sync(
         weaknesses = score_analysis.get("weaknesses", [])
         red_flags = score_analysis.get("red_flags", [])
     except Exception as e:
-        print(f"Loi khi chay analyze_cv_deep: {e}")
+        logger.error(f"Loi khi phan tich chuyen sau CV: {e}")
         strengths, weaknesses, red_flags = [], [], []
 
     try:
@@ -126,7 +127,7 @@ def score_resume_sync(
             jd_skills=jd_skills
         )
     except Exception as e:
-        print(f"Loi khi chay generate_cv_star_tips: {e}")
+        logger.error(f"Loi khi tao goi y STAR: {e}")
         star_tips = []
 
     try:
@@ -135,10 +136,10 @@ def score_resume_sync(
             jd_text=job_description
         )
     except Exception as e:
-        print(f"Loi khi chay generate_cv_language_review: {e}")
+        logger.error(f"Loi khi review ngon tu CV: {e}")
         language_review = {
             "overall_language_score": 0,
-            "language_comment": "Không thể phân tích ngôn từ.",
+            "language_comment": "Khong the phan tich ngon tu.",
             "good_action_verbs": [],
             "weak_phrases": [],
             "ai_generation_risk": {"detected": False, "section": "", "score": 0, "comment": ""}
@@ -150,15 +151,15 @@ def score_resume_sync(
             jd_text=job_description
         )
     except Exception as e:
-        print(f"Loi khi chay generate_cv_mock_interview: {e}")
+        logger.error(f"Loi khi tao cau hoi phong van: {e}")
         mock_interview = []
 
-    # Gom gói phân tích
+    # Gom goi tat ca thong tin
     full_analysis_data = {
         "score_analysis": {
             "total_score": scoring_result.get("total_score", 0),
-            "classification": scoring_result.get("classification", "Chưa phân loại"),
-            "summary": scoring_result.get("summary", "Đã hoàn thành phân tích CV."),
+            "classification": scoring_result.get("classification", "Chua phan loai"),
+            "summary": scoring_result.get("summary", "Da hoan thanh phan tich CV."),
             "strengths": strengths,
             "weaknesses": weaknesses,
             "red_flags": red_flags,
@@ -186,7 +187,7 @@ def score_resume_sync(
         "matching_result": scoring_result
     }
 
-    # Ghi nhận vào Cache cấp 2
+    # Luu vao Cache cap 2
     SCORE_CACHE[score_key] = response_data
     clean_cache_if_large()
 
@@ -199,18 +200,16 @@ def preview_resume_sync(
     content_type: str,
     job_description: str,
     job_title: str,
-    company_name: str,
-    sync_skills_callback
+    company_name: str
 ) -> Dict[str, Any]:
     """
-    Phân tích sơ bộ CV (dùng cho Tab 1 preview).
-    Có tích hợp auto-learn và đồng bộ skills sang database.
+    Phan tich nhanh CV phục vụ xem truoc (Preview)
     """
     cv_hash = get_bytes_hash(file_bytes)
 
-    # 1. Trích xuất text (Check Level 1 Cache)
+    # Kiem tra Cache text
     if cv_hash in TEXT_CACHE and "cv_text" in TEXT_CACHE[cv_hash]:
-        print(f"[TEXT CACHE HIT] Da lay text cho CV {cv_hash} trong preview")
+        logger.info(f"Lay text CV tu cache trong preview: {cv_hash}")
         cv_text = TEXT_CACHE[cv_hash]["cv_text"]
     else:
         cv_text = doc_parser_service.extract_text_from_file(
@@ -225,11 +224,11 @@ def preview_resume_sync(
             clean_cache_if_large()
 
     if not cv_text or cv_text.strip() == "":
-        raise ValueError("Không thể đọc nội dung file CV. Vui lòng dùng file PDF hoặc ảnh rõ nét.")
+        raise ValueError("Khong the trich xuat text tu CV. Vui long kiem tra lai dinh dang file.")
 
-    # 2. Kiểm tra tính hợp lệ của CV (Check Level 1 Cache)
+    # Kiem dinh tinh hop le
     if cv_hash in TEXT_CACHE and "validation" in TEXT_CACHE[cv_hash]:
-        print(f"[VALIDATION CACHE HIT] Lay ket qua kiem dinh CV tu cache cho {cv_hash} trong preview")
+        logger.info(f"Lay ket qua kiem dinh tu cache trong preview: {cv_hash}")
         is_resume, reason = TEXT_CACHE[cv_hash]["validation"]
     else:
         is_resume, reason = scoring_service.is_document_a_resume(cv_text)
@@ -239,16 +238,16 @@ def preview_resume_sync(
         clean_cache_if_large()
 
     if not is_resume:
-        raise ValueError(f"Tệp tải lên không phải là một CV hợp lệ. {reason}")
+        raise ValueError(f"Tai lieu tai len khong phai CV hop le. Chi tiet: {reason}")
 
-    # Trích xuất kỹ năng
+    # Trich xuat ky nang
     cv_info = nlp_processor.extract_information(cv_text)
     cv_skills = cv_info.get("skills", [])
 
     jd_info = nlp_processor.extract_information(job_description)
     jd_skills = jd_info.get("skills", [])
 
-    # Phân tích thô sâu Tab 1
+    # Phan tich nhanh tab 1
     result = scoring_service.analyze_cv_deep(
         cv_text=cv_text,
         jd_text=job_description,
@@ -266,7 +265,7 @@ def preview_resume_sync(
     result["cv_text"] = cv_text
     result["job_description"] = job_description
 
-    # Auto-learn mechanism
+    # Hoc tu dong ky nang moi va dong bo sang C# SQL
     try:
         gemini_skills = []
         score_analysis = result.get("score_analysis", {})
@@ -292,10 +291,9 @@ def preview_resume_sync(
                 with open("skills.json", "w", encoding="utf-8") as f:
                     json.dump(merged, f, ensure_ascii=False, indent=2)
                 nlp_processor.reload_knowledge_base()
-                print(f"[AUTO-LEARN] Learned {len(new_skills)} new skills: {new_skills}")
-                # Gọi callback để đồng bộ sang SQL Server qua C#
-                sync_skills_callback([s.strip() for s in gemini_skills if s.strip() and s.lower().strip() in new_skills])
+                logger.info(f"Da tu dong hoc {len(new_skills)} ky nang moi")
+                sync_skills_to_db([s.strip() for s in gemini_skills if s.strip() and s.lower().strip() in new_skills])
     except Exception as learn_err:
-        print(f"Error in auto-learn preview: {learn_err}")
+        logger.error(f"Loi khi hoc ky nang tu dong: {learn_err}")
 
     return result
