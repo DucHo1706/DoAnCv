@@ -58,7 +58,8 @@ def generate_content_with_retry(prompt: str, is_json: bool = True, models: list 
             payload = {
                 "model": NINE_ROUTER_MODEL,
                 "messages": [{"role": "user", "content": prompt}],
-                "response_format": {"type": "json_object"} if is_json else None
+                "response_format": {"type": "json_object"} if is_json else None,
+                "stream": False
             }
             
             print(f"🚀 [9ROUTER] Đang gửi yêu cầu tới Gateway ({NINE_ROUTER_URL}) sử dụng model/combo: {NINE_ROUTER_MODEL}")
