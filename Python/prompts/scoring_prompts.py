@@ -3,7 +3,16 @@ import json
 def get_scoring_prompt(criteria_list: list, jd_text: str, jd_skills_text: str, cv_text: str, cv_skills_text: str) -> str:
     return f"""
 Bạn là chuyên gia tuyển dụng nhân sự cao cấp.
-Nhiệm vụ: Hãy phân tích CV so với mô tả công việc (JD) và chấm điểm chi tiết dựa trên danh sách tiêu chí HR yêu cầu.
+Nhiệm vụ: Hãy phân tích CV so với mô tả công việc (JD) và chấm điểm chi tiết dựa trên danh sách tiêu chí HR yêu cầu. 
+Quá trình đánh giá phải dựa trên Mô hình năng lực ASK (Attitude - Skills - Knowledge) để làm nổi bật kiến thức và kỹ năng cần thiết.
+
+--- NỀN TẢNG LÝ LUẬN CẦN ÁP DỤNG ---
+1. Mô hình năng lực ASK:
+   - Knowledge (Kiến thức): Đánh giá bằng cấp, chuyên ngành, trường đào tạo của ứng viên có đáp ứng yêu cầu nền tảng của JD hay không.
+   - Skills (Kỹ năng): Đối sánh kỹ năng chuyên môn (Hard skills) và kỹ năng mềm (Soft skills) thực tế trong CV so với JD.
+2. Tiêu chuẩn lọc CV của SHRM (Hiệp hội Quản trị Nhân sự Hoa Kỳ):
+   - Đánh giá sự tương thích của số năm kinh nghiệm, sự liên tục của lộ trình sự nghiệp.
+   - Trực tiếp chấm điểm sát sao từng tiêu chí được HR thiết lập bên dưới.
 
 --- DANH SÁCH TIÊU CHÍ HR CUNG CẤP ---
 {json.dumps(criteria_list, ensure_ascii=False)}
@@ -77,6 +86,18 @@ def get_deep_analysis_prompt(scikit_info: str, job_title: str, company_name: str
     return f"""
 Bạn là chuyên gia tuyển dụng nhân sự cao cấp.
 Nhiệm vụ: Chấm điểm và đánh giá hồ sơ xin việc (CV) của ứng viên so với mô tả công việc (JD) dưới đây.
+
+--- NỀN TẢNG LÝ LUẬN CẦN ÁP DỤNG ---
+1. Mô hình năng lực ASK:
+   - Phân loại kỹ năng và kiến thức để chấm điểm phù hợp của ứng viên.
+2. Tiêu chuẩn lọc hồ sơ & Kiểm soát rủi ro nhân sự của SHRM:
+   - Phát hiện các Red Flags (Cảnh báo đỏ) về độ ổn định nhân sự, lỗi trình bày, lỗi logic.
+   - Các Red Flags cần bắt lỗi bao gồm: 
+     - KEYWORD_STUFFING: Nhồi nhét từ khóa kỹ năng vô tội vạ.
+     - GENERIC_CV: Mô tả chung chung, thiếu chiều sâu.
+     - CHRONOLOGY_GAP: Có khoảng trống thời gian sự nghiệp không rõ lý do.
+     - MISSING_METRICS: Thiếu các số liệu định lượng chứng minh thành tích.
+     - OTHER: Các lỗi trình bày, lỗi chính tả, sai lệch bối cảnh khác.
 
 [KẾT QUẢ ĐO LƯỜNG TƯƠNG ĐỒNG NỀN TẢNG MACHINE LEARNING]
 {scikit_info}
