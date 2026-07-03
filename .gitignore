@@ -38,3 +38,15 @@ build/
 google-credentials.json
 appsettings.json
 appsettings.Development.json
+
+# Thesis / Report documents & temporary files
+BaoCao_CoSoLyLuan_Prompts*.docx
+~$*.docx
+TaiLieuThamKhao/
+
+# Thesis helper scripts
+Python/download_pdfs.py
+Python/download_references.py
+Python/generate_thesis_docx.py
+Python/hoan_thanh_bao_cao.py
+Python/test_links.py
