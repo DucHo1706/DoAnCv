@@ -1,4 +1,3 @@
-import React from "react";
 import { Tooltip, Typography } from "antd";
 import { formatNumber, formatPercent } from "../hooks/useAdminDashboard";
 import type { OcrErrorRateItem } from "../hooks/useAdminDashboard";

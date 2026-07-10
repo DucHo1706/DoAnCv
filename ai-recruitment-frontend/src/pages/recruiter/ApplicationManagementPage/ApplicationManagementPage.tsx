@@ -26,14 +26,13 @@ import {
   Input,
   message,
 } from "antd";
-import React from "react";
 import PageContainer from "../../../components/common/PageContainer";
 import StatCard from "../../../components/common/StatCard";
 import TableToolbar from "../../../components/common/TableToolbar";
 import { useApplicationManagement } from "./hooks/useApplicationManagement";
 import type { ApplicationDto } from "../../../services/recruitmentService";
 
-const { Paragraph, Text, Title } = Typography;
+const { Text, Title } = Typography;
 
 export default function ApplicationManagementPage() {
   const {
@@ -448,7 +447,7 @@ export default function ApplicationManagementPage() {
           <Button
             type="primary"
             icon={<FilePdfOutlined />}
-            href={selectedApp?.cvUrl}
+            href={selectedApp?.cvUrl ? (selectedApp.cvUrl.startsWith("http") ? selectedApp.cvUrl : `https://localhost:7006${selectedApp.cvUrl.startsWith("/") ? "" : "/"}${selectedApp.cvUrl}`) : "#"}
             target="_blank"
           >
             Xem CV

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import {
   Input,
   Button,
@@ -308,24 +308,25 @@ export default function CandidateJobPage() {
       {/* 1. KHU VỰC TÌM KIẾM (SEARCH HERO SECTION) */}
       <div
         style={{
-          background: "linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)",
-          padding: "50px 20px",
+          background: "#F8FAFC",
+          padding: "48px 20px 24px",
+          borderBottom: "1px solid #E2E8F0",
         }}
       >
-        <div style={{ maxWidth: "94%", margin: "0 auto" }}>
-          <Title level={2} style={{ color: "#fff", marginBottom: 20, fontFamily: appTheme.font.family, fontWeight: 700 }}>
-            Tìm kiếm công việc mơ ước tiếp theo của bạn
+        <div style={{ maxWidth: "1300px", margin: "0 auto" }}>
+          <Title level={2} style={{ color: "#0F172A", marginBottom: 20, fontFamily: appTheme.font.family, fontWeight: 800, fontSize: 28, letterSpacing: "-0.02em" }}>
+            Tìm kiếm cơ hội nghề nghiệp tiếp theo
           </Title>
 
           <div
             style={{
-              background: "rgba(255, 255, 255, 0.95)",
+              background: "white",
               padding: "10px 14px",
               borderRadius: 16,
               display: "flex",
               gap: 8,
-              boxShadow: "0 8px 32px 0 rgba(15, 23, 42, 0.08)",
-              border: "1px solid rgba(226, 232, 240, 0.8)",
+              boxShadow: "0 8px 30px rgba(15, 23, 42, 0.04)",
+              border: "1px solid #E2E8F0",
             }}
           >
             <Input
@@ -376,7 +377,7 @@ export default function CandidateJobPage() {
       </div>
 
       {/* 2. KHU VỰC NỘI DUNG CHÍNH */}
-      <div style={{ maxWidth: "94%", margin: "32px auto 0", padding: "0 20px" }}>
+      <div style={{ maxWidth: "1300px", margin: "32px auto 0", padding: "0 20px" }}>
         <Row gutter={24}>
           {/* Cột trái: Bộ lọc (Sidebar Filters) - REFACTOR: Chuyển dọc thay vì ngang như TopCV */}
           <Col xs={24} lg={6} xl={5}>

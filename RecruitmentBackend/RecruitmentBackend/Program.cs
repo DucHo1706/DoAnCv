@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 using RecruitmentBackend.Data;
 using RecruitmentBackend.Interfaces;

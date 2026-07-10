@@ -379,11 +379,30 @@ function CVRankingPage() {
       title="Xếp hạng hồ sơ ứng tuyển"
       subtitle="Danh sách ứng viên được sắp xếp tự động theo mức độ phù hợp AI (AI Matching Score)."
     >
+      <style dangerouslySetInnerHTML={{ __html: `
+        .ant-table-row {
+          transition: all 0.2s ease-in-out !important;
+        }
+        .ant-table-row:hover {
+          background-color: #F8FAFC !important;
+          transform: translateY(-1px);
+        }
+        .bento-stat-card {
+          transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        }
+        .bento-stat-card:hover {
+          transform: translateY(-3px);
+          box-shadow: 0 16px 32px -10px rgba(15, 23, 42, 0.08) !important;
+          border-color: #2563EB !important;
+        }
+      `}} />
+
       {/* Khối Thống kê Bento Grid không đối xứng */}
       <Row gutter={[20, 20]} style={{ marginBottom: 28 }}>
         {/* Bento Cell 1: Top 1 Ứng viên (Span 12) */}
         <Col xs={24} md={12}>
           <Card
+            className="bento-stat-card"
             style={{
               height: "100%",
               borderRadius: 16,
@@ -431,6 +450,7 @@ function CVRankingPage() {
         {/* Bento Cell 2: Điểm cao nhất (Span 6) */}
         <Col xs={24} sm={12} md={6}>
           <Card
+            className="bento-stat-card"
             style={{
               height: "100%",
               borderRadius: 16,
@@ -456,6 +476,7 @@ function CVRankingPage() {
         {/* Bento Cell 3: Số lượng hồ sơ (Span 6) */}
         <Col xs={24} sm={12} md={6}>
           <Card
+            className="bento-stat-card"
             style={{
               height: "100%",
               borderRadius: 16,

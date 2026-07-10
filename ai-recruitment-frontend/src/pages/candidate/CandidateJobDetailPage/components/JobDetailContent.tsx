@@ -183,11 +183,13 @@ const JobDetailContent: React.FC<JobDetailContentProps> = ({
                   height: 44,
                   fontSize: 14,
                   borderRadius: 12,
-                  background: "linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)",
-                  color: "#fff",
-                  border: "none",
+                  background: "#EFF6FF",
+                  borderColor: "#BFDBFE",
+                  color: "#2563EB",
+                  border: "1px solid #BFDBFE",
                   fontWeight: 600,
                   fontFamily: appTheme.font.family,
+                  boxShadow: "0 2px 8px rgba(37, 99, 235, 0.04)",
                 }}
               >
                 AI Phân tích & Ứng tuyển

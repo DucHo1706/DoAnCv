@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { message, Modal, Spin } from "antd";
 import { recruitmentService } from "../../../../services/recruitmentService";

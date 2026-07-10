@@ -23,7 +23,6 @@ import axiosClient from "../../services/axiosClient";
 import type {
   BranchDto,
   CategoryDto,
-  CreateJobPayload,
   JobPositionDto,
 } from "../../services/jobService";
 
@@ -100,7 +99,7 @@ function CreateJobPage() {
   // ── Tạo tin tuyển dụng ────────────────────────────────
   const handleCreateJob = async (values: any) => {
     try {
-      const payload: CreateJobPayload = {
+      const payload: any = {
         positionId: values.positionId,
         branchId: values.branchId,
         categoryId: values.categoryPath
@@ -250,7 +249,7 @@ function CreateJobPage() {
             <Input.TextArea rows={4} placeholder="Nhập yêu cầu công việc..." />
           </Form.Item>
 
-          <Divider orientation="left">Tiêu chí đánh giá (AI sẽ dựa vào đây để chấm điểm)</Divider>
+          <Divider orientation={"left" as any}>Tiêu chí đánh giá (AI sẽ dựa vào đây để chấm điểm)</Divider>
           <Form.List
             name="criteria"
             initialValue={[

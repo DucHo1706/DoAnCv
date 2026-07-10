@@ -1,9 +1,8 @@
-import { EditOutlined, EyeOutlined, PlusOutlined, DeleteOutlined } from "@ant-design/icons";
+import { EditOutlined, EyeOutlined, PlusOutlined } from "@ant-design/icons";
 import {
   Button,
   Card,
   Col,
-  DatePicker,
   Descriptions,
   Divider,
   message,
@@ -15,18 +14,15 @@ import {
   Tag,
   Typography,
 } from "antd";
-import dayjs from "dayjs";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import PageContainer from "../../components/common/PageContainer";
 import StatCard from "../../components/common/StatCard";
 import TableToolbar from "../../components/common/TableToolbar";
-import { jobService, jobPositionService, branchService } from "../../services/jobService";
+import { jobService } from "../../services/jobService";
 import type {
-  BranchDto,
   CategoryDto,
   JobDto,
-  JobPositionDto,
   JobReviewResponse,
 } from "../../services/jobService";
 

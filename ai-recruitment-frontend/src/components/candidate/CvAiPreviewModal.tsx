@@ -1,9 +1,9 @@
-import React, { useState } from "react";
-import { Modal, Upload, Button, Typography, Space, Spin, Alert } from "antd";
+import { useState } from "react";
+import { Modal, Upload, Button, Typography, Space, Alert } from "antd";
 import { CloseOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 
-const { Title, Text, Paragraph } = Typography;
+const { Title, Paragraph } = Typography;
 const { Dragger } = Upload;
 
 interface CvAiPreviewModalProps {
@@ -15,8 +15,6 @@ interface CvAiPreviewModalProps {
   companyName?: string;
 }
 
-const PYTHON_AI_URL = "http://127.0.0.1:8000";
-
 export default function CvAiPreviewModal({
   open,
   onClose,
@@ -27,23 +25,11 @@ export default function CvAiPreviewModal({
 }: CvAiPreviewModalProps) {
   const navigate = useNavigate();
   const [file, setFile] = useState<File | null>(null);
-  const [analyzing, setAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [loadingStep, setLoadingStep] = useState(0);
-
-  const loadingSteps = [
-    "Đang đọc và trích xuất nội dung CV...",
-    "AI đang đối chiếu với yêu cầu công việc...",
-    "Phân tích điểm mạnh, điểm yếu...",
-    "Tạo gợi ý tối ưu CV...",
-    "Hoàn thiện báo cáo phân tích...",
-  ];
 
   const handleClose = () => {
-    if (analyzing) return;
     setFile(null);
     setError(null);
-    setLoadingStep(0);
     onClose();
   };
 

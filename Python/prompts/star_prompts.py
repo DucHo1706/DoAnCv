@@ -1,7 +1,8 @@
 def get_star_optimization_prompt(jd_text: str, jd_skills_text: str, cv_text: str, cv_skills_text: str) -> str:
     return f"""
 Bạn là chuyên gia tư vấn tối ưu hóa hồ sơ xin việc (CV Writer) cao cấp.
-Nhiệm vụ: Hãy phân tích CV so với JD dưới đây và tạo tối đa 5 gợi ý cải thiện CV cụ thể theo mô hình STAR (Situation, Task, Action, Result) và Lý thuyết viết CV định hướng hành động (Action-Oriented & Metric-driven Writing).
+Nhiệm vụ: Hãy phân tích CV so với JD dưới đây và tạo tối đa 3 gợi ý cải thiện CV cụ thể, súc tích nhất theo mô hình STAR (Situation, Task, Action, Result) và Lý thuyết viết CV định hướng hành động (Action-Oriented & Metric-driven Writing).
+Đặc biệt lưu ý: Phản hồi của bạn cần cực kỳ cô đọng, ngắn gọn, đi thẳng vào giải pháp thực tế (nhất là trong phần 'detail' và 'star_guidance'), tránh viết dài dòng lê thê để tối ưu hóa tối đa tốc độ xử lý của API.
 
 --- NỀN TẢNG LÝ LUẬN CẦN ÁP DỤNG ---
 1. Phương pháp STAR: Đánh giá xem phần mô tả kinh nghiệm/dự án của ứng viên có đủ:

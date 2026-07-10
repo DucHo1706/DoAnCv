@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import { useMemo } from "react";
 import { Tooltip, Typography, Space } from "antd";
 import dayjs from "dayjs";
 import { formatShortDate, formatNumber } from "../hooks/useAdminDashboard";

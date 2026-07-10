@@ -18,7 +18,6 @@ import {
   EditOutlined,
   PlusOutlined,
   UnlockOutlined,
-  DeleteOutlined,
 } from "@ant-design/icons";
 import { useState } from "react";
 import PageContainer from "../../components/common/PageContainer";
@@ -123,7 +122,8 @@ function UserManagementPage() {
     try {
       const result = await userService.toggleUserStatus(id);
       setUsers(users.map((u) => (u.id === id ? { ...u, status: result.newStatus } : u)));
-      message.success(result.message || "Thao tác thành công!");
+      const actionText = currentStatus === "Active" ? "Khóa" : "Mở khóa";
+      message.success(result.message || `${actionText} tài khoản thành công!`);
     } catch (error: any) {
       message.error(error.response?.data?.message || "Lỗi khi thay đổi trạng thái!");
     }

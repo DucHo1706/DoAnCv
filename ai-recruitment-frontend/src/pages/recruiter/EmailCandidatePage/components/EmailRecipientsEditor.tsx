@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Modal, Typography, Input, Button, message } from "antd";
 
 const { Text } = Typography;

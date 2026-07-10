@@ -1,4 +1,3 @@
-import React from "react";
 import { Tooltip, Typography } from "antd";
 import { formatNumber, formatPercent, chartColors } from "../hooks/useAdminDashboard";
 import type { JobCategoryShareItem } from "../hooks/useAdminDashboard";

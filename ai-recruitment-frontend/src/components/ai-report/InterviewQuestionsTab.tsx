@@ -15,6 +15,38 @@ interface InterviewQuestionsTabProps {
   interviewQuestions: MockInterviewQuestion[];
 }
 
+const renderTextWithLinks = (text: string) => {
+  if (!text) return "";
+  const regex = /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g;
+  const parts = [];
+  let lastIndex = 0;
+  let match;
+
+  while ((match = regex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(text.substring(lastIndex, match.index));
+    }
+    parts.push(
+      <a 
+        key={match.index} 
+        href={match[2]} 
+        target="_blank" 
+        rel="noopener noreferrer"
+        style={{ color: "#2563EB", textDecoration: "underline", fontWeight: 500 }}
+      >
+        {match[1]}
+      </a>
+    );
+    lastIndex = regex.lastIndex;
+  }
+
+  if (lastIndex < text.length) {
+    parts.push(text.substring(lastIndex));
+  }
+
+  return parts.length > 0 ? parts : text;
+};
+
 const InterviewQuestionsTab: React.FC<InterviewQuestionsTabProps> = ({ interviewQuestions }) => {
   return (
     <Space direction="vertical" size={20} style={{ width: "100%" }}>
@@ -28,11 +60,10 @@ const InterviewQuestionsTab: React.FC<InterviewQuestionsTabProps> = ({ interview
             fontWeight: 700,
           }}
         >
-          Gợi ý các kịch bản phỏng vấn chuyên sâu từ AI
+          Gợi ý tài liệu & lộ trình ôn luyện phỏng vấn từ AI
         </Title>
         <Text type="secondary" style={{ fontSize: 14 }}>
-          AI dựa trên CV và tin tuyển dụng để tạo ra các câu hỏi phỏng vấn chuyên sâu, giúp bạn
-          chuẩn bị tốt hơn cho buổi phỏng vấn.
+          AI dựa trên CV và JD của vị trí tuyển dụng để tổng hợp các chủ đề ôn tập cốt lõi cùng các đường dẫn tài liệu tự học hữu ích trên internet.
         </Text>
       </div>
       {interviewQuestions.length > 0 ? (
@@ -47,7 +78,7 @@ const InterviewQuestionsTab: React.FC<InterviewQuestionsTabProps> = ({ interview
             <Panel
               header={
                 <Text strong style={{ color: "#0F172A" }}>
-                  Câu hỏi {index + 1}: {item.question}
+                  Chủ đề {index + 1}: {item.question}
                 </Text>
               }
               key={index.toString()}
@@ -60,17 +91,31 @@ const InterviewQuestionsTab: React.FC<InterviewQuestionsTabProps> = ({ interview
               }}
             >
               <div style={{ padding: "8px 0" }}>
-                <Text strong style={{ color: "#2563EB" }}>
-                  AI Gợi ý trả lời:
-                </Text>
-                <Paragraph style={{ color: "#475569" }}>{item.best_answer}</Paragraph>
+                <div style={{ marginBottom: 12 }}>
+                  <Text strong style={{ color: "#475569" }}>Tầm quan trọng: </Text>
+                  <Paragraph style={{ color: "#64748B", margin: "4px 0 0" }}>{item.intention}</Paragraph>
+                </div>
+                
+                <div style={{ marginBottom: 12 }}>
+                  <Text strong style={{ color: "#475569" }}>Cách hệ thống theo chuẩn STAR: </Text>
+                  <Paragraph style={{ color: "#64748B", margin: "4px 0 0" }}>{item.star_guide}</Paragraph>
+                </div>
+
+                <div style={{ marginTop: 8 }}>
+                  <Text strong style={{ color: "#2563EB" }}>
+                    Gợi ý ôn luyện & Tài liệu tham khảo:
+                  </Text>
+                  <Paragraph style={{ color: "#475569", marginTop: 4, whiteSpace: "pre-line" }}>
+                    {renderTextWithLinks(item.best_answer)}
+                  </Paragraph>
+                </div>
               </div>
             </Panel>
           ))}
         </Collapse>
       ) : (
         <Alert
-          message="AI chưa sinh kịch bản câu hỏi phỏng vấn cho hồ sơ này."
+          message="AI chưa sinh gợi ý ôn tập phỏng vấn cho hồ sơ này."
           type="warning"
           showIcon
         />

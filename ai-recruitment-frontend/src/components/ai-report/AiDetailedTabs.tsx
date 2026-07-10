@@ -50,7 +50,7 @@ const AiDetailedTabs: React.FC<AiDetailedTabsProps> = ({
       label: "Ngôn từ & Chân thực",
       children: langLoading ? (
         <div style={{ textAlign: "center", padding: "50px 0" }}>
-          <Spin tip="AI đang đánh giá chất lượng ngôn từ & rà soát định kiến..." size="large" />
+          <Spin tip="AI đang đánh giá chất lượng ngôn từ & phân tích tính chân thực..." size="large" />
         </div>
       ) : (
         <LanguageReviewTab languageReview={lang} />

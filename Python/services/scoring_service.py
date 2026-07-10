@@ -51,8 +51,7 @@ def calculate_resume_score(cv_text: str, jd_text: str, cv_skills: list, jd_skill
     try:
         response_text = generate_content_with_retry(
             prompt,
-            is_json=True,
-            models=["gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.5-pro", "gemini-2.0-flash-lite", "gemini-flash-latest"]
+            is_json=True
         )
         ai_result = json.loads(response_text)
         return normalize_scoring_result(ai_result, criteria_list)
@@ -206,8 +205,7 @@ def analyze_cv_deep(cv_text: str, jd_text: str, cv_skills: list, jd_skills: list
     try:
         response_text = generate_content_with_retry(
             prompt,
-            is_json=True,
-            models=["gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.5-pro", "gemini-2.0-flash-lite", "gemini-flash-latest"]
+            is_json=True
         )
         result = json.loads(response_text)
 

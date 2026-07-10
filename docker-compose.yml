@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  # 1. AI Service (FastAPI Python)
+  ai-service:
+    build:
+      context: ./Python
+      dockerfile: Dockerfile
+    container_name: recruitment_ai_service
+    ports:
+      - "8000:8000"
+    environment:
+      - CSHARP_API_URL=http://backend:8080/api
+      # Truyền API keys từ file .env ở máy host vào container
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+    restart: always
+
+  # 2. Backend Service (.NET 8.0 Core Web API)
+  backend:
+    build:
+      context: ./RecruitmentBackend
+      dockerfile: Dockerfile
+    container_name: recruitment_backend
+    ports:
+      - "5286:8080" # Cổng HTTP hỗ trợ truy cập trực tiếp từ máy host nếu cần
+    environment:
+      - ASPNETCORE_URLS=http://+:8080
+      - ASPNETCORE_ENVIRONMENT=Production
+    restart: always
+
+  # 3. Frontend Service (React + Nginx)
+  frontend:
+    build:
+      context: ./ai-recruitment-frontend
+      dockerfile: Dockerfile
+    container_name: recruitment_frontend
+    ports:
+      - "80:80" # Bạn của bạn chỉ cần truy cập http://localhost trên trình duyệt
+    depends_on:
+      - backend
+    restart: always
+
+volumes:
+  # Cấu hình lưu trữ dữ liệu nếu cần
+  uploads_data:

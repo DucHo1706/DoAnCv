@@ -28,7 +28,7 @@ import { useEffect, useState, useMemo } from "react";
 import PageContainer from "../../components/common/PageContainer";
 import axiosClient from "../../services/axiosClient";
 
-const { Title, Text } = Typography;
+const { Text } = Typography;
 
 function JobLevelManagementPage() {
   const [levels, setLevels] = useState<any[]>([]);
@@ -291,7 +291,7 @@ function JobLevelManagementPage() {
                   <div style={{ flex: 1 }}></div>
                   <Popconfirm
                     title={selectedLevel.isActive ? "Khóa cấp này?" : "Mở khóa cấp này?"}
-                    onConfirm={() => handleToggleStatus(selectedId)}
+                    onConfirm={() => handleToggleStatus(selectedId!)}
                   >
                     <Button
                       icon={selectedLevel.isActive ? <LockOutlined /> : <UnlockOutlined />}
@@ -305,7 +305,7 @@ function JobLevelManagementPage() {
                   </Popconfirm>
                   <Popconfirm
                     title="Bạn có chắc chắn muốn xóa cấp bậc này?"
-                    onConfirm={() => handleDelete(selectedId)}
+                    onConfirm={() => handleDelete(selectedId!)}
                   >
                     <Button danger icon={<DeleteOutlined />}>
                       Xóa

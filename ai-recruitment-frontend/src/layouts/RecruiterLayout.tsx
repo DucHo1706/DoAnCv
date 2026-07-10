@@ -2,7 +2,6 @@ import {
   DashboardOutlined,
   FileSearchOutlined,
   FileTextOutlined,
-  TeamOutlined,
 } from "@ant-design/icons";
 import { Breadcrumb, Layout } from "antd";
 import type { ItemType } from "antd/es/menu/interface";

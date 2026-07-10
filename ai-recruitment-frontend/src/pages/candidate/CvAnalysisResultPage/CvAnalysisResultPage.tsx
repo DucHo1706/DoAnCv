@@ -717,7 +717,7 @@ export default function CvAnalysisResultPage() {
         }
       `}</style>
 
-      <div style={{ maxWidth: 1520, margin: "0 auto", padding: "0 24px" }}>
+      <div style={{ maxWidth: 1300, margin: "0 auto", padding: "0 24px" }}>
         <div style={{ marginBottom: 24 }}>
           <Button
             icon={<ArrowLeftOutlined />}

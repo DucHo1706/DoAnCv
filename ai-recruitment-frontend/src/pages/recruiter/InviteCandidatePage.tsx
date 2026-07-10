@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Button, Card, Typography, Select, message, Spin, Space, Divider, Row, Col } from "antd";
+import { Button, Card, Typography, Select, message, Spin, Divider, Row, Col } from "antd";
 import { RobotOutlined, FireOutlined, ArrowLeftOutlined, SendOutlined } from "@ant-design/icons";
 import PageContainer from "../../components/common/PageContainer";
 import { jobService } from "../../services/jobService";
 
-const { Title, Text, Paragraph } = Typography;
+const { Text, Paragraph } = Typography;
 
 // Dữ liệu giả lập cho kho Talent Pool
 const mockTalentPool = [

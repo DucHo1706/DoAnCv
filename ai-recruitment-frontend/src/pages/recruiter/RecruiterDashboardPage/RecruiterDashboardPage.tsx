@@ -22,9 +22,9 @@ import {
   Tooltip,
   Typography,
 } from "antd";
-import React from "react";
 import PageContainer from "../../../components/common/PageContainer";
 import { useRecruiterDashboard } from "./hooks/useRecruiterDashboard";
+import { appTheme } from "../../../constants/theme";
 
 const { Paragraph, Text } = Typography;
 
@@ -756,9 +756,10 @@ export default function RecruiterDashboardPage() {
           </div>
         }
         style={{
-          borderRadius: 8,
+          borderRadius: 16,
           height: 400,
-          boxShadow: "0 2px 8px rgba(0, 0, 0, 0.04)",
+          boxShadow: appTheme.shadow.card,
+          border: `1px solid ${appTheme.colors.border}`,
         }}
         bodyStyle={{
           padding: "12px 16px",
@@ -821,8 +822,9 @@ export default function RecruiterDashboardPage() {
         <Col span={24}>
           <Card
             style={{
-              borderRadius: 8,
-              boxShadow: "0 2px 8px rgba(0, 0, 0, 0.04)",
+              borderRadius: 16,
+              boxShadow: appTheme.shadow.card,
+              border: `1px solid ${appTheme.colors.border}`,
             }}
             bodyStyle={{
               padding: 12,
@@ -857,10 +859,11 @@ export default function RecruiterDashboardPage() {
         <Col xs={24} md={8}>
           <Card
             style={{
-              borderRadius: 8,
+              borderRadius: 16,
               height: "100%",
               width: "100%",
-              boxShadow: "0 2px 8px rgba(0, 0, 0, 0.04)",
+              boxShadow: appTheme.shadow.card,
+              border: `1px solid ${appTheme.colors.border}`,
             }}
             bodyStyle={{
               padding: 16,
@@ -874,7 +877,7 @@ export default function RecruiterDashboardPage() {
                 fontWeight: 700,
                 lineHeight: 1.1,
               }}
-              prefix={<TeamOutlined style={{ color: "#1677ff" }} />}
+              prefix={<TeamOutlined style={{ color: "#2563EB" }} />}
             />
           </Card>
         </Col>
@@ -882,10 +885,11 @@ export default function RecruiterDashboardPage() {
         <Col xs={24} md={8}>
           <Card
             style={{
-              borderRadius: 8,
+              borderRadius: 16,
               height: "100%",
               width: "100%",
-              boxShadow: "0 2px 8px rgba(0, 0, 0, 0.04)",
+              boxShadow: appTheme.shadow.card,
+              border: `1px solid ${appTheme.colors.border}`,
             }}
             bodyStyle={{
               padding: 16,
@@ -907,10 +911,11 @@ export default function RecruiterDashboardPage() {
         <Col xs={24} md={8}>
           <Card
             style={{
-              borderRadius: 8,
+              borderRadius: 16,
               height: "100%",
               width: "100%",
-              boxShadow: "0 2px 8px rgba(0, 0, 0, 0.04)",
+              boxShadow: appTheme.shadow.card,
+              border: `1px solid ${appTheme.colors.border}`,
             }}
             bodyStyle={{
               padding: 16,
@@ -944,8 +949,9 @@ export default function RecruiterDashboardPage() {
               <Card
                 title="Top năng lực nổi bật trong tập ứng viên"
                 style={{
-                  borderRadius: 8,
-                  boxShadow: "0 2px 8px rgba(0, 0, 0, 0.04)",
+                  borderRadius: 16,
+                  boxShadow: appTheme.shadow.card,
+                  border: `1px solid ${appTheme.colors.border}`,
                 }}
               >
                 {renderSkillHorizontalBarChart()}
@@ -956,8 +962,9 @@ export default function RecruiterDashboardPage() {
               <Card
                 title="Chất lượng Ứng viên (Fit Score Distribution)"
                 style={{
-                  borderRadius: 8,
-                  boxShadow: "0 2px 8px rgba(0, 0, 0, 0.04)",
+                  borderRadius: 16,
+                  boxShadow: appTheme.shadow.card,
+                  border: `1px solid ${appTheme.colors.border}`,
                 }}
               >
                 {renderFitScoreDistributionChart()}
@@ -970,9 +977,10 @@ export default function RecruiterDashboardPage() {
               <Card
                 title="Top 5 Ứng viên tiềm năng nhất"
                 style={{
-                  borderRadius: 8,
+                  borderRadius: 16,
                   height: 400,
-                  boxShadow: "0 2px 8px rgba(0, 0, 0, 0.04)",
+                  boxShadow: appTheme.shadow.card,
+                  border: `1px solid ${appTheme.colors.border}`,
                 }}
                 bodyStyle={{
                   padding: "12px 14px",

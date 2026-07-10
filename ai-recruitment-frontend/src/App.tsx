@@ -8,6 +8,7 @@ import ForgotPasswordPage from "./pages/auth/ForgotPasswordPage";
 
 // Layout chung
 import MainLayout from "./pages/recruiter/MainLayout";
+import AuthLayout from "./layouts/AuthLayout";
 
 // Recruiter pages
 import JobManagementPage from "./pages/recruiter/JobManagementPage";
@@ -46,9 +47,11 @@ function App() {
       <ScrollToTop />
       <Routes>
         {/* Auth */}
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
-        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route element={<AuthLayout />}>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        </Route>
 
         {/* Public */}
         <Route path="/" element={<PublicLayout />}>

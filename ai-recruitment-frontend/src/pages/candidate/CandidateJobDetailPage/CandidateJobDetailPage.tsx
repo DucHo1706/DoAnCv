@@ -1,4 +1,3 @@
-import React from "react";
 import { Breadcrumb, Spin } from "antd";
 import { HomeOutlined } from "@ant-design/icons";
 import { useJobDetail } from "./hooks/useJobDetail";
@@ -41,7 +40,7 @@ export default function CandidateJobDetailPage() {
 
   return (
     <div style={{ background: appTheme.colors.background, minHeight: "100vh", paddingBottom: 60, paddingTop: 24 }}>
-      <div style={{ maxWidth: "94%", margin: "0 auto" }}>
+      <div style={{ maxWidth: "1300px", margin: "0 auto", padding: "0 20px" }}>
         {/* Breadcrumb */}
         <Breadcrumb style={{ marginBottom: 16 }}>
           <Breadcrumb.Item

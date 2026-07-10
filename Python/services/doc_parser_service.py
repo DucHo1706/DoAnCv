@@ -4,8 +4,10 @@ from PIL import Image
 import io
 import re
 
-# Đường dẫn đến Tesseract OCR trên Windows (HR App local default)
-pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+# Đường dẫn đến Tesseract OCR trên Windows (tự động phát hiện hệ điều hành)
+import os
+if os.name == 'nt':
+    pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
 
 def _is_vietnamese_garbled(text: str) -> bool:
