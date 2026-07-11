@@ -1,21 +1,8 @@
-import { Button, Layout, Typography, Space, Dropdown, Row, Col, Divider } from "antd";
+import { Button, Layout, Typography, Space, Row, Col, Divider } from "antd";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { authService } from "../../services/authService";
 import CandidateChatbot from "../../components/common/CandidateChatbot";
-import {
-  SearchOutlined,
-  HeartOutlined,
-  SendOutlined,
-  CheckCircleOutlined,
-  BuildOutlined,
-  StarOutlined,
-  AppstoreOutlined,
-  FireOutlined,
-  FileTextOutlined,
-  CloudUploadOutlined,
-  BookOutlined,
-  GlobalOutlined,
-} from "@ant-design/icons";
+import { GlobalOutlined } from "@ant-design/icons";
 
 const { Header, Content, Footer } = Layout;
 const { Title, Text, Paragraph } = Typography;
@@ -64,325 +51,6 @@ function PublicLayout() {
 
   // Danh sách các trang cần hiển thị Full-width (không bị giới hạn 1200px ở Layout ngoài cùng)
   const isFullWidthPage = location.pathname === "/" || location.pathname.startsWith("/jobs");
-
-  // Mega Menu cho Việc Làm
-  const jobsDropdownContent = () => (
-    <div
-      style={{
-        background: "rgba(255, 255, 255, 0.95)",
-        backdropFilter: "blur(20px)",
-        border: "1px solid rgba(226, 232, 240, 0.8)",
-        padding: "24px",
-        borderRadius: "12px",
-        boxShadow: "0 20px 40px -10px rgba(15, 23, 42, 0.12)",
-        width: "850px",
-        cursor: "default",
-      }}
-    >
-      <Row gutter={[40, 24]}>
-        <Col span={8}>
-          <Title level={5} style={{ marginBottom: 16, color: "#2563EB" }}>
-            Việc Làm
-          </Title>
-          <Space direction="vertical" size={16} style={{ width: "100%" }}>
-            <Link
-              to="/jobs"
-              style={{
-                color: "#595959",
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                fontSize: "15px",
-              }}
-            >
-              <SearchOutlined style={{ fontSize: 18 }} /> Tìm việc làm
-            </Link>
-            <Link
-              to="/jobs"
-              style={{
-                color: "#595959",
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                fontSize: "15px",
-              }}
-            >
-              <HeartOutlined style={{ fontSize: 18 }} /> Việc làm đã lưu
-            </Link>
-            <Link
-              to="/my-applications"
-              style={{
-                color: "#595959",
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                fontSize: "15px",
-              }}
-            >
-              <SendOutlined style={{ fontSize: 18 }} /> Việc làm đã ứng tuyển
-            </Link>
-            <Link
-              to="/jobs"
-              style={{
-                color: "#595959",
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                fontSize: "15px",
-              }}
-            >
-              <CheckCircleOutlined style={{ fontSize: 18 }} /> Việc làm phù hợp
-            </Link>
-          </Space>
-
-          <Title level={5} style={{ marginTop: 32, marginBottom: 16, color: "#2563EB" }}>
-            Công Ty
-          </Title>
-          <Space direction="vertical" size={16} style={{ width: "100%" }}>
-            <Link
-              to="/jobs"
-              className="header-nav-link"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                fontSize: "15px",
-              }}
-            >
-              <BuildOutlined style={{ fontSize: 18 }} /> Danh sách công ty
-            </Link>
-            <Link
-              to="/jobs"
-              className="header-nav-link"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                fontSize: "15px",
-              }}
-            >
-              <StarOutlined style={{ fontSize: 18 }} /> Top công ty
-            </Link>
-          </Space>
-        </Col>
-
-        <Col span={8}>
-          <Title level={5} style={{ marginBottom: 16, color: "#2563EB" }}>
-            Việc Làm Theo Vị Trí
-          </Title>
-          <Space direction="vertical" size={16} style={{ width: "100%" }}>
-            <Link to="/jobs" className="header-nav-link" style={{ fontSize: "15px" }}>
-              Nhân viên kinh doanh
-            </Link>
-            <Link to="/jobs" className="header-nav-link" style={{ fontSize: "15px" }}>
-              Kế toán
-            </Link>
-            <Link to="/jobs" className="header-nav-link" style={{ fontSize: "15px" }}>
-              Marketing
-            </Link>
-            <Link to="/jobs" className="header-nav-link" style={{ fontSize: "15px" }}>
-              Hành chính nhân sự
-            </Link>
-            <Link to="/jobs" className="header-nav-link" style={{ fontSize: "15px" }}>
-              Chăm sóc khách hàng
-            </Link>
-            <Link to="/jobs" className="header-nav-link" style={{ fontSize: "15px" }}>
-              Ngân hàng
-            </Link>
-            <Link to="/jobs" className="header-nav-link" style={{ fontSize: "15px" }}>
-              IT
-            </Link>
-            <Link to="/jobs" className="header-nav-link" style={{ fontSize: "15px" }}>
-              Thiết kế đồ hoạ
-            </Link>
-          </Space>
-        </Col>
-
-        <Col span={8}>
-          <Title level={5} style={{ marginBottom: 16, color: "#2563EB" }}>
-            Việc Làm Theo Lĩnh Vực
-          </Title>
-          <Space direction="vertical" size={16} style={{ width: "100%" }}>
-            <Link to="/jobs" style={{ color: "#595959", fontSize: "15px" }}>
-              Sản xuất
-            </Link>
-            <Link to="/jobs" style={{ color: "#595959", fontSize: "15px" }}>
-              Bán lẻ - Hàng tiêu dùng
-            </Link>
-            <Link to="/jobs" style={{ color: "#595959", fontSize: "15px" }}>
-              IT - Phần mềm
-            </Link>
-            <Link to="/jobs" style={{ color: "#595959", fontSize: "15px" }}>
-              Xây dựng
-            </Link>
-            <Link to="/jobs" style={{ color: "#595959", fontSize: "15px" }}>
-              Giáo dục/Đào tạo
-            </Link>
-          </Space>
-        </Col>
-      </Row>
-    </div>
-  );
-
-  // Mega Menu cho Tạo CV
-  const cvDropdownContent = () => (
-    <div
-      style={{
-        background: "rgba(255, 255, 255, 0.95)",
-        backdropFilter: "blur(20px)",
-        border: "1px solid rgba(226, 232, 240, 0.8)",
-        padding: "24px",
-        borderRadius: "12px",
-        boxShadow: "0 20px 40px -10px rgba(15, 23, 42, 0.12)",
-        width: "650px",
-        cursor: "default",
-      }}
-    >
-      <Row gutter={[40, 24]}>
-        <Col span={12}>
-          <Title level={5} style={{ marginBottom: 16, color: "#2563EB" }}>
-            Mẫu CV Theo Style
-          </Title>
-          <Space direction="vertical" size={16} style={{ width: "100%" }}>
-            <Link
-              to="/profile"
-              style={{
-                color: "#595959",
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                fontSize: "15px",
-              }}
-            >
-              <AppstoreOutlined style={{ fontSize: 18 }} /> Mẫu CV Đơn giản
-            </Link>
-            <Link
-              to="/profile"
-              style={{
-                color: "#595959",
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                fontSize: "15px",
-              }}
-            >
-              <FireOutlined style={{ fontSize: 18 }} /> Mẫu CV Ấn tượng
-            </Link>
-            <Link
-              to="/profile"
-              style={{
-                color: "#595959",
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                fontSize: "15px",
-              }}
-            >
-              <StarOutlined style={{ fontSize: 18 }} /> Mẫu CV Chuyên nghiệp
-            </Link>
-            <Link
-              to="/profile"
-              style={{
-                color: "#595959",
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                fontSize: "15px",
-              }}
-            >
-              <BuildOutlined style={{ fontSize: 18 }} /> Mẫu CV Harvard
-            </Link>
-          </Space>
-
-          <Title level={5} style={{ marginTop: 32, marginBottom: 16, color: "#2563EB" }}>
-            Mẫu CV Theo Vị Trí
-          </Title>
-          <Space direction="vertical" size={16} style={{ width: "100%" }}>
-            <Link to="/profile" className="header-nav-link" style={{ fontSize: "15px" }}>
-              Nhân viên kinh doanh
-            </Link>
-            <Link to="/profile" className="header-nav-link" style={{ fontSize: "15px" }}>
-              Lập trình viên
-            </Link>
-            <Link to="/profile" className="header-nav-link" style={{ fontSize: "15px" }}>
-              Nhân viên kế toán
-            </Link>
-            <Link to="/profile" className="header-nav-link" style={{ fontSize: "15px" }}>
-              Chuyên viên marketing
-            </Link>
-          </Space>
-        </Col>
-
-        <Col span={12}>
-          <Title level={5} style={{ marginBottom: 16, color: "#2563EB" }}>
-            Công Cụ
-          </Title>
-          <Space direction="vertical" size={16} style={{ width: "100%" }}>
-            <Link
-              to="/profile"
-              style={{
-                color: "#595959",
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                fontSize: "15px",
-              }}
-            >
-              <FileTextOutlined style={{ fontSize: 18 }} /> Quản lý CV
-            </Link>
-            <Link
-              to="/profile"
-              style={{
-                color: "#595959",
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                fontSize: "15px",
-              }}
-            >
-              <CloudUploadOutlined style={{ fontSize: 18 }} /> Tải CV lên
-            </Link>
-            <Link
-              to="/profile"
-              style={{
-                color: "#595959",
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                fontSize: "15px",
-              }}
-            >
-              <BookOutlined style={{ fontSize: 18 }} /> Hướng dẫn viết CV
-            </Link>
-            <Link
-              to="/profile"
-              style={{
-                color: "#595959",
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                fontSize: "15px",
-              }}
-            >
-              <FileTextOutlined style={{ fontSize: 18 }} /> Quản lý Cover Letter
-            </Link>
-            <Link
-              to="/profile"
-              style={{
-                color: "#595959",
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                fontSize: "15px",
-              }}
-            >
-              <AppstoreOutlined style={{ fontSize: 18 }} /> Mẫu Cover Letter
-            </Link>
-          </Space>
-        </Col>
-      </Row>
-    </div>
-  );
 
   const customStyles = `
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
@@ -472,38 +140,34 @@ function PublicLayout() {
               </Link>
             </Title>
             <Space size={4}>
-              <Dropdown dropdownRender={jobsDropdownContent} placement="bottomLeft">
-                <Link
-                  to="/jobs"
-                  className="header-nav-link"
-                  style={{
-                    display: "inline-block",
-                    height: "80px",
-                    lineHeight: "80px",
-                    padding: "0 16px",
-                    fontWeight: 600,
-                    fontSize: "16px",
-                  }}
-                >
-                  Việc làm
-                </Link>
-              </Dropdown>
-              <Dropdown dropdownRender={cvDropdownContent} placement="bottomLeft">
-                <Link
-                  to="/profile"
-                  className="header-nav-link"
-                  style={{
-                    display: "inline-block",
-                    height: "80px",
-                    lineHeight: "80px",
-                    padding: "0 16px",
-                    fontWeight: 600,
-                    fontSize: "16px",
-                  }}
-                >
-                  Tạo CV
-                </Link>
-              </Dropdown>
+              <Link
+                to="/jobs"
+                className="header-nav-link"
+                style={{
+                  display: "inline-block",
+                  height: "80px",
+                  lineHeight: "80px",
+                  padding: "0 16px",
+                  fontWeight: 600,
+                  fontSize: "16px",
+                }}
+              >
+                Tìm việc làm
+              </Link>
+              <Link
+                to="/about"
+                className="header-nav-link"
+                style={{
+                  display: "inline-block",
+                  height: "80px",
+                  lineHeight: "80px",
+                  padding: "0 16px",
+                  fontWeight: 600,
+                  fontSize: "16px",
+                }}
+              >
+                Giới thiệu
+              </Link>
             </Space>
           </Space>
 

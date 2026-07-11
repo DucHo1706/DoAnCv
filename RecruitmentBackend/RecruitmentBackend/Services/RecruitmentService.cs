@@ -423,6 +423,8 @@ namespace RecruitmentBackend.Services
                     MissingSkills = JsonSerializer.Serialize(missingSkills, jsonSerializeOptions),
                     Classification = classification,
                     CriteriaResultsJson = JsonSerializer.Serialize(criteriaResults, jsonSerializeOptions),
+                    WhiteboxScore = (decimal)(matchingResult?.WhiteboxScore ?? 0.0),
+                    BlackboxScore = (decimal)(matchingResult?.BlackboxScore ?? totalScore),
                     EvaluatedAt = DateTime.Now
                 };
 

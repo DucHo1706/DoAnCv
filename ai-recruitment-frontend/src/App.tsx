@@ -22,6 +22,7 @@ import TalentPoolPage from "./pages/recruiter/TalentPoolPage";
 import TalentPoolDetailPage from "./pages/recruiter/TalentPoolDetailPage";
 import PublicLayout from "./pages/recruiter/PublicLayout";
 import HomePage from "./pages/recruiter/HomePage";
+import AboutPage from "./pages/candidate/AboutPage";
 
 // Candidate pages
 import CandidateJobPage from "./pages/candidate/CandidateJobPage";
@@ -56,6 +57,7 @@ function App() {
         {/* Public */}
         <Route path="/" element={<PublicLayout />}>
           <Route index element={<HomePage />} />
+          <Route path="about" element={<AboutPage />} />
           <Route path="jobs" element={<CandidateJobPage />} />
           <Route path="jobs/:id" element={<CandidateJobDetailPage />} />
           <Route path="jobs/:id/cv-analysis" element={<CvAnalysisResultPage />} />

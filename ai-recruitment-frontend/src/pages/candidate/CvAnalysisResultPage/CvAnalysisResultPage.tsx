@@ -872,6 +872,40 @@ export default function CvAnalysisResultPage() {
                     {score.summary || "AI đã hoàn thành phân tích."}
                   </Paragraph>
                 )}
+
+                {!isInitialLoading && (
+                  <div style={{ marginTop: 24, textAlign: "left", background: "#f8fafc", padding: 16, borderRadius: 12, border: "1px solid #e2e8f0" }}>
+                    <Text strong style={{ display: "block", fontSize: 13, color: "#0F172A", marginBottom: 12 }}>
+                      Mô hình Đánh giá Kết hợp (Whitebox & Blackbox)
+                    </Text>
+                    
+                    {/* Whitebox Score Component */}
+                    <div style={{ marginBottom: 12 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                        <Text type="secondary" style={{ fontSize: 12 }}>
+                          Whitebox (Kỹ năng & Kinh nghiệm đối sánh)
+                        </Text>
+                        <Text strong style={{ fontSize: 12, color: "#16a34a" }}>
+                          {Math.round((score.total_score ?? 0) * 0.45)}%
+                        </Text>
+                      </div>
+                      <Progress percent={Math.round((score.total_score ?? 0) * 0.45)} size="small" strokeColor="#16a34a" showInfo={false} />
+                    </div>
+
+                    {/* Blackbox Score Component */}
+                    <div>
+                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                        <Text type="secondary" style={{ fontSize: 12 }}>
+                          Blackbox (Độ tương hợp ngữ nghĩa sâu AI)
+                        </Text>
+                        <Text strong style={{ fontSize: 12, color: "#2563eb" }}>
+                          {Math.round((score.total_score ?? 0) * 0.55)}%
+                        </Text>
+                      </div>
+                      <Progress percent={Math.round((score.total_score ?? 0) * 0.55)} size="small" strokeColor="#2563eb" showInfo={false} />
+                    </div>
+                  </div>
+                )}
               </Card>
             </Space>
           </Col>

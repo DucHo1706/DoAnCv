@@ -224,52 +224,6 @@ const CompetencyTab: React.FC<CompetencyTabProps> = ({ scoreAnalysis, criteriaRe
           </div>
         </div>
       )}
-
-      {/* Criteria table */}
-      <div style={{ marginTop: 8 }}>
-        <Text strong style={{ display: "block", marginBottom: 12 }}>
-          Điểm chi tiết theo từng tiêu chí
-        </Text>
-        <Table
-          dataSource={criteriaResults}
-          rowKey={(record: any) => record.criterion_name || record.criterionName}
-          pagination={false}
-          size="small"
-          bordered
-          columns={[
-            {
-              title: "Tiêu chí đánh giá",
-              key: "criterionName",
-              width: "35%",
-              render: (_: any, record: any) =>
-                record.criterion_name || record.criterionName || "Chưa có tên",
-            },
-            {
-              title: "Trọng số",
-              key: "weight",
-              width: "15%",
-              render: (_: any, record: any) => `${record.weight || 0}%`,
-            },
-            {
-              title: "Điểm đạt được",
-              key: "score",
-              width: "20%",
-              render: (_: any, record: any) => (
-                <strong>
-                  {record.score || 0} / {record.max_score || record.maxScore || 0}
-                </strong>
-              ),
-            },
-            {
-              title: "AI Giải thích",
-              dataIndex: "comment",
-              key: "comment",
-              width: "30%",
-            },
-          ]}
-          locale={{ emptyText: "Không có dữ liệu tiêu chí đánh giá" }}
-        />
-      </div>
     </Space>
   );
 };

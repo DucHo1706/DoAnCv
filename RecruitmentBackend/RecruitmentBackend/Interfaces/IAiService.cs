@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http;
 using RecruitmentBackend.DTOs.Responses;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -9,5 +9,8 @@ namespace RecruitmentBackend.Interfaces
     {
         Task<AiMatchingResponse> GetMatchingScoreAsync(IFormFile cvFile, string jobDescription, string criteriaJson);
         Task<bool> SyncSkillsToAiAsync(List<string> skills);
+        Task<bool> TrainAprioriAsync(List<List<string>> transactions);
+        Task<List<string>> RecommendSkillsAsync(List<string> currentSkills, int topN = 5);
+        Task<string> GetAssociationRulesJsonAsync();
     }
 }

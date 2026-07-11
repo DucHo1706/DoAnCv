@@ -1,4 +1,4 @@
-import { CheckOutlined, EyeOutlined, LockOutlined, UnlockOutlined } from "@ant-design/icons";
+import { CheckOutlined, EyeOutlined, LockOutlined, UnlockOutlined, SearchOutlined, FilterOutlined } from "@ant-design/icons";
 import {
   Button,
   Card,
@@ -13,11 +13,13 @@ import {
   Table,
   Tag,
   Typography,
+  Input,
+  Select,
 } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import PageContainer from "../../components/common/PageContainer";
 import StatCard from "../../components/common/StatCard";
-import { jobService } from "../../services/jobService";
+import { jobService, categoryService } from "../../services/jobService";
 import type { JobDto, JobReviewResponse } from "../../services/jobService";
 
 const { Paragraph, Text } = Typography;
@@ -45,6 +47,12 @@ function JobApprovalPage() {
   const [loading, setLoading] = useState(false);
   const [approvingId, setApprovingId] = useState<string | null>(null);
   const [jobs, setJobs] = useState<JobDto[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
+
+  // Search & filter states
+  const [searchText, setSearchText] = useState("");
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>("all");
+  const [selectedStatus, setSelectedStatus] = useState<string>("all");
 
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
@@ -63,12 +71,44 @@ function JobApprovalPage() {
     }
   };
 
+  const fetchCategories = async () => {
+    try {
+      const data = await categoryService.getCategories();
+      setCategories(Array.isArray(data) ? data : (data as any)?.$values || []);
+    } catch (error) {
+      console.error("Lỗi khi tải danh sách lĩnh vực: ", error);
+    }
+  };
+
   useEffect(() => {
     fetchAdminJobs();
+    fetchCategories();
   }, []);
 
+  const filteredJobs = useMemo(() => {
+    return jobs.filter((job) => {
+      // 1. Search text mapping
+      const searchKey = searchText.trim().toLowerCase();
+      const titleMatch = (job.position?.name || "").toLowerCase().includes(searchKey);
+      const companyMatch = (job.company || "").toLowerCase().includes(searchKey);
+      const matchesSearch = searchKey.length === 0 || titleMatch || companyMatch;
+
+      // 2. Category matching
+      const matchesCategory =
+        selectedCategoryId === "all" ||
+        job.position?.categoryId === selectedCategoryId;
+
+      // 3. Status matching
+      const matchesStatus =
+        selectedStatus === "all" ||
+        job.status === selectedStatus;
+
+      return matchesSearch && matchesCategory && matchesStatus;
+    });
+  }, [jobs, searchText, selectedCategoryId, selectedStatus]);
+
   const tableData: PendingJobTableItem[] = useMemo(() => {
-    return jobs.map((job) => ({
+    return filteredJobs.map((job) => ({
       id: job.id,
       title: job.position?.name || "Chưa cập nhật",
       location: job.branch?.name || "Chưa cập nhật",
@@ -77,7 +117,7 @@ function JobApprovalPage() {
       deadline: job.deadline,
       raw: job,
     }));
-  }, [jobs]);
+  }, [filteredJobs]);
 
   const handleViewJob = async (record: PendingJobTableItem) => {
     try {
@@ -229,18 +269,61 @@ function JobApprovalPage() {
         <Col xs={24} sm={12}>
           <StatCard
             title="Tổng tin tuyển dụng"
-            value={tableData.length}
+            value={jobs.length}
             subtitle="Tất cả các bài đăng"
           />
         </Col>
         <Col xs={24} sm={12}>
           <StatCard
             title="Tin đã duyệt"
-            value={tableData.filter((j) => j.raw.status === "Published").length}
+            value={jobs.filter((j) => j.status === "Published").length}
             subtitle="Danh sách tin đang được công khai"
           />
         </Col>
       </Row>
+
+      <Card style={{ marginBottom: 16 }} bodyStyle={{ padding: "16px 24px" }}>
+        <Row gutter={[16, 16]} align="middle">
+          <Col xs={24} md={8}>
+            <Input
+              placeholder="Tìm theo vị trí, công ty..."
+              prefix={<SearchOutlined style={{ color: "#94A3B8" }} />}
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              allowClear
+              style={{ borderRadius: 8 }}
+            />
+          </Col>
+          <Col xs={24} sm={12} md={8}>
+            <Select
+              style={{ width: "100%" }}
+              placeholder="Lọc theo lĩnh vực"
+              value={selectedCategoryId}
+              onChange={(value) => setSelectedCategoryId(value)}
+              options={[
+                { value: "all", label: "Tất cả lĩnh vực" },
+                ...categories.map((c) => ({ value: c.id, label: c.name })),
+              ]}
+              dropdownStyle={{ borderRadius: 8 }}
+            />
+          </Col>
+          <Col xs={24} sm={12} md={8}>
+            <Select
+              style={{ width: "100%" }}
+              placeholder="Lọc theo trạng thái"
+              value={selectedStatus}
+              onChange={(value) => setSelectedStatus(value)}
+              options={[
+                { value: "all", label: "Tất cả trạng thái" },
+                { value: "Pending", label: "Chờ duyệt" },
+                { value: "Published", label: "Đang tuyển" },
+                { value: "Closed", label: "Đã khóa / Đã đóng" },
+              ]}
+              dropdownStyle={{ borderRadius: 8 }}
+            />
+          </Col>
+        </Row>
+      </Card>
 
       <Card>
         <Table

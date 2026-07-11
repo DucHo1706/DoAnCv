@@ -81,6 +81,7 @@ builder.Services.AddHttpClient<IChatbotService, ChatbotService>();
 builder.Services.AddScoped<IEmailSenderService, EmailSenderService>();
 builder.Services.AddHttpClient<ICandidateEmailAiService, CandidateEmailAiService>();
 builder.Services.AddScoped<ITalentPoolService, TalentPoolService>();
+builder.Services.AddScoped<IAprioriService, AprioriService>();
 
 
 var jwtSettings = builder.Configuration.GetSection("Jwt");

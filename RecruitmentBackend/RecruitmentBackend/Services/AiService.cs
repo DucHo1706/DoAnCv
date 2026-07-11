@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http;
 using RecruitmentBackend.DTOs.Responses;
 using RecruitmentBackend.Interfaces;
 using System;
@@ -88,6 +88,62 @@ namespace RecruitmentBackend.Services
             var response = await _httpClient.PostAsync("update-skills", jsonContent);
 
             return response.IsSuccessStatusCode;
+        }
+
+        public async Task<bool> TrainAprioriAsync(List<List<string>> transactions)
+        {
+            var payload = new 
+            { 
+                transactions = transactions,
+                min_support = 0.05,
+                min_confidence = 0.3
+            };
+            var jsonContent = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
+
+            var response = await _httpClient.PostAsync("train-apriori", jsonContent);
+            return response.IsSuccessStatusCode;
+        }
+
+        public async Task<List<string>> RecommendSkillsAsync(List<string> currentSkills, int topN = 5)
+        {
+            var payload = new 
+            { 
+                current_skills = currentSkills,
+                top_n = topN
+            };
+            var jsonContent = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
+
+            var response = await _httpClient.PostAsync("recommend-skills", jsonContent);
+            if (response.IsSuccessStatusCode == false)
+            {
+                return new List<string>();
+            }
+
+            var jsonResponse = await response.Content.ReadAsStringAsync();
+            using var doc = JsonDocument.Parse(jsonResponse);
+            var root = doc.RootElement;
+            if (root.TryGetProperty("recommended_skills", out var recommendedProp) && recommendedProp.ValueKind == JsonValueKind.Array)
+            {
+                var result = new List<string>();
+                foreach (var item in recommendedProp.EnumerateArray())
+                {
+                    result.Add(item.GetString());
+                }
+                return result;
+            }
+
+            return new List<string>();
+        }
+
+        public async Task<string> GetAssociationRulesJsonAsync()
+        {
+            var response = await _httpClient.GetAsync("association-rules");
+            if (response.IsSuccessStatusCode == false)
+            {
+                return "{\"rules\":[]}";
+            }
+
+            return await response.Content.ReadAsStringAsync();
         }
     }
 }

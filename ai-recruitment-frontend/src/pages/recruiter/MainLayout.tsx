@@ -1,10 +1,11 @@
-import { Layout, Menu, Typography } from "antd";
+import { Avatar, Dropdown, Layout, Menu, Space, Typography } from "antd";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { authService } from "../../services/authService";
 import { useEffect, useState } from "react";
+import { LogoutOutlined, UserOutlined, SettingOutlined } from "@ant-design/icons";
 
-const { Header, Content, Footer, Sider } = Layout;
-const { Title } = Typography;
+const { Header, Content, Sider } = Layout;
+const { Title, Text } = Typography;
 
 function MainLayout() {
   const location = useLocation();
@@ -24,7 +25,15 @@ function MainLayout() {
   const handleLogout = (e: any) => {
     e.preventDefault();
     authService.logout();
+    navigate("/login");
   };
+
+  const userMenuItems = [
+    { key: "profile", icon: <UserOutlined />, label: <Link to="/profile">Thông tin tài khoản</Link> },
+    { key: "settings", icon: <SettingOutlined />, label: "Cài đặt" },
+    { type: "divider" as const },
+    { key: "logout", icon: <LogoutOutlined />, label: "Đăng xuất", danger: true, onClick: handleLogout },
+  ];
 
   const hrMenuItems = [
     {
@@ -88,51 +97,61 @@ function MainLayout() {
 
   return (
     <Layout style={{ minHeight: "100vh" }}>
-      <Sider theme="light" width={260}>
+      {/* Sidebar Slate-900 chuyên nghiệp */}
+      <Sider theme="dark" width={260} style={{ backgroundColor: "#0F172A" }}>
         <div
-          style={{ padding: "20px 16px", textAlign: "center", borderBottom: "1px solid #E2E8F0" }}
+          style={{ padding: "24px 16px", textAlign: "center", borderBottom: "1px solid #1E293B" }}
         >
           <Title
             level={4}
-            style={{ margin: 0, color: "#2563EB", fontWeight: 800, letterSpacing: "0.5px" }}
+            style={{ margin: 0, color: "#3B82F6", fontWeight: 800, letterSpacing: "0.5px" }}
           >
-            {isAdminRoute ? "Admin Portal" : "HR Portal"}
+            {isAdminRoute ? "ADMIN PORTAL" : "HR PORTAL"}
           </Title>
         </div>
         <Menu
+          theme="dark"
           mode="inline"
           selectedKeys={[location.pathname]}
           items={menuItems}
-          style={{ borderRight: 0 }}
+          style={{ borderRight: 0, backgroundColor: "#0F172A", paddingTop: 16 }}
         />
       </Sider>
-      <Layout>
+      
+      <Layout style={{ backgroundColor: "#F8FAFC" }}>
         <Header
-          style={{ background: "#fff", padding: "0 24px", borderBottom: "1px solid #E2E8F0" }}
+          style={{
+            background: "#FFFFFF",
+            padding: "0 32px",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            borderBottom: "1px solid #E2E8F0",
+          }}
         >
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "flex-end",
-              alignItems: "center",
-              height: "100%",
-            }}
-          >
-            <span style={{ marginRight: "16px", fontWeight: 600, color: "#334155" }}>
-              Xin chào, {currentUser?.fullName || "Người dùng"}
-            </span>
-            <a href="#" onClick={handleLogout} style={{ color: "#EF4444", fontWeight: 600 }}>
-              Đăng xuất
-            </a>
-          </div>
+          <Text strong style={{ fontSize: 16, color: "#334155" }}>
+            {isAdminRoute ? "Hệ thống quản trị" : "Không gian tuyển dụng"}
+          </Text>
+          
+          <Dropdown menu={{ items: userMenuItems }} placement="bottomRight" trigger={["click"]}>
+            <Space style={{ cursor: "pointer" }}>
+              <Avatar style={{ backgroundColor: "#3B82F6" }} icon={<UserOutlined />} />
+              <div style={{ display: "flex", flexDirection: "column", lineHeight: 1.2 }}>
+                <Text strong style={{ fontSize: 14 }}>
+                  {currentUser?.fullName || "Thành viên"}
+                </Text>
+                <Text type="secondary" style={{ fontSize: 11 }}>
+                  {isAdminRoute ? "Administrator" : "Recruiter"}
+                </Text>
+              </div>
+            </Space>
+          </Dropdown>
         </Header>
-        <Content style={{ margin: "24px 16px", padding: 24, background: "#fff", minHeight: 280 }}>
-          {/* Outlet là nơi các trang con (JobManagement, JobApproval...) sẽ được hiển thị */}
+        
+        {/* Nền trong suốt để các Card trắng hiển thị bóng đổ nổi bật */}
+        <Content style={{ margin: "32px", background: "transparent", minHeight: 280 }}>
           <Outlet />
         </Content>
-        <Footer style={{ textAlign: "center" }}>
-          Khóa luận tốt nghiệp ©2026 - Ứng dụng AI trong tuyển dụng
-        </Footer>
       </Layout>
     </Layout>
   );

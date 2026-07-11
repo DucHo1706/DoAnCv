@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿using RecruitmentBackend.DTOs.Requests;
+﻿﻿﻿﻿﻿using RecruitmentBackend.DTOs.Requests;
 using RecruitmentBackend.DTOs.Responses;
 using RecruitmentBackend.Models;
 using System.Threading.Tasks;
@@ -19,5 +19,7 @@ namespace RecruitmentBackend.Interfaces
         Task<object> ReviewJobAsync(string jobId);
         Task<bool> ApproveJobAndSyncAiAsync(string jobId);
         Task<bool> ToggleJobStatusAsync(string jobId);
+        Task<IEnumerable<JobSummaryDto>> GetTrendingJobsAsync(int limit = 6);
+        Task<IEnumerable<JobSummaryDto>> GetRelatedJobsAsync(string jobId, int limit = 3);
     }
 }

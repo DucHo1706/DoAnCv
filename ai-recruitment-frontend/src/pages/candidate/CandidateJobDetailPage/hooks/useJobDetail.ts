@@ -15,6 +15,7 @@ export function useJobDetail() {
   const [submittedApplicationId, setSubmittedApplicationId] = useState<string | null>(null);
   const [appliedApplication, setAppliedApplication] = useState<any>(null);
   const [isAiPreviewModalOpen, setIsAiPreviewModalOpen] = useState(false);
+  const [relatedJobs, setRelatedJobs] = useState<any[]>([]);
 
   const getJobId = (jobItem: any) => {
     return jobItem?.id || jobItem?.jobId || jobItem?.jobID || "";
@@ -69,6 +70,9 @@ export function useJobDetail() {
         if (currentJobId) {
           await fetchAppliedApplication(currentJobId);
         }
+
+        const relatedRes = await axiosClient.get(`/Jobs/${id}/related?limit=3`);
+        setRelatedJobs(relatedRes.data?.$values || relatedRes.data || []);
       } catch (error) {
         message.error("Không thể tải chi tiết công việc hoặc tin đã hết hạn.");
         navigate("/jobs");
@@ -238,6 +242,7 @@ export function useJobDetail() {
     handleViewAppliedAiEvaluation,
     handleDirectApply,
     uploadProps,
-    navigate
+    navigate,
+    relatedJobs
   };
 }

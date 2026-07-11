@@ -33,3 +33,12 @@ class LazyAnalysisRequest(BaseModel):
     jd_skills: Optional[List[str]] = []
     job_title: Optional[str] = ""
     company_name: Optional[str] = ""
+
+class AprioriTrainRequest(BaseModel):
+    transactions: List[List[str]]
+    min_support: Optional[float] = 0.05
+    min_confidence: Optional[float] = 0.3
+
+class SkillRecommendRequest(BaseModel):
+    current_skills: List[str]
+    top_n: Optional[int] = 5

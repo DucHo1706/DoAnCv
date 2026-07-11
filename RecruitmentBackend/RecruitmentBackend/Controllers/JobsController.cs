@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿using Microsoft.AspNetCore.Mvc;
+﻿﻿﻿﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using RecruitmentBackend.DTOs.Requests;
 using RecruitmentBackend.Interfaces;
@@ -144,6 +144,36 @@ namespace RecruitmentBackend.Controllers
             catch (Exception ex)
             {
                 return StatusCode(500, new { message = "Lỗi khi lấy danh sách ngành nghề: " + ex.Message });
+            }
+        }
+
+        [HttpGet("trending")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetTrendingJobs([FromQuery] int limit = 6)
+        {
+            try
+            {
+                var result = await _jobService.GetTrendingJobsAsync(limit);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Lỗi khi lấy tin tuyển dụng nổi bật: " + ex.Message });
+            }
+        }
+
+        [HttpGet("{id}/related")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetRelatedJobs(string id, [FromQuery] int limit = 3)
+        {
+            try
+            {
+                var result = await _jobService.GetRelatedJobsAsync(id, limit);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Lỗi khi lấy tin tuyển dụng tương tự: " + ex.Message });
             }
         }
     }

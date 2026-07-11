@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from dtos.request_dtos import SkillUpdateRequest
+from dtos.request_dtos import SkillUpdateRequest, AprioriTrainRequest, SkillRecommendRequest
 import nlp_processor
 from utils.logger import logger
 import os
@@ -47,4 +47,55 @@ async def update_skills(request: SkillUpdateRequest):
         }
     except Exception as e:
         logger.error(f"Loi khi cap nhat ky nang: {e}")
+        return {"status": "error", "message": str(e)}
+
+
+@router.post("/train-apriori")
+async def train_apriori(request: AprioriTrainRequest):
+    try:
+        from services import apriori_service
+        rules = apriori_service.train_and_save_rules(
+            transactions_list=request.transactions,
+            min_support=request.min_support,
+            min_confidence=request.min_confidence
+        )
+        return {
+            "status": "success",
+            "message": f"Huan luyen Apriori thanh cong. Khai pha duoc {len(rules)} luat kết hợp.",
+            "rules_count": len(rules)
+        }
+    except Exception as e:
+        logger.error(f"Loi khi huan luyen Apriori: {e}")
+        return {"status": "error", "message": str(e)}
+
+
+@router.post("/recommend-skills")
+async def recommend_skills(request: SkillRecommendRequest):
+    try:
+        from services import apriori_service
+        recommended = apriori_service.get_recommended_skills(
+            current_skills=request.current_skills,
+            top_n=request.top_n
+        )
+        return {
+            "status": "success",
+            "recommended_skills": recommended
+        }
+    except Exception as e:
+        logger.error(f"Loi khi goi y ky nang: {e}")
+        return {"status": "error", "message": str(e)}
+
+
+@router.get("/association-rules")
+async def get_association_rules():
+    try:
+        rules_path = "association_rules.json"
+        if not os.path.exists(rules_path):
+            return {"status": "success", "rules": []}
+            
+        with open(rules_path, "r", encoding="utf-8") as f:
+            rules = json.load(f)
+        return {"status": "success", "rules": rules}
+    except Exception as e:
+        logger.error(f"Loi khi lay danh sach luat ket hop: {e}")
         return {"status": "error", "message": str(e)}

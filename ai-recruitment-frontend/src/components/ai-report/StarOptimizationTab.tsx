@@ -210,7 +210,7 @@ const StarOptimizationTab: React.FC<StarOptimizationTabProps> = ({ optimizationT
   );
 
   return (
-    <Space direction="vertical" size={20} style={{ width: "100%" }}>
+    <Space direction="vertical" size={24} style={{ width: "100%" }}>
       <div>
         <Title
           level={4}
@@ -233,197 +233,140 @@ const StarOptimizationTab: React.FC<StarOptimizationTabProps> = ({ optimizationT
         Object.entries(tipGroups).map(([group, groupTips]) => (
           <Card
             key={group}
+            size="small"
             title={
-              <span style={{ color: "#0F172A", fontWeight: 700, fontSize: 15 }}>
-                <InfoCircleOutlined style={{ color: "#2563EB", marginRight: 8 }} /> Mục: {group}
+              <span style={{ color: "#2563EB", fontWeight: 700, fontSize: 14.5 }}>
+                <InfoCircleOutlined style={{ marginRight: 6 }} /> Phần CV: {group} ({groupTips.length} đề xuất)
               </span>
             }
             style={{
-              borderRadius: 16,
-              background: "#FFFFFF",
-              border: "1px solid #E2E8F0",
-              boxShadow: "0 4px 12px rgba(148, 163, 184, 0.02)",
+              borderRadius: 14,
+              background: "#EFF6FF",
+              border: "1px solid #BFDBFE",
+              marginBottom: 12,
             }}
-            bodyStyle={{ padding: "16px 20px" }}
+            bodyStyle={{ padding: "16px" }}
           >
-            <Collapse
-              ghost
-              expandIconPosition="end"
-              defaultActiveKey={["0"]} // Tự động mở đề xuất đầu tiên cho đỡ trống
-              style={{ background: "transparent" }}
-            >
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               {groupTips.map((tip: OptimizationTip, idx: number) => (
-                <Collapse.Panel
-                  key={idx.toString()}
-                  header={
-                    <span
-                      style={{
-                        color: "#0F172A",
-                        fontWeight: 600,
-                        fontSize: 14,
-                        display: "inline-flex",
-                        alignItems: "center",
-                      }}
-                    >
-                      💡 Đề xuất {idx + 1}: {tip.title}
-                      {tip.priority === "high" && (
-                        <span
-                          style={{
-                            marginLeft: 8,
-                            fontSize: 10,
-                            padding: "2px 6px",
-                            borderRadius: 4,
-                            background: "#FEF2F2",
-                            border: "1px solid #FECACA",
-                            color: "#EF4444",
-                            fontWeight: 700,
-                          }}
-                        >
-                          ƯU TIÊN CAO
-                        </span>
-                      )}
-                    </span>
-                  }
+                <div
+                  key={idx}
                   style={{
-                    marginBottom: 12,
-                    background: "#F8FAFC",
-                    borderRadius: 12,
+                    background: "#FFFFFF",
                     border: "1px solid #E2E8F0",
-                    overflow: "hidden",
+                    borderRadius: 12,
+                    padding: "18px",
+                    boxShadow: "0 2px 8px rgba(148, 163, 184, 0.02)",
                   }}
                 >
-                  <div style={{ padding: "4px 8px 12px" }}>
-                    <div style={{ marginBottom: 16 }}>
-                      <Paragraph
+                  {/* Tip Header with Title and Priority Tag */}
+                  <div style={{ marginBottom: 12, display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
+                    <Text strong style={{ fontSize: 15, color: "#0F172A", display: "inline-block" }}>
+                       đề xuất {idx + 1}: {tip.title}
+                    </Text>
+                    {tip.priority === "high" && (
+                      <span
                         style={{
-                          color: "#334155",
-                          fontSize: 15,
-                          lineHeight: "1.65",
-                          marginBottom: 10,
+                          fontSize: 10,
+                          padding: "2px 8px",
+                          borderRadius: 4,
+                          background: "#FEF2F2",
+                          border: "1px solid #FECACA",
+                          color: "#EF4444",
+                          fontWeight: 700,
                         }}
                       >
-                        {tip.detail}
-                      </Paragraph>
-                      <div
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: 6,
-                          padding: "3px 10px",
-                          background: "#F1F5F9",
-                          borderRadius: 6,
-                          border: "1px solid #E2E8F0",
-                        }}
-                      >
-                        <span style={{ fontSize: 11, fontWeight: 700, color: "#475569", textTransform: "uppercase" }}>
-                          🎯 Cơ sở gợi ý:
-                        </span>
-                        <span style={{ fontSize: 13, color: "#64748B" }}>
-                          Khoảng cách kỹ năng & Kinh nghiệm được đối sánh trực tiếp từ JD tuyển dụng
-                        </span>
-                      </div>
-                    </div>
-
-                    {tip.star_guidance && (
-                      <div
-                        style={{
-                          background: "rgba(239, 246, 255, 0.5)",
-                          padding: "14px 16px",
-                          borderRadius: 10,
-                          borderLeft: "4px solid #2563EB",
-                          marginBottom: 16,
-                        }}
-                      >
-                        <Text
-                          strong
-                          style={{
-                            color: "#1E40AF",
-                            fontSize: 14,
-                            display: "block",
-                            marginBottom: 6,
-                          }}
-                        >
-                          📌 Hướng dẫn tối ưu STAR:
-                        </Text>
-                        <Text
-                          style={{
-                            color: "#1E3A8A",
-                            fontSize: 14,
-                            lineHeight: "1.65",
-                            display: "block",
-                          }}
-                        >
-                          {tip.star_guidance}
-                        </Text>
-                      </div>
-                    )}
-
-                    {tip.example_before && (
-                      <Row gutter={[16, 16]}>
-                        <Col xs={24} md={12}>
-                          <div
-                            style={{
-                              background: "#FAF9F9",
-                              padding: "16px",
-                              borderRadius: 12,
-                              border: "1px solid #F3EEEE",
-                              height: "100%",
-                              display: "flex",
-                              flexDirection: "column",
-                              justifyContent: "flex-start",
-                            }}
-                          >
-                            <Text
-                              strong
-                              style={{
-                                color: "#991B1B",
-                                fontSize: 12.5,
-                                display: "block",
-                                marginBottom: 12,
-                                textTransform: "uppercase",
-                                letterSpacing: 0.5,
-                              }}
-                            >
-                              ❌ Cơ sở đối chiếu (Bản gốc CV chưa tối ưu):
-                            </Text>
-                            <div style={{ flex: 1 }}>{renderFormattedStarText(tip.example_before || null)}</div>
-                          </div>
-                        </Col>
-                        <Col xs={24} md={12}>
-                          <div
-                            style={{
-                              background: "#F6FCF8",
-                              padding: "16px",
-                              borderRadius: 12,
-                              border: "1px solid #E1F4E8",
-                              height: "100%",
-                              display: "flex",
-                              flexDirection: "column",
-                              justifyContent: "flex-start",
-                            }}
-                          >
-                            <Text
-                              strong
-                              style={{
-                                color: "#166534",
-                                fontSize: 12.5,
-                                display: "block",
-                                marginBottom: 12,
-                                textTransform: "uppercase",
-                                letterSpacing: 0.5,
-                              }}
-                            >
-                              ✔️ Đề xuất viết lại theo chuẩn STAR (Đo lường & Lượng hóa):
-                            </Text>
-                            <div style={{ flex: 1 }}>{renderFormattedStarText(tip.example_after || null)}</div>
-                          </div>
-                        </Col>
-                      </Row>
+                        ƯU TIÊN CAO
+                      </span>
                     )}
                   </div>
-                </Collapse.Panel>
+
+                  {/* Tip Detail */}
+                  <Paragraph style={{ color: "#475569", fontSize: 14, lineHeight: "1.6", marginBottom: 12 }}>
+                    {tip.detail}
+                  </Paragraph>
+
+                  {/* STAR Guidance */}
+                  {tip.star_guidance && (
+                    <div
+                      style={{
+                        background: "#F8FAFC",
+                        borderLeft: "3px solid #2563EB",
+                        padding: "10px 14px",
+                        borderRadius: 6,
+                        marginBottom: 16,
+                      }}
+                    >
+                      <Text style={{ color: "#1E3A8A", fontSize: 13.5, display: "block", lineHeight: "1.5" }}>
+                        <strong>Hướng dẫn STAR:</strong> {tip.star_guidance}
+                      </Text>
+                    </div>
+                  )}
+
+                  {/* Before / After Columns */}
+                  {tip.example_before && (
+                    <Row gutter={[16, 12]}>
+                      <Col xs={24} sm={12}>
+                        <div
+                          style={{
+                            padding: "12px 14px",
+                            background: "#FEF2F2",
+                            borderRadius: 8,
+                            border: "1px solid #FEE2E2",
+                            height: "100%",
+                          }}
+                        >
+                          <Text
+                            strong
+                            style={{
+                              color: "#B91C1C",
+                              fontSize: 11,
+                              display: "block",
+                              marginBottom: 8,
+                              textTransform: "uppercase",
+                              letterSpacing: 0.5,
+                            }}
+                          >
+                            ❌ Bản gốc CV chưa tối ưu:
+                          </Text>
+                          <div style={{ color: "#991B1B", fontSize: 13.5 }}>
+                            {renderFormattedStarText(tip.example_before || null)}
+                          </div>
+                        </div>
+                      </Col>
+                      <Col xs={24} sm={12}>
+                        <div
+                          style={{
+                            padding: "12px 14px",
+                            background: "#F0FDF4",
+                            borderRadius: 8,
+                            border: "1px solid #DCFCE7",
+                            height: "100%",
+                          }}
+                        >
+                          <Text
+                            strong
+                            style={{
+                              color: "#15803D",
+                              fontSize: 11,
+                              display: "block",
+                              marginBottom: 8,
+                              textTransform: "uppercase",
+                              letterSpacing: 0.5,
+                            }}
+                          >
+                            ✔️ Đề xuất viết lại theo chuẩn STAR:
+                          </Text>
+                          <div style={{ color: "#166534", fontSize: 13.5 }}>
+                            {renderFormattedStarText(tip.example_after || null)}
+                          </div>
+                        </div>
+                      </Col>
+                    </Row>
+                  )}
+                </div>
               ))}
-            </Collapse>
+            </div>
           </Card>
         ))
       ) : (
@@ -431,6 +374,7 @@ const StarOptimizationTab: React.FC<StarOptimizationTabProps> = ({ optimizationT
           message="Tuyệt vời! CV của bạn đã viết rất chuyên nghiệp, không cần viết lại theo STAR."
           type="success"
           showIcon
+          style={{ borderRadius: 12 }}
         />
       )}
     </Space>

@@ -1,4 +1,5 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import { Row, Col, Card, Typography, Space, Divider, Button } from "antd";
 import {
   DollarOutlined,
@@ -22,6 +23,7 @@ interface JobDetailContentProps {
   showApplyModal: () => void;
   handleViewAppliedAiEvaluation: () => void;
   handleApplyWithAI: () => void;
+  relatedJobs?: any[];
 }
 
 const JobDetailContent: React.FC<JobDetailContentProps> = ({
@@ -30,7 +32,9 @@ const JobDetailContent: React.FC<JobDetailContentProps> = ({
   showApplyModal,
   handleViewAppliedAiEvaluation,
   handleApplyWithAI,
+  relatedJobs = [],
 }) => {
+  const navigate = useNavigate();
   return (
     <>
       {/* 1. KHU VỰC HERO CARD (TOP) */}
@@ -250,27 +254,9 @@ const JobDetailContent: React.FC<JobDetailContentProps> = ({
                 borderRadius: 12,
               }}
             >
-              <Text style={{ fontSize: 14, display: "block", marginBottom: 16, fontFamily: appTheme.font.family, color: "#166534" }}>
-                Ứng viên nộp hồ sơ trực tuyến bằng cách bấm <strong>Ứng tuyển ngay</strong>. Trợ lý
-                AI sẽ tiếp nhận, phân tích CV và trả về kết quả độ phù hợp (Match Score) ngay lập
-                tức.
+              <Text style={{ fontSize: 14, display: "block", fontFamily: appTheme.font.family, color: "#166534" }}>
+                Ứng viên nộp hồ sơ trực tuyến bằng cách bấm vào nút <strong>Ứng tuyển ngay</strong> hoặc <strong>AI Phân tích & Ứng tuyển</strong> ở đầu trang. Trợ lý AI sẽ tiếp nhận, phân tích CV và tự động trả về báo cáo đánh giá năng lực chi tiết ngay lập tức.
               </Text>
-              <Button
-                type="primary"
-                size="large"
-                onClick={showApplyModal}
-                style={{
-                  borderRadius: 12,
-                  height: 40,
-                  fontSize: 14,
-                  fontWeight: 600,
-                  fontFamily: appTheme.font.family,
-                  background: appTheme.colors.primary,
-                  borderColor: appTheme.colors.primary,
-                }}
-              >
-                Nộp Hồ Sơ Ứng Tuyển
-              </Button>
             </div>
           </Card>
         </Col>
@@ -388,6 +374,48 @@ const JobDetailContent: React.FC<JobDetailContentProps> = ({
               <EnvironmentOutlined /> Địa chỉ: {job.location}
             </Text>
           </Card>
+
+          {/* Bảng Việc làm tương tự */}
+          {relatedJobs && relatedJobs.length > 0 && (
+            <Card
+              title={<Title level={5} style={{ margin: 0, fontFamily: appTheme.font.family, fontWeight: 600, fontSize: 15 }}>Việc làm tương tự</Title>}
+              style={{
+                borderRadius: 16,
+                marginTop: 24,
+                boxShadow: appTheme.shadow.card,
+                border: `1px solid ${appTheme.colors.border}`,
+                background: appTheme.colors.surface,
+              }}
+            >
+              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                {relatedJobs.map((rJob: any) => (
+                  <div
+                    key={rJob.id}
+                    onClick={() => {
+                      navigate(`/jobs/${rJob.id}`);
+                      window.scrollTo(0, 0);
+                    }}
+                    style={{
+                      cursor: "pointer",
+                      paddingBottom: 12,
+                      borderBottom: "1px solid #f1f5f9",
+                      transition: "opacity 0.2s"
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.opacity = "0.7"}
+                    onMouseLeave={(e) => e.currentTarget.style.opacity = "1"}
+                  >
+                    <Text strong style={{ display: "block", fontSize: 14, color: appTheme.colors.textPrimary, marginBottom: 4 }}>
+                      {rJob.title}
+                    </Text>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <Text type="secondary" style={{ fontSize: 12 }}>{rJob.location}</Text>
+                      <Text strong style={{ color: appTheme.colors.primary, fontSize: 13 }}>{rJob.salary}</Text>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
         </Col>
       </Row>
     </>

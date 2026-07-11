@@ -53,6 +53,7 @@ export default function CandidateJobPage() {
   const [pageIndex, setPageIndex] = useState(1);
   const [loading, setLoading] = useState(false);
   const [myApplications, setMyApplications] = useState<any[]>([]);
+  const [isFallback, setIsFallback] = useState(false);
 
   // State cho Bộ lọc nâng cao
   const [categoryId, setCategoryId] = useState("all");
@@ -261,6 +262,7 @@ export default function CandidateJobPage() {
       const items = res.data.items?.$values || res.data.items || [];
       setJobs(items);
       setTotalCount(res.data.totalCount || 0);
+      setIsFallback(res.data.isFallback || false);
     } catch (error) {
       console.error("Lỗi lấy danh sách việc làm:", error);
     } finally {
@@ -734,6 +736,29 @@ export default function CandidateJobPage() {
                 </Space>
               </Space>
             </div>
+
+            {isFallback && (
+              <div
+                style={{
+                  background: "#FEF3C7",
+                  border: "1px solid #F59E0B",
+                  borderRadius: "12px",
+                  padding: "16px 24px",
+                  marginBottom: "24px",
+                  color: "#D97706",
+                  fontWeight: 600,
+                  fontSize: "15px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 12
+                }}
+              >
+                <ExclamationCircleOutlined style={{ fontSize: 20 }} />
+                <span>
+                  Chúng tôi không tìm thấy kết quả phù hợp cho từ khóa của bạn. Dưới đây là danh sách việc làm nổi bật đang tuyển dụng gấp:
+                </span>
+              </div>
+            )}
 
             {/* Map danh sách công việc */}
             <Spin spinning={loading} tip="Đang tải danh sách việc làm...">

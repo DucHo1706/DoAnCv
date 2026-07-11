@@ -29,6 +29,21 @@ import type { JobDto } from "../../services/jobService";
 
 const { Text } = Typography;
 
+const AiSparkleIcon = ({ size = 20 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block' }}>
+    <path
+      d="M12 2C12 2 12.5 8.5 15.5 11.5C18.5 14.5 22 15 22 15C22 15 18.5 15.5 15.5 18.5C12.5 21.5 12 28 12 28C12 28 11.5 21.5 8.5 18.5C5.5 15.5 2 15 2 15C2 15 5.5 14.5 8.5 11.5C11.5 8.5 12 2 12 2Z"
+      fill="url(#aiSparkleGrad)"
+    />
+    <defs>
+      <linearGradient id="aiSparkleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#2563EB" />
+        <stop offset="100%" stopColor="#10B981" />
+      </linearGradient>
+    </defs>
+  </svg>
+);
+
 export default function CandidateChatbot() {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
@@ -254,9 +269,8 @@ export default function CandidateChatbot() {
   return (
     <>
       <FloatButton
-        icon={<RobotOutlined />}
-        type="primary"
-        style={{ right: 24, bottom: 24, width: 60, height: 60 }}
+        icon={<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}><AiSparkleIcon size={24} /></div>}
+        style={{ right: 24, bottom: 24, width: 60, height: 60, background: "#FFFFFF", border: "1px solid #E2E8F0", boxShadow: "0 8px 32px rgba(15, 23, 42, 0.08)" }}
         onClick={() => setOpen(true)}
         tooltip="Chat với Trợ lý AI"
         badge={{ dot: true }}
@@ -272,7 +286,7 @@ export default function CandidateChatbot() {
             height: size.height,
             backgroundColor: "#fff",
             borderRadius: 16,
-            boxShadow: "0 10px 40px rgba(0,0,0,0.2)",
+            boxShadow: "0 10px 40px rgba(0,0,0,0.15)",
             display: "flex",
             flexDirection: "column",
             zIndex: 1000,
@@ -284,7 +298,7 @@ export default function CandidateChatbot() {
             onMouseDown={onMouseDown}
             style={{
               padding: "16px",
-              backgroundColor: "#1677ff",
+              backgroundColor: "#0F172A",
               color: "#fff",
               cursor: isDragging ? "grabbing" : "grab",
               display: "flex",
@@ -294,10 +308,9 @@ export default function CandidateChatbot() {
             }}
           >
             <Space>
-              <Avatar
-                icon={<RobotOutlined />}
-                style={{ backgroundColor: "#ffffff", color: "#1677ff" }}
-              />
+              <div style={{ background: "#ffffff", padding: 6, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <AiSparkleIcon size={16} />
+              </div>
               <Text strong style={{ fontSize: 16, color: "#fff" }}>
                 AI Career Assistant
               </Text>
@@ -323,13 +336,16 @@ export default function CandidateChatbot() {
                   gap: 8,
                 }}
               >
-                <Avatar
-                  icon={msg.role === "user" ? <UserOutlined /> : <RobotOutlined />}
-                  style={{
-                    backgroundColor: msg.role === "user" ? "#87d068" : "#1677ff",
-                    flexShrink: 0,
-                  }}
-                />
+                {msg.role === "user" ? (
+                  <Avatar
+                    icon={<UserOutlined />}
+                    style={{ backgroundColor: "#87d068", flexShrink: 0 }}
+                  />
+                ) : (
+                  <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#EFF6FF", border: "1px solid #BFDBFE", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <AiSparkleIcon size={16} />
+                  </div>
+                )}
                 <div
                   style={{
                     display: "inline-block",
@@ -467,10 +483,9 @@ export default function CandidateChatbot() {
             ))}
             {loading && (
               <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-                <Avatar
-                  icon={<RobotOutlined />}
-                  style={{ backgroundColor: "#1677ff", flexShrink: 0 }}
-                />
+                <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#EFF6FF", border: "1px solid #BFDBFE", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <AiSparkleIcon size={16} />
+                </div>
                 <div
                   style={{
                     padding: "10px 14px",

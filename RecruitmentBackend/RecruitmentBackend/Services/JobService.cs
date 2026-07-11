@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿using Microsoft.EntityFrameworkCore;
+﻿﻿﻿﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using RecruitmentBackend.Data;
 using RecruitmentBackend.DTOs.Requests;
@@ -327,6 +327,48 @@ namespace RecruitmentBackend.Services
 
             var totalCount = await query.CountAsync();
 
+            if (totalCount == 0)
+            {
+                // Fallback: Lấy Top 6 tin tuyển dụng nổi bật nhất (ViewCount cao nhất)
+                var fallbackQuery = from j in _context.JobPostings
+                                    join p in _context.Positions on j.PositionID equals p.PositionID into pj
+                                    from p in pj.DefaultIfEmpty()
+                                    join b in _context.Branches on j.BranchID equals b.BranchID into bj
+                                    from b in bj.DefaultIfEmpty()
+                                    where j.Status == "Published"
+                                    orderby j.ViewCount descending, j.CreatedAt descending
+                                    select new { j, p, b };
+
+                var fallbackJobs = await fallbackQuery
+                    .Take(6)
+                    .Select(x => new JobSummaryDto
+                    {
+                        Id = x.j.JobID,
+                        Title = x.p != null ? x.p.PositionName : "Vị trí chưa cập nhật",
+                        Company = "Công Ty AI Recruitment", 
+                        Salary = (x.j.SalaryMin == 0 && x.j.SalaryMax == 0) ? "Thỏa thuận" : $"{x.j.SalaryMin:N0} - {x.j.SalaryMax:N0} triệu",
+                        Location = x.b != null ? x.b.BranchName : "Chưa cập nhật",
+                        Type = "Toàn thời gian", 
+                        UpdatedAt = x.j.ApprovedAt ?? x.j.CreatedAt,
+                        Logo = "https://cdn-icons-png.flaticon.com/512/3061/3061341.png",
+                        Description = x.j.JobDescription != null && x.j.JobDescription.Length > 200 
+                                        ? x.j.JobDescription.Substring(0, 200) + "..." 
+                                        : x.j.JobDescription ?? "",
+                        Skills = new List<string> { "Đang tuyển dụng" },
+                        AiScore = 0
+                    })
+                    .ToListAsync();
+
+                return new PagedResult<JobSummaryDto>
+                {
+                    Items = fallbackJobs,
+                    TotalCount = fallbackJobs.Count,
+                    PageIndex = 1,
+                    PageSize = request.PageSize,
+                    IsFallback = true
+                };
+            }
+
             // 4. Phân trang & Chuyển đổi dữ liệu
             var jobs = await query
                 .OrderByDescending(x => x.j.CreatedAt)
@@ -355,12 +397,20 @@ namespace RecruitmentBackend.Services
                 Items = jobs,
                 TotalCount = totalCount,
                 PageIndex = request.PageIndex,
-                PageSize = request.PageSize
+                PageSize = request.PageSize,
+                IsFallback = false
             };
         }
 
         public async Task<object?> GetPublishedJobByIdAsync(string jobId)
         {
+            var job = await _context.JobPostings.FindAsync(jobId);
+            if (job != null && job.Status == "Published")
+            {
+                job.ViewCount += 1;
+                await _context.SaveChangesAsync();
+            }
+
             var query = from j in _context.JobPostings
                         join p in _context.Positions on j.PositionID equals p.PositionID into pj
                         from p in pj.DefaultIfEmpty()
@@ -379,7 +429,8 @@ namespace RecruitmentBackend.Services
                             maxCandidates = j.MaxCandidates,
                             description = j.JobDescription,
                             requirements = j.JobRequirement,
-                            logo = "https://cdn-icons-png.flaticon.com/512/3061/3061341.png"
+                            logo = "https://cdn-icons-png.flaticon.com/512/3061/3061341.png",
+                            viewCount = j.ViewCount
                         };
 
             return await query.FirstOrDefaultAsync();
@@ -400,6 +451,82 @@ namespace RecruitmentBackend.Services
                                    count = g.Count()
                                }).Take(limit).ToListAsync();
             return query;
+        }
+
+        public async Task<IEnumerable<JobSummaryDto>> GetTrendingJobsAsync(int limit = 6)
+        {
+            var query = from j in _context.JobPostings
+                        join p in _context.Positions on j.PositionID equals p.PositionID into pj
+                        from p in pj.DefaultIfEmpty()
+                        join b in _context.Branches on j.BranchID equals b.BranchID into bj
+                        from b in bj.DefaultIfEmpty()
+                        where j.Status == "Published"
+                        orderby j.ViewCount descending, j.CreatedAt descending
+                        select new { j, p, b };
+
+            return await query
+                .Take(limit)
+                .Select(x => new JobSummaryDto
+                {
+                    Id = x.j.JobID,
+                    Title = x.p != null ? x.p.PositionName : "Vị trí chưa cập nhật",
+                    Company = "Công Ty AI Recruitment", 
+                    Salary = (x.j.SalaryMin == 0 && x.j.SalaryMax == 0) ? "Thỏa thuận" : $"{x.j.SalaryMin:N0} - {x.j.SalaryMax:N0} triệu",
+                    Location = x.b != null ? x.b.BranchName : "Chưa cập nhật",
+                    Type = "Toàn thời gian", 
+                    UpdatedAt = x.j.ApprovedAt ?? x.j.CreatedAt,
+                    Logo = "https://cdn-icons-png.flaticon.com/512/3061/3061341.png",
+                    Description = x.j.JobDescription != null && x.j.JobDescription.Length > 200 
+                                    ? x.j.JobDescription.Substring(0, 200) + "..." 
+                                    : x.j.JobDescription ?? "",
+                    Skills = new List<string> { "Đang tuyển dụng" },
+                    AiScore = 0
+                })
+                .ToListAsync();
+        }
+
+        public async Task<IEnumerable<JobSummaryDto>> GetRelatedJobsAsync(string jobId, int limit = 3)
+        {
+            var targetJob = await _context.JobPostings.FindAsync(jobId);
+            string? categoryId = targetJob?.CategoryID;
+
+            var query = from j in _context.JobPostings
+                        join p in _context.Positions on j.PositionID equals p.PositionID into pj
+                        from p in pj.DefaultIfEmpty()
+                        join b in _context.Branches on j.BranchID equals b.BranchID into bj
+                        from b in bj.DefaultIfEmpty()
+                        where j.Status == "Published" && j.JobID != jobId
+                        select new { j, p, b };
+
+            if (!string.IsNullOrEmpty(categoryId))
+            {
+                query = query.OrderByDescending(x => x.j.CategoryID == categoryId)
+                             .ThenByDescending(x => x.j.ViewCount);
+            }
+            else
+            {
+                query = query.OrderByDescending(x => x.j.ViewCount);
+            }
+
+            return await query
+                .Take(limit)
+                .Select(x => new JobSummaryDto
+                {
+                    Id = x.j.JobID,
+                    Title = x.p != null ? x.p.PositionName : "Vị trí chưa cập nhật",
+                    Company = "Công Ty AI Recruitment", 
+                    Salary = (x.j.SalaryMin == 0 && x.j.SalaryMax == 0) ? "Thỏa thuận" : $"{x.j.SalaryMin:N0} - {x.j.SalaryMax:N0} triệu",
+                    Location = x.b != null ? x.b.BranchName : "Chưa cập nhật",
+                    Type = "Toàn thời gian", 
+                    UpdatedAt = x.j.ApprovedAt ?? x.j.CreatedAt,
+                    Logo = "https://cdn-icons-png.flaticon.com/512/3061/3061341.png",
+                    Description = x.j.JobDescription != null && x.j.JobDescription.Length > 200 
+                                    ? x.j.JobDescription.Substring(0, 200) + "..." 
+                                    : x.j.JobDescription ?? "",
+                    Skills = new List<string> { "Đang tuyển dụng" },
+                    AiScore = 0
+                })
+                .ToListAsync();
         }
     }
 }

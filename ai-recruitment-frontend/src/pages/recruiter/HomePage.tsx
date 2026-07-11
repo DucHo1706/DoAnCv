@@ -219,6 +219,7 @@ const getJobCategoryIcon = (jobTitle: string) => {
 function HomePage() {
   const navigate = useNavigate();
   const [recentJobs, setRecentJobs] = useState<JobDto[]>([]);
+  const [trendingJobs, setTrendingJobs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchValue, setSearchValue] = useState("");
   const [searchLocation, setSearchLocation] = useState("all");
@@ -389,14 +390,12 @@ function HomePage() {
     return list.slice(0, 6);
   }, [allJobsCombined, selectedFilterCategory, isSmartRecommend, refreshSeed]);
 
-
-
   useEffect(() => {
     const fetchJobs = async () => {
       try {
-        const [jobsData, , statsData] = await Promise.all([
+        const [jobsData, trendingData, statsData] = await Promise.all([
           jobService.getJobs(),
-          axiosClient.get("/Jobs/trending-categories").catch(() => ({ data: { $values: [] } })),
+          axiosClient.get("/Jobs/trending?limit=6").catch(() => ({ data: [] })),
           axiosClient.get("/Dashboard/admin-stats").catch(() => ({
             data: {
               quickMetrics: { totalUsers: 0, activeJobs: 0, analyzedCvs: 0, totalCandidateUsers: 0 },
@@ -406,10 +405,7 @@ function HomePage() {
 
         const jobsArray = Array.isArray(jobsData) ? jobsData : (jobsData as any)?.$values || [];
         setRecentJobs(jobsArray.slice(0, 6));
-
-        // Simulator initializes with the tech category candidate by default.
-
-        // trending categories not rendered on frontend homepage
+        setTrendingJobs(trendingData.data?.$values || trendingData.data || []);
 
         if (statsData?.data?.quickMetrics) {
           setStats(statsData.data.quickMetrics);
@@ -1132,6 +1128,73 @@ function HomePage() {
         </div>
       </ScrollReveal>
 
+      {/* 4.5 TRENDING JOBS */}
+      <ScrollReveal>
+        <div style={{ padding: "80px 20px", background: "#FFFFFF", borderTop: "1px solid #E2E8F0" }}>
+          <div style={{ maxWidth: "1300px", margin: "0 auto" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 48, paddingBottom: 20 }} className="editorial-border">
+              <div>
+                <Title level={2} style={{ fontSize: "32px", fontWeight: 800, color: "#0F172A", margin: 0 }} className="plus-jakarta-sans">
+                  Xu hướng việc làm & Tin nổi bật
+                </Title>
+                <Paragraph style={{ fontSize: 15, color: "#64748B", marginTop: 8, margin: 0 }}>
+                  Các vị trí tuyển dụng có lượt quan tâm và tương tác nhiều nhất hệ thống tuần qua.
+                </Paragraph>
+              </div>
+            </div>
+
+            {trendingJobs.length > 0 ? (
+              <Row gutter={[24, 24]}>
+                {trendingJobs.map((job: any) => (
+                  <Col xs={24} md={8} key={job.id}>
+                    <div
+                      className="premium-card"
+                      style={{
+                        padding: "28px",
+                        display: "flex",
+                        flexDirection: "column",
+                        height: "100%",
+                        background: "rgba(248, 250, 252, 0.6)",
+                        border: "1px solid #E2E8F0",
+                        borderRadius: "16px",
+                        boxShadow: "0 4px 12px rgba(15, 23, 42, 0.01)",
+                        transition: "all 0.3s ease",
+                        cursor: "pointer",
+                        minHeight: "180px"
+                      }}
+                      onClick={() => navigate(`/jobs/${job.id}`)}
+                    >
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                        <Tag color="blue" style={{ borderRadius: "8px", fontWeight: 700, fontSize: "11px", padding: "2px 8px" }}>
+                          HOT • {job.viewCount || 0} lượt xem
+                        </Tag>
+                      </div>
+
+                      <Title level={4} style={{ fontSize: "17px", fontWeight: 800, color: "#0F172A", marginBottom: 16, flex: 1 }} className="plus-jakarta-sans">
+                        {job.title}
+                      </Title>
+
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "auto" }}>
+                        <Text type="secondary" style={{ fontSize: 13 }}>
+                          <EnvironmentOutlined /> {job.location}
+                        </Text>
+                        <Text strong style={{ color: "#2563EB", fontSize: 14 }}>
+                          {job.salary}
+                        </Text>
+                      </div>
+                    </div>
+                  </Col>
+                ))}
+              </Row>
+            ) : (
+              <div style={{ textAlign: "center", padding: "40px 0" }}>
+                <Text type="secondary">Chưa có tin tuyển dụng nổi bật nào.</Text>
+              </div>
+            )}
+          </div>
+        </div>
+      </ScrollReveal>
+
       {/* 5. FEATURED JOBS */}
       <ScrollReveal>
         <div style={{ padding: "100px 20px", background: "#F8FAFC", borderTop: "1px solid #E2E8F0" }}>
@@ -1405,69 +1468,6 @@ function HomePage() {
           </div>
         </div>
       </ScrollReveal>
-
-      {/* 7. FINAL CTA */}
-      <div style={{ padding: "100px 20px", background: "#F8FAFC", borderTop: "1px solid #E2E8F0", textAlign: "center" }}>
-        <div style={{ maxWidth: "800px", margin: "0 auto" }}>
-          <span style={{ color: "#2563EB", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.18em", display: "block", marginBottom: 24 }}>
-            Yêu cầu trải nghiệm & Tư vấn
-          </span>
-          <Title level={2} style={{ fontSize: "36px", fontWeight: 800, color: "#0F172A", marginBottom: 24, lineHeight: 1.25 }} className="plus-jakarta-sans">
-            Tối ưu hóa quy trình sàng lọc và tuyển dụng nhân tài của bạn ngay hôm nay.
-          </Title>
-          <Paragraph style={{ fontSize: 16, color: "#64748B", lineHeight: 1.7, marginBottom: 40, maxWidth: "600px", margin: "0 auto 48px" }}>
-            Giải pháp tự động hóa nhân sự giúp doanh nghiệp giảm thiểu 80% thời gian đánh giá hồ sơ và định vị nhân tài chuẩn xác cùng hệ thống AI Tuyển Dụng.
-          </Paragraph>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 16, justifyContent: "center" }}>
-            <Button
-              type="primary"
-              size="large"
-              className="action-btn"
-              style={{
-                height: "52px",
-                padding: "0 36px",
-                fontSize: "14px",
-                fontWeight: 700,
-                borderRadius: "8px",
-                background: "#0F172A",
-                borderColor: "#0F172A",
-                textTransform: "uppercase",
-                letterSpacing: "0.08em",
-              }}
-              onClick={() => navigate("/login")}
-            >
-              Yêu cầu trải nghiệm
-            </Button>
-            <Button
-              type="default"
-              size="large"
-              className="action-btn"
-              style={{
-                height: "52px",
-                padding: "0 36px",
-                fontSize: "14px",
-                fontWeight: 700,
-                borderRadius: "8px",
-                borderColor: "#0F172A",
-                color: "#0F172A",
-                textTransform: "uppercase",
-                letterSpacing: "0.08em",
-              }}
-              onClick={() => navigate("/login")}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = "#0F172A";
-                e.currentTarget.style.color = "#FFFFFF";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = "transparent";
-                e.currentTarget.style.color = "#0F172A";
-              }}
-            >
-              Đặt lịch tư vấn
-            </Button>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

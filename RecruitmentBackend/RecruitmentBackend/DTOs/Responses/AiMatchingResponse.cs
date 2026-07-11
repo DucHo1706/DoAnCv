@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
 
@@ -64,6 +64,12 @@ namespace RecruitmentBackend.DTOs.Responses
 
         [JsonPropertyName("extracted_info")]
         public ExtractedInfoResponse? ExtractedInfo { get; set; }
+
+        [JsonPropertyName("whitebox_score")]
+        public double? WhiteboxScore { get; set; }
+
+        [JsonPropertyName("blackbox_score")]
+        public double? BlackboxScore { get; set; }
     }
 
     public class CriteriaScoreResult

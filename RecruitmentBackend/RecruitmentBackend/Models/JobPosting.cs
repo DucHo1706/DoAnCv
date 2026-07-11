@@ -30,6 +30,7 @@ namespace RecruitmentBackend.Models
         public string ApprovedBy { get; set; } 
         public DateTime? ApprovedAt { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.Now;
+        public int ViewCount { get; set; } = 0;
 
         public string? CategoryID { get; set; }
         [ForeignKey("CategoryID")]

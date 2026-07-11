@@ -26,6 +26,7 @@ export default function CandidateJobDetailPage() {
     uploadProps,
     navigate,
     isSubmitting,
+    relatedJobs
   } = useJobDetail();
 
   if (loading) {
@@ -71,6 +72,7 @@ export default function CandidateJobDetailPage() {
           showApplyModal={showApplyModal}
           handleViewAppliedAiEvaluation={handleViewAppliedAiEvaluation}
           handleApplyWithAI={handleApplyWithAI}
+          relatedJobs={relatedJobs}
         />
 
         {/* 2. Modal nộp hồ sơ */}

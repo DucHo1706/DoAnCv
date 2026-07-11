@@ -14,6 +14,8 @@ namespace RecruitmentBackend.Models
         public string MissingSkills { get; set; }
         public string? Classification { get; set; }
         public string? CriteriaResultsJson { get; set; }
+        public decimal? WhiteboxScore { get; set; }
+        public decimal? BlackboxScore { get; set; }
         public DateTime EvaluatedAt { get; set; } = DateTime.Now;
     }
 }

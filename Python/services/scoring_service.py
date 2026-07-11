@@ -228,6 +228,8 @@ def analyze_cv_deep(cv_text: str, jd_text: str, cv_skills: list, jd_skills: list
 
         score_analysis["total_score"] = total_score
         score_analysis["classification"] = classification
+        score_analysis["whitebox_score"] = round(scikit_score, 1)
+        score_analysis["blackbox_score"] = total_score
         score_analysis.setdefault("summary", "AI da hoan thanh phan tich CV.")
         score_analysis.setdefault("strengths", [])
         score_analysis.setdefault("weaknesses", [])
