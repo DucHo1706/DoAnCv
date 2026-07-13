@@ -8,7 +8,6 @@ import {
   Typography,
   Select,
   Space,
-  Checkbox,
   Tag,
   Pagination,
   Divider,
@@ -19,11 +18,8 @@ import {
 import {
   SearchOutlined,
   EnvironmentOutlined,
-  LoadingOutlined,
-  CheckCircleOutlined,
   ExclamationCircleOutlined,
   ClockCircleOutlined,
-  RobotOutlined,
 } from "@ant-design/icons";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import axiosClient from "../../services/axiosClient";
@@ -52,7 +48,6 @@ export default function CandidateJobPage() {
   const [totalCount, setTotalCount] = useState(0);
   const [pageIndex, setPageIndex] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [myApplications, setMyApplications] = useState<any[]>([]);
   const [isFallback, setIsFallback] = useState(false);
 
   // State cho Bộ lọc nâng cao
@@ -60,8 +55,38 @@ export default function CandidateJobPage() {
   const [jobLevelId, setJobLevelId] = useState("all");
   const [salaryMin, setSalaryMin] = useState<number | null>(null);
   const [salaryMax, setSalaryMax] = useState<number | null>(null);
+  const [salaryRange, setSalaryRange] = useState("all");
   const [categories, setCategories] = useState<any[]>([]);
   const [jobLevels, setJobLevels] = useState<any[]>([]);
+
+  const handleSalaryRangeChange = (val: string) => {
+    setSalaryRange(val);
+    if (val === "all") {
+      setSalaryMin(null);
+      setSalaryMax(null);
+    } else if (val === "under10") {
+      setSalaryMin(0);
+      setSalaryMax(10);
+    } else if (val === "10to15") {
+      setSalaryMin(10);
+      setSalaryMax(15);
+    } else if (val === "15to20") {
+      setSalaryMin(15);
+      setSalaryMax(20);
+    } else if (val === "20to25") {
+      setSalaryMin(20);
+      setSalaryMax(25);
+    } else if (val === "25to30") {
+      setSalaryMin(25);
+      setSalaryMax(30);
+    } else if (val === "30to50") {
+      setSalaryMin(30);
+      setSalaryMax(50);
+    } else if (val === "over50") {
+      setSalaryMin(50);
+      setSalaryMax(null);
+    }
+  };
 
   // Fetch Metadata lúc mới mở trang
   useEffect(() => {
@@ -78,171 +103,9 @@ export default function CandidateJobPage() {
     fetchMetadata();
   }, []);
 
-  const normalizeArrayData = (data: any) => {
-    if (Array.isArray(data)) {
-      return data;
-    }
 
-    return data?.$values || [];
-  };
 
-  const getJobId = (job: any) => {
-    return job?.id || job?.jobId || job?.jobID || "";
-  };
 
-  const getApplicationJobId = (application: any) => {
-    return application?.jobId || application?.jobID || "";
-  };
-
-  const findApplicationByJobId = (jobId: string) => {
-    return myApplications.find((application) => {
-      return getApplicationJobId(application) === jobId;
-    });
-  };
-
-  const isApplicationAiReady = (application: any) => {
-    if (!application) {
-      return false;
-    }
-
-    if (application.aiStatus === "Completed") {
-      return true;
-    }
-
-    if (application.hasAiEvaluation === true && application.classification !== "AI_ERROR") {
-      return true;
-    }
-
-    return false;
-  };
-
-  const isApplicationAiProcessing = (application: any) => {
-    if (!application) {
-      return false;
-    }
-
-    if (application.aiStatus === "Processing") {
-      return true;
-    }
-
-    if (application.hasAiEvaluation === false) {
-      return true;
-    }
-
-    return false;
-  };
-
-  const isApplicationAiFailed = (application: any) => {
-    if (!application) {
-      return false;
-    }
-
-    if (application.aiStatus === "Failed") {
-      return true;
-    }
-
-    if (application.classification === "AI_ERROR") {
-      return true;
-    }
-
-    return false;
-  };
-
-  const getAiScoreText = (application: any) => {
-    if (!application) {
-      return "Chưa chấm";
-    }
-
-    if (isApplicationAiProcessing(application) === true) {
-      return "Đang phân tích";
-    }
-
-    if (isApplicationAiFailed(application) === true) {
-      return "AI lỗi";
-    }
-
-    if (isApplicationAiReady(application) === true) {
-      return `${Math.round(Number(application.aiScore || 0))}/100`;
-    }
-
-    return "Chưa chấm";
-  };
-
-  const getAiTagColor = (application: any) => {
-    if (!application) {
-      return "default";
-    }
-
-    if (isApplicationAiProcessing(application) === true) {
-      return "processing";
-    }
-
-    if (isApplicationAiFailed(application) === true) {
-      return "red";
-    }
-
-    const score = Number(application.aiScore || 0);
-
-    if (score >= 80) {
-      return "green";
-    }
-
-    if (score >= 50) {
-      return "orange";
-    }
-
-    return "red";
-  };
-
-  const renderAiMatchTag = (job: any) => {
-    const jobId = getJobId(job);
-    const application = findApplicationByJobId(jobId);
-
-    let icon = <RobotOutlined />;
-
-    if (isApplicationAiProcessing(application) === true) {
-      icon = <LoadingOutlined />;
-    } else if (isApplicationAiFailed(application) === true) {
-      icon = <ExclamationCircleOutlined />;
-    } else if (isApplicationAiReady(application) === true) {
-      icon = <CheckCircleOutlined />;
-    }
-
-    return (
-      <Tag
-        icon={icon}
-        color={getAiTagColor(application)}
-        style={{
-          marginTop: 12,
-          fontSize: 16,
-          padding: "6px 12px",
-          borderRadius: 6,
-        }}
-      >
-        AI Match: {getAiScoreText(application)}
-      </Tag>
-    );
-  };
-
-  const fetchMyApplications = async () => {
-    try {
-      const response = await axiosClient.get("/Recruitment/my-applications");
-      const applications = normalizeArrayData(response.data);
-
-      setMyApplications(applications);
-
-      return applications;
-    } catch (error: any) {
-      if (error?.response?.status === 401 || error?.response?.status === 403) {
-        setMyApplications([]);
-        return [];
-      }
-
-      console.error("Lỗi lấy lịch sử ứng tuyển:", error);
-      setMyApplications([]);
-      return [];
-    }
-  };
 
   const fetchJobs = async () => {
     setLoading(true);
@@ -272,13 +135,12 @@ export default function CandidateJobPage() {
 
   useEffect(() => {
     fetchJobs();
-    fetchMyApplications();
   }, [pageIndex]);
 
-  // Tự động gọi Tìm kiếm khi người dùng đổi Category hoặc Level
+  // Tự động gọi Tìm kiếm khi người dùng đổi các bộ lọc chính
   useEffect(() => {
     handleSearch();
-  }, [categoryId, jobLevelId]);
+  }, [categoryId, jobLevelId, location, salaryMin, salaryMax]);
 
   const handleSearch = () => {
     // Cập nhật lại thanh URL để người dùng có thể copy link chia sẻ
@@ -300,6 +162,7 @@ export default function CandidateJobPage() {
     setJobLevelId("all");
     setSalaryMin(null);
     setSalaryMax(null);
+    setSalaryRange("all");
     setPageIndex(1);
     navigate("/jobs", { replace: true });
     setTimeout(() => fetchJobs(), 50); // Fetch lại ngay sau khi reset
@@ -410,148 +273,26 @@ export default function CandidateJobPage() {
               }
             >
               <Space direction="vertical" size="middle" style={{ width: "100%" }}>
-                {/* Nghỉ thứ 7 */}
+                {/* 1. Lọc theo Địa điểm */}
                 <div>
                   <Text strong style={{ display: "block", marginBottom: 12, fontSize: 16 }}>
-                    Nghỉ thứ 7
+                    Địa điểm làm việc
                   </Text>
                   <Radio.Group
-                    defaultValue="all"
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
                     style={{ display: "flex", flexDirection: "column", gap: 12 }}
                   >
-                    <Radio value="all" style={{ fontSize: 15 }}>
-                      Không lọc
-                    </Radio>
-                    <Radio value="work" style={{ fontSize: 15 }}>
-                      Làm thứ 7
-                    </Radio>
-                    <Radio value="off" style={{ fontSize: 15 }}>
-                      Nghỉ thứ 7
-                    </Radio>
-                    <Radio value="na" style={{ fontSize: 15 }}>
-                      Tin đăng không đề cập
-                    </Radio>
+                    <Radio value="all" style={{ fontSize: 15 }}>Tất cả địa điểm</Radio>
+                    <Radio value="hn" style={{ fontSize: 15 }}>Hà Nội</Radio>
+                    <Radio value="hcm" style={{ fontSize: 15 }}>Hồ Chí Minh</Radio>
+                    <Radio value="dn" style={{ fontSize: 15 }}>Đà Nẵng</Radio>
                   </Radio.Group>
                 </div>
 
                 <Divider style={{ margin: 0 }} />
 
-                {/* Theo danh mục nghề */}
-                <div>
-                  <Text strong style={{ display: "block", marginBottom: 12, fontSize: 16 }}>
-                    Theo danh mục nghề
-                  </Text>
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      marginBottom: 12,
-                    }}
-                  >
-                    <Checkbox style={{ fontSize: 15 }}>Kế toán</Checkbox>{" "}
-                    <Text type="secondary" style={{ fontSize: 14 }}>
-                      (4495)
-                    </Text>
-                  </div>
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      marginBottom: 12,
-                    }}
-                  >
-                    <Checkbox style={{ fontSize: 15 }}>Marketing</Checkbox>{" "}
-                    <Text type="secondary" style={{ fontSize: 14 }}>
-                      (4113)
-                    </Text>
-                  </div>
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      marginBottom: 12,
-                    }}
-                  >
-                    <Checkbox style={{ fontSize: 15 }}>Quản lý dự án xây dựng</Checkbox>{" "}
-                    <Text type="secondary" style={{ fontSize: 14 }}>
-                      (1875)
-                    </Text>
-                  </div>
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      marginBottom: 12,
-                    }}
-                  >
-                    <Checkbox style={{ fontSize: 15 }}>Nhân sự</Checkbox>{" "}
-                    <Text type="secondary" style={{ fontSize: 14 }}>
-                      (1517)
-                    </Text>
-                  </div>
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                    }}
-                  >
-                    <Checkbox style={{ fontSize: 15 }}>Thiết kế và Kiến trúc</Checkbox>{" "}
-                    <Text type="secondary" style={{ fontSize: 14 }}>
-                      (1501)
-                    </Text>
-                  </div>
-                </div>
-
-                <Divider style={{ margin: 0 }} />
-
-                {/* Kinh nghiệm */}
-                <div>
-                  <Text strong style={{ display: "block", marginBottom: 12, fontSize: 16 }}>
-                    Kinh nghiệm
-                  </Text>
-                  <Select
-                    size="large"
-                    placeholder="Chọn kinh nghiệm"
-                    style={{ width: "100%" }}
-                    mode="multiple"
-                    maxTagCount="responsive"
-                    defaultValue={["all"]}
-                  >
-                    <Option value="all">Tất cả</Option>
-                    <Option value="none">Không yêu cầu</Option>
-                    <Option value="under_1">Dưới 1 năm</Option>
-                    <Option value="1">1 năm</Option>
-                    <Option value="2">2 năm</Option>
-                    <Option value="3">3 năm</Option>
-                    <Option value="4">4 năm</Option>
-                    <Option value="5">5 năm</Option>
-                    <Option value="over_5">Trên 5 năm</Option>
-                  </Select>
-                </div>
-
-                <Divider style={{ margin: 0 }} />
-
-                {/* Lĩnh vực công ty */}
-                <div>
-                  <Text strong style={{ display: "block", marginBottom: 12, fontSize: 16 }}>
-                    Lĩnh vực công ty
-                  </Text>
-                  <Select size="large" defaultValue="all" style={{ width: "100%" }} showSearch>
-                    <Option value="all">Tất cả lĩnh vực</Option>
-                    <Option value="it">IT - Phần mềm</Option>
-                    <Option value="finance">Tài chính - Ngân hàng</Option>
-                    <Option value="education">Giáo dục / Đào tạo</Option>
-                  </Select>
-                </div>
-
-                <Divider style={{ margin: 0 }} />
-
-                {/* Lĩnh vực công việc */}
+                {/* 2. Lọc theo Lĩnh vực công việc */}
                 <div>
                   <Text strong style={{ display: "block", marginBottom: 12, fontSize: 16 }}>
                     Lĩnh vực công việc
@@ -579,76 +320,10 @@ export default function CandidateJobPage() {
 
                 <Divider style={{ margin: 0 }} />
 
-                {/* Loại công ty */}
+                {/* 3. Lọc theo Cấp bậc */}
                 <div>
                   <Text strong style={{ display: "block", marginBottom: 12, fontSize: 16 }}>
-                    Loại công ty
-                  </Text>
-                  <Radio.Group
-                    defaultValue="all"
-                    style={{ display: "flex", flexDirection: "column", gap: 12 }}
-                  >
-                    <Radio value="all" style={{ fontSize: 15 }}>
-                      Tất cả
-                    </Radio>
-                    <Radio value="pro" style={{ fontSize: 15 }}>
-                      Pro Company
-                    </Radio>
-                  </Radio.Group>
-                </div>
-
-                <Divider style={{ margin: 0 }} />
-
-                {/* Mức lương */}
-                <div>
-                  <Text strong style={{ display: "block", marginBottom: 12, fontSize: 16 }}>
-                    Mức lương
-                  </Text>
-                  <Space
-                    direction="vertical"
-                    size="middle"
-                    style={{ width: "100%", marginBottom: 16 }}
-                  >
-                    <Checkbox defaultChecked style={{ fontSize: 15 }}>
-                      Tất cả
-                    </Checkbox>
-                    <Checkbox style={{ fontSize: 15 }}>Dưới 10 triệu</Checkbox>
-                    <Checkbox style={{ fontSize: 15 }}>10 - 15 triệu</Checkbox>
-                    <Checkbox style={{ fontSize: 15 }}>15 - 20 triệu</Checkbox>
-                    <Checkbox style={{ fontSize: 15 }}>20 - 25 triệu</Checkbox>
-                    <Checkbox style={{ fontSize: 15 }}>25 - 30 triệu</Checkbox>
-                    <Checkbox style={{ fontSize: 15 }}>30 - 50 triệu</Checkbox>
-                    <Checkbox style={{ fontSize: 15 }}>Trên 50 triệu</Checkbox>
-                    <Checkbox style={{ fontSize: 15 }}>Thoả thuận</Checkbox>
-                  </Space>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <InputNumber
-                      size="large"
-                      placeholder="Từ"
-                      style={{ width: "100%" }}
-                      value={salaryMin}
-                      onChange={setSalaryMin}
-                      onPressEnter={handleSearch}
-                    />
-                    <span>-</span>
-                    <InputNumber
-                      size="large"
-                      placeholder="Đến"
-                      style={{ width: "100%" }}
-                      value={salaryMax}
-                      onChange={setSalaryMax}
-                      onPressEnter={handleSearch}
-                    />
-                    <span>triệu</span>
-                  </div>
-                </div>
-
-                <Divider style={{ margin: 0 }} />
-
-                {/* Cấp bậc */}
-                <div>
-                  <Text strong style={{ display: "block", marginBottom: 12, fontSize: 16 }}>
-                    Cấp bậc
+                    Cấp bậc tuyển dụng
                   </Text>
                   <Select
                     size="large"
@@ -673,20 +348,54 @@ export default function CandidateJobPage() {
 
                 <Divider style={{ margin: 0 }} />
 
-                {/* Loại hình làm việc */}
+                {/* 4. Lọc theo Mức lương */}
                 <div>
                   <Text strong style={{ display: "block", marginBottom: 12, fontSize: 16 }}>
-                    Loại hình làm việc
+                    Khoảng lương tuyển dụng
                   </Text>
-                  <Space direction="vertical" size="middle" style={{ width: "100%" }}>
-                    <Checkbox defaultChecked style={{ fontSize: 15 }}>
-                      Tất cả
-                    </Checkbox>
-                    <Checkbox style={{ fontSize: 15 }}>Toàn thời gian</Checkbox>
-                    <Checkbox style={{ fontSize: 15 }}>Bán thời gian</Checkbox>
-                    <Checkbox style={{ fontSize: 15 }}>Thực tập</Checkbox>
-                    <Checkbox style={{ fontSize: 15 }}>Khác</Checkbox>
-                  </Space>
+                  <Radio.Group
+                    value={salaryRange}
+                    onChange={(e) => handleSalaryRangeChange(e.target.value)}
+                    style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 16 }}
+                  >
+                    <Radio value="all" style={{ fontSize: 15 }}>Tất cả mức lương</Radio>
+                    <Radio value="under10" style={{ fontSize: 15 }}>Dưới 10 triệu</Radio>
+                    <Radio value="10to15" style={{ fontSize: 15 }}>10 - 15 triệu</Radio>
+                    <Radio value="15to20" style={{ fontSize: 15 }}>15 - 20 triệu</Radio>
+                    <Radio value="20to25" style={{ fontSize: 15 }}>20 - 25 triệu</Radio>
+                    <Radio value="25to30" style={{ fontSize: 15 }}>25 - 30 triệu</Radio>
+                    <Radio value="30to50" style={{ fontSize: 15 }}>30 - 50 triệu</Radio>
+                    <Radio value="over50" style={{ fontSize: 15 }}>Trên 50 triệu</Radio>
+                  </Radio.Group>
+
+                  <Text type="secondary" style={{ display: "block", marginBottom: 8, fontSize: 14 }}>
+                    Nhập khoảng lương tự chọn (triệu):
+                  </Text>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <InputNumber
+                      size="large"
+                      placeholder="Từ"
+                      style={{ width: "100%" }}
+                      value={salaryMin}
+                      onChange={(val) => {
+                        setSalaryMin(val);
+                        setSalaryRange("custom");
+                      }}
+                      onPressEnter={handleSearch}
+                    />
+                    <span>-</span>
+                    <InputNumber
+                      size="large"
+                      placeholder="Đến"
+                      style={{ width: "100%" }}
+                      value={salaryMax}
+                      onChange={(val) => {
+                        setSalaryMax(val);
+                        setSalaryRange("custom");
+                      }}
+                      onPressEnter={handleSearch}
+                    />
+                  </div>
                 </div>
               </Space>
             </Card>
@@ -726,10 +435,7 @@ export default function CandidateJobPage() {
                   <Text type="secondary" style={{ fontSize: 14, fontFamily: appTheme.font.family }}>
                     Sắp xếp theo:
                   </Text>
-                  <Select defaultValue="ai" style={{ width: 220 }} size="large">
-                    <Option value="ai">
-                      <RobotOutlined style={{ color: appTheme.colors.primary }} /> Gợi ý từ AI Toppy
-                    </Option>
+                  <Select defaultValue="new" style={{ width: 180 }} size="large">
                     <Option value="new">Mới cập nhật</Option>
                     <Option value="salary">Lương cao đến thấp</Option>
                   </Select>
@@ -839,7 +545,6 @@ export default function CandidateJobPage() {
                           <Text strong style={{ color: appTheme.colors.success, fontSize: 16, display: "block", fontFamily: appTheme.font.family }}>
                             {job.salary}
                           </Text>
-                          {renderAiMatchTag(job)}
                         </div>
                       </div>
 

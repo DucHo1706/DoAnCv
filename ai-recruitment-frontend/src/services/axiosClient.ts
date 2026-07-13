@@ -32,8 +32,13 @@ axiosClient.interceptors.response.use(
       localStorage.removeItem("token");
       localStorage.removeItem("user");
 
-      // Redirect to login page
-      window.location.href = "/login";
+      // Redirect to login page with original redirect path
+      const currentPath = window.location.pathname;
+      if (currentPath !== "/login" && currentPath !== "/register" && currentPath !== "/forgot-password") {
+        window.location.href = `/login?redirect=${encodeURIComponent(currentPath + window.location.search)}`;
+      } else {
+        window.location.href = "/login";
+      }
 
       return Promise.reject(new Error("Authentication expired. Please login again."));
     }

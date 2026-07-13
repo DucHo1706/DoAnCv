@@ -17,6 +17,33 @@ export function useJobDetail() {
   const [isAiPreviewModalOpen, setIsAiPreviewModalOpen] = useState(false);
   const [relatedJobs, setRelatedJobs] = useState<any[]>([]);
 
+  // Default CV states
+  const [hasDefaultCv, setHasDefaultCv] = useState(false);
+  const [defaultCvName, setDefaultCvName] = useState<string | null>(null);
+  const [useDefaultCv, setUseDefaultCv] = useState(false);
+
+  useEffect(() => {
+    const fetchDefaultCvStatus = async () => {
+      try {
+        const res = await axiosClient.get("/profile");
+        if (res.data?.defaultCvUrl) {
+          setHasDefaultCv(true);
+          setDefaultCvName(res.data.defaultCvName);
+          setUseDefaultCv(true);
+        } else {
+          setHasDefaultCv(false);
+          setDefaultCvName(null);
+          setUseDefaultCv(false);
+        }
+      } catch (err) {
+        // Candidate not logged in or token missing, ignore
+      }
+    };
+    if (isApplyModalOpen) {
+      fetchDefaultCvStatus();
+    }
+  }, [isApplyModalOpen]);
+
   const getJobId = (jobItem: any) => {
     return jobItem?.id || jobItem?.jobId || jobItem?.jobID || "";
   };
@@ -67,7 +94,8 @@ export function useJobDetail() {
         setJob(res.data);
         const currentJobId = getJobId(res.data);
 
-        if (currentJobId) {
+        const isLoggedIn = !!localStorage.getItem("token");
+        if (isLoggedIn && currentJobId) {
           await fetchAppliedApplication(currentJobId);
         }
 
@@ -84,10 +112,22 @@ export function useJobDetail() {
   }, [id, navigate]);
 
   const handleApplyWithAI = () => {
+    const isLoggedIn = !!localStorage.getItem("token");
+    if (!isLoggedIn) {
+      message.info("Vui lòng đăng nhập để sử dụng tính năng phân tích AI.");
+      navigate(`/login?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`);
+      return;
+    }
     setIsAiPreviewModalOpen(true);
   };
 
   const showApplyModal = () => {
+    const isLoggedIn = !!localStorage.getItem("token");
+    if (!isLoggedIn) {
+      message.info("Vui lòng đăng nhập để nộp hồ sơ ứng tuyển.");
+      navigate(`/login?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`);
+      return;
+    }
     setIsApplyModalOpen(true);
   };
 
@@ -119,7 +159,7 @@ export function useJobDetail() {
   };
 
   const handleDirectApply = async () => {
-    if (!applyFile) {
+    if (!useDefaultCv && !applyFile) {
       message.error("Vui lòng chọn file CV của bạn!");
       return;
     }
@@ -131,7 +171,10 @@ export function useJobDetail() {
     try {
       const formData = new FormData();
       formData.append("JobId", job.id);
-      formData.append("CvFile", applyFile);
+      formData.append("UseDefaultCv", String(useDefaultCv));
+      if (!useDefaultCv && applyFile) {
+        formData.append("CvFile", applyFile);
+      }
 
       const response = await axiosClient.post("/Recruitment/apply", formData, {
         headers: {
@@ -243,6 +286,10 @@ export function useJobDetail() {
     handleDirectApply,
     uploadProps,
     navigate,
-    relatedJobs
+    relatedJobs,
+    hasDefaultCv,
+    defaultCvName,
+    useDefaultCv,
+    setUseDefaultCv,
   };
 }

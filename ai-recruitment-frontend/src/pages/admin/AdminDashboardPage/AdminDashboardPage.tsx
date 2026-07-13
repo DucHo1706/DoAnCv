@@ -29,6 +29,7 @@ import CategoryDonutChart from "./components/CategoryDonutChart";
 import ConversionFunnelChart from "./components/ConversionFunnelChart";
 import OcrErrorRateChart from "./components/OcrErrorRateChart";
 import AprioriRulesSection from "./components/AprioriRulesSection";
+import HUIMRulesSection from "./components/HUIMRulesSection";
 import { useAdminDashboard, getStatusTagColor, formatNumber } from "./hooks/useAdminDashboard";
 
 const { RangePicker } = DatePicker;
@@ -318,6 +319,9 @@ export default function AdminDashboardPage() {
 
           {/* Phần khai phá luật kết hợp kỹ năng bằng Apriori */}
           <AprioriRulesSection />
+
+          {/* Phần khai phá lợi ích kỹ năng bằng HUIM (Two-Phase) */}
+          <HUIMRulesSection />
         </>
       )}
     </PageContainer>

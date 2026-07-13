@@ -1,4 +1,4 @@
-﻿﻿﻿using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using RecruitmentBackend.Models;
 
 namespace RecruitmentBackend.Data
@@ -29,6 +29,8 @@ namespace RecruitmentBackend.Data
         public DbSet<ChatMessage> ChatMessages { get; set; }
         public DbSet<TalentPoolCandidate> TalentPoolCandidates { get; set; }
         public DbSet<TalentPoolInteraction> TalentPoolInteractions { get; set; }
+        public DbSet<InterviewSchedule> InterviewSchedules { get; set; }
+        public DbSet<EmailLog> EmailLogs { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -43,6 +45,13 @@ namespace RecruitmentBackend.Data
                 .WithOne()
                 .HasForeignKey<AIEvaluation>(ai => ai.ApplicationID)
                 .OnDelete(DeleteBehavior.Cascade); // Nếu xóa đơn ứng tuyển thì tự động xóa luôn kết quả đánh giá AI
+
+            // Liên kết 1-1 giữa Application và InterviewSchedule
+            modelBuilder.Entity<Application>()
+                .HasOne(a => a.InterviewSchedule)
+                .WithOne(isched => isched.Application)
+                .HasForeignKey<InterviewSchedule>(isched => isched.ApplicationID)
+                .OnDelete(DeleteBehavior.Cascade);
             modelBuilder.Entity<Category>()
                 .HasOne(c => c.ParentCategory)
                 .WithMany(c => c.SubCategories)

@@ -98,22 +98,23 @@ const LanguageReviewTab: React.FC<LanguageReviewTabProps> = ({ languageReview })
           <Card
             size="small"
             title={
-              <span style={{ color: "#16A34A", fontWeight: 700, fontSize: 14.5 }}>
-                <CheckCircleOutlined style={{ marginRight: 6 }} /> Động từ hành động mạnh & Ngôn ngữ hiệu quả
+              <span style={{ color: "#0F172A", fontWeight: 700, fontSize: 15 }}>
+                <CheckCircleOutlined style={{ color: "#10B981", marginRight: 6 }} /> Động từ hành động mạnh & Ngôn ngữ hiệu quả
               </span>
             }
             style={{
               borderRadius: 14,
-              background: "#F0FDF4",
-              border: "1px solid #BBF7D0",
+              background: "#FFFFFF",
+              border: "1px solid #E2E8F0",
+              borderLeft: "4px solid #10B981",
             }}
-            bodyStyle={{ padding: "16px" }}
+            bodyStyle={{ padding: "20px" }}
           >
             {effectiveLanguage.length > 0 ? (
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                 {effectiveLanguage.map((verb: string, index: number) => (
                   <Tag
-                    color="green"
+                    color="success"
                     key={`good-verb-${index}`}
                     style={{
                       margin: 0,
@@ -138,28 +139,28 @@ const LanguageReviewTab: React.FC<LanguageReviewTabProps> = ({ languageReview })
           <Card
             size="small"
             title={
-              <span style={{ color: "#D97706", fontWeight: 700, fontSize: 14.5 }}>
-                <WarningOutlined style={{ marginRight: 6 }} /> Rà soát từ ngữ mơ hồ & Đề xuất cải thiện ({weakPhrasesList.length})
+              <span style={{ color: "#0F172A", fontWeight: 700, fontSize: 15 }}>
+                <WarningOutlined style={{ color: "#F59E0B", marginRight: 6 }} /> Rà soát từ ngữ mơ hồ & Đề xuất cải thiện ({weakPhrasesList.length})
               </span>
             }
             style={{
               borderRadius: 14,
-              background: "#FFFBEB",
-              border: "1px solid #FDE68A",
+              background: "#FFFFFF",
+              border: "1px solid #E2E8F0",
+              borderLeft: "4px solid #F59E0B",
             }}
-            bodyStyle={{ padding: "16px" }}
+            bodyStyle={{ padding: "20px" }}
           >
             {weakPhrasesList.length > 0 ? (
-              <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                 {weakPhrasesList.map((item: WeakPhrase, idx: number) => (
                   <div
                     key={idx}
                     style={{
-                      background: "#FFFFFF",
-                      border: "1px solid rgba(245, 158, 11, 0.2)",
+                      background: "#F8FAFC",
+                      border: "1px solid #E2E8F0",
                       borderRadius: 12,
                       padding: "16px",
-                      boxShadow: "0 2px 8px rgba(148, 163, 184, 0.02)",
                     }}
                   >
                     <Row gutter={[16, 12]}>
@@ -167,16 +168,17 @@ const LanguageReviewTab: React.FC<LanguageReviewTabProps> = ({ languageReview })
                         <div
                           style={{
                             padding: "10px 14px",
-                            background: "#FEF2F2",
+                            background: "#FFFFFF",
                             borderRadius: 8,
-                            border: "1px solid #FEE2E2",
+                            border: "1px solid #E2E8F0",
+                            borderLeft: "3px solid #94A3B8",
                             height: "100%",
                           }}
                         >
                           <Text
                             strong
                             style={{
-                              color: "#B91C1C",
+                              color: "#64748B",
                               fontSize: 11,
                               display: "block",
                               marginBottom: 4,
@@ -186,7 +188,7 @@ const LanguageReviewTab: React.FC<LanguageReviewTabProps> = ({ languageReview })
                           >
                             ❌ Cụm từ mơ hồ trong CV:
                           </Text>
-                          <Text style={{ color: "#991B1B", fontSize: 13.5, fontWeight: 600 }}>
+                          <Text style={{ color: "#475569", fontSize: 13.5, fontWeight: 600 }}>
                             "{item.original}"
                           </Text>
                         </div>
@@ -195,16 +197,17 @@ const LanguageReviewTab: React.FC<LanguageReviewTabProps> = ({ languageReview })
                         <div
                           style={{
                             padding: "10px 14px",
-                            background: "#F0FDF4",
+                            background: "#FFFFFF",
                             borderRadius: 8,
-                            border: "1px solid #DCFCE7",
+                            border: "1px solid #E2E8F0",
+                            borderLeft: "3px solid #10B981",
                             height: "100%",
                           }}
                         >
                           <Text
                             strong
                             style={{
-                              color: "#15803D",
+                              color: "#10B981",
                               fontSize: 11,
                               display: "block",
                               marginBottom: 4,
@@ -214,7 +217,7 @@ const LanguageReviewTab: React.FC<LanguageReviewTabProps> = ({ languageReview })
                           >
                             ✔️ Gợi ý thay thế mạnh mẽ:
                           </Text>
-                          <Text style={{ color: "#166534", fontSize: 13.5, fontWeight: 600 }}>
+                          <Text style={{ color: "#0F172A", fontSize: 13.5, fontWeight: 600 }}>
                             "{item.suggestion}"
                           </Text>
                         </div>
@@ -224,9 +227,9 @@ const LanguageReviewTab: React.FC<LanguageReviewTabProps> = ({ languageReview })
                       style={{
                         marginTop: 12,
                         padding: "8px 12px 0",
-                        borderTop: "1px dashed #FEF3C7",
+                        borderTop: "1px dashed #E2E8F0",
                         fontSize: 13.5,
-                        color: "#92400E",
+                        color: "#475569",
                         lineHeight: "1.5",
                       }}
                     >
@@ -236,7 +239,7 @@ const LanguageReviewTab: React.FC<LanguageReviewTabProps> = ({ languageReview })
                 ))}
               </div>
             ) : (
-              <Text type="secondary" style={{ fontStyle: "italic", fontSize: 13.5, color: "#16A34A" }}>
+              <Text type="secondary" style={{ fontStyle: "italic", fontSize: 13.5, color: "#10B981" }}>
                 Tuyệt vời! AI không phát hiện từ ngữ sáo rỗng hoặc mơ hồ nào trong CV này. 🎉
               </Text>
             )}
@@ -248,7 +251,7 @@ const LanguageReviewTab: React.FC<LanguageReviewTabProps> = ({ languageReview })
               <Text
                 strong
                 style={{
-                  color: "#DC2626",
+                  color: "#EF4444",
                   display: "block",
                   marginBottom: 12,
                   textTransform: "uppercase",
@@ -256,30 +259,33 @@ const LanguageReviewTab: React.FC<LanguageReviewTabProps> = ({ languageReview })
                   letterSpacing: 0.5,
                 }}
               >
-                <CloseCircleOutlined /> Phát hiện nguy cơ & Đánh giá mức độ chân thực
+                <CloseCircleOutlined style={{ marginRight: 6 }} /> Phát hiện nguy cơ & Đánh giá mức độ chân thực
               </Text>
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                 {uncertainStatements.map((statement: any, idx: number) => (
-                  <Alert
+                  <Card
                     key={idx}
-                    type="warning"
-                    showIcon
-                    message={
-                      <strong style={{ color: "#991B1B", fontSize: 13.5 }}>
-                        {statement.title || "Nhận định cần làm rõ"}
-                      </strong>
-                    }
-                    description={
-                      <span style={{ color: "#7F1D1D", fontSize: 13, lineHeight: "1.6" }}>
-                        {statement.description}
-                      </span>
-                    }
+                    size="small"
                     style={{
                       borderRadius: 12,
-                      background: "#FFF1F2",
-                      border: "1px solid #FFE4E6",
+                      background: "#FFFFFF",
+                      border: "1px solid #E2E8F0",
+                      borderLeft: "4px solid #EF4444",
                     }}
-                  />
+                    bodyStyle={{ padding: "16px" }}
+                  >
+                    <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                      <WarningOutlined style={{ color: "#EF4444", fontSize: "16px", marginTop: "3px" }} />
+                      <div>
+                        <Text strong style={{ color: "#0F172A", fontSize: "15px", display: "block", marginBottom: 4 }}>
+                          {statement.title || "Nhận định cần làm rõ"}
+                        </Text>
+                        <Text type="secondary" style={{ color: "#64748B", fontSize: "14px" }}>
+                          {statement.description}
+                        </Text>
+                      </div>
+                    </div>
+                  </Card>
                 ))}
               </div>
             </div>

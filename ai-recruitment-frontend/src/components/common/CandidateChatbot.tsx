@@ -8,13 +8,11 @@ import {
   Space,
   Avatar,
   Upload,
-  Select,
   message,
   Popconfirm,
   Tag,
 } from "antd";
 import {
-  RobotOutlined,
   SendOutlined,
   UserOutlined,
   CloseOutlined,
@@ -24,23 +22,38 @@ import {
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import axiosClient from "../../services/axiosClient";
-import { jobService } from "../../services/jobService";
-import type { JobDto } from "../../services/jobService";
 
 const { Text } = Typography;
 
 const AiSparkleIcon = ({ size = 20 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block' }}>
-    <path
-      d="M12 2C12 2 12.5 8.5 15.5 11.5C18.5 14.5 22 15 22 15C22 15 18.5 15.5 15.5 18.5C12.5 21.5 12 28 12 28C12 28 11.5 21.5 8.5 18.5C5.5 15.5 2 15 2 15C2 15 5.5 14.5 8.5 11.5C11.5 8.5 12 2 12 2Z"
-      fill="url(#aiSparkleGrad)"
-    />
     <defs>
       <linearGradient id="aiSparkleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
         <stop offset="0%" stopColor="#2563EB" />
+        <stop offset="50%" stopColor="#3B82F6" />
         <stop offset="100%" stopColor="#10B981" />
       </linearGradient>
     </defs>
+    <path
+      d="M12 2.5L4 7v10l8 4.5 8-4.5V7l-8-4.5z"
+      stroke="url(#aiSparkleGrad)"
+      strokeWidth="2"
+      strokeLinejoin="round"
+      fill="none"
+    />
+    <path
+      d="M12 7.5L7.5 10v4l4.5 2.5 4.5-2.5v-4L12 7.5z"
+      fill="url(#aiSparkleGrad)"
+      opacity="0.15"
+    />
+    <path
+      d="M12 7.5L7.5 10v4l4.5 2.5 4.5-2.5v-4L12 7.5z"
+      stroke="url(#aiSparkleGrad)"
+      strokeWidth="1.5"
+      strokeLinejoin="round"
+      fill="none"
+    />
+    <circle cx="12" cy="12" r="2" fill="url(#aiSparkleGrad)" />
   </svg>
 );
 
@@ -64,7 +77,6 @@ export default function CandidateChatbot() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const [fileList, setFileList] = useState<any[]>([]);
-  const [jobs, setJobs] = useState<JobDto[]>([]);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
 
   const [position, setPosition] = useState({ x: 0, y: 0 });
@@ -109,18 +121,7 @@ export default function CandidateChatbot() {
     }
   }, [messages, open]);
 
-  // Tải danh sách công việc để đưa vào Dropdown
-  useEffect(() => {
-    const fetchJobs = async () => {
-      try {
-        const data: any = await jobService.getJobs();
-        setJobs(Array.isArray(data) ? data : data?.$values || []);
-      } catch (error) {
-        console.error("Lỗi lấy danh sách việc làm cho Chatbot", error);
-      }
-    };
-    fetchJobs();
-  }, []);
+
 
   const handleClearChat = () => {
     localStorage.removeItem(`chat_history_${sessionId}`);
@@ -363,6 +364,51 @@ export default function CandidateChatbot() {
                     {msg.text.split("\n").map((line, lineIdx) => {
                       if (!line.trim()) return <div key={lineIdx} style={{ height: 8 }} />;
 
+                      if (line.includes("[RECOMMEND_JOB:")) {
+                        const match = line.match(/\[RECOMMEND_JOB:\s*(.*?)\s*\|\s*(.*?)\s*\|\s*(.*?)\s*\|\s*(.*?)\s*\]/);
+                        if (match) {
+                          const jobId = match[1];
+                          const jobTitle = match[2];
+                          const location = match[3];
+                          const salary = match[4];
+                          return (
+                            <div
+                              key={lineIdx}
+                              style={{
+                                background: "#EFF6FF",
+                                border: "1px solid #BFDBFE",
+                                borderRadius: 12,
+                                padding: 12,
+                                marginTop: 8,
+                                marginBottom: 8,
+                                color: "#1E293B",
+                                boxShadow: "0 2px 4px rgba(37,99,235,0.03)",
+                              }}
+                            >
+                              <Text strong style={{ fontSize: 13, color: "#1E293B", display: "block", marginBottom: 4 }}>
+                                {jobTitle}
+                              </Text>
+                              <div style={{ fontSize: 11, color: "#64748B", marginBottom: 8 }}>
+                                <span>📍 {location}</span>
+                                <span style={{ margin: "0 6px" }}>•</span>
+                                <span style={{ color: "#10B981", fontWeight: 600 }}>💰 {salary}</span>
+                              </div>
+                              <Button
+                                type="primary"
+                                size="small"
+                                style={{ borderRadius: 6, width: "100%", fontSize: 12, height: 28, background: "#2563EB", border: "none" }}
+                                onClick={() => {
+                                  navigate(`/jobs/${jobId}`);
+                                  setOpen(false);
+                                }}
+                              >
+                                Xem Chi Tiết & Ứng Tuyển
+                              </Button>
+                            </div>
+                          );
+                        }
+                      }
+
                       const parseInline = (text: string) => {
                         return text.split(/(\*\*.*?\*\*|\[.*?\]\(.*?\))/g).map((part, i) => {
                           if (part.startsWith("**") && part.endsWith("**")) {
@@ -515,20 +561,6 @@ export default function CandidateChatbot() {
                 alignItems: "center",
               }}
             >
-              <Select
-                size="small"
-                placeholder="Gắn kèm tin tuyển dụng để so sánh (Tùy chọn)..."
-                allowClear
-                style={{ flex: 1, minWidth: 200 }}
-                value={selectedJobId}
-                onChange={setSelectedJobId}
-              >
-                {jobs.map((j) => (
-                  <Select.Option key={j.id} value={j.id}>
-                    {j.position?.name || "Vị trí"} - {j.branch?.name || "Chi nhánh"}
-                  </Select.Option>
-                ))}
-              </Select>
               {fileList.length > 0 && (
                 <Tag closable onClose={() => setFileList([])} color="blue" style={{ margin: 0 }}>
                   📎 {fileList[0].name}

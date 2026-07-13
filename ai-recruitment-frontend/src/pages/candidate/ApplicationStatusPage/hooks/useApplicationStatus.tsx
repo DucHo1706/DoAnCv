@@ -45,6 +45,81 @@ export function useApplicationStatus() {
     fetchMyApps();
   }, []);
 
+  // Real-time status tracker for candidates using SignalR
+  useEffect(() => {
+    if (applications.length === 0) return;
+
+    let connection: any = null;
+    let isSubscribed = true;
+
+    const startSignalR = async () => {
+      try {
+        const signalR = await import("@microsoft/signalr");
+        const apiBase = import.meta.env.VITE_API_URL || "https://localhost:7006/api";
+        const hubUrl = apiBase.replace(/\/api\/?$/, "") + "/hubs/ai-evaluation";
+        connection = new signalR.HubConnectionBuilder()
+          .withUrl(hubUrl)
+          .withAutomaticReconnect()
+          .build();
+
+        // Lắng nghe cập nhật trạng thái hồ sơ thời gian thực (Ví dụ: HR duyệt phỏng vấn/nhận việc)
+        connection.on("ReceiveStatusUpdate", (data: { applicationId: string; status: string }) => {
+          if (!isSubscribed) return;
+          
+          setApplications((prev) =>
+            prev.map((app) => {
+              const appId = getApplicationId(app);
+              if (appId === data.applicationId) {
+                return { ...app, status: data.status };
+              }
+              return app;
+            })
+          );
+          
+          message.info({
+            content: `Hồ sơ của bạn vừa được Nhà tuyển dụng cập nhật tiến trình mới! 🔔`,
+            duration: 5,
+          });
+        });
+
+        // Lắng nghe khi AI hoàn tất chấm điểm ngầm
+        connection.on("ReceiveResult", () => {
+          if (!isSubscribed) return;
+          
+          fetchMyApps(false).then(() => {
+            if (!isSubscribed) return;
+            // Tự động đóng modal loading đang quay tròn nếu có
+            closeProcessingModal();
+            clearPollingTimer();
+          }).catch((err: any) => console.error("Lỗi cập nhật danh sách ứng tuyển ứng viên:", err));
+        });
+
+        await connection.start();
+
+        // Tham gia nhóm Realtime cho từng bộ hồ sơ ứng tuyển
+        for (const app of applications) {
+          const appId = getApplicationId(app);
+          if (appId) {
+            await connection.invoke("JoinApplicationGroup", appId);
+          }
+        }
+        
+        console.log("[SignalR] Candidate joined application groups for real-time tracking!");
+      } catch (err: any) {
+        console.warn("[SignalR] Kết nối SignalR ứng viên thất bại, sử dụng fallback.", err);
+      }
+    };
+
+    startSignalR();
+
+    return () => {
+      isSubscribed = false;
+      if (connection) {
+        connection.stop().catch((err: any) => console.error("[SignalR] Stop error", err));
+      }
+    };
+  }, [applications.length]);
+
   const getApplicationId = (application: any) => {
     return application?.id || application?.applicationId || application?.applicationID || "";
   };

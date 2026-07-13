@@ -17,6 +17,11 @@ namespace RecruitmentBackend.Models
         public string Role { get; set; } // Admin, Recruiter, Candidate
         public string Status { get; set; } = "Active"; // Active, Banned
         
+        public int AccessFailedCount { get; set; } = 0;
+        public DateTime? LockoutEnd { get; set; }
+        public string? PasswordResetOtp { get; set; }
+        public DateTime? OtpExpiry { get; set; }
+        
         public DateTime CreatedAt { get; set; } = DateTime.Now;
         public DateTime UpdatedAt { get; set; } = DateTime.Now;
         public virtual Candidate Candidate { get; set; }

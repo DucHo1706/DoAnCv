@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   BarChartOutlined,
   LeftOutlined,
@@ -7,6 +8,7 @@ import {
   TrophyOutlined,
   UserAddOutlined,
   UserOutlined,
+  EyeOutlined,
 } from "@ant-design/icons";
 import {
   Avatar,
@@ -21,14 +23,17 @@ import {
   Tag,
   Tooltip,
   Typography,
+  Progress,
 } from "antd";
 import PageContainer from "../../../components/common/PageContainer";
 import { useRecruiterDashboard } from "./hooks/useRecruiterDashboard";
 import { appTheme } from "../../../constants/theme";
 
-const { Paragraph, Text } = Typography;
+const { Paragraph, Text, Title } = Typography;
 
 export default function RecruiterDashboardPage() {
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+
   const {
     loading,
     stats,
@@ -50,6 +55,26 @@ export default function RecruiterDashboardPage() {
     getUniversityCarouselData,
     truncateText,
   } = useRecruiterDashboard();
+
+  const categories = Array.from(
+    new Set(stats.jobOptions.map((job) => job.categoryName || "Lĩnh vực khác"))
+  );
+
+  const filteredJobOptions = selectedCategory
+    ? stats.jobOptions.filter(
+        (job) => (job.categoryName || "Lĩnh vực khác") === selectedCategory
+      )
+    : stats.jobOptions;
+
+  const handleCategoryChange = (value: string | undefined) => {
+    setSelectedCategory(value || null);
+    if (value && selectedJob) {
+      const job = stats.jobOptions.find((j) => j.jobId === selectedJob);
+      if (job && (job.categoryName || "Lĩnh vực khác") !== value) {
+        handleChangeSelectedJob(undefined);
+      }
+    }
+  };
 
   const renderSkillHorizontalBarChart = () => {
     const topSkillData = getTopSkillData();
@@ -813,6 +838,58 @@ export default function RecruiterDashboardPage() {
     );
   };
 
+  const renderRecruitmentFunnel = () => {
+    const funnel = (stats as any).funnel || { applied: 0, reviewing: 0, interview: 0, offer: 0, rejected: 0 };
+    const stages = [
+      { label: "Mới nộp (Applied)", count: funnel.applied, color: "#2563EB" },
+      { label: "Đang xem xét (Reviewing)", count: funnel.reviewing, color: "#7C3AED" },
+      { label: "Phỏng vấn (Interview)", count: funnel.interview, color: "#F59E0B" },
+      { label: "Nhận việc (Offer)", count: funnel.offer, color: "#10B981" },
+      { label: "Từ chối (Rejected)", count: funnel.rejected, color: "#EF4444" },
+    ];
+    const maxCount = Math.max(...stages.map(s => s.count), 1);
+
+    return (
+      <Card
+        title="Phễu quy trình tuyển dụng (Recruitment Pipeline Funnel)"
+        style={{
+          borderRadius: 16,
+          boxShadow: appTheme.shadow.card,
+          border: `1px solid ${appTheme.colors.border}`,
+          marginBottom: 24
+        }}
+      >
+        <Row gutter={[16, 16]} justify="space-between">
+          {stages.map((stage) => {
+            const percentage = Math.round((stage.count / maxCount) * 100);
+            return (
+              <Col key={stage.label} xs={24} sm={12} md={4} style={{ textAlign: "center" }}>
+                <div
+                  style={{
+                    padding: "20px 12px",
+                    background: "#FFFFFF",
+                    border: `1.5px solid ${appTheme.colors.border}`,
+                    borderLeft: `5px solid ${stage.color}`,
+                    borderRadius: 12,
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.01)",
+                  }}
+                >
+                  <Text type="secondary" style={{ fontSize: 11, display: "block", marginBottom: 8, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {stage.label}
+                  </Text>
+                  <Title level={3} style={{ margin: 0, color: stage.color }}>
+                    {stage.count} <span style={{ fontSize: 12, fontWeight: 400, color: "#64748B" }}>CV</span>
+                  </Title>
+                  <Progress percent={percentage} size="small" strokeColor={stage.color} showInfo={false} style={{ marginTop: 10 }} />
+                </div>
+              </Col>
+            );
+          })}
+        </Row>
+      </Card>
+    );
+  };
+
   return (
     <PageContainer
       title="Recruiter Dashboard"
@@ -831,22 +908,37 @@ export default function RecruiterDashboardPage() {
             }}
           >
             <Row align="middle" gutter={[12, 12]}>
-              <Col xs={24} md={7} lg={6}>
-                <Text strong>Lọc dữ liệu theo Tin tuyển dụng:</Text>
+              <Col xs={24} md={4}>
+                <Text strong>Lọc dữ liệu:</Text>
               </Col>
 
-              <Col xs={24} md={17} lg={18}>
+              <Col xs={24} md={10}>
+                <Select
+                  allowClear
+                  size="large"
+                  placeholder="Lọc theo Lĩnh vực / Ngành"
+                  value={selectedCategory}
+                  onChange={handleCategoryChange}
+                  style={{ width: "100%" }}
+                  options={categories.map((cat) => ({
+                    value: cat,
+                    label: cat,
+                  }))}
+                />
+              </Col>
+
+              <Col xs={24} md={10}>
                 <Select
                   showSearch
                   allowClear
                   size="large"
-                  placeholder="Tất cả tin tuyển dụng"
+                  placeholder="Chọn tin tuyển dụng"
                   value={selectedJob}
                   onChange={handleChangeSelectedJob}
                   style={{ width: "100%" }}
                   optionFilterProp="label"
                   loading={loading}
-                  options={stats.jobOptions.map((job) => ({
+                  options={filteredJobOptions.map((job) => ({
                     value: job.jobId,
                     label: job.jobTitle,
                   }))}
@@ -856,7 +948,7 @@ export default function RecruiterDashboardPage() {
           </Card>
         </Col>
 
-        <Col xs={24} md={8}>
+        <Col xs={24} md={5}>
           <Card
             style={{
               borderRadius: 16,
@@ -873,7 +965,7 @@ export default function RecruiterDashboardPage() {
               title="Tổng số CV đã nhận"
               value={stats.quickMetrics.totalApplications}
               valueStyle={{
-                fontSize: 30,
+                fontSize: 24,
                 fontWeight: 700,
                 lineHeight: 1.1,
               }}
@@ -882,7 +974,7 @@ export default function RecruiterDashboardPage() {
           </Card>
         </Col>
 
-        <Col xs={24} md={8}>
+        <Col xs={24} md={5}>
           <Card
             style={{
               borderRadius: 16,
@@ -899,7 +991,7 @@ export default function RecruiterDashboardPage() {
               title="CV mới chưa đọc"
               value={stats.quickMetrics.newApplications}
               valueStyle={{
-                fontSize: 30,
+                fontSize: 24,
                 fontWeight: 700,
                 lineHeight: 1.1,
               }}
@@ -908,7 +1000,7 @@ export default function RecruiterDashboardPage() {
           </Card>
         </Col>
 
-        <Col xs={24} md={8}>
+        <Col xs={24} md={5}>
           <Card
             style={{
               borderRadius: 16,
@@ -922,17 +1014,72 @@ export default function RecruiterDashboardPage() {
             }}
           >
             <Statistic
-              title="Điểm Fit Score trung bình"
+              title="Điểm Fit Score TB"
               value={stats.quickMetrics.averageFitScore}
               precision={1}
               suffix="/100"
               valueStyle={{
-                fontSize: 30,
+                fontSize: 24,
                 fontWeight: 700,
                 lineHeight: 1.1,
                 color: getAverageFitScoreColor(stats.quickMetrics.averageFitScore),
               }}
               prefix={<RiseOutlined />}
+            />
+          </Card>
+        </Col>
+
+        <Col xs={24} md={5}>
+          <Card
+            style={{
+              borderRadius: 16,
+              height: "100%",
+              width: "100%",
+              boxShadow: appTheme.shadow.card,
+              border: `1px solid ${appTheme.colors.border}`,
+            }}
+            bodyStyle={{
+              padding: 16,
+            }}
+          >
+            <Statistic
+              title="Tổng lượt xem tin"
+              value={(stats.quickMetrics as any).totalViews || 0}
+              valueStyle={{
+                fontSize: 24,
+                fontWeight: 700,
+                lineHeight: 1.1,
+              }}
+              prefix={<EyeOutlined style={{ color: "#7C3AED" }} />}
+            />
+          </Card>
+        </Col>
+
+        <Col xs={24} md={4}>
+          <Card
+            style={{
+              borderRadius: 16,
+              height: "100%",
+              width: "100%",
+              boxShadow: appTheme.shadow.card,
+              border: `1px solid ${appTheme.colors.border}`,
+            }}
+            bodyStyle={{
+              padding: 16,
+            }}
+          >
+            <Statistic
+              title="Tỷ lệ ứng tuyển"
+              value={(stats.quickMetrics as any).applicationRate || 0}
+              precision={1}
+              suffix="%"
+              valueStyle={{
+                fontSize: 24,
+                fontWeight: 700,
+                lineHeight: 1.1,
+                color: "#10B981"
+              }}
+              prefix={<RiseOutlined style={{ color: "#10B981" }} />}
             />
           </Card>
         </Col>
@@ -944,6 +1091,7 @@ export default function RecruiterDashboardPage() {
         </div>
       ) : (
         <>
+          {renderRecruitmentFunnel()}
           <Row gutter={[24, 24]}>
             <Col xs={24} lg={12}>
               <Card

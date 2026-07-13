@@ -1,12 +1,14 @@
-import { EditOutlined, EyeOutlined, PlusOutlined } from "@ant-design/icons";
+import {
+  EyeOutlined,
+  PlusOutlined,
+  CheckCircleOutlined,
+  ClockCircleOutlined,
+} from "@ant-design/icons";
 import {
   Button,
   Card,
   Col,
-  Descriptions,
-  Divider,
   message,
-  Modal,
   Row,
   Select,
   Space,
@@ -23,13 +25,12 @@ import { jobService } from "../../services/jobService";
 import type {
   CategoryDto,
   JobDto,
-  JobReviewResponse,
 } from "../../services/jobService";
+import { appTheme } from "../../constants/theme";
 
-const { Paragraph, Text } = Typography;
+const { Text } = Typography;
 type JobStatus = "approved" | "pending";
 
-// Thêm categories vào JobDto (bổ sung phía frontend)
 type JobDtoExtended = JobDto & {
   category?: { name: string };
 };
@@ -40,15 +41,11 @@ type JobTableItem = {
   field: string;
   location: string;
   status: JobStatus;
+  isExpired: boolean;
   raw: JobDtoExtended;
 };
 
-function formatDate(value?: string | null) {
-  if (!value) return "Chưa cập nhật";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleDateString("vi-VN");
-}
+
 
 function getStatusMeta(status: JobStatus) {
   if (status === "approved") {
@@ -62,14 +59,13 @@ function JobManagementPage() {
   const [jobs, setJobs] = useState<JobDtoExtended[]>([]);
   const navigate = useNavigate();
 
-  const [detailOpen, setDetailOpen] = useState(false);
-  const [detailLoading, setDetailLoading] = useState(false);
-  const [jobDetail, setJobDetail] = useState<JobReviewResponse | null>(null);
+
 
   // Filter states
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<string | undefined>(undefined);
   const [filterCategory, setFilterCategory] = useState<string | undefined>(undefined);
+  const [filterActivity, setFilterActivity] = useState<string | undefined>(undefined);
 
   // Dropdown data từ API
   const [categories, setCategories] = useState<CategoryDto[]>([]); // For filter dropdown
@@ -89,7 +85,6 @@ function JobManagementPage() {
 
   useEffect(() => {
     fetchJobs();
-    // Fetch categories for filter dropdown
     jobService
       .getCategories()
       .then((data) => setCategories(data))
@@ -100,6 +95,7 @@ function JobManagementPage() {
   const tableData: JobTableItem[] = jobs.map((job) => {
     const status: JobStatus = job.isApproved ? "approved" : "pending";
     const categoryNames = job.category?.name || "Chưa cập nhật";
+    const isExpired = job.deadline ? new Date(job.deadline) < new Date() : false;
 
     return {
       id: job.id,
@@ -107,60 +103,73 @@ function JobManagementPage() {
       field: categoryNames,
       location: job.branch?.name || "Chưa cập nhật",
       status,
+      isExpired,
       raw: job,
     };
   });
 
-  const approvedJobs = tableData.filter((j) => j.status === "approved").length;
+  const approvedJobs = tableData.filter((j) => j.status === "approved" && !j.isExpired).length;
+  const expiredJobs = tableData.filter((j) => j.isExpired).length;
   const pendingJobs = tableData.filter((j) => j.status === "pending").length;
 
   const filteredTableData = tableData.filter((item) => {
     const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = filterStatus ? item.status === filterStatus : true;
     const matchesCategory = filterCategory ? item.field === filterCategory : true;
-    return matchesSearch && matchesStatus && matchesCategory;
+    
+    let matchesActivity = true;
+    if (filterActivity === "active") {
+      matchesActivity = !item.isExpired;
+    } else if (filterActivity === "expired") {
+      matchesActivity = item.isExpired;
+    }
+
+    return matchesSearch && matchesStatus && matchesCategory && matchesActivity;
   });
 
   // ── Xem chi tiết ──────────────────────────────────────
-  const handleViewJob = async (record: JobTableItem) => {
-    try {
-      setDetailOpen(true);
-      setDetailLoading(true);
-      const data = await jobService.getJobReview(record.id);
-      setJobDetail(data);
-    } catch {
-      message.error("Không tải được chi tiết tin tuyển dụng");
-      setDetailOpen(false);
-    } finally {
-      setDetailLoading(false);
-    }
+  const handleViewJob = (record: JobTableItem) => {
+    navigate(`/recruiter/jobs/${record.id}`);
   };
 
   // ── Columns ───────────────────────────────────────────
   const columns = [
     {
-      title: "Vị trí",
+      title: "Vị trí tuyển dụng",
       dataIndex: "title",
       key: "title",
+      render: (text: string) => <Text strong style={{ color: "#0F172A" }}>{text}</Text>
     },
     {
       title: "Lĩnh vực",
       dataIndex: "field",
       key: "field",
-      render: (value: string) => <Text type="secondary">{value}</Text>,
+      render: (value: string) => <Tag color="blue" style={{ borderRadius: 6 }}>{value}</Tag>,
     },
     {
-      title: "Địa điểm",
+      title: "Địa điểm làm việc",
       dataIndex: "location",
       key: "location",
+      render: (text: string) => <Text type="secondary">{text}</Text>
     },
     {
-      title: "Trạng thái",
+      title: "Trạng thái duyệt",
       dataIndex: "status",
       key: "status",
       render: (value: JobStatus) => {
         const meta = getStatusMeta(value);
-        return <Tag color={meta.color}>{meta.label}</Tag>;
+        return <Tag color={meta.color} style={{ borderRadius: 6 }}>{meta.label}</Tag>;
+      },
+    },
+    {
+      title: "Hạn tuyển dụng",
+      key: "activity",
+      render: (_: unknown, record: JobTableItem) => {
+        return record.isExpired ? (
+          <Tag color="error" icon={<ClockCircleOutlined />} style={{ borderRadius: 6 }}>Hết hạn</Tag>
+        ) : (
+          <Tag color="success" icon={<CheckCircleOutlined />} style={{ borderRadius: 6 }}>Đang tuyển</Tag>
+        );
       },
     },
     {
@@ -169,20 +178,14 @@ function JobManagementPage() {
       render: (_: unknown, record: JobTableItem) => (
         <Space>
           <Button icon={<EyeOutlined />} onClick={() => handleViewJob(record)}>
-            Xem
-          </Button>
-          <Button icon={<EditOutlined />} disabled>
-            Sửa
+            Xem chi tiết
           </Button>
         </Space>
       ),
     },
   ];
 
-  const detailStatus = jobDetail?.jobInfo?.isApproved ? "approved" : "pending";
-  const detailStatusMeta = getStatusMeta(detailStatus);
 
-  // ── Render ────────────────────────────────────────────
   return (
     <PageContainer
       title="Quản lý tin tuyển dụng"
@@ -192,6 +195,10 @@ function JobManagementPage() {
           type="primary"
           icon={<PlusOutlined />}
           onClick={() => navigate("/recruiter/jobs/create")}
+          style={{
+            borderRadius: 8,
+            boxShadow: "0 4px 12px rgba(37, 99, 235, 0.2)",
+          }}
         >
           Tạo tin tuyển dụng
         </Button>
@@ -199,30 +206,49 @@ function JobManagementPage() {
     >
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
         <Col xs={24} sm={8}>
-          <StatCard title="Tin công khai" value={approvedJobs} subtitle="Đã được Admin duyệt" />
+          <StatCard title="Tin đang tuyển" value={approvedJobs} subtitle="Đã duyệt & Đang tuyển dụng" />
         </Col>
         <Col xs={24} sm={8}>
           <StatCard title="Tin chờ duyệt" value={pendingJobs} subtitle="Đang chờ Admin xét duyệt" />
         </Col>
         <Col xs={24} sm={8}>
           <StatCard
-            title="Tổng tin tuyển dụng"
-            value={tableData.length}
-            subtitle="Toàn bộ tin đang hoạt động"
+            title="Tin đã hết hạn"
+            value={expiredJobs}
+            subtitle="Đã qua hạn nộp hồ sơ"
           />
         </Col>
       </Row>
 
-      <Card>
+      <Card
+        style={{
+          borderRadius: 16,
+          boxShadow: appTheme.shadow.card,
+          border: `1px solid ${appTheme.colors.border}`,
+        }}
+      >
         <TableToolbar
           searchPlaceholder="Tìm theo tên vị trí..."
           searchValue={searchQuery}
           onSearchChange={setSearchQuery}
           extra={
-            <>
+            <Space wrap>
               <Select
-                placeholder="Lọc trạng thái"
-                style={{ width: 180 }}
+                showSearch
+                placeholder="Lọc theo Lĩnh vực"
+                style={{ width: 200 }}
+                allowClear
+                value={filterCategory}
+                onChange={setFilterCategory}
+                optionFilterProp="label"
+                options={categories.map((c) => ({
+                  label: c.name,
+                  value: c.name,
+                }))}
+              />
+              <Select
+                placeholder="Trạng thái duyệt"
+                style={{ width: 150 }}
                 allowClear
                 value={filterStatus}
                 onChange={setFilterStatus}
@@ -232,17 +258,17 @@ function JobManagementPage() {
                 ]}
               />
               <Select
-                placeholder="Lọc lĩnh vực"
-                style={{ width: 220 }}
+                placeholder="Trạng thái tuyển"
+                style={{ width: 150 }}
                 allowClear
-                value={filterCategory}
-                onChange={setFilterCategory}
-                options={categories.map((c) => ({
-                  label: c.name,
-                  value: c.name,
-                }))}
+                value={filterActivity}
+                onChange={setFilterActivity}
+                options={[
+                  { label: "Đang tuyển", value: "active" },
+                  { label: "Hết hạn", value: "expired" },
+                ]}
               />
-            </>
+            </Space>
           }
         />
 
@@ -252,111 +278,9 @@ function JobManagementPage() {
           dataSource={filteredTableData}
           loading={loading}
           pagination={{ pageSize: 5 }}
+          style={{ marginTop: 8 }}
         />
       </Card>
-
-      {/* ── Modal xem chi tiết ── */}
-      <Modal
-        title="Chi tiết tin tuyển dụng"
-        open={detailOpen}
-        onCancel={() => {
-          setDetailOpen(false);
-          setJobDetail(null);
-        }}
-        footer={null}
-        width={820}
-        confirmLoading={detailLoading}
-      >
-        {detailLoading && <Text type="secondary">Đang tải dữ liệu...</Text>}
-
-        {jobDetail && (
-          <>
-            <Space style={{ marginBottom: 16 }}>
-              <Tag color={detailStatusMeta.color}>{detailStatusMeta.label}</Tag>
-              <Text type="secondary">Tạo lúc: {formatDate(jobDetail.jobInfo.createdAt)}</Text>
-            </Space>
-
-            <Descriptions bordered column={2} size="middle">
-              <Descriptions.Item label="Vị trí" span={2}>
-                {jobDetail.jobInfo.position?.name || "Chưa cập nhật"}
-              </Descriptions.Item>
-              <Descriptions.Item label="Địa điểm">
-                {jobDetail.jobInfo.branch?.name || "Chưa cập nhật"}
-              </Descriptions.Item>
-              <Descriptions.Item label="Mức lương">
-                {jobDetail.jobInfo.salaryRange || "Chưa cập nhật"}
-              </Descriptions.Item>
-              <Descriptions.Item label="Ngày bắt đầu">
-                {formatDate(jobDetail.jobInfo.startDate)}
-              </Descriptions.Item>
-              <Descriptions.Item label="Hạn chót">
-                {formatDate(jobDetail.jobInfo.deadline)}
-              </Descriptions.Item>
-              <Descriptions.Item label="Số lượng cần tuyển" span={2}>
-                {jobDetail.jobInfo.maxCandidates ?? "Không giới hạn"}
-              </Descriptions.Item>
-            </Descriptions>
-
-            <Divider />
-
-            <div style={{ marginBottom: 16 }}>
-              <Text strong>Mô tả công việc</Text>
-              <Paragraph style={{ marginTop: 8, whiteSpace: "pre-line" }}>
-                {jobDetail.jobInfo.description || "Chưa có mô tả"}
-              </Paragraph>
-            </div>
-
-            <div style={{ marginBottom: 16 }}>
-              <Text strong>Yêu cầu</Text>
-              <Paragraph style={{ marginTop: 8, whiteSpace: "pre-line" }}>
-                {jobDetail.jobInfo.requirements || "Chưa có yêu cầu"}
-              </Paragraph>
-            </div>
-
-            <div>
-              <Text strong>Từ khóa mới AI phát hiện</Text>
-              <div style={{ marginTop: 8 }}>
-                {jobDetail.wordsToHighlight?.length ? (
-                  <Space wrap>
-                    {jobDetail.wordsToHighlight.map((word) => (
-                      <Tag color="blue" key={word}>
-                        {word}
-                      </Tag>
-                    ))}
-                  </Space>
-                ) : (
-                  <Text type="secondary">Không có từ khóa mới</Text>
-                )}
-              </div>
-            </div>
-
-            {/* Hiển thị tiêu chí đánh giá nếu có */}
-            {(jobDetail.jobInfo as any).criteria?.length > 0 && (
-              <div style={{ marginTop: 24 }}>
-                <Text strong>Tiêu chí đánh giá AI (Trọng số %)</Text>
-                <div style={{ marginTop: 8 }}>
-                  <Table
-                    size="small"
-                    columns={[
-                      { title: "Tên tiêu chí", dataIndex: "name", key: "name" },
-                      {
-                        title: "Trọng số",
-                        dataIndex: "weight",
-                        key: "weight",
-                        render: (val) => <Tag color="blue">{val}%</Tag>,
-                      },
-                    ]}
-                    dataSource={(jobDetail.jobInfo as any).criteria}
-                    rowKey="name"
-                    pagination={false}
-                    bordered
-                  />
-                </div>
-              </div>
-            )}
-          </>
-        )}
-      </Modal>
     </PageContainer>
   );
 }

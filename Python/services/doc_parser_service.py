@@ -53,14 +53,16 @@ def extract_text_from_file(file_bytes: bytes, filename: str, content_type: str) 
         # 1. FILE PDF
         if content_type == "application/pdf" or filename.lower().endswith(".pdf"):
             # === Bước 1: Trích xuất bằng PyPDF2 (thành phần chính theo đề cương) ===
-            pdf_reader = PyPDF2.PdfReader(io.BytesIO(file_bytes))
-            for page in pdf_reader.pages:
-                if page.extract_text():
-                    text += page.extract_text() + "\n"
+            try:
+                pdf_reader = PyPDF2.PdfReader(io.BytesIO(file_bytes))
+                for page in pdf_reader.pages:
+                    if page.extract_text():
+                        text += page.extract_text() + "\n"
+            except Exception as pypdf_err:
+                print(f"⚠️ PyPDF2 gặp lỗi khi đọc PDF ({pypdf_err}). Chuyển sang pdfplumber...")
 
-            # === Bước 2: Kiểm tra chất lượng tiếng Việt ===
-            if text.strip() and _is_vietnamese_garbled(text):
-                print("⚠️ [QUALITY CHECK] PyPDF2 trích xuất sai dấu tiếng Việt → chuyển sang pdfplumber hỗ trợ...")
+            # === Bước 2: Kiểm tra chất lượng tiếng Việt hoặc cứu hộ nếu PyPDF2 thất bại ===
+            if not text.strip() or _is_vietnamese_garbled(text):
                 try:
                     import pdfplumber
                     fallback_text = ""
@@ -70,17 +72,19 @@ def extract_text_from_file(file_bytes: bytes, filename: str, content_type: str) 
                             if page_text:
                                 fallback_text += page_text + "\n"
 
-                    if fallback_text.strip() and not _is_vietnamese_garbled(fallback_text):
-                        print("✅ [QUALITY CHECK] pdfplumber trích xuất tiếng Việt thành công!")
-                        text = fallback_text
-                    else:
-                        print("⚠️ [QUALITY CHECK] pdfplumber cũng không cải thiện được, giữ kết quả PyPDF2.")
-                except ImportError:
-                    print("⚠️ pdfplumber chưa được cài đặt, giữ kết quả PyPDF2.")
+                    if fallback_text.strip():
+                        if not _is_vietnamese_garbled(fallback_text):
+                            print("✅ [QUALITY CHECK] pdfplumber trích xuất tiếng Việt thành công!")
+                            text = fallback_text
+                        else:
+                            print("⚠️ [QUALITY CHECK] pdfplumber trích xuất có chữ nhưng sai dấu, giữ lại làm dự phòng.")
+                            text = fallback_text
+                except Exception as plumber_err:
+                    print(f"⚠️ pdfplumber gặp lỗi: {plumber_err}")
 
             # === Bước 3: Fallback OCR nếu không có text nào ===
             if not text.strip():
-                print("⚠️ Không trích xuất được text từ PDF (file scan/ảnh), chuyển sang OCR...")
+                print("⚠️ Không trích xuất được text từ PDF (file scan/ảnh/lỗi định dạng), chuyển sang OCR...")
                 try:
                     from pdf2image import convert_from_bytes
                     images = convert_from_bytes(file_bytes, dpi=300)
@@ -90,10 +94,8 @@ def extract_text_from_file(file_bytes: bytes, filename: str, content_type: str) 
                         if ocr_text:
                             ocr_texts.append(ocr_text)
                     text = "\n".join(ocr_texts)
-                except ImportError:
-                    print("⚠️ pdf2image chưa được cài đặt, không thể OCR file PDF dạng ảnh.")
                 except Exception as ocr_err:
-                    print(f"⚠️ Lỗi OCR PDF scan: {ocr_err}")
+                    print(f"⚠️ Lỗi OCR PDF: {ocr_err}")
 
         # 2. FILE ẢNH (PNG, JPEG)
         elif content_type in ["image/png", "image/jpeg", "image/jpg"] or filename.lower().endswith((".png", ".jpg", ".jpeg")):

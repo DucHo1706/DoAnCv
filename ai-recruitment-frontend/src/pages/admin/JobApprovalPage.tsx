@@ -1,4 +1,4 @@
-import { CheckOutlined, EyeOutlined, LockOutlined, UnlockOutlined, SearchOutlined, FilterOutlined } from "@ant-design/icons";
+import { CheckOutlined, EyeOutlined, LockOutlined, UnlockOutlined, SearchOutlined } from "@ant-design/icons";
 import {
   Button,
   Card,
@@ -90,13 +90,13 @@ function JobApprovalPage() {
       // 1. Search text mapping
       const searchKey = searchText.trim().toLowerCase();
       const titleMatch = (job.position?.name || "").toLowerCase().includes(searchKey);
-      const companyMatch = (job.company || "").toLowerCase().includes(searchKey);
+      const companyMatch = ((job as any).company || "").toLowerCase().includes(searchKey);
       const matchesSearch = searchKey.length === 0 || titleMatch || companyMatch;
 
       // 2. Category matching
       const matchesCategory =
         selectedCategoryId === "all" ||
-        job.position?.categoryId === selectedCategoryId;
+        (job.position as any)?.categoryId === selectedCategoryId;
 
       // 3. Status matching
       const matchesStatus =

@@ -6,6 +6,7 @@ export interface JobDto {
   requirements: string;
   position: JobPositionDto;
   branch: BranchDto;
+  category?: { id: string; name: string } | null;
   salaryRange: string;
   isActive: boolean;
   status: string;
@@ -14,11 +15,13 @@ export interface JobDto {
   startDate?: string | null;
   deadline?: string | null;
   maxCandidates?: number | null;
+  jobLevel?: { name: string } | null;
 }
 
 export interface CategoryDto {
   id: string;
   name: string;
+  parentId?: string | null;
   isActive: boolean;
 }
 
@@ -54,6 +57,12 @@ export interface CreateJobPayload {
 export interface JobReviewResponse {
   jobInfo: JobDto;
   wordsToHighlight: string[];
+  stats?: {
+    applicationsCount: number;
+    viewsCount: number;
+    interestedCount: number;
+    applyRate: number;
+  };
 }
 
 export const jobService = {

@@ -1,6 +1,15 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.EntityFrameworkCore;
 using RecruitmentBackend.DTOs.Requests;
 using RecruitmentBackend.Interfaces;
+using RecruitmentBackend.Data;
+using RecruitmentBackend.Models;
+using System.Security.Claims;
+using System;
+using System.Threading.Tasks;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace RecruitmentBackend.Controllers
 {
@@ -10,13 +19,16 @@ namespace RecruitmentBackend.Controllers
     {
         private readonly IEmailSenderService _emailSenderService;
         private readonly ICandidateEmailAiService _candidateEmailAiService;
+        private readonly AppDbContext _context;
 
         public CandidateEmailsController(
             IEmailSenderService emailSenderService,
-            ICandidateEmailAiService candidateEmailAiService)
+            ICandidateEmailAiService candidateEmailAiService,
+            AppDbContext context)
         {
             _emailSenderService = emailSenderService;
             _candidateEmailAiService = candidateEmailAiService;
+            _context = context;
         }
 
         [HttpPost("generate")]
@@ -103,10 +115,93 @@ namespace RecruitmentBackend.Controllers
                 });
             }
 
+            // Log email to database
+            try
+            {
+                var log = new EmailLog
+                {
+                    RecipientEmail = request.ToEmail,
+                    Subject = request.Subject,
+                    Body = request.Body,
+                    SentAt = DateTime.Now
+                };
+
+                if (!string.IsNullOrEmpty(request.ApplicationId))
+                {
+                    var application = await _context.Applications
+                        .Include(a => a.CandidateCV)
+                        .Include(a => a.JobPosting)
+                        .FirstOrDefaultAsync(a => a.ApplicationID == request.ApplicationId);
+
+                    if (application != null)
+                    {
+                        log.ApplicationID = request.ApplicationId;
+                        log.JobID = application.JobID;
+                        log.CandidateID = application.CandidateCV?.CandidateID;
+
+                        var candidate = await _context.Candidates
+                            .FirstOrDefaultAsync(c => c.CandidateID == application.CandidateCV.CandidateID);
+                        if (candidate != null)
+                        {
+                            log.CandidateName = candidate.FullName;
+                        }
+
+                        var job = application.JobPosting;
+                        if (job != null)
+                        {
+                            var position = await _context.Positions
+                                .FirstOrDefaultAsync(p => p.PositionID == job.PositionID);
+                            if (position != null)
+                            {
+                                log.JobTitle = position.PositionName;
+                            }
+
+                            var category = await _context.Categories
+                                .FirstOrDefaultAsync(c => c.CategoryID == job.CategoryID);
+                            if (category != null)
+                            {
+                                log.CategoryName = category.Name;
+                            }
+                        }
+                    }
+                }
+
+                if (string.IsNullOrEmpty(log.CandidateName))
+                {
+                    var candidate = await _context.Candidates
+                        .FirstOrDefaultAsync(c => c.Account.Email == request.ToEmail);
+                    log.CandidateName = candidate?.FullName ?? request.ToEmail;
+                }
+
+                _context.EmailLogs.Add(log);
+                await _context.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error logging email: " + ex.Message);
+            }
+
             return Ok(new
             {
                 message = message
             });
+        }
+
+        [HttpGet("hr/logs")]
+        [Authorize(Roles = "Recruiter")]
+        public async Task<IActionResult> GetHrEmailLogs()
+        {
+            try
+            {
+                var logs = await _context.EmailLogs
+                    .OrderByDescending(l => l.SentAt)
+                    .ToListAsync();
+                return Ok(logs);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = "Lỗi khi lấy danh sách nhật ký gửi mail: " + ex.Message });
+            }
         }
     }
 }

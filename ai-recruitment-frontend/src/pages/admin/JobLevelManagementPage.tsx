@@ -19,7 +19,6 @@ import {
   Popconfirm,
   Row,
   Space,
-  Tag,
   Tree,
   TreeSelect,
   Typography,
@@ -77,12 +76,21 @@ function JobLevelManagementPage() {
                 {item.name}
               </Text>
               {!item.isActive && (
-                <Tag
-                  color="error"
-                  style={{ fontSize: "10px", padding: "0 4px", lineHeight: "14px", border: 0 }}
+                <span
+                  style={{
+                    display: "inline-block",
+                    padding: "1px 6px",
+                    borderRadius: "999px",
+                    fontSize: "11px",
+                    fontWeight: 600,
+                    backgroundColor: "#FEE2E2",
+                    border: "1px solid #FCA5A5",
+                    color: "#991B1B",
+                    lineHeight: "12px",
+                  }}
                 >
                   Đã khóa
-                </Tag>
+                </span>
               )}
             </Space>
           ),
@@ -297,7 +305,9 @@ function JobLevelManagementPage() {
                       icon={selectedLevel.isActive ? <LockOutlined /> : <UnlockOutlined />}
                       danger={selectedLevel.isActive}
                       style={
-                        !selectedLevel.isActive ? { color: "#52c41a", borderColor: "#52c41a" } : {}
+                        !selectedLevel.isActive 
+                          ? { color: "#10B981", borderColor: "#BBF7D0", backgroundColor: "#F0FDF4" } 
+                          : { color: "#EF4444", borderColor: "#FECACA", backgroundColor: "#FEF2F2" }
                       }
                     >
                       {selectedLevel.isActive ? "Khóa" : "Mở khóa"}

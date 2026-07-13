@@ -56,6 +56,7 @@ namespace RecruitmentBackend.Services
                                        orderby j.CreatedAt descending
                                        select new
                                        {
+                                           j.JobID,
                                            PositionName = p != null ? p.PositionName : "Vị trí IT",
                                            BranchName = b != null ? b.BranchName : "Chưa cập nhật",
                                            j.JobRequirement,
@@ -94,7 +95,7 @@ Dẫn chứng cụ thể một số vị trí đang đăng tuyển:
                     string sal = (j.SalaryMin == 0 && j.SalaryMax == 0) ? "Thỏa thuận" : (j.SalaryMax == 0 ? $"{j.SalaryMin} triệu" : $"{j.SalaryMin} - {j.SalaryMax} triệu");
                     // Rút gọn requirement để tránh quá tải Token của AI
                     string req = j.JobRequirement?.Length > 150 ? j.JobRequirement.Substring(0, 150) + "..." : j.JobRequirement;
-                    jobList.AppendLine($"- Vị trí: {j.PositionName} | Khu vực: {j.BranchName} | Lương: {sal} | Yêu cầu: {req}");
+                    jobList.AppendLine($"- ID: {j.JobID} | Vị trí: {j.PositionName} | Khu vực: {j.BranchName} | Lương: {sal} | Yêu cầu: {req}");
                 }
 
                 jobRecommendations = $@"
@@ -102,10 +103,12 @@ DANH SÁCH CÁC CÔNG VIỆC ĐANG TUYỂN DỤNG TRÊN HỆ THỐNG:
 {jobList.ToString().Trim()}
 
 **CHỈ THỊ GỢI Ý VIỆC LÀM**: 
-Nếu người dùng hỏi 'Có việc làm nào phù hợp không', 'Gợi ý việc làm' hoặc nếu bạn thấy kỹ năng trong CV của họ khớp với công việc nào trong danh sách trên:
+Nếu người dùng hỏi 'Có việc làm nào phù hợp không', 'Gợi ý việc làm', 'Tìm việc', hoặc nếu bạn thấy kỹ năng trong CV của họ khớp với công việc nào trong danh sách trên:
 1. Hãy chọn ra 1-2 công việc phù hợp nhất để giới thiệu.
 2. Nêu rõ lý do tại sao họ phù hợp.
-3. BẮT BUỘC cung cấp link để họ ứng tuyển bằng cú pháp Markdown như sau: [Xem và ứng tuyển tại đây](/jobs).";
+3. BẮT BUỘC chèn đoạn mã thẻ đặc biệt sau vào cuối câu trả lời ứng với mỗi công việc được giới thiệu để hệ thống hiển thị thẻ công việc trực quan cho người dùng click xem chi tiết và ứng tuyển:
+[RECOMMEND_JOB: <ID> | <Vị trí> | <Khu vực> | <Lương>]
+(Ví dụ: [RECOMMEND_JOB: {publishedJobs.FirstOrDefault()?.JobID ?? "job_example"} | {publishedJobs.FirstOrDefault()?.PositionName ?? "Senior Developer"} | {publishedJobs.FirstOrDefault()?.BranchName ?? "Quận 1, TP.HCM"} | {((publishedJobs.FirstOrDefault()?.SalaryMax ?? 0) == 0 ? "Thỏa thuận" : publishedJobs.FirstOrDefault()?.SalaryMin + " - " + publishedJobs.FirstOrDefault()?.SalaryMax + " triệu")}])";
             }
 
             string systemKnowledge = $@"

@@ -3,6 +3,7 @@ import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { message, Modal, Upload } from "antd";
 import type { UploadFile, UploadProps } from "antd";
 import { recruitmentService } from "../../../../services/recruitmentService";
+import dayjs from "dayjs";
 
 export type TalentPoolEmailState = {
   source?: string;
@@ -102,6 +103,45 @@ export function useEmailCandidate() {
     }
   };
 
+  const generateInitialInterviewEmail = async (emailCandidate: any, emailContext: string) => {
+    if (hasGeneratedInitialTalentPoolEmailRef.current === true) return;
+    hasGeneratedInitialTalentPoolEmailRef.current = true;
+    setIsGeneratingAi(true);
+
+    try {
+      const response = await recruitmentService.generateCandidateEmail({
+        emailType: "invite",
+        candidateName: emailCandidate.candidateName || emailCandidate.fullName || "Ứng viên",
+        jobTitle: emailCandidate.jobTitle || "Vị trí ứng tuyển",
+        companyName: "AI Recruitment System",
+        fitScore: Number(emailCandidate.aiScore || 0),
+        classification: emailCandidate.classification || "Đạt yêu cầu",
+        summary: emailCandidate.aiReason || "",
+        matchedSkills: normalizeSkills(emailCandidate.matchedSkills),
+        missingSkills: normalizeSkills(emailCandidate.missingSkills),
+        rejectReason: null,
+        emailContext: emailContext,
+      });
+
+      if (response.subject) setSubject(response.subject);
+      if (response.body) {
+        let body = response.body;
+        if (emailCandidate.schedule) {
+          const dateStr = dayjs(emailCandidate.schedule.interviewDate).format("DD/MM/YYYY HH:mm");
+          body = body.replace("[Điền thời gian]", dateStr);
+          body = body.replace("[Điền hình thức: trực tuyến/trực tiếp]", emailCandidate.schedule.format === "Online" ? "Trực tuyến" : "Trực tiếp");
+          body = body.replace("[Điền địa điểm/link họp]", emailCandidate.schedule.locationOrLink);
+        }
+        setContent(body);
+      }
+      message.success("AI đã phác thảo thư mời phỏng vấn thành công. Bạn có thể chỉnh sửa trước khi gửi.");
+    } catch (error: any) {
+      message.error("AI chưa thể tự động soạn thư mời. Bạn có thể tự viết.");
+    } finally {
+      setIsGeneratingAi(false);
+    }
+  };
+
   useEffect(() => {
     const navigationState = location.state as TalentPoolEmailState | null;
 
@@ -135,6 +175,29 @@ export function useEmailCandidate() {
 
       generateInitialTalentPoolInviteEmail(talentPoolCandidate).catch((error) => {
         console.error("Error generating email:", error);
+      });
+      return;
+    }
+
+    if (
+      navigationState?.source === "interview-schedule" &&
+      navigationState?.candidate
+    ) {
+      const emailContext = navigationState.emailContext || "";
+      const interviewCandidate = {
+        ...navigationState.candidate,
+        emailContext,
+        talentPoolContext: emailContext,
+      };
+
+      setCandidate(interviewCandidate);
+      setToEmail(interviewCandidate.cvEmail || interviewCandidate.email || "");
+      setCcEmail(interviewCandidate.accountEmail || "");
+      setSubject(`[AI Recruitment] Thư mời phỏng vấn vị trí ${interviewCandidate.jobTitle}`);
+      setLoading(false);
+
+      generateInitialInterviewEmail(interviewCandidate, emailContext).catch((error) => {
+        console.error("Error generating interview email:", error);
       });
       return;
     }

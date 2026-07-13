@@ -29,17 +29,45 @@ namespace RecruitmentBackend.Services
         {
             var account = await _context.Accounts.FirstOrDefaultAsync(a => a.Email == request.Email);
 
-            // Tạm thời so sánh chuỗi mật khẩu trực tiếp. 
-            // Nếu có chức năng tạo tài khoản sau này, ta có thể tích hợp thư viện BCrypt.Net để mã hóa.
-            if (account == null || account.PasswordHash != request.Password)
+            if (account == null)
             {
                 throw new Exception("Email hoặc mật khẩu không chính xác.");
+            }
+
+            // Kiểm tra tài khoản có đang bị khóa tạm thời do nhập sai quá 5 lần không
+            if (account.LockoutEnd != null && account.LockoutEnd > DateTime.Now)
+            {
+                var remainingMinutes = Math.Ceiling((account.LockoutEnd.Value - DateTime.Now).TotalMinutes);
+                throw new Exception($"Tài khoản của bạn tạm thời bị khóa do nhập sai mật khẩu quá 5 lần. Vui lòng thử lại sau {remainingMinutes} phút.");
             }
 
             if (account.Status != "Active")
             {
                 throw new Exception("Tài khoản của bạn đã bị khóa.");
             }
+
+            if (account.PasswordHash != request.Password)
+            {
+                account.AccessFailedCount += 1;
+                if (account.AccessFailedCount >= 5)
+                {
+                    account.LockoutEnd = DateTime.Now.AddMinutes(15);
+                    _context.Accounts.Update(account);
+                    await _context.SaveChangesAsync();
+                    throw new Exception("Bạn đã nhập sai mật khẩu quá 5 lần. Tài khoản tạm thời bị khóa trong 15 phút.");
+                }
+                _context.Accounts.Update(account);
+                await _context.SaveChangesAsync();
+
+                var remainingAttempts = 5 - account.AccessFailedCount;
+                throw new Exception($"Mật khẩu không chính xác. Bạn còn {remainingAttempts} lần thử lại trước khi bị khóa tài khoản.");
+            }
+
+            // Đăng nhập thành công, reset số lần nhập sai
+            account.AccessFailedCount = 0;
+            account.LockoutEnd = null;
+            _context.Accounts.Update(account);
+            await _context.SaveChangesAsync();
 
             // Lấy FullName tùy theo Role
             string fullName = "Quản trị viên";

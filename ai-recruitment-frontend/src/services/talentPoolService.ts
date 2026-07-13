@@ -4,6 +4,7 @@ export interface TalentPoolCandidateDto {
   talentPoolCandidateId: string;
   candidateId: string;
   latestCvId?: string;
+  latestCvUrl?: string;
   fullName: string;
   email: string;
   phone?: string;
@@ -47,6 +48,8 @@ export interface TalentPoolSuggestedJobDto {
   branchName: string;
   matchScore: number;
   reason: string;
+  salaryRange?: string;
+  deadline?: string;
 }
 
 export interface TalentPoolInviteSuggestionDto {

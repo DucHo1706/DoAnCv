@@ -1,7 +1,6 @@
 import {
   ArrowLeftOutlined,
   DownloadOutlined,
-  RobotOutlined,
 } from "@ant-design/icons";
 import {
   Button,
@@ -22,8 +21,9 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import PageContainer from "../../components/common/PageContainer";
 import { recruitmentService } from "../../services/recruitmentService";
-import RecruiterAnalysisTabs from "../../components/ai-report/RecruiterAnalysisTabs";
+import AiDetailedTabs from "../../components/ai-report/AiDetailedTabs";
 import { appTheme } from "../../constants/theme";
+import AiCoreIcon from "../../components/common/AiCoreIcon";
 
 const { Text, Paragraph } = Typography;
 
@@ -34,74 +34,8 @@ function CandidateDetailPage() {
   const [candidate, setCandidate] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [reEvaluating, setReEvaluating] = useState(false);
-
-  const handleReEvaluate = async () => {
-    if (!id) return;
-    setReEvaluating(true);
-    message.loading({
-      content: "Đang yêu cầu AI đọc và phân tích chi tiết lại CV...",
-      key: "reeval",
-    });
-    try {
-      await recruitmentService.reEvaluateApplication(id);
-      message.success({
-        content: "Đã kích hoạt AI chạy lại thành công! Đang tải lại dữ liệu...",
-        key: "reeval",
-        duration: 2,
-      });
-
-      setTimeout(async () => {
-        try {
-          const data = await recruitmentService.getHrApplications();
-          const apps = Array.isArray(data) ? data : (data as any)?.$values || [];
-          const found = apps.find((app: any) => app.id === id);
-          setCandidate(found || null);
-          message.success("Đã cập nhật báo cáo AI chi tiết mới! 🎉");
-        } catch {
-          message.error("Lỗi khi tải lại dữ liệu mới.");
-        } finally {
-          setReEvaluating(false);
-        }
-      }, 4500);
-    } catch (error: any) {
-      const errMsg = error?.response?.data?.message || "Không thể yêu cầu AI phân tích lại.";
-      message.error({ content: errMsg, key: "reeval" });
-      setReEvaluating(false);
-    }
-  };
-
-  useEffect(() => {
-    const fetchDetail = async () => {
-      try {
-        setLoading(true);
-        const data = await recruitmentService.getHrApplications();
-        const apps = Array.isArray(data) ? data : (data as any)?.$values || [];
-        const found = apps.find((app: any) => app.id === id);
-        setCandidate(found || null);
-      } catch (error: any) {
-        const errMsg =
-          error?.response?.status === 403
-            ? "Bạn không có quyền truy cập hồ sơ này (403). Vui lòng đăng nhập lại."
-            : error?.response?.status === 401
-              ? "Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại."
-              : "Lỗi khi tải chi tiết hồ sơ";
-        message.error(errMsg);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchDetail();
-  }, [id]);
-
-  const parseSkills = (jsonStr: string) => {
-    if (!jsonStr) return [];
-    try {
-      const parsed = JSON.parse(jsonStr);
-      return Array.isArray(parsed) ? parsed : [];
-    } catch {
-      return [];
-    }
-  };
+  const [evalProgress, setEvalProgress] = useState<number | null>(null);
+  const [evalStatusText, setEvalStatusText] = useState<string>("");
 
   // ====== HELPER PHÂN TÍCH NHANH CHO BÁO CÁO CHI TIẾT TỪ AI ======
   const getParsedAnalysis = (app: any) => {
@@ -119,6 +53,138 @@ function CandidateDetailPage() {
     }
     return null;
   };
+
+  const fetchDetail = async (showLoading = false) => {
+    try {
+      if (showLoading) setLoading(true);
+      const data = await recruitmentService.getHrApplications();
+      const apps = Array.isArray(data) ? data : (data as any)?.$values || [];
+      const found = apps.find((app: any) => app.id === id);
+      setCandidate(found || null);
+      return found;
+    } catch (error: any) {
+      const errMsg =
+        error?.response?.status === 403
+          ? "Bạn không có quyền truy cập hồ sơ này (403). Vui lòng đăng nhập lại."
+          : error?.response?.status === 401
+            ? "Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại."
+            : "Lỗi khi tải chi tiết hồ sơ";
+      message.error(errMsg);
+      return null;
+    } finally {
+      if (showLoading) setLoading(false);
+    }
+  };
+
+  const handleReEvaluate = async () => {
+    if (!id) return;
+    setReEvaluating(true);
+    setEvalProgress(10);
+    setEvalStatusText("Khởi chạy quy trình phân tích AI...");
+
+    message.loading({
+      content: "Đang gửi yêu cầu phân tích lại cho AI...",
+      key: "reeval",
+    });
+    try {
+      await recruitmentService.reEvaluateApplication(id);
+      message.success({
+        content: "Đã kích hoạt AI chạy lại thành công! Hệ thống đang phân tích...",
+        key: "reeval",
+        duration: 3,
+      });
+
+      // Poll every 3 seconds as a fallback in case SignalR connection fails
+      let attempts = 0;
+      const maxAttempts = 20; // 60 seconds fallback max
+      const intervalId = setInterval(async () => {
+        attempts++;
+        const updatedCandidate = await fetchDetail(false);
+        const parsedReport = getParsedAnalysis(updatedCandidate);
+        
+        if (parsedReport || attempts >= maxAttempts) {
+          clearInterval(intervalId);
+          setReEvaluating(false);
+          setEvalProgress(null);
+          if (parsedReport) {
+            message.success("Đã hoàn tất phân tích và cập nhật báo cáo AI chi tiết mới! 🎉");
+          } else {
+            message.warning("Yêu cầu AI phân tích lại đang chạy ngầm hoặc gặp gián đoạn. Hãy tải lại trang sau.");
+          }
+        }
+      }, 3000);
+      
+    } catch (error: any) {
+      const errMsg = error?.response?.data?.message || "Không thể yêu cầu AI phân tích lại.";
+      message.error({ content: errMsg, key: "reeval" });
+      setReEvaluating(false);
+      setEvalProgress(null);
+    }
+  };
+
+  useEffect(() => {
+    fetchDetail(true);
+  }, [id]);
+
+  // Real-time AI Progress listener using SignalR
+  useEffect(() => {
+    if (!id || !reEvaluating) return;
+
+    let connection: any = null;
+    let isSubscribed = true;
+
+    const startSignalR = async () => {
+      try {
+        const signalR = await import("@microsoft/signalr");
+        const apiBase = import.meta.env.VITE_API_URL || "https://localhost:7006/api";
+        const hubUrl = apiBase.replace(/\/api\/?$/, "") + "/hubs/ai-evaluation";
+        connection = new signalR.HubConnectionBuilder()
+          .withUrl(hubUrl)
+          .withAutomaticReconnect()
+          .build();
+
+        connection.on("ReceiveProgress", (data: { progress: number; stage: string; message: string }) => {
+          if (!isSubscribed) return;
+          setEvalProgress(data.progress);
+          setEvalStatusText(data.message || data.stage);
+        });
+
+        connection.on("ReceiveResult", (data: { aiStatus: string; message?: string }) => {
+          if (!isSubscribed) return;
+          if (data.aiStatus === "Success") {
+            setEvalProgress(100);
+            setEvalStatusText("Đã hoàn tất phân tích AI! 🎉");
+            fetchDetail(false);
+            setTimeout(() => {
+              if (isSubscribed) {
+                setReEvaluating(false);
+                setEvalProgress(null);
+              }
+            }, 800);
+          } else {
+            message.error(data.message || "Phân tích AI thất bại.");
+            setReEvaluating(false);
+            setEvalProgress(null);
+          }
+        });
+
+        await connection.start();
+        await connection.invoke("JoinApplicationGroup", id);
+        console.log("[SignalR] Connected to AI Evaluation Hub!");
+      } catch (err: any) {
+        console.warn("[SignalR] Connection failed, falling back to polling.", err);
+      }
+    };
+
+    startSignalR();
+
+    return () => {
+      isSubscribed = false;
+      if (connection) {
+        connection.stop().catch((err: any) => console.error("[SignalR] Stop error", err));
+      }
+    };
+  }, [id, reEvaluating]);
 
   if (loading) {
     return (
@@ -147,15 +213,7 @@ function CandidateDetailPage() {
     );
   }
 
-  const strengths = parseSkills(candidate.matchedSkills);
-  const gaps = parseSkills(candidate.missingSkills);
-
   const parsed = getParsedAnalysis(candidate);
-  const matchedSkillsFromParse = parsed?.score_analysis?.matched_skills ?? [];
-  const missingSkillsFromParse = parsed?.score_analysis?.missing_skills ?? [];
-
-  const finalMatchedSkills = matchedSkillsFromParse.length > 0 ? matchedSkillsFromParse : strengths;
-  const finalMissingSkills = missingSkillsFromParse.length > 0 ? missingSkillsFromParse : gaps;
 
   return (
     <PageContainer
@@ -176,7 +234,7 @@ function CandidateDetailPage() {
           <Button
             type="primary"
             ghost
-            icon={<RobotOutlined />}
+            icon={<AiCoreIcon size={16} style={{ verticalAlign: "middle" }} />}
             loading={reEvaluating}
             onClick={handleReEvaluate}
             style={{
@@ -305,7 +363,32 @@ function CandidateDetailPage() {
               </Descriptions.Item>
             </Descriptions>
 
-            {!parsed && (
+            {reEvaluating && evalProgress !== null && (
+              <Card 
+                style={{ 
+                  marginTop: 20, 
+                  borderRadius: 14, 
+                  background: "#EFF6FF", 
+                  border: "1px solid #BFDBFE",
+                  boxShadow: "0 4px 12px rgba(37, 99, 235, 0.08)"
+                }}
+              >
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ fontWeight: 650, color: "#1E40AF", display: "inline-flex", alignItems: "center", gap: 6 }}>
+                      <AiCoreIcon spin size={16} /> Tiến trình phân tích AI thời gian thực (Real-time)
+                    </span>
+                    <span style={{ fontWeight: 700, color: "#2563EB" }}>{evalProgress}%</span>
+                  </div>
+                  <Progress percent={evalProgress} strokeColor="#2563EB" status="active" showInfo={false} />
+                  <Text style={{ fontSize: 13, color: "#475569", fontStyle: "italic" }}>
+                    {evalStatusText || "Đang xử lý hồ sơ..."}
+                  </Text>
+                </div>
+              </Card>
+            )}
+
+            {!parsed && !reEvaluating && (
               <div style={{ marginTop: 20 }}>
                 <Alert
                   message="Báo cáo AI chưa được nâng cấp"
@@ -392,7 +475,7 @@ function CandidateDetailPage() {
                       <Button
                         type="primary"
                         size="large"
-                        icon={<RobotOutlined />}
+                        icon={<AiCoreIcon size={16} style={{ filter: "brightness(0) invert(1)", verticalAlign: "middle" }} />}
                         loading={reEvaluating}
                         onClick={handleReEvaluate}
                         style={{
@@ -421,8 +504,8 @@ function CandidateDetailPage() {
           {parsed && (
             <Card
               title={
-                <span style={{ fontWeight: 700, fontFamily: appTheme.font.family, fontSize: 16 }}>
-                  <RobotOutlined style={{ marginRight: 8, color: appTheme.colors.primary }} />
+                <span style={{ display: "inline-flex", alignItems: "center", fontWeight: 700, fontFamily: appTheme.font.family, fontSize: 16 }}>
+                  <AiCoreIcon size={18} style={{ marginRight: 8 }} />
                   Báo cáo Phân tích chi tiết từ AI
                 </span>
               }
@@ -434,11 +517,8 @@ function CandidateDetailPage() {
               }}
               bodyStyle={{ padding: "20px 24px" }}
             >
-              <RecruiterAnalysisTabs
+              <AiDetailedTabs
                 parsedAnalysis={parsed}
-                candidate={candidate}
-                finalMatchedSkills={finalMatchedSkills}
-                finalMissingSkills={finalMissingSkills}
               />
             </Card>
           )}
@@ -485,8 +565,8 @@ function CandidateDetailPage() {
  
           <Card
             title={
-              <Space>
-                <RobotOutlined style={{ color: appTheme.colors.primary }} />
+              <Space style={{ display: "inline-flex", alignItems: "center" }}>
+                <AiCoreIcon size={18} />
                 <span style={{ fontFamily: appTheme.font.family, fontWeight: 700, fontSize: 16 }}>
                   Luồng xử lý hồ sơ
                 </span>

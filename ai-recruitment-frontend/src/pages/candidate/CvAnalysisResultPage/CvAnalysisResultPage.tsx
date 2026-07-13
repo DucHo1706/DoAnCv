@@ -1,11 +1,12 @@
 import React, { useEffect, useState, useRef } from "react";
 import { Typography, Button, Tag, Space, Row, Col, Card, Progress, message } from "antd";
-import { ArrowLeftOutlined, SendOutlined, RedoOutlined, AlertOutlined, RobotOutlined } from "@ant-design/icons";
+import { ArrowLeftOutlined, SendOutlined, RedoOutlined, AlertOutlined } from "@ant-design/icons";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import axiosClient from "../../../services/axiosClient";
 import CvAiPreviewModal from "../../../components/candidate/CvAiPreviewModal";
 import AiDetailedTabs from "../../../components/ai-report/AiDetailedTabs";
 import PdfExportUtils from "./components/PdfExportUtils";
+import AiCoreIcon from "../../../components/common/AiCoreIcon";
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -832,7 +833,7 @@ export default function CvAnalysisResultPage() {
                         animation: "spin 1.5s linear infinite",
                       }}
                     >
-                      <RobotOutlined style={{ fontSize: 32, color: "#2563eb", animation: "pulse-glow 1.5s infinite" }} />
+                      <AiCoreIcon size={32} style={{ animation: "pulse-glow 1.5s infinite", verticalAlign: "middle" }} />
                     </div>
                   ) : (
                     <Progress

@@ -231,17 +231,32 @@ function HomePage() {
   });
 
   // Simulator State
-  const [activeCategory, setActiveCategory] = useState<"tech" | "marketing" | "corp">("tech");
+  const [activeCategory, setActiveCategory] = useState<string>("tech");
   const [simulatorLoading, setSimulatorLoading] = useState(false);
   const [simulatorCandidate, setSimulatorCandidate] = useState<any>(SIMULATOR_CANDIDATES.tech);
+  const [simulatorItems, setSimulatorItems] = useState<any[]>([]);
 
-  const handleCategoryChange = (category: "tech" | "marketing" | "corp") => {
-    setActiveCategory(category);
-    setSimulatorLoading(true);
-    setTimeout(() => {
-      setSimulatorCandidate(SIMULATOR_CANDIDATES[category]);
-      setSimulatorLoading(false);
-    }, 400);
+  const getCategoryIcon = (categoryName: string) => {
+    const name = categoryName.toLowerCase();
+    if (name.includes("công nghệ") || name.includes("tech") || name.includes("it") || name.includes("phần mềm") || name.includes("lập trình")) {
+      return <CodeOutlined style={{ fontSize: 20 }} />;
+    }
+    if (name.includes("marketing") || name.includes("quảng cáo") || name.includes("seo") || name.includes("truyền thông")) {
+      return <BarChartOutlined style={{ fontSize: 20 }} />;
+    }
+    if (name.includes("tài chính") || name.includes("kế toán") || name.includes("corp") || name.includes("doanh nghiệp") || name.includes("luật")) {
+      return <BankOutlined style={{ fontSize: 20 }} />;
+    }
+    if (name.includes("kinh doanh") || name.includes("sales") || name.includes("bán hàng")) {
+      return <DollarOutlined style={{ fontSize: 20 }} />;
+    }
+    if (name.includes("thiết kế") || name.includes("design") || name.includes("ux/ui")) {
+      return <FormatPainterOutlined style={{ fontSize: 20 }} />;
+    }
+    if (name.includes("nhân sự") || name.includes("hr")) {
+      return <TeamOutlined style={{ fontSize: 20 }} />;
+    }
+    return <AppstoreOutlined style={{ fontSize: 20 }} />;
   };
 
   // Rotating & Personalized Featured Jobs States
@@ -393,7 +408,7 @@ function HomePage() {
   useEffect(() => {
     const fetchJobs = async () => {
       try {
-        const [jobsData, trendingData, statsData] = await Promise.all([
+        const [jobsData, trendingData, statsData, simulatorData] = await Promise.all([
           jobService.getJobs(),
           axiosClient.get("/Jobs/trending?limit=6").catch(() => ({ data: [] })),
           axiosClient.get("/Dashboard/admin-stats").catch(() => ({
@@ -401,6 +416,7 @@ function HomePage() {
               quickMetrics: { totalUsers: 0, activeJobs: 0, analyzedCvs: 0, totalCandidateUsers: 0 },
             },
           })),
+          axiosClient.get("/Dashboard/simulator-candidates").catch(() => ({ data: { isSuccess: false, data: [] } })),
         ]);
 
         const jobsArray = Array.isArray(jobsData) ? jobsData : (jobsData as any)?.$values || [];
@@ -409,6 +425,27 @@ function HomePage() {
 
         if (statsData?.data?.quickMetrics) {
           setStats(statsData.data.quickMetrics);
+        }
+
+        const simList = simulatorData?.data?.data || [];
+        if (simulatorData?.data?.isSuccess && Array.isArray(simList) && simList.length > 0) {
+          const items = simList.map((item: any) => ({
+            key: item.categoryKey,
+            name: item.categoryName,
+            candidate: item.candidate
+          }));
+          setSimulatorItems(items);
+          setActiveCategory(items[0].key);
+          setSimulatorCandidate(items[0].candidate);
+        } else {
+          const mockItems = [
+            { key: "tech", name: "TECH", candidate: SIMULATOR_CANDIDATES.tech },
+            { key: "marketing", name: "MARKETING", candidate: SIMULATOR_CANDIDATES.marketing },
+            { key: "corp", name: "CORP", candidate: SIMULATOR_CANDIDATES.corp }
+          ];
+          setSimulatorItems(mockItems);
+          setActiveCategory("tech");
+          setSimulatorCandidate(SIMULATOR_CANDIDATES.tech);
         }
       } catch (error) {
         console.error("Lỗi khi tải dữ liệu trang chủ", error);
@@ -536,6 +573,14 @@ function HomePage() {
       color: #64748B !important;
       font-size: 15px !important;
       line-height: 1.7 !important;
+    }
+
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
     }
   `;
 
@@ -724,66 +769,51 @@ function HomePage() {
                       SELECT ACTIVE REQUISITION
                     </span>
                   </div>
-                  <div style={{ display: "flex", gap: 12 }}>
-                    <div
-                      onClick={() => handleCategoryChange("tech")}
-                      style={{
-                        flex: 1,
-                        border: activeCategory === "tech" ? "2px solid #2563EB" : "1px solid #E2E8F0",
-                        borderRadius: "12px",
-                        padding: "16px 8px",
-                        textAlign: "center",
-                        cursor: "pointer",
-                        background: "#FFFFFF",
-                        transition: "all 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
-                        boxShadow: activeCategory === "tech" ? "0 8px 24px rgba(37, 99, 235, 0.08)" : "none",
-                      }}
-                    >
-                      <CodeOutlined style={{ fontSize: 20, color: activeCategory === "tech" ? "#2563EB" : "#64748B", marginBottom: 8, display: "block" }} />
-                      <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.08em", color: activeCategory === "tech" ? "#2563EB" : "#0F172A", textTransform: "uppercase" }} className="plus-jakarta-sans">
-                        TECH
-                      </span>
-                    </div>
-
-                    <div
-                      onClick={() => handleCategoryChange("marketing")}
-                      style={{
-                        flex: 1,
-                        border: activeCategory === "marketing" ? "2px solid #2563EB" : "1px solid #E2E8F0",
-                        borderRadius: "12px",
-                        padding: "16px 8px",
-                        textAlign: "center",
-                        cursor: "pointer",
-                        background: "#FFFFFF",
-                        transition: "all 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
-                        boxShadow: activeCategory === "marketing" ? "0 8px 24px rgba(37, 99, 235, 0.08)" : "none",
-                      }}
-                    >
-                      <BarChartOutlined style={{ fontSize: 20, color: activeCategory === "marketing" ? "#2563EB" : "#64748B", marginBottom: 8, display: "block" }} />
-                      <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.08em", color: activeCategory === "marketing" ? "#2563EB" : "#0F172A", textTransform: "uppercase" }} className="plus-jakarta-sans">
-                        MARKETING
-                      </span>
-                    </div>
-
-                    <div
-                      onClick={() => handleCategoryChange("corp")}
-                      style={{
-                        flex: 1,
-                        border: activeCategory === "corp" ? "2px solid #2563EB" : "1px solid #E2E8F0",
-                        borderRadius: "12px",
-                        padding: "16px 8px",
-                        textAlign: "center",
-                        cursor: "pointer",
-                        background: "#FFFFFF",
-                        transition: "all 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
-                        boxShadow: activeCategory === "corp" ? "0 8px 24px rgba(37, 99, 235, 0.08)" : "none",
-                      }}
-                    >
-                      <BankOutlined style={{ fontSize: 20, color: activeCategory === "corp" ? "#2563EB" : "#64748B", marginBottom: 8, display: "block" }} />
-                      <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.08em", color: activeCategory === "corp" ? "#2563EB" : "#0F172A", textTransform: "uppercase" }} className="plus-jakarta-sans">
-                        CORP
-                      </span>
-                    </div>
+                  <div 
+                    className="no-scrollbar"
+                    style={{ 
+                      display: "flex", 
+                      gap: 12, 
+                      overflowX: simulatorItems.length > 3 ? "auto" : "visible", 
+                      paddingBottom: 8,
+                      scrollbarWidth: "none",
+                      msOverflowStyle: "none"
+                    }}
+                  >
+                    {simulatorItems.map((item) => {
+                      const isActive = activeCategory === item.key;
+                      return (
+                        <div
+                          key={item.key}
+                          onClick={() => {
+                            setActiveCategory(item.key);
+                            setSimulatorLoading(true);
+                            setTimeout(() => {
+                              setSimulatorCandidate(item.candidate);
+                              setSimulatorLoading(false);
+                            }, 300);
+                          }}
+                          style={{
+                            flex: simulatorItems.length > 3 ? "0 0 115px" : 1,
+                            border: isActive ? "2px solid #2563EB" : "1px solid #E2E8F0",
+                            borderRadius: "12px",
+                            padding: "16px 8px",
+                            textAlign: "center",
+                            cursor: "pointer",
+                            background: "#FFFFFF",
+                            transition: "all 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
+                            boxShadow: isActive ? "0 8px 24px rgba(37, 99, 235, 0.08)" : "none",
+                          }}
+                        >
+                          <div style={{ color: isActive ? "#2563EB" : "#64748B", marginBottom: 8 }}>
+                            {getCategoryIcon(item.name)}
+                          </div>
+                          <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.08em", color: isActive ? "#2563EB" : "#0F172A", textTransform: "uppercase" }} className="plus-jakarta-sans">
+                            {item.name}
+                          </span>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
 
@@ -806,42 +836,43 @@ function HomePage() {
                     }}
                   >
                     {/* Candidate Profile Info */}
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-                      <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24, gap: 12 }}>
+                      <div style={{ display: "flex", gap: 16, alignItems: "center", minWidth: 0, flex: 1 }}>
                         <div style={{
                           width: 56,
                           height: 56,
+                          flexShrink: 0,
                           borderRadius: "50%",
                           background: "#FFFFFF",
-                          border: "1px solid #E2E8F0",
-                          color: "#0F172A",
+                          border: "2px solid #E2E8F0",
+                          color: "#2563EB",
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
-                          fontWeight: 700,
+                          fontWeight: 800,
                           fontSize: 18,
-                          boxShadow: "0 2px 8px rgba(15, 23, 42, 0.02)"
+                          boxShadow: "0 4px 12px rgba(15, 23, 42, 0.04)"
                         }}>
                           {simulatorCandidate.avatar}
                         </div>
-                        <div>
-                          <h4 style={{ fontSize: 20, color: "#0F172A", margin: 0, fontWeight: 800, letterSpacing: "-0.01em" }} className="plus-jakarta-sans">
+                        <div style={{ minWidth: 0 }}>
+                          <h4 style={{ fontSize: "21px", color: "#0F172A", margin: 0, fontWeight: 800, letterSpacing: "-0.02em", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} className="plus-jakarta-sans">
                             {simulatorCandidate.name}
                           </h4>
-                          <span style={{ fontSize: 11, color: "#475569", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 700, marginTop: 4, display: "block" }}>
+                          <span style={{ fontSize: "11px", color: "#64748B", textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 700, marginTop: 4, display: "block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                             {simulatorCandidate.role}
                           </span>
                         </div>
                       </div>
 
                       {/* Matching Score Circle Badge */}
-                      <div style={{ textAlign: "right" }}>
-                        <div style={{ fontSize: 44, fontWeight: 800, color: "#0F172A", lineHeight: 1 }}>
+                      <div style={{ textAlign: "right", flexShrink: 0 }}>
+                        <div style={{ fontSize: 44, fontWeight: 900, color: simulatorCandidate.score >= 90 ? "#10B981" : "#2563EB", lineHeight: 1, letterSpacing: "-0.03em" }}>
                           {simulatorCandidate.score}
-                          <small style={{ fontSize: 18, fontWeight: 700, color: "#0F172A", marginLeft: 2 }}>%</small>
+                          <small style={{ fontSize: 18, fontWeight: 800, marginLeft: 2 }}>%</small>
                         </div>
-                        <span style={{ fontSize: 10, color: "#475569", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 700, marginTop: 4, display: "block" }}>
-                          NEURAL MATCH
+                        <span style={{ fontSize: 10, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 800, marginTop: 6, display: "block" }}>
+                          ĐỘ PHÙ HỢP AI
                         </span>
                       </div>
                     </div>
@@ -849,40 +880,41 @@ function HomePage() {
                     <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: 24, marginTop: 24 }}>
                       {/* Skills Section */}
                       <div>
-                        <span style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.1em", color: "#475569", display: "block", borderBottom: "1px solid #CBD5E1", paddingBottom: 8, marginBottom: 12 }}>
-                          CORE COMPETENCIES
+                        <span style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.08em", color: "#475569", display: "block", borderBottom: "2px solid #E2E8F0", paddingBottom: 8, marginBottom: 12 }}>
+                          NĂNG LỰC CỐT LÕI
                         </span>
-                        <Space wrap size={[6, 8]}>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: "8px 10px" }}>
                           {simulatorCandidate.skills.map((skill: string) => (
                             <span
                               key={skill}
                               style={{
+                                display: "inline-block",
                                 background: "#FFFFFF",
-                                border: "1px solid #CBD5E1",
-                                color: "#0F172A",
+                                border: "1px solid #E2E8F0",
+                                color: "#1E293B",
                                 padding: "6px 14px",
-                                borderRadius: "8px",
+                                borderRadius: "20px",
                                 fontSize: "12px",
                                 fontWeight: 600,
-                                boxShadow: "0 2px 4px rgba(15, 23, 42, 0.01)"
+                                boxShadow: "0 2px 4px rgba(15, 23, 42, 0.02)"
                               }}
                             >
                               {skill}
                             </span>
                           ))}
-                        </Space>
+                        </div>
                       </div>
 
                       {/* Warnings Section */}
                       <div>
-                        <span style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.1em", color: "#991B1B", display: "block", borderBottom: "1px solid #FCA5A5", paddingBottom: 8, marginBottom: 12 }}>
-                          RED FLAGS
+                        <span style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.08em", color: "#EF4444", display: "block", borderBottom: "2px solid #FEE2E2", paddingBottom: 8, marginBottom: 12 }}>
+                          CẢNH BÁO
                         </span>
-                        <ul style={{ fontSize: 12, color: "#991B1B", paddingLeft: 0, listStyle: "none", margin: 0, display: "flex", flexDirection: "column", gap: 6 }}>
+                        <ul style={{ fontSize: 12, color: "#DC2626", paddingLeft: 0, listStyle: "none", margin: 0, display: "flex", flexDirection: "column", gap: 8 }}>
                           {simulatorCandidate.warnings.map((warn: string, i: number) => (
-                            <li key={i} style={{ display: "flex", alignItems: "flex-start", gap: 6 }}>
-                              <span>•</span>
-                              <span style={{ fontWeight: 550 }}>{warn}</span>
+                            <li key={i} style={{ display: "flex", alignItems: "flex-start", gap: 6, lineHeight: "1.4" }}>
+                              <span style={{ color: "#EF4444", fontWeight: 900 }}>•</span>
+                              <span style={{ fontWeight: 600, color: "#7F1D1D" }}>{warn}</span>
                             </li>
                           ))}
                         </ul>

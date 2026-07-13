@@ -23,8 +23,12 @@ builder.Services.AddCors(options =>
             "http://localhost:3000",
             "http://localhost:5173")
                         .AllowAnyHeader()
-                        .AllowAnyMethod());
+                        .AllowAnyMethod()
+                        .AllowCredentials());
 });
+
+// Đăng ký SignalR
+builder.Services.AddSignalR();
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -72,6 +76,9 @@ builder.Services.AddScoped<IJobService, JobService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IJobPositionService, JobPositionService>();
+builder.Services.AddScoped<IApplicationService, ApplicationService>();
+builder.Services.AddScoped<IAiEvaluationService, AiEvaluationService>();
+builder.Services.AddScoped<IInterviewService, InterviewService>();
 builder.Services.AddScoped<IRecruitmentService, RecruitmentService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<IBranchService, BranchService>();
@@ -82,6 +89,8 @@ builder.Services.AddScoped<IEmailSenderService, EmailSenderService>();
 builder.Services.AddHttpClient<ICandidateEmailAiService, CandidateEmailAiService>();
 builder.Services.AddScoped<ITalentPoolService, TalentPoolService>();
 builder.Services.AddScoped<IAprioriService, AprioriService>();
+builder.Services.AddScoped<IHighUtilityService, HighUtilityService>();
+builder.Services.AddHostedService<MiningSchedulerService>();
 
 
 var jwtSettings = builder.Configuration.GetSection("Jwt");
@@ -125,6 +134,9 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.UseHttpsRedirection();
 app.MapControllers();
+
+// Map SignalR Hub
+app.MapHub<RecruitmentBackend.Hubs.AIEvaluationHub>("/hubs/ai-evaluation");
 
 var uploadPath = Path.Combine(builder.Environment.ContentRootPath, "Uploads");
 if (!Directory.Exists(uploadPath))

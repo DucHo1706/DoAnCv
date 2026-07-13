@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List, Optional, Dict
 
 class SkillUpdateRequest(BaseModel):
     skills: List[str]
@@ -42,3 +42,12 @@ class AprioriTrainRequest(BaseModel):
 class SkillRecommendRequest(BaseModel):
     current_skills: List[str]
     top_n: Optional[int] = 5
+
+class HUIMTransaction(BaseModel):
+    items: List[str]
+    quantities: Dict[str, int]
+
+class HUIMTrainRequest(BaseModel):
+    transactions: List[HUIMTransaction]
+    external_utilities: Dict[str, float]
+    min_utility: float

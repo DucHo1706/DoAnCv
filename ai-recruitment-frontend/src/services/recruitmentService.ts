@@ -124,6 +124,11 @@ export const recruitmentService = {
     return response.data;
   },
 
+  async getHrEmailLogs() {
+    const response = await axiosClient.get("/CandidateEmails/hr/logs");
+    return response.data;
+  },
+
   async getMyApplications() {
     const response = await axiosClient.get("/Recruitment/my-applications");
     return response.data;
@@ -135,4 +140,45 @@ export const recruitmentService = {
     );
     return response.data;
   },
+
+  async scheduleInterview(applicationId: string, request: any) {
+    const response = await axiosClient.post(
+      `/Recruitment/hr/applications/${applicationId}/schedule`,
+      request
+    );
+    return response.data;
+  },
+
+  async getInterviewSchedule(applicationId: string) {
+    const response = await axiosClient.get<InterviewScheduleDto>(
+      `/Recruitment/applications/${applicationId}/schedule`
+    );
+    return response.data;
+  },
+
+  async getHrInterviewSchedules() {
+    const response = await axiosClient.get<InterviewScheduleDto[]>(
+      "/Recruitment/hr/schedules"
+    );
+    return response.data;
+  },
+
+  async cancelInterview(applicationId: string) {
+    const response = await axiosClient.delete(
+      `/Recruitment/hr/applications/${applicationId}/schedule`
+    );
+    return response.data;
+  },
 };
+
+export interface InterviewScheduleDto {
+  scheduleId?: string;
+  applicationId: string;
+  interviewDate: string;
+  format: string; // "Online" | "Offline"
+  locationOrLink: string;
+  meetingId?: string;
+  passcode?: string;
+  notes?: string;
+  createdAt?: string;
+}

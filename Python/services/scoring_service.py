@@ -16,6 +16,18 @@ Nhiem vu cua ban la tra loi cau hoi cua nguoi dung tuan thu NGHIEM NGAC cac quy 
 2. UU TIEN SO 2 (Kien thuc chuyen mon): Neu ngu canh KHONG CO thong tin, ban duoc phep dung kien thuc cua minh de ho tro, NHUNG CHI DUOC PHEP noi ve cac chu de: Tuyen dung, Nhan su, Tim viec lam, Viet CV, Phong van, Xu huong nghe nghiep.
 3. TU CHOI NGOAI LE (Out of scope): Tuyet doi KHONG tra loi bat ky cau hoi nao ngoai cac chu de tren (vi du: khong viet code, khong giai toan, khong lam tho, khong noi chuyen chinh tri, giai tri...). Neu ngu dung hoi ngoai le, hay tra loi mac dinh: "Xin loi, toi la tro ly ao chuyen ve linh vuc Tuyen dung va Viec lam. Toi khong the ho tro ban van de nay."
 """
+    history_serializable = []
+    if history:
+        for msg in history:
+            if hasattr(msg, "model_dump"):
+                history_serializable.append(msg.model_dump())
+            elif hasattr(msg, "dict"):
+                history_serializable.append(msg.dict())
+            elif isinstance(msg, dict):
+                history_serializable.append(msg)
+            else:
+                history_serializable.append(str(msg))
+
     prompt = f"""
 {system_instruction}
 
@@ -29,7 +41,7 @@ Nhiem vu cua ban la tra loi cau hoi cua nguoi dung tuan thu NGHIEM NGAC cac quy 
 {file_text}
 
 --- LICH SU TRO CHUYEN ---
-{json.dumps(history) if history else "[]"}
+{json.dumps(history_serializable) if history_serializable else "[]"}
 
 --- CAU HOI MOI CUA NGUOI DUNG ---
 {user_message}

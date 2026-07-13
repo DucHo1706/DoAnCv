@@ -16,5 +16,7 @@ namespace RecruitmentBackend.DTOs.Responses
         public string Description { get; set; } = string.Empty;
         public List<string> Skills { get; set; } = new List<string>();
         public int AiScore { get; set; } = 0;
+        public string? RecommendationType { get; set; }
+        public double? UtilityScore { get; set; }
     }
 }

@@ -20,13 +20,15 @@ export default function CandidateJobDetailPage() {
     handleApplyWithAI,
     showApplyModal,
     handleCancelApplyModal,
-    handleGoToAiEvaluation,
-    handleViewAppliedAiEvaluation,
     handleDirectApply,
     uploadProps,
     navigate,
     isSubmitting,
-    relatedJobs
+    relatedJobs,
+    hasDefaultCv,
+    defaultCvName,
+    useDefaultCv,
+    setUseDefaultCv,
   } = useJobDetail();
 
   if (loading) {
@@ -70,7 +72,6 @@ export default function CandidateJobDetailPage() {
           job={job}
           appliedApplication={appliedApplication}
           showApplyModal={showApplyModal}
-          handleViewAppliedAiEvaluation={handleViewAppliedAiEvaluation}
           handleApplyWithAI={handleApplyWithAI}
           relatedJobs={relatedJobs}
         />
@@ -83,16 +84,19 @@ export default function CandidateJobDetailPage() {
           onCancel={handleCancelApplyModal}
           confirmLoading={isSubmitting}
           uploadProps={uploadProps}
+          hasDefaultCv={hasDefaultCv}
+          defaultCvName={defaultCvName}
+          useDefaultCv={useDefaultCv}
+          setUseDefaultCv={setUseDefaultCv}
         />
 
         {/* 3. Modal thông báo thành công */}
         <ApplySuccessModal
           open={isApplySuccessModalOpen}
           onCancel={() => setIsApplySuccessModalOpen(false)}
-          onGoToAiEvaluation={handleGoToAiEvaluation}
         />
 
-        {/* 4. AI Preview Modal */}
+        {/* 4. AI CV Analysis & Preview Modal */}
         <CvAiPreviewModal
           open={isAiPreviewModalOpen}
           onClose={() => setIsAiPreviewModalOpen(false)}

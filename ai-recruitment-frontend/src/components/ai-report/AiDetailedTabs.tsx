@@ -28,43 +28,66 @@ const AiDetailedTabs: React.FC<AiDetailedTabsProps> = ({
   const lang = parsedAnalysis?.language_review || {};
   const interviewQuestions = parsedAnalysis?.mock_interview || [];
 
+  const scrollContainerStyle = {
+    maxHeight: "580px",
+    overflowY: "auto" as const,
+    paddingRight: "12px",
+    paddingBottom: "12px",
+  };
+
   const tabItems = [
     {
       key: "1",
       label: "Năng lực & Cảnh báo",
-      children: <CompetencyTab scoreAnalysis={score} criteriaResults={criteriaResults} loading={isInitialLoading} />,
+      children: (
+        <div className="custom-scrollbar" style={scrollContainerStyle}>
+          <CompetencyTab scoreAnalysis={score} criteriaResults={criteriaResults} loading={isInitialLoading} />
+        </div>
+      ),
     },
     {
       key: "2",
       label: "Tối ưu hóa (STAR)",
-      children: tipsLoading ? (
-        <div style={{ textAlign: "center", padding: "50px 0" }}>
-          <Spin tip="AI đang tối ưu hóa CV theo chuẩn STAR..." size="large" />
+      children: (
+        <div className="custom-scrollbar" style={scrollContainerStyle}>
+          {tipsLoading ? (
+            <div style={{ textAlign: "center", padding: "50px 0" }}>
+              <Spin tip="AI đang tối ưu hóa CV theo chuẩn STAR..." size="large" />
+            </div>
+          ) : (
+            <StarOptimizationTab optimizationTips={tips} />
+          )}
         </div>
-      ) : (
-        <StarOptimizationTab optimizationTips={tips} />
       ),
     },
     {
       key: "3",
       label: "Ngôn từ & Chân thực",
-      children: langLoading ? (
-        <div style={{ textAlign: "center", padding: "50px 0" }}>
-          <Spin tip="AI đang đánh giá chất lượng ngôn từ & phân tích tính chân thực..." size="large" />
+      children: (
+        <div className="custom-scrollbar" style={scrollContainerStyle}>
+          {langLoading ? (
+            <div style={{ textAlign: "center", padding: "50px 0" }}>
+              <Spin tip="AI đang đánh giá chất lượng ngôn từ & phân tích tính chân thực..." size="large" />
+            </div>
+          ) : (
+            <LanguageReviewTab languageReview={lang} />
+          )}
         </div>
-      ) : (
-        <LanguageReviewTab languageReview={lang} />
       ),
     },
     {
       key: "4",
       label: "Gợi ý phỏng vấn",
-      children: interviewLoading ? (
-        <div style={{ textAlign: "center", padding: "50px 0" }}>
-          <Spin tip="AI đang soạn bộ câu hỏi phỏng vấn tối ưu cho bạn..." size="large" />
+      children: (
+        <div className="custom-scrollbar" style={scrollContainerStyle}>
+          {interviewLoading ? (
+            <div style={{ textAlign: "center", padding: "50px 0" }}>
+              <Spin tip="AI đang soạn bộ câu hỏi phỏng vấn tối ưu cho bạn..." size="large" />
+            </div>
+          ) : (
+            <InterviewQuestionsTab interviewQuestions={interviewQuestions} />
+          )}
         </div>
-      ) : (
-        <InterviewQuestionsTab interviewQuestions={interviewQuestions} />
       ),
     },
   ];

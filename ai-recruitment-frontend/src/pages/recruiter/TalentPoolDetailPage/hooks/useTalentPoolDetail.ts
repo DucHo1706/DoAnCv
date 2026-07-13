@@ -17,12 +17,15 @@ import type {
   TalentPoolSuggestedJobDto,
 } from "../../../../services/talentPoolService";
 
+import type { CategoryDto } from "../../../../services/jobService";
+
 export function useTalentPoolDetail() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
 
   const [detail, setDetail] = useState<TalentPoolDetailDto | null>(null);
   const [jobs, setJobs] = useState<JobDto[]>([]);
+  const [categories, setCategories] = useState<CategoryDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [note, setNote] = useState("");
   const [noteSubmitting, setNoteSubmitting] = useState(false);
@@ -31,6 +34,18 @@ export function useTalentPoolDetail() {
   );
   const [suggestionLoading, setSuggestionLoading] = useState(false);
   const [selectedJobId, setSelectedJobId] = useState<string | undefined>();
+
+  // Job filtering states
+  const [searchJobQuery, setSearchJobQuery] = useState("");
+  const [filterJobIndustry, setFilterJobIndustry] = useState<string | null>(null);
+  const [filterJobSector, setFilterJobSector] = useState<string | null>(null);
+  const [filterJobBranch, setFilterJobBranch] = useState<string | null>(null);
+  const [filterJobLevel, setFilterJobLevel] = useState<string | null>(null);
+
+  const handleSelectIndustry = (val: string | null) => {
+    setFilterJobIndustry(val);
+    setFilterJobSector(null);
+  };
 
   const fetchDetail = async () => {
     if (!id) {
@@ -67,6 +82,15 @@ export function useTalentPoolDetail() {
     }
   };
 
+  const fetchCategories = async () => {
+    try {
+      const data = await jobService.getCategories();
+      setCategories(Array.isArray(data) ? data : (data as any)?.$values || []);
+    } catch (e) {
+      console.error("Lỗi khi tải categories", e);
+    }
+  };
+
   const fetchInviteSuggestions = async () => {
     if (!id) {
       message.error("Không tìm thấy mã ứng viên Talent Pool.");
@@ -94,6 +118,7 @@ export function useTalentPoolDetail() {
   useEffect(() => {
     fetchDetail();
     fetchJobs();
+    fetchCategories();
     fetchInviteSuggestions();
   }, [id]);
 
@@ -209,6 +234,56 @@ export function useTalentPoolDetail() {
     return jobs.filter((job) => isOpenJob(job));
   }, [jobs]);
 
+  const filteredOpenJobs = useMemo(() => {
+    return openJobs.filter((job) => {
+      const positionName = (job.position?.name || "").toLowerCase();
+      const requirements = (job.requirements || "").toLowerCase();
+      
+      const matchQuery = searchJobQuery
+        ? positionName.includes(searchJobQuery.toLowerCase()) ||
+          requirements.includes(searchJobQuery.toLowerCase())
+        : true;
+
+      let matchIndustry = true;
+      if (filterJobIndustry) {
+        if (!job.category?.id) {
+          matchIndustry = false;
+        } else {
+          const jobCat = categories.find((c) => c.id === job.category?.id);
+          const industryId = jobCat?.parentId || job.category?.id;
+          matchIndustry = industryId === filterJobIndustry;
+        }
+      }
+
+      let matchSector = true;
+      if (filterJobSector) {
+        matchSector = job.category?.id === filterJobSector;
+      }
+
+      let matchBranch = true;
+      if (filterJobBranch) {
+        matchBranch = job.branch?.id === filterJobBranch;
+      }
+
+      const matchLevel = filterJobLevel
+        ? job.jobLevel?.name === filterJobLevel
+        : true;
+
+      return matchQuery && matchIndustry && matchSector && matchBranch && matchLevel;
+    });
+  }, [openJobs, searchJobQuery, filterJobIndustry, filterJobSector, filterJobBranch, filterJobLevel, categories]);
+
+  // Extract distinct levels from open jobs
+  const jobLevels = useMemo(() => {
+    const levels = new Set<string>();
+    openJobs.forEach((job) => {
+      if (job.jobLevel?.name) {
+        levels.add(job.jobLevel.name);
+      }
+    });
+    return Array.from(levels);
+  }, [openJobs]);
+
   const isSelectedJobValid = useMemo(() => {
     if (!selectedJobId) return false;
     const isSuggestedJob = visibleSuggestedJobs.some((job) => job.jobId === selectedJobId);
@@ -233,8 +308,8 @@ export function useTalentPoolDetail() {
     if (inviteSuggestion?.isLocked === true || detail.candidate.isInviteLocked === true) {
       message.warning(
         inviteSuggestion?.lockReason ||
-          detail.candidate.inviteLockReason ||
-          "Ứng viên đang tham gia quy trình tuyển dụng ở vị trí khác."
+        detail.candidate.inviteLockReason ||
+        "Ứng viên đang tham gia quy trình tuyển dụng ở vị trí khác."
       );
       return;
     }
@@ -250,19 +325,19 @@ export function useTalentPoolDetail() {
 
       const selectedJobForEmail = selectedSuggestedJob
         ? {
-            jobId: selectedSuggestedJob.jobId,
-            jobTitle: selectedSuggestedJob.jobTitle,
-            branchName: selectedSuggestedJob.branchName,
-            matchScore: selectedSuggestedJob.matchScore,
-            reason: selectedSuggestedJob.reason,
-          }
+          jobId: selectedSuggestedJob.jobId,
+          jobTitle: selectedSuggestedJob.jobTitle,
+          branchName: selectedSuggestedJob.branchName,
+          matchScore: selectedSuggestedJob.matchScore,
+          reason: selectedSuggestedJob.reason,
+        }
         : {
-            jobId: selectedOpenJob!.id,
-            jobTitle: selectedOpenJob!.position?.name || formatJobLabel(selectedOpenJob!),
-            branchName: selectedOpenJob!.branch?.name || "Chưa cập nhật",
-            matchScore: 0,
-            reason: "HR tự chọn JD ngoài danh sách AI đề xuất.",
-          };
+          jobId: selectedOpenJob!.id,
+          jobTitle: selectedOpenJob!.position?.name || formatJobLabel(selectedOpenJob!),
+          branchName: selectedOpenJob!.branch?.name || "Chưa cập nhật",
+          matchScore: 0,
+          reason: "HR tự chọn JD ngoài danh sách AI đề xuất.",
+        };
 
       const candidateForEmail = inviteSuggestion?.candidate ?? detail.candidate;
       if (!candidateForEmail.candidateId || !candidateForEmail.talentPoolCandidateId) {
@@ -340,6 +415,20 @@ export function useTalentPoolDetail() {
     skills,
     visibleSuggestedJobs,
     openJobs,
+    filteredOpenJobs,
+    categories,
+    jobLevels,
     isSelectedJobValid,
+    searchJobQuery,
+    setSearchJobQuery,
+    filterJobIndustry,
+    setFilterJobIndustry,
+    filterJobSector,
+    setFilterJobSector,
+    filterJobBranch,
+    setFilterJobBranch,
+    filterJobLevel,
+    setFilterJobLevel,
+    handleSelectIndustry,
   };
 }

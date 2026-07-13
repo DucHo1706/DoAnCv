@@ -45,6 +45,12 @@ export default function SystemCategoryManager({
   const [editingItem, setEditingItem] = useState<any | null>(null);
   const [form] = Form.useForm();
 
+  const [searchText, setSearchText] = useState("");
+
+  const filteredData = data.filter((item) =>
+    (item.name || "").toLowerCase().includes(searchText.toLowerCase())
+  );
+
   const loadData = async () => {
     try {
       setLoading(true);
@@ -186,10 +192,14 @@ export default function SystemCategoryManager({
       }
     >
       <Card>
-        <TableToolbar searchPlaceholder={`Tìm kiếm ${entityName.toLowerCase()}...`} />
+        <TableToolbar
+          searchPlaceholder={`Tìm kiếm ${entityName.toLowerCase()}...`}
+          searchValue={searchText}
+          onSearchChange={setSearchText}
+        />
         <Table
           columns={columns}
-          dataSource={data}
+          dataSource={filteredData}
           rowKey="id"
           loading={loading}
           pagination={{ pageSize: 10 }}

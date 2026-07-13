@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿using Microsoft.AspNetCore.Http;
+﻿﻿﻿﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using RecruitmentBackend.Interfaces;
@@ -10,8 +10,9 @@ namespace RecruitmentBackend.Controllers
 {
     public class ApplyJobRequest
     {
-        public IFormFile CvFile { get; set; }
+        public IFormFile? CvFile { get; set; }
         public string JobId { get; set; }
+        public bool UseDefaultCv { get; set; } = false;
     }
 
     [Route("api/[controller]")]
@@ -32,11 +33,11 @@ namespace RecruitmentBackend.Controllers
             var cvFile = request?.CvFile;
             var jobId = request?.JobId;
 
-            if (cvFile == null || cvFile.Length == 0)
-                return BadRequest("Vui lòng tải lên file CV.");
-
             if (string.IsNullOrEmpty(jobId))
                 return BadRequest("Mã công việc (JobId) không hợp lệ.");
+
+            if ((request == null || !request.UseDefaultCv) && (cvFile == null || cvFile.Length == 0))
+                return BadRequest("Vui lòng tải lên file CV.");
 
             var result = await _recruitmentService.ApplyJobAsync(request, User);
 
@@ -133,12 +134,91 @@ namespace RecruitmentBackend.Controllers
         }
 
         [HttpPost("hr/applications/{applicationId}/re-evaluate")]
-        [Authorize(Roles = "Recruiter")]
+        [Authorize(Roles = "Recruiter,Candidate")]
         public async Task<IActionResult> ReEvaluateApplication(string applicationId)
         {
             var result = await _recruitmentService.ReEvaluateApplicationAsync(applicationId, User);
             if (!result.IsSuccess) return BadRequest(new { message = result.Message });
             return Ok(new { message = result.Message, data = result.Data });
+        }
+
+        [HttpPost("hr/applications/{applicationId}/schedule")]
+        [Authorize(Roles = "Recruiter")]
+        public async Task<IActionResult> ScheduleInterview(string applicationId, [FromBody] ScheduleInterviewRequest request)
+        {
+            var result = await _recruitmentService.ScheduleInterviewAsync(
+                applicationId,
+                request,
+                User
+            );
+
+            if (result.IsSuccess == false)
+            {
+                return BadRequest(new
+                {
+                    message = result.Message
+                });
+            }
+
+            return Ok(new
+            {
+                message = result.Message,
+                data = result.Data
+            });
+        }
+
+        [HttpGet("applications/{applicationId}/schedule")]
+        [Authorize]
+        public async Task<IActionResult> GetInterviewSchedule(string applicationId)
+        {
+            var result = await _recruitmentService.GetInterviewScheduleAsync(applicationId, User);
+
+            if (result.IsSuccess == false)
+            {
+                return NotFound(new
+                {
+                    message = result.Message
+                });
+            }
+
+            return Ok(result.Data);
+        }
+
+        [HttpGet("hr/schedules")]
+        [Authorize(Roles = "Recruiter")]
+        public async Task<IActionResult> GetHrInterviewSchedules()
+        {
+            var result = await _recruitmentService.GetHrInterviewSchedulesAsync(User);
+
+            if (result.IsSuccess == false)
+            {
+                return BadRequest(new
+                {
+                    message = result.Message
+                });
+            }
+
+            return Ok(result.Data);
+        }
+
+        [HttpDelete("hr/applications/{applicationId}/schedule")]
+        [Authorize(Roles = "Recruiter")]
+        public async Task<IActionResult> CancelInterviewSchedule(string applicationId)
+        {
+            var result = await _recruitmentService.CancelInterviewScheduleAsync(applicationId, User);
+
+            if (result.IsSuccess == false)
+            {
+                return BadRequest(new
+                {
+                    message = result.Message
+                });
+            }
+
+            return Ok(new
+            {
+                message = result.Message
+            });
         }
     }
 }

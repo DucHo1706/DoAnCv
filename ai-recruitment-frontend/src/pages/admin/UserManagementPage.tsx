@@ -1,7 +1,6 @@
 import {
   Card,
   Table,
-  Tag,
   Space,
   Button,
   Select,
@@ -35,6 +34,31 @@ function UserManagementPage() {
   const [editingUser, setEditingUser] = useState<any>(null);
   const [branches, setBranches] = useState<any[]>([]);
   const [form] = Form.useForm();
+
+  const [searchText, setSearchText] = useState("");
+  const [selectedRole, setSelectedRole] = useState("all");
+  const [selectedBranch, setSelectedBranch] = useState("all");
+
+  const filteredUsers = users.filter((u) => {
+    const searchKey = searchText.trim().toLowerCase();
+    const nameMatch = (u.name || "").toLowerCase().includes(searchKey);
+    const emailMatch = (u.email || "").toLowerCase().includes(searchKey);
+    const matchesSearch = searchKey.length === 0 || nameMatch || emailMatch;
+
+    let matchesRole = true;
+    if (selectedRole !== "all") {
+      if (selectedRole === "admin") matchesRole = u.role === "Admin";
+      else if (selectedRole === "hr") matchesRole = u.role === "Recruiter";
+      else if (selectedRole === "candidate") matchesRole = u.role === "Candidate";
+    }
+
+    let matchesBranch = true;
+    if (selectedBranch !== "all" && u.role === "Recruiter") {
+      matchesBranch = u.branches.includes(selectedBranch);
+    }
+
+    return matchesSearch && matchesRole && matchesBranch;
+  });
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -160,11 +184,24 @@ function UserManagementPage() {
       dataIndex: "role",
       key: "role",
       render: (role: string) => {
-        let color = role === "Admin" ? "volcano" : role === "Recruiter" ? "geekblue" : "cyan";
+        const isOpt = role === "Admin" ? { bg: "#FEF2F2", border: "#FECACA", color: "#EF4444" } :
+                      role === "Recruiter" ? { bg: "#EFF6FF", border: "#DBEAFE", color: "#2563EB" } :
+                      { bg: "#F0FDF4", border: "#BBF7D0", color: "#10B981" };
         return (
-          <Tag color={color} style={{ borderRadius: "4px" }}>
-            {role}
-          </Tag>
+          <span
+            style={{
+              display: "inline-block",
+              padding: "4px 10px",
+              borderRadius: "8px",
+              fontSize: "12px",
+              fontWeight: 600,
+              backgroundColor: isOpt.bg,
+              border: `1px solid ${isOpt.border}`,
+              color: isOpt.color,
+            }}
+          >
+            {role === "Admin" ? "Admin Portal" : role === "Recruiter" ? "Recruiter (HR)" : "Candidate"}
+          </span>
         );
       },
     },
@@ -181,9 +218,21 @@ function UserManagementPage() {
             {branchIds.map((id) => {
               const bName = branches.find((b) => b.id === id)?.name || "Chi nhánh ẩn";
               return (
-                <Tag key={id} color="blue">
+                <span
+                  key={id}
+                  style={{
+                    display: "inline-block",
+                    padding: "2px 8px",
+                    borderRadius: "6px",
+                    fontSize: "12px",
+                    fontWeight: 500,
+                    backgroundColor: "#F1F5F9",
+                    border: "1px solid #E2E8F0",
+                    color: "#475569",
+                  }}
+                >
                   {bName}
-                </Tag>
+                </span>
               );
             })}
           </Space>
@@ -194,24 +243,42 @@ function UserManagementPage() {
       title: "Trạng thái",
       dataIndex: "status",
       key: "status",
-      render: (status: string) => (
-        <Tag
-          color={status === "Active" ? "success" : "error"}
-          style={{ borderRadius: "12px", padding: "2px 10px", fontWeight: 500 }}
-        >
-          {status === "Active" ? "Hoạt động" : "Đã khóa"}
-        </Tag>
-      ),
+      render: (status: string) => {
+        const isActive = status === "Active";
+        return (
+          <span
+            style={{
+              display: "inline-block",
+              padding: "4px 12px",
+              borderRadius: "999px",
+              fontSize: "12px",
+              fontWeight: 600,
+              color: isActive ? "#166534" : "#991B1B",
+              backgroundColor: isActive ? "#DCFCE7" : "#FEE2E2",
+              border: isActive ? "1px solid #BBF7D0" : "1px solid #FCA5A5",
+            }}
+          >
+            {isActive ? "Hoạt động" : "Đã khóa"}
+          </span>
+        );
+      },
     },
     {
       title: "Thao tác",
       key: "action",
       render: (_: any, record: any) => (
-        <Space size="middle">
+        <Space size="small">
           <Button
             icon={<EditOutlined />}
             type="text"
-            style={{ color: "#1677ff", background: "#e6f4ff" }}
+            size="small"
+            style={{ 
+              color: "#2563EB", 
+              display: "flex", 
+              alignItems: "center",
+              borderRadius: "6px",
+              padding: "4px 8px",
+            }}
             onClick={() => handleOpenEdit(record)}
           >
             Sửa
@@ -229,12 +296,15 @@ function UserManagementPage() {
             <Button
               icon={record.status === "Active" ? <LockOutlined /> : <UnlockOutlined />}
               type="text"
+              size="small"
               danger={record.status === "Active"}
-              style={
-                record.status !== "Active"
-                  ? { color: "#52c41a", background: "#f6ffed" }
-                  : { background: "#fff2f0" }
-              }
+              style={{ 
+                color: record.status === "Active" ? "#EF4444" : "#10B981",
+                display: "flex", 
+                alignItems: "center",
+                borderRadius: "6px",
+                padding: "4px 8px",
+              }}
             >
               {record.status === "Active" ? "Khóa" : "Mở"}
             </Button>
@@ -257,24 +327,30 @@ function UserManagementPage() {
       <Card>
         <TableToolbar
           searchPlaceholder="Tìm theo tên, email..."
+          searchValue={searchText}
+          onSearchChange={setSearchText}
           extra={
             <>
               <Select
                 placeholder="Vai trò"
-                style={{ width: 150 }}
+                style={{ width: 170 }}
+                value={selectedRole}
+                onChange={setSelectedRole}
                 options={[
-                  { label: "Tất cả", value: "all" },
+                  { label: "Tất cả vai trò", value: "all" },
+                  { label: "Admin Portal", value: "admin" },
                   { label: "Recruiter (HR)", value: "hr" },
-                  { label: "Ứng viên", value: "candidate" },
+                  { label: "Ứng viên (Candidate)", value: "candidate" },
                 ]}
               />
               <Select
-                placeholder="Chi nhánh"
-                style={{ width: 180 }}
+                placeholder="Lọc theo Chi nhánh"
+                style={{ width: 220 }}
+                value={selectedBranch}
+                onChange={setSelectedBranch}
                 options={[
-                  { label: "Trụ sở Hồ Chí Minh", value: "hcm" },
-                  { label: "Chi nhánh Hà Nội", value: "hn" },
-                  { label: "Chi nhánh Đà Nẵng", value: "dn" },
+                  { label: "Tất cả chi nhánh", value: "all" },
+                  ...branches.map((b: any) => ({ label: b.name || b.branchName, value: b.id || b.branchID })),
                 ]}
               />
             </>
@@ -282,7 +358,7 @@ function UserManagementPage() {
         />
         <Table
           columns={columns}
-          dataSource={users}
+          dataSource={filteredUsers}
           rowKey="id"
           loading={loading}
           pagination={{ pageSize: 5 }}

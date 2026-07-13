@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using RecruitmentBackend.Data;
 using RecruitmentBackend.Interfaces;
 using RecruitmentBackend.Models;
@@ -338,6 +338,8 @@ namespace RecruitmentBackend.Services
                                 where job.RecruiterID == recruiter.RecruiterID
                                 join position in _context.Positions on job.PositionID equals position.PositionID into positionGroup
                                 from position in positionGroup.DefaultIfEmpty()
+                                join category in _context.Categories on job.CategoryID equals category.CategoryID into categoryGroup
+                                from category in categoryGroup.DefaultIfEmpty()
                                 orderby job.CreatedAt descending
                                 select new
                                 {
@@ -345,7 +347,9 @@ namespace RecruitmentBackend.Services
                                     jobTitle = position != null ? position.PositionName : "Tin tuyển dụng chưa cập nhật vị trí",
                                     status = job.Status,
                                     createdAt = job.CreatedAt,
-                                    deadline = job.Deadline
+                                    deadline = job.Deadline,
+                                    viewCount = job.ViewCount,
+                                    categoryName = category != null ? category.Name : "Lĩnh vực khác"
                                 }).ToListAsync();
 
             var hrJobIds = hrJobs.Select(job => job.jobId).ToList();
@@ -417,12 +421,31 @@ namespace RecruitmentBackend.Services
                 averageFitScore = Math.Round(evaluatedApplications.Average(item => item.AiEvaluation!.FitScore), 1);
             }
 
+            var totalViews = hrJobs.Sum(job => job.viewCount);
+            if (string.IsNullOrWhiteSpace(jobId) == false)
+            {
+                totalViews = hrJobs.Where(job => job.jobId == jobId).Sum(job => job.viewCount);
+            }
+
+            double applicationRate = totalViews > 0 ? Math.Round((double)totalApplications / totalViews * 100, 1) : 0;
+
+            var funnel = new
+            {
+                applied = dashboardApplications.Count(item => item.Application.Status == "Applied"),
+                reviewing = dashboardApplications.Count(item => item.Application.Status == "Reviewing"),
+                interview = dashboardApplications.Count(item => item.Application.Status == "Interview"),
+                offer = dashboardApplications.Count(item => item.Application.Status == "Offer"),
+                rejected = dashboardApplications.Count(item => item.Application.Status == "Rejected")
+            };
+
             var quickMetrics = new
             {
                 totalJobs,
                 totalApplications,
                 newApplications,
-                averageFitScore
+                averageFitScore,
+                totalViews,
+                applicationRate
             };
 
             var skillCloudData = BuildSkillCloudData(dashboardApplications);
@@ -439,6 +462,7 @@ namespace RecruitmentBackend.Services
                 selectedJobId = jobId,
                 jobOptions = hrJobs,
                 quickMetrics,
+                funnel,
 
                 totalJobs,
                 totalApplications,
@@ -1060,6 +1084,106 @@ namespace RecruitmentBackend.Services
             }
 
             return result;
+        }
+
+        public async Task<object> GetSimulatorCandidatesAsync()
+        {
+            try
+            {
+                var query = from evaluation in _context.AIEvaluations
+                            join application in _context.Applications on evaluation.ApplicationID equals application.ApplicationID
+                            join cv in _context.CandidateCVs on application.CVID equals cv.CVID
+                            join candidate in _context.Candidates on cv.CandidateID equals candidate.CandidateID
+                            join job in _context.JobPostings on application.JobID equals job.JobID
+                            join position in _context.Positions on job.PositionID equals position.PositionID into positionGroup
+                            from position in positionGroup.DefaultIfEmpty()
+                            join category in _context.Categories on job.CategoryID equals category.CategoryID into categoryGroup
+                            from category in categoryGroup.DefaultIfEmpty()
+                            select new
+                            {
+                                evaluation,
+                                application,
+                                cv,
+                                candidate,
+                                job,
+                                positionName = position != null ? position.PositionName : "Vị trí chưa xác định",
+                                categoryId = category != null ? category.CategoryID : "other",
+                                categoryName = category != null ? category.Name : "Khác"
+                            };
+
+                var evaluationsList = await query.ToListAsync();
+
+                if (evaluationsList.Count == 0)
+                {
+                    return new
+                    {
+                        isSuccess = true,
+                        data = new List<object>() // Trả về trống để frontend fallback về mock
+                    };
+                }
+
+                // Nhóm theo CategoryId
+                var grouped = evaluationsList
+                    .GroupBy(item => item.categoryId)
+                    .Select(g => {
+                        // Lấy ứng viên có điểm cao nhất trong nhóm này
+                        var topEvaluated = g.OrderByDescending(x => x.evaluation.FitScore).First();
+                        
+                        var matchedSkills = ParseStringListFromJson(topEvaluated.evaluation.MatchedSkills);
+                        var missingSkills = ParseStringListFromJson(topEvaluated.evaluation.MissingSkills);
+
+                        // Lấy chữ cái đầu làm avatar
+                        string avatar = "UV";
+                        if (!string.IsNullOrWhiteSpace(topEvaluated.candidate.FullName))
+                        {
+                            var words = topEvaluated.candidate.FullName.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                            if (words.Length >= 2)
+                            {
+                                avatar = (words[words.Length - 2][0].ToString() + words[words.Length - 1][0].ToString()).ToUpper();
+                            }
+                            else if (words.Length == 1)
+                            {
+                                avatar = words[0].Substring(0, Math.Min(2, words[0].Length)).ToUpper();
+                            }
+                        }
+
+                        // Lọc các warnings hợp lý từ missingSkills
+                        var warnings = missingSkills.Count > 0 
+                            ? missingSkills.Take(2).ToList() 
+                            : new List<string> { "Cần bổ sung kinh nghiệm thực tế", "Kiến thức chuyên môn cơ bản" };
+
+                        return new
+                        {
+                            categoryKey = topEvaluated.categoryId,
+                            categoryName = topEvaluated.categoryName,
+                            candidate = new
+                            {
+                                name = topEvaluated.candidate.FullName ?? "Ứng viên chưa cập nhật tên",
+                                role = topEvaluated.positionName.ToUpper(),
+                                score = (int)Math.Round(topEvaluated.evaluation.FitScore),
+                                avatar,
+                                skills = matchedSkills.Count > 0 ? matchedSkills.Take(3).ToList() : new List<string> { "Kỹ năng mềm", "Tin học văn phòng" },
+                                warnings
+                            }
+                        };
+                    })
+                    .ToList();
+
+                return new
+                {
+                    isSuccess = true,
+                    data = grouped
+                };
+            }
+            catch (Exception ex)
+            {
+                return new
+                {
+                    isSuccess = false,
+                    message = "Lỗi khi lấy thông tin mô phỏng ứng viên: " + ex.Message,
+                    data = new List<object>()
+                };
+            }
         }
     }
 }

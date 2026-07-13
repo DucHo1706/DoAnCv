@@ -1,6 +1,7 @@
 import { LogoutOutlined, SettingOutlined, UserOutlined } from "@ant-design/icons";
 import { Avatar, Dropdown, Space, Typography } from "antd";
 import type { MenuProps } from "antd";
+import { useNavigate } from "react-router-dom";
 
 const { Text } = Typography;
 
@@ -12,6 +13,8 @@ type AppHeaderProps = {
 };
 
 function AppHeader({ title, userName, roleLabel, onLogout }: AppHeaderProps) {
+  const navigate = useNavigate();
+
   const userMenuItems: MenuProps["items"] = [
     {
       key: "profile",
@@ -35,6 +38,14 @@ function AppHeader({ title, userName, roleLabel, onLogout }: AppHeaderProps) {
   const handleMenuClick: MenuProps["onClick"] = ({ key }) => {
     if (key === "logout" && onLogout) {
       onLogout();
+    } else if (key === "profile") {
+      if (roleLabel === "Recruiter") {
+        navigate("/recruiter/profile");
+      } else if (roleLabel === "Candidate") {
+        navigate("/candidate/profile");
+      } else {
+        navigate("/admin/dashboard");
+      }
     }
   };
 

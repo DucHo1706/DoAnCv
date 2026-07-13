@@ -26,6 +26,7 @@ import CVRankingPage from "../pages/recruiter/CVRankingPage";
 import JobManagementPage from "../pages/recruiter/JobManagementPage";
 import RecruiterDashboardPage from "../pages/recruiter/RecruiterDashboardPage";
 import CandidateDetailPage from "../pages/recruiter/CandidateDetailPage";
+import RecruiterProfilePage from "../pages/recruiter/RecruiterProfilePage";
 
 function AppRoutes() {
   return (
@@ -44,6 +45,7 @@ function AppRoutes() {
           <Route path="jobs" element={<JobManagementPage />} />
           <Route path="cv-ranking" element={<CVRankingPage />} />
           <Route path="candidates/:id" element={<CandidateDetailPage />} />
+          <Route path="profile" element={<RecruiterProfilePage />} />
         </Route>
 
         <Route path="/candidate" element={<CandidateLayout />}>

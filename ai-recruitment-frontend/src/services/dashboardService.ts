@@ -6,6 +6,7 @@ export interface JobOption {
   status?: string;
   createdAt?: string;
   deadline?: string;
+  categoryName?: string;
 }
 
 export interface QuickMetrics {

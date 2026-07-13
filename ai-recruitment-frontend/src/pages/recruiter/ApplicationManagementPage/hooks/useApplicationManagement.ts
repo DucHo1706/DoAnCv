@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { message } from "antd";
+import dayjs from "dayjs";
 import { recruitmentService } from "../../../../services/recruitmentService";
 import type { ApplicationDto } from "../../../../services/recruitmentService";
 import { jobService } from "../../../../services/jobService";
@@ -10,9 +11,14 @@ export function useApplicationManagement() {
   const navigate = useNavigate();
   const [applications, setApplications] = useState<ApplicationDto[]>([]);
   const [jobs, setJobs] = useState<JobDto[]>([]);
-  const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
+  const [selectedJobId, setSelectedJobId] = useState<string | null>(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get("jobId");
+  });
   const [searchQuery, setSearchQuery] = useState("");
   const [filterClassification, setFilterClassification] = useState<string | null>(null);
+  const [searchSkill, setSearchSkill] = useState("");
+  const [minScore, setMinScore] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedApp, setSelectedApp] = useState<ApplicationDto | null>(null);
@@ -33,6 +39,10 @@ export function useApplicationManagement() {
   const [rejectReasonType, setRejectReasonType] = useState<string | undefined>(undefined);
   const [rejectNote, setRejectNote] = useState("");
   const [rejectSubmitting, setRejectSubmitting] = useState(false);
+
+  const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
+  const [scheduleTargetApplication, setScheduleTargetApplication] = useState<ApplicationDto | null>(null);
+  const [scheduleSubmitting, setScheduleSubmitting] = useState(false);
 
   const rejectReasonOptions = [
     { value: "Thiếu kinh nghiệm", label: "Thiếu kinh nghiệm" },
@@ -94,6 +104,78 @@ export function useApplicationManagement() {
     }
   };
 
+  const openScheduleModal = (application: ApplicationDto) => {
+    setScheduleTargetApplication(application);
+    setScheduleModalOpen(true);
+  };
+
+  const handleConfirmSchedule = async (values: {
+    interviewDate: string;
+    format: string;
+    locationOrLink: string;
+    notes?: string;
+    meetingId?: string;
+    passcode?: string;
+  }) => {
+    if (!scheduleTargetApplication) return;
+    try {
+      setScheduleSubmitting(true);
+      const res = await recruitmentService.scheduleInterview(scheduleTargetApplication.id, values);
+
+      setApplications((previousApplications) =>
+        previousApplications.map((application) => {
+          if (application.id === scheduleTargetApplication.id) {
+            return {
+              ...application,
+              status: "Interview",
+            };
+          }
+          return application;
+        })
+      );
+
+      message.success("Đã thiết lập lịch phỏng vấn thành công. Đang chuyển hướng sang trang soạn email...");
+      setScheduleModalOpen(false);
+
+      const dateStr = dayjs(values.interviewDate).format("DD/MM/YYYY HH:mm");
+      const emailContext = `Mời phỏng vấn vào lúc ${dateStr}. Hình thức: ${values.format === "Online" ? "Trực tuyến (Online)" : "Trực tiếp tại văn phòng"}. Địa điểm/Đường dẫn: ${values.locationOrLink}. ${values.notes ? `Ghi chú thêm: ${values.notes}` : ""}`;
+
+      navigate(`/recruiter/candidates/${scheduleTargetApplication.id}/email`, {
+        state: {
+          source: "interview-schedule",
+          emailType: "invite",
+          emailContext,
+          candidate: {
+            id: scheduleTargetApplication.id,
+            candidateId: scheduleTargetApplication.id,
+            candidateName: scheduleTargetApplication.candidateName,
+            fullName: scheduleTargetApplication.candidateName,
+            jobTitle: scheduleTargetApplication.jobTitle,
+            aiScore: scheduleTargetApplication.aiScore || 0,
+            classification: scheduleTargetApplication.classification || "Đạt yêu cầu",
+            aiReason: scheduleTargetApplication.aiReason || "",
+            matchedSkills: parseSkills(scheduleTargetApplication.matchedSkills || ""),
+            missingSkills: parseSkills(scheduleTargetApplication.missingSkills || ""),
+            cvEmail: scheduleTargetApplication.email,
+            accountEmail: scheduleTargetApplication.email,
+            schedule: res.data?.schedule || {
+              interviewDate: values.interviewDate,
+              format: values.format,
+              locationOrLink: values.locationOrLink,
+            }
+          }
+        }
+      });
+
+      setScheduleTargetApplication(null);
+    } catch (error: any) {
+      const errorMessage = error?.response?.data?.message || "Không thể lập lịch phỏng vấn.";
+      message.error(errorMessage);
+    } finally {
+      setScheduleSubmitting(false);
+    }
+  };
+
   const getStageLabelByStatus = (status?: string) => {
     const foundStage = applicationStatusStages.find((stage) => stage.status === status);
     if (foundStage) return foundStage.label;
@@ -128,13 +210,64 @@ export function useApplicationManagement() {
     fetchData();
   }, []);
 
+  // Real-time updates using SignalR
+  useEffect(() => {
+    let connection: any = null;
+    let isSubscribed = true;
+
+    const startSignalR = async () => {
+      try {
+        const signalR = await import("@microsoft/signalr");
+        const apiBase = import.meta.env.VITE_API_URL || "https://localhost:7006/api";
+        const hubUrl = apiBase.replace(/\/api\/?$/, "") + "/hubs/ai-evaluation";
+        connection = new signalR.HubConnectionBuilder()
+          .withUrl(hubUrl)
+          .withAutomaticReconnect()
+          .build();
+
+        // Cập nhật trạng thái Kanban thời gian thực khi HR khác thay đổi trạng thái
+        connection.on("ApplicationStatusChanged", (data: { applicationId: string; status: string }) => {
+          if (!isSubscribed) return;
+          setApplications((prev) =>
+            prev.map((app) => (app.id === data.applicationId ? { ...app, status: data.status } : app))
+          );
+        });
+
+        // Tự động tải lại điểm số/tags AI khi chấm xong ngầm
+        connection.on("ReceiveResult", () => {
+          if (!isSubscribed) return;
+          recruitmentService.getHrApplications().then((updatedApps) => {
+            if (isSubscribed) {
+              setApplications(Array.isArray(updatedApps) ? updatedApps : (updatedApps as any)?.$values || []);
+            }
+          }).catch((err: any) => console.error("Lỗi cập nhật danh sách sau chấm điểm AI:", err));
+        });
+
+        await connection.start();
+        console.log("[SignalR] Recruiter connected to AI Hub!");
+      } catch (err: any) {
+        console.warn("[SignalR] Kết nối SignalR thất bại, sử dụng fallback.", err);
+      }
+    };
+
+    startSignalR();
+
+    return () => {
+      isSubscribed = false;
+      if (connection) {
+        connection.stop().catch((err: any) => console.error("[SignalR] Stop error", err));
+      }
+    };
+  }, []);
+
   const handleViewDetail = (record: ApplicationDto) => {
     setSelectedApp(record);
     setIsModalOpen(true);
   };
 
-  const parseSkills = (jsonStr: string) => {
+  const parseSkills = (jsonStr: string | string[]) => {
     if (!jsonStr) return [];
+    if (Array.isArray(jsonStr)) return jsonStr;
     try {
       const parsed = JSON.parse(jsonStr);
       return Array.isArray(parsed) ? parsed : [];
@@ -153,9 +286,16 @@ export function useApplicationManagement() {
       const matchesClassification = filterClassification
         ? app.classification === filterClassification
         : true;
-      return matchesJob && matchesSearch && matchesClassification;
+      const matchesSkill = searchSkill
+        ? (Array.isArray(app.matchedSkills) ? app.matchedSkills.join(",") : (app.matchedSkills || "")).toLowerCase().includes(searchSkill.toLowerCase()) ||
+          (Array.isArray(app.missingSkills) ? app.missingSkills.join(",") : (app.missingSkills || "")).toLowerCase().includes(searchSkill.toLowerCase())
+        : true;
+      const matchesMinScore = minScore !== null
+        ? app.aiScore >= minScore
+        : true;
+      return matchesJob && matchesSearch && matchesClassification && matchesSkill && matchesMinScore;
     });
-  }, [applications, selectedJobId, searchQuery, filterClassification]);
+  }, [applications, selectedJobId, searchQuery, filterClassification, searchSkill, minScore]);
 
   useEffect(() => {
     const groupedData: Record<string, ApplicationDto[]> = {};
@@ -195,6 +335,16 @@ export function useApplicationManagement() {
       return;
     }
 
+    if (targetStatus === "Interview") {
+      const targetApplication = applications.find((application) => application.id === appId);
+      if (!targetApplication) {
+        message.error("Không tìm thấy hồ sơ cần phỏng vấn.");
+        return;
+      }
+      openScheduleModal(targetApplication);
+      return;
+    }
+
     try {
       await recruitmentService.updateApplicationStatus(appId, targetStatus);
       setApplications((previousApplications) =>
@@ -212,17 +362,37 @@ export function useApplicationManagement() {
     }
   };
 
+  const jobsWithStats = useMemo(() => {
+    return jobs.map((job) => {
+      const jobApps = applications.filter((app) => app.jobId === job.id);
+      return {
+        ...job,
+        stats: {
+          total: jobApps.length,
+          newApps: jobApps.filter((app) => app.status === "Applied").length,
+          interviewing: jobApps.filter((app) => app.status === "Interview").length,
+          hired: jobApps.filter((app) => app.status === "Offer").length,
+        }
+      };
+    });
+  }, [jobs, applications]);
+
   return {
     navigate,
     applications,
     setApplications,
     jobs,
+    jobsWithStats,
     selectedJobId,
     setSelectedJobId,
     searchQuery,
     setSearchQuery,
     filterClassification,
     setFilterClassification,
+    searchSkill,
+    setSearchSkill,
+    minScore,
+    setMinScore,
     loading,
     isModalOpen,
     setIsModalOpen,
@@ -251,5 +421,11 @@ export function useApplicationManagement() {
     setRejectTargetApplication,
     getStageLabelByStatus,
     getStatusByStageLabel,
+    scheduleModalOpen,
+    setScheduleModalOpen,
+    scheduleTargetApplication,
+    scheduleSubmitting,
+    openScheduleModal,
+    handleConfirmSchedule,
   };
 }

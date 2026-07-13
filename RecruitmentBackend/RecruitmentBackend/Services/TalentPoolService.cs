@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using RecruitmentBackend.Constants;
 using RecruitmentBackend.Data;
 using RecruitmentBackend.DTOs.Requests;
@@ -84,6 +84,16 @@ namespace RecruitmentBackend.Services
                     responseItem.TalentPoolCandidateId = poolCandidate.TalentPoolCandidateID;
                     responseItem.CandidateId = poolCandidate.CandidateID;
                     responseItem.LatestCvId = poolCandidate.LatestCVID;
+
+                    // Lookup CV file path
+                    if (!string.IsNullOrEmpty(poolCandidate.LatestCVID))
+                    {
+                        var cv = await _context.CandidateCVs
+                            .Where(c => c.CVID == poolCandidate.LatestCVID)
+                            .Select(c => c.FilePath)
+                            .FirstOrDefaultAsync();
+                        responseItem.LatestCvUrl = cv;
+                    }
                     responseItem.FullName = poolCandidate.FullName;
                     responseItem.Email = poolCandidate.Email;
                     responseItem.Phone = poolCandidate.Phone;
@@ -171,6 +181,16 @@ namespace RecruitmentBackend.Services
                 candidateResponse.TalentPoolCandidateId = poolCandidate.TalentPoolCandidateID;
                 candidateResponse.CandidateId = poolCandidate.CandidateID;
                 candidateResponse.LatestCvId = poolCandidate.LatestCVID;
+
+                // Lookup CV file path
+                if (!string.IsNullOrEmpty(poolCandidate.LatestCVID))
+                {
+                    var cv = await _context.CandidateCVs
+                        .Where(c => c.CVID == poolCandidate.LatestCVID)
+                        .Select(c => c.FilePath)
+                        .FirstOrDefaultAsync();
+                    candidateResponse.LatestCvUrl = cv;
+                }
                 candidateResponse.FullName = poolCandidate.FullName;
                 candidateResponse.Email = poolCandidate.Email;
                 candidateResponse.Phone = poolCandidate.Phone;
@@ -373,7 +393,10 @@ namespace RecruitmentBackend.Services
                         branch.BranchName,
                         job.JobDescription,
                         job.JobRequirement,
-                        job.JDExtractedSkills
+                        job.JDExtractedSkills,
+                        job.SalaryMin,
+                        job.SalaryMax,
+                        job.Deadline
                     }
                 ).ToListAsync();
 
@@ -418,6 +441,8 @@ namespace RecruitmentBackend.Services
                     suggestedJob.BranchName = job.BranchName;
                     suggestedJob.MatchScore = matchScore;
                     suggestedJob.Reason = reason;
+                    suggestedJob.SalaryRange = (job.SalaryMin == 0 && job.SalaryMax == 0) ? "Thỏa thuận" : (job.SalaryMax == 0 ? job.SalaryMin + " triệu" : job.SalaryMin + " - " + job.SalaryMax + " triệu");
+                    suggestedJob.Deadline = job.Deadline.ToString("yyyy-MM-dd");
 
                     suggestedJobs.Add(suggestedJob);
                 }
@@ -431,6 +456,16 @@ namespace RecruitmentBackend.Services
                 candidateResponse.TalentPoolCandidateId = poolCandidate.TalentPoolCandidateID;
                 candidateResponse.CandidateId = poolCandidate.CandidateID;
                 candidateResponse.LatestCvId = poolCandidate.LatestCVID;
+
+                // Lookup CV file path
+                if (!string.IsNullOrEmpty(poolCandidate.LatestCVID))
+                {
+                    var cv = await _context.CandidateCVs
+                        .Where(c => c.CVID == poolCandidate.LatestCVID)
+                        .Select(c => c.FilePath)
+                        .FirstOrDefaultAsync();
+                    candidateResponse.LatestCvUrl = cv;
+                }
                 candidateResponse.FullName = poolCandidate.FullName;
                 candidateResponse.Email = poolCandidate.Email;
                 candidateResponse.Phone = poolCandidate.Phone;

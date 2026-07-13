@@ -20,7 +20,7 @@ def generate_cv_star_tips(cv_text: str, jd_text: str, cv_skills: list, jd_skills
         logger.error(f"Loi generate_cv_star_tips: {e}")
         return []
 
-def generate_cv_mock_interview(cv_text: str, jd_text: str, job_title: str, company_name: str) -> list:
+def generate_cv_mock_interview(cv_text: str, jd_text: str, job_title: str = "Chưa rõ", company_name: str = "Doanh nghiệp") -> list:
     """
     Du doan cac cau hoi phong van nghiep vu dua tren CV va JD
     """

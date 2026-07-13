@@ -33,11 +33,14 @@ client = clients[0] if clients else None
 
 def clean_json_text(text: str) -> str:
     """
-    Loai bo cac ky tu boc Markdown nhu ```json ... ``` de chuyen ve JSON hop le
+    Loai bo cac ky tu boc Markdown hoac text linh tinh de chuyen ve JSON hop le.
+    Trich xuat khoi JSON bang cach tim dau { hoac [ dau tien va } hoac ] cuoi cung.
     """
     if not text:
         return ""
     text = text.strip()
+    
+    # Neu bat dau/ket thuc bang markdown code block, boc no ra truoc
     if text.startswith("```"):
         first_newline = text.find("\n")
         if first_newline != -1:
@@ -46,6 +49,35 @@ def clean_json_text(text: str) -> str:
             text = text[3:].strip()
     if text.endswith("```"):
         text = text[:-3].strip()
+        
+    text = text.strip()
+    
+    # Tim vi tri bat dau cua JSON ({ hoac [)
+    first_brace = text.find("{")
+    first_bracket = text.find("[")
+    
+    start_idx = -1
+    end_char = ""
+    
+    if first_brace != -1 and first_bracket != -1:
+        if first_brace < first_bracket:
+            start_idx = first_brace
+            end_char = "}"
+        else:
+            start_idx = first_bracket
+            end_char = "]"
+    elif first_brace != -1:
+        start_idx = first_brace
+        end_char = "}"
+    elif first_bracket != -1:
+        start_idx = first_bracket
+        end_char = "]"
+        
+    if start_idx != -1:
+        end_idx = text.rfind(end_char)
+        if end_idx != -1 and end_idx > start_idx:
+            text = text[start_idx:end_idx + 1]
+            
     return text
 
 

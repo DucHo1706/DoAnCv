@@ -20,9 +20,14 @@ import CVRankingPage from "./pages/recruiter/CVRankingPage";
 import EmailCandidatePage from "./pages/recruiter/EmailCandidatePage";
 import TalentPoolPage from "./pages/recruiter/TalentPoolPage";
 import TalentPoolDetailPage from "./pages/recruiter/TalentPoolDetailPage";
+import InterviewSchedulePage from "./pages/recruiter/InterviewSchedulePage/InterviewSchedulePage";
+import EmailLogsPage from "./pages/recruiter/EmailLogsPage/EmailLogsPage";
 import PublicLayout from "./pages/recruiter/PublicLayout";
 import HomePage from "./pages/recruiter/HomePage";
 import AboutPage from "./pages/candidate/AboutPage";
+import RecruiterProfilePage from "./pages/recruiter/RecruiterProfilePage";
+import RecruiterJobDetailPage from "./pages/recruiter/RecruiterJobDetailPage";
+import CandidateComparisonPage from "./pages/recruiter/CandidateComparisonPage";
 
 // Candidate pages
 import CandidateJobPage from "./pages/candidate/CandidateJobPage";
@@ -70,12 +75,17 @@ function App() {
           <Route path="dashboard" element={<RecruiterDashboardPage />} />
           <Route path="jobs" element={<JobManagementPage />} />
           <Route path="jobs/create" element={<CreateJobPage />} /> {/* <--- Thêm dòng này */}
+          <Route path="jobs/:id" element={<RecruiterJobDetailPage />} />
           <Route path="applications" element={<ApplicationManagementPage />} />
+          <Route path="schedules" element={<InterviewSchedulePage />} />
           <Route path="candidates/:id" element={<CandidateDetailPage />} />
           <Route path="candidates/:id/email" element={<EmailCandidatePage />} />
           <Route path="ranking" element={<CVRankingPage />} />
           <Route path="talent-pool" element={<TalentPoolPage />} />
           <Route path="talent-pool/:id" element={<TalentPoolDetailPage />} />
+          <Route path="email-logs" element={<EmailLogsPage />} />
+          <Route path="profile" element={<RecruiterProfilePage />} />
+          <Route path="compare" element={<CandidateComparisonPage />} />
         </Route>
 
         {/* Admin */}

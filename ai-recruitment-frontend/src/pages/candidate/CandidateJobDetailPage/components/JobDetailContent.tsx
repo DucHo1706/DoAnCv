@@ -7,7 +7,6 @@ import {
   ClockCircleOutlined,
   CheckCircleOutlined,
   SendOutlined,
-  EyeOutlined,
   ExperimentOutlined,
   StarOutlined,
   TeamOutlined,
@@ -21,7 +20,6 @@ interface JobDetailContentProps {
   job: any;
   appliedApplication: any;
   showApplyModal: () => void;
-  handleViewAppliedAiEvaluation: () => void;
   handleApplyWithAI: () => void;
   relatedJobs?: any[];
 }
@@ -30,7 +28,6 @@ const JobDetailContent: React.FC<JobDetailContentProps> = ({
   job,
   appliedApplication,
   showApplyModal,
-  handleViewAppliedAiEvaluation,
   handleApplyWithAI,
   relatedJobs = [],
 }) => {
@@ -162,42 +159,28 @@ const JobDetailContent: React.FC<JobDetailContentProps> = ({
               >
                 {appliedApplication ? "Đã ứng tuyển" : "Ứng tuyển ngay"}
               </Button>
-              {appliedApplication && (
+              {!appliedApplication && (
                 <Button
                   size="large"
-                  icon={<EyeOutlined />}
-                  onClick={handleViewAppliedAiEvaluation}
+                  icon={<ExperimentOutlined />}
+                  onClick={handleApplyWithAI}
                   style={{
                     width: 220,
                     height: 44,
                     fontSize: 14,
                     borderRadius: 12,
+                    background: "#EFF6FF",
+                    borderColor: "#BFDBFE",
+                    color: "#2563EB",
+                    border: "1px solid #BFDBFE",
+                    fontWeight: 600,
                     fontFamily: appTheme.font.family,
+                    boxShadow: "0 2px 8px rgba(37, 99, 235, 0.04)",
                   }}
                 >
-                  Xem AI đánh giá
+                  AI Phân tích & Ứng tuyển
                 </Button>
               )}
-              <Button
-                size="large"
-                icon={<ExperimentOutlined />}
-                onClick={handleApplyWithAI}
-                style={{
-                  width: 220,
-                  height: 44,
-                  fontSize: 14,
-                  borderRadius: 12,
-                  background: "#EFF6FF",
-                  borderColor: "#BFDBFE",
-                  color: "#2563EB",
-                  border: "1px solid #BFDBFE",
-                  fontWeight: 600,
-                  fontFamily: appTheme.font.family,
-                  boxShadow: "0 2px 8px rgba(37, 99, 235, 0.04)",
-                }}
-              >
-                AI Phân tích & Ứng tuyển
-              </Button>
             </Space>
           </Col>
         </Row>
@@ -255,7 +238,7 @@ const JobDetailContent: React.FC<JobDetailContentProps> = ({
               }}
             >
               <Text style={{ fontSize: 14, display: "block", fontFamily: appTheme.font.family, color: "#166534" }}>
-                Ứng viên nộp hồ sơ trực tuyến bằng cách bấm vào nút <strong>Ứng tuyển ngay</strong> hoặc <strong>AI Phân tích & Ứng tuyển</strong> ở đầu trang. Trợ lý AI sẽ tiếp nhận, phân tích CV và tự động trả về báo cáo đánh giá năng lực chi tiết ngay lập tức.
+                Ứng viên nộp hồ sơ trực tuyến bằng cách bấm vào nút <strong>Ứng tuyển ngay</strong> hoặc <strong>AI Phân tích & Ứng tuyển</strong> ở đầu trang để được trợ lý AI phân tích và đưa ra gợi ý tối ưu CV trước khi nộp.
               </Text>
             </div>
           </Card>

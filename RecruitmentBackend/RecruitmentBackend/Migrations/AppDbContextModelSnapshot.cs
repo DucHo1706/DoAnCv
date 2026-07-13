@@ -74,6 +74,9 @@ namespace RecruitmentBackend.Migrations
                     b.Property<string>("AccountID")
                         .HasColumnType("nvarchar(450)");
 
+                    b.Property<int>("AccessFailedCount")
+                        .HasColumnType("int");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -81,8 +84,17 @@ namespace RecruitmentBackend.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<DateTime?>("LockoutEnd")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("OtpExpiry")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("PasswordHash")
                         .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PasswordResetOtp")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Role")
@@ -168,8 +180,17 @@ namespace RecruitmentBackend.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("AvatarUrl")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<DateTime?>("DOB")
                         .HasColumnType("datetime2");
+
+                    b.Property<string>("DefaultCvName")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("DefaultCvUrl")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("FullName")
                         .IsRequired()
@@ -299,6 +320,94 @@ namespace RecruitmentBackend.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("ChatMessages");
+                });
+
+            modelBuilder.Entity("RecruitmentBackend.Models.EmailLog", b =>
+                {
+                    b.Property<string>("EmailLogID")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("ApplicationID")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("CandidateID")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("CandidateName")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("CategoryName")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("JobID")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("JobTitle")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("RecipientEmail")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("SentAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("EmailLogID");
+
+                    b.ToTable("EmailLogs");
+                });
+
+            modelBuilder.Entity("RecruitmentBackend.Models.InterviewSchedule", b =>
+                {
+                    b.Property<string>("ScheduleID")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("ApplicationID")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Format")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime>("InterviewDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("LocationOrLink")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("MeetingID")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("Passcode")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.HasKey("ScheduleID");
+
+                    b.HasIndex("ApplicationID")
+                        .IsUnique();
+
+                    b.ToTable("InterviewSchedules");
                 });
 
             modelBuilder.Entity("RecruitmentBackend.Models.JobCriterion", b =>
@@ -660,6 +769,17 @@ namespace RecruitmentBackend.Migrations
                     b.Navigation("ParentCategory");
                 });
 
+            modelBuilder.Entity("RecruitmentBackend.Models.InterviewSchedule", b =>
+                {
+                    b.HasOne("RecruitmentBackend.Models.Application", "Application")
+                        .WithOne("InterviewSchedule")
+                        .HasForeignKey("RecruitmentBackend.Models.InterviewSchedule", "ApplicationID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Application");
+                });
+
             modelBuilder.Entity("RecruitmentBackend.Models.JobCriterion", b =>
                 {
                     b.HasOne("RecruitmentBackend.Models.JobPosting", "JobPosting")
@@ -740,6 +860,8 @@ namespace RecruitmentBackend.Migrations
                 {
                     b.Navigation("AIEvaluation")
                         .IsRequired();
+
+                    b.Navigation("InterviewSchedule");
                 });
 
             modelBuilder.Entity("RecruitmentBackend.Models.Category", b =>

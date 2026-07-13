@@ -12,5 +12,8 @@ namespace RecruitmentBackend.Interfaces
         Task<bool> TrainAprioriAsync(List<List<string>> transactions);
         Task<List<string>> RecommendSkillsAsync(List<string> currentSkills, int topN = 5);
         Task<string> GetAssociationRulesJsonAsync();
+        Task<bool> TrainHuimAsync(object payload);
+        Task<string> RecommendHighUtilitySkillsAsync(List<string> currentSkills, int topN = 5);
+        Task<string> GetHighUtilityItemsetsJsonAsync();
     }
 }

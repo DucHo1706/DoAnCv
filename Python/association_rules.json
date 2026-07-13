@@ -1,0 +1,11348 @@
+[
+  {
+    "antecedent": [
+      "typescript"
+    ],
+    "consequent": [
+      "javascript"
+    ],
+    "support": 0.092,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "mongodb"
+    ],
+    "consequent": [
+      "postgresql"
+    ],
+    "support": 0.092,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "postgresql"
+    ],
+    "consequent": [
+      "mongodb"
+    ],
+    "support": 0.092,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "reactjs"
+    ],
+    "consequent": [
+      "git"
+    ],
+    "support": 0.092,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "reactjs"
+    ],
+    "consequent": [
+      "javascript"
+    ],
+    "support": 0.092,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "tailwind css"
+    ],
+    "consequent": [
+      "git"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "tailwind css"
+    ],
+    "consequent": [
+      "javascript"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "tailwind css"
+    ],
+    "consequent": [
+      "typescript"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "tailwind css"
+    ],
+    "consequent": [
+      "reactjs"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "excel"
+    ],
+    "consequent": [
+      "tax accounting"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "tax accounting"
+    ],
+    "consequent": [
+      "excel"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "excel"
+    ],
+    "consequent": [
+      "sap erp"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "sap erp"
+    ],
+    "consequent": [
+      "excel"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "excel"
+    ],
+    "consequent": [
+      "misa"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "misa"
+    ],
+    "consequent": [
+      "excel"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "sap erp"
+    ],
+    "consequent": [
+      "tax accounting"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "tax accounting"
+    ],
+    "consequent": [
+      "sap erp"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "misa"
+    ],
+    "consequent": [
+      "tax accounting"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "tax accounting"
+    ],
+    "consequent": [
+      "misa"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "misa"
+    ],
+    "consequent": [
+      "sap erp"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "sap erp"
+    ],
+    "consequent": [
+      "misa"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "embedded systems"
+    ],
+    "consequent": [
+      "iot"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "iot"
+    ],
+    "consequent": [
+      "embedded systems"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "c++"
+    ],
+    "consequent": [
+      "embedded systems"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "embedded systems"
+    ],
+    "consequent": [
+      "c++"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "embedded systems"
+    ],
+    "consequent": [
+      "pcb design"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "pcb design"
+    ],
+    "consequent": [
+      "embedded systems"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "c++"
+    ],
+    "consequent": [
+      "pcb design"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "pcb design"
+    ],
+    "consequent": [
+      "c++"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "c++"
+    ],
+    "consequent": [
+      "iot"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "iot"
+    ],
+    "consequent": [
+      "c++"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "iot"
+    ],
+    "consequent": [
+      "pcb design"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "pcb design"
+    ],
+    "consequent": [
+      "iot"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "logistics"
+    ],
+    "consequent": [
+      "warehouse management"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "warehouse management"
+    ],
+    "consequent": [
+      "logistics"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "logistics"
+    ],
+    "consequent": [
+      "supply chain"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "supply chain"
+    ],
+    "consequent": [
+      "logistics"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "supply chain"
+    ],
+    "consequent": [
+      "warehouse management"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "warehouse management"
+    ],
+    "consequent": [
+      "supply chain"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "pytorch"
+    ],
+    "consequent": [
+      "sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "pytorch"
+    ],
+    "consequent": [
+      "tensorflow"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "tensorflow"
+    ],
+    "consequent": [
+      "pytorch"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "tensorflow"
+    ],
+    "consequent": [
+      "docker"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "tensorflow"
+    ],
+    "consequent": [
+      "python"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "pytorch"
+    ],
+    "consequent": [
+      "docker"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "pytorch"
+    ],
+    "consequent": [
+      "python"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "tensorflow"
+    ],
+    "consequent": [
+      "sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "ci/cd"
+    ],
+    "consequent": [
+      "kubernetes"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "kubernetes"
+    ],
+    "consequent": [
+      "ci/cd"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "aws"
+    ],
+    "consequent": [
+      "kubernetes"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "kubernetes"
+    ],
+    "consequent": [
+      "aws"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "ci/cd"
+    ],
+    "consequent": [
+      "docker"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "kubernetes"
+    ],
+    "consequent": [
+      "docker"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "aws"
+    ],
+    "consequent": [
+      "docker"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "kubernetes"
+    ],
+    "consequent": [
+      "terraform"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "terraform"
+    ],
+    "consequent": [
+      "kubernetes"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "ci/cd"
+    ],
+    "consequent": [
+      "terraform"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "terraform"
+    ],
+    "consequent": [
+      "ci/cd"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "aws"
+    ],
+    "consequent": [
+      "terraform"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "terraform"
+    ],
+    "consequent": [
+      "aws"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "aws"
+    ],
+    "consequent": [
+      "ci/cd"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "ci/cd"
+    ],
+    "consequent": [
+      "aws"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "terraform"
+    ],
+    "consequent": [
+      "docker"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "redis"
+    ],
+    "consequent": [
+      "postgresql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "nestjs"
+    ],
+    "consequent": [
+      "mongodb"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "node.js"
+    ],
+    "consequent": [
+      "postgresql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "nestjs"
+    ],
+    "consequent": [
+      "postgresql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "node.js"
+    ],
+    "consequent": [
+      "redis"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "redis"
+    ],
+    "consequent": [
+      "node.js"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "nestjs"
+    ],
+    "consequent": [
+      "redis"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "redis"
+    ],
+    "consequent": [
+      "nestjs"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "redis"
+    ],
+    "consequent": [
+      "mongodb"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "nestjs"
+    ],
+    "consequent": [
+      "node.js"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "node.js"
+    ],
+    "consequent": [
+      "nestjs"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "node.js"
+    ],
+    "consequent": [
+      "mongodb"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "microservices"
+    ],
+    "consequent": [
+      "spring boot"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "spring boot"
+    ],
+    "consequent": [
+      "microservices"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "java"
+    ],
+    "consequent": [
+      "oracle sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "oracle sql"
+    ],
+    "consequent": [
+      "java"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "oracle sql"
+    ],
+    "consequent": [
+      "spring boot"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "spring boot"
+    ],
+    "consequent": [
+      "oracle sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "hibernate"
+    ],
+    "consequent": [
+      "spring boot"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "spring boot"
+    ],
+    "consequent": [
+      "hibernate"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "hibernate"
+    ],
+    "consequent": [
+      "microservices"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "microservices"
+    ],
+    "consequent": [
+      "hibernate"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "hibernate"
+    ],
+    "consequent": [
+      "oracle sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "oracle sql"
+    ],
+    "consequent": [
+      "hibernate"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "java"
+    ],
+    "consequent": [
+      "spring boot"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "spring boot"
+    ],
+    "consequent": [
+      "java"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "hibernate"
+    ],
+    "consequent": [
+      "java"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "java"
+    ],
+    "consequent": [
+      "hibernate"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "java"
+    ],
+    "consequent": [
+      "microservices"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "microservices"
+    ],
+    "consequent": [
+      "java"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "microservices"
+    ],
+    "consequent": [
+      "oracle sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "oracle sql"
+    ],
+    "consequent": [
+      "microservices"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "figma"
+    ],
+    "consequent": [
+      "ui/ux design"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "ui/ux design"
+    ],
+    "consequent": [
+      "figma"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "photoshop"
+    ],
+    "consequent": [
+      "ui/ux design"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "ui/ux design"
+    ],
+    "consequent": [
+      "photoshop"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "figma"
+    ],
+    "consequent": [
+      "photoshop"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "photoshop"
+    ],
+    "consequent": [
+      "figma"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "ui/ux design"
+    ],
+    "consequent": [
+      "wireframing"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "wireframing"
+    ],
+    "consequent": [
+      "ui/ux design"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "figma"
+    ],
+    "consequent": [
+      "wireframing"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "wireframing"
+    ],
+    "consequent": [
+      "figma"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "photoshop"
+    ],
+    "consequent": [
+      "wireframing"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "wireframing"
+    ],
+    "consequent": [
+      "photoshop"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "postman"
+    ],
+    "consequent": [
+      "qa/qc"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "qa/qc"
+    ],
+    "consequent": [
+      "postman"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "jira"
+    ],
+    "consequent": [
+      "postman"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "postman"
+    ],
+    "consequent": [
+      "jira"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "qa/qc"
+    ],
+    "consequent": [
+      "sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "jira"
+    ],
+    "consequent": [
+      "selenium"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "selenium"
+    ],
+    "consequent": [
+      "jira"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "postman"
+    ],
+    "consequent": [
+      "sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "selenium"
+    ],
+    "consequent": [
+      "sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "jira"
+    ],
+    "consequent": [
+      "sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "jira"
+    ],
+    "consequent": [
+      "qa/qc"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "qa/qc"
+    ],
+    "consequent": [
+      "jira"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "qa/qc"
+    ],
+    "consequent": [
+      "selenium"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "selenium"
+    ],
+    "consequent": [
+      "qa/qc"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "postman"
+    ],
+    "consequent": [
+      "selenium"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "selenium"
+    ],
+    "consequent": [
+      "postman"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "google ads"
+    ],
+    "consequent": [
+      "seo"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "seo"
+    ],
+    "consequent": [
+      "google ads"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "google ads"
+    ],
+    "consequent": [
+      "google analytics"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "google analytics"
+    ],
+    "consequent": [
+      "google ads"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "content strategy"
+    ],
+    "consequent": [
+      "seo"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "seo"
+    ],
+    "consequent": [
+      "content strategy"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "content strategy"
+    ],
+    "consequent": [
+      "google analytics"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "google analytics"
+    ],
+    "consequent": [
+      "content strategy"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "content strategy"
+    ],
+    "consequent": [
+      "google ads"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "google ads"
+    ],
+    "consequent": [
+      "content strategy"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "google analytics"
+    ],
+    "consequent": [
+      "seo"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "seo"
+    ],
+    "consequent": [
+      "google analytics"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "hrbp"
+    ],
+    "consequent": [
+      "recruitment"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "recruitment"
+    ],
+    "consequent": [
+      "hrbp"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "communication"
+    ],
+    "consequent": [
+      "hrbp"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "hrbp"
+    ],
+    "consequent": [
+      "communication"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "communication"
+    ],
+    "consequent": [
+      "recruitment"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "recruitment"
+    ],
+    "consequent": [
+      "communication"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "communication"
+    ],
+    "consequent": [
+      "labor law"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "labor law"
+    ],
+    "consequent": [
+      "communication"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "labor law"
+    ],
+    "consequent": [
+      "recruitment"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "recruitment"
+    ],
+    "consequent": [
+      "labor law"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "hrbp"
+    ],
+    "consequent": [
+      "labor law"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "labor law"
+    ],
+    "consequent": [
+      "hrbp"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "javascript",
+      "reactjs"
+    ],
+    "consequent": [
+      "git"
+    ],
+    "support": 0.092,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "git",
+      "reactjs"
+    ],
+    "consequent": [
+      "javascript"
+    ],
+    "support": 0.092,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "reactjs"
+    ],
+    "consequent": [
+      "git",
+      "javascript"
+    ],
+    "support": 0.092,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "git",
+      "javascript"
+    ],
+    "consequent": [
+      "reactjs"
+    ],
+    "support": 0.092,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "tailwind css",
+      "typescript"
+    ],
+    "consequent": [
+      "javascript"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "tailwind css"
+    ],
+    "consequent": [
+      "javascript",
+      "typescript"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "javascript",
+      "tailwind css"
+    ],
+    "consequent": [
+      "typescript"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "reactjs",
+      "tailwind css"
+    ],
+    "consequent": [
+      "javascript"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "javascript",
+      "tailwind css"
+    ],
+    "consequent": [
+      "reactjs"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "tailwind css"
+    ],
+    "consequent": [
+      "javascript",
+      "reactjs"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "reactjs",
+      "typescript"
+    ],
+    "consequent": [
+      "javascript"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "javascript",
+      "tailwind css"
+    ],
+    "consequent": [
+      "git"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "git",
+      "tailwind css"
+    ],
+    "consequent": [
+      "javascript"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "tailwind css"
+    ],
+    "consequent": [
+      "git",
+      "javascript"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "git",
+      "typescript"
+    ],
+    "consequent": [
+      "javascript"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "tailwind css",
+      "typescript"
+    ],
+    "consequent": [
+      "git"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "tailwind css"
+    ],
+    "consequent": [
+      "git",
+      "typescript"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "git",
+      "typescript"
+    ],
+    "consequent": [
+      "tailwind css"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "git",
+      "tailwind css"
+    ],
+    "consequent": [
+      "typescript"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "reactjs",
+      "tailwind css"
+    ],
+    "consequent": [
+      "git"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "git",
+      "tailwind css"
+    ],
+    "consequent": [
+      "reactjs"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "tailwind css"
+    ],
+    "consequent": [
+      "git",
+      "reactjs"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "reactjs",
+      "typescript"
+    ],
+    "consequent": [
+      "git"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "git",
+      "typescript"
+    ],
+    "consequent": [
+      "reactjs"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "tailwind css",
+      "typescript"
+    ],
+    "consequent": [
+      "reactjs"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "tailwind css"
+    ],
+    "consequent": [
+      "reactjs",
+      "typescript"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "reactjs",
+      "typescript"
+    ],
+    "consequent": [
+      "tailwind css"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "reactjs",
+      "tailwind css"
+    ],
+    "consequent": [
+      "typescript"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "misa"
+    ],
+    "consequent": [
+      "sap erp",
+      "tax accounting"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "sap erp",
+      "tax accounting"
+    ],
+    "consequent": [
+      "misa"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "sap erp"
+    ],
+    "consequent": [
+      "misa",
+      "tax accounting"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "misa",
+      "tax accounting"
+    ],
+    "consequent": [
+      "sap erp"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "tax accounting"
+    ],
+    "consequent": [
+      "misa",
+      "sap erp"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "misa",
+      "sap erp"
+    ],
+    "consequent": [
+      "tax accounting"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "excel"
+    ],
+    "consequent": [
+      "misa",
+      "tax accounting"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "misa",
+      "tax accounting"
+    ],
+    "consequent": [
+      "excel"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "misa"
+    ],
+    "consequent": [
+      "excel",
+      "tax accounting"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "excel",
+      "tax accounting"
+    ],
+    "consequent": [
+      "misa"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "tax accounting"
+    ],
+    "consequent": [
+      "excel",
+      "misa"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "excel",
+      "misa"
+    ],
+    "consequent": [
+      "tax accounting"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "excel"
+    ],
+    "consequent": [
+      "misa",
+      "sap erp"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "misa",
+      "sap erp"
+    ],
+    "consequent": [
+      "excel"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "misa"
+    ],
+    "consequent": [
+      "excel",
+      "sap erp"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "excel",
+      "sap erp"
+    ],
+    "consequent": [
+      "misa"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "sap erp"
+    ],
+    "consequent": [
+      "excel",
+      "misa"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "excel",
+      "misa"
+    ],
+    "consequent": [
+      "sap erp"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "excel"
+    ],
+    "consequent": [
+      "sap erp",
+      "tax accounting"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "sap erp",
+      "tax accounting"
+    ],
+    "consequent": [
+      "excel"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "sap erp"
+    ],
+    "consequent": [
+      "excel",
+      "tax accounting"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "excel",
+      "tax accounting"
+    ],
+    "consequent": [
+      "sap erp"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "tax accounting"
+    ],
+    "consequent": [
+      "excel",
+      "sap erp"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "excel",
+      "sap erp"
+    ],
+    "consequent": [
+      "tax accounting"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "c++"
+    ],
+    "consequent": [
+      "iot",
+      "pcb design"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "iot",
+      "pcb design"
+    ],
+    "consequent": [
+      "c++"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "iot"
+    ],
+    "consequent": [
+      "c++",
+      "pcb design"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "c++",
+      "pcb design"
+    ],
+    "consequent": [
+      "iot"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "pcb design"
+    ],
+    "consequent": [
+      "c++",
+      "iot"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "c++",
+      "iot"
+    ],
+    "consequent": [
+      "pcb design"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "c++"
+    ],
+    "consequent": [
+      "embedded systems",
+      "pcb design"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "embedded systems",
+      "pcb design"
+    ],
+    "consequent": [
+      "c++"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "embedded systems"
+    ],
+    "consequent": [
+      "c++",
+      "pcb design"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "c++",
+      "pcb design"
+    ],
+    "consequent": [
+      "embedded systems"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "pcb design"
+    ],
+    "consequent": [
+      "c++",
+      "embedded systems"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "c++",
+      "embedded systems"
+    ],
+    "consequent": [
+      "pcb design"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "c++"
+    ],
+    "consequent": [
+      "embedded systems",
+      "iot"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "embedded systems",
+      "iot"
+    ],
+    "consequent": [
+      "c++"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "embedded systems"
+    ],
+    "consequent": [
+      "c++",
+      "iot"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "c++",
+      "iot"
+    ],
+    "consequent": [
+      "embedded systems"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "iot"
+    ],
+    "consequent": [
+      "c++",
+      "embedded systems"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "c++",
+      "embedded systems"
+    ],
+    "consequent": [
+      "iot"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "embedded systems"
+    ],
+    "consequent": [
+      "iot",
+      "pcb design"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "iot",
+      "pcb design"
+    ],
+    "consequent": [
+      "embedded systems"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "iot"
+    ],
+    "consequent": [
+      "embedded systems",
+      "pcb design"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "embedded systems",
+      "pcb design"
+    ],
+    "consequent": [
+      "iot"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "pcb design"
+    ],
+    "consequent": [
+      "embedded systems",
+      "iot"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "embedded systems",
+      "iot"
+    ],
+    "consequent": [
+      "pcb design"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "logistics"
+    ],
+    "consequent": [
+      "supply chain",
+      "warehouse management"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "supply chain",
+      "warehouse management"
+    ],
+    "consequent": [
+      "logistics"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "supply chain"
+    ],
+    "consequent": [
+      "logistics",
+      "warehouse management"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "logistics",
+      "warehouse management"
+    ],
+    "consequent": [
+      "supply chain"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "warehouse management"
+    ],
+    "consequent": [
+      "logistics",
+      "supply chain"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "logistics",
+      "supply chain"
+    ],
+    "consequent": [
+      "warehouse management"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "python",
+      "pytorch"
+    ],
+    "consequent": [
+      "docker"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "docker",
+      "pytorch"
+    ],
+    "consequent": [
+      "python"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "pytorch"
+    ],
+    "consequent": [
+      "docker",
+      "python"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "docker",
+      "python"
+    ],
+    "consequent": [
+      "pytorch"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "docker",
+      "sql"
+    ],
+    "consequent": [
+      "python"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "docker",
+      "python"
+    ],
+    "consequent": [
+      "sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "pytorch",
+      "sql"
+    ],
+    "consequent": [
+      "docker"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "pytorch"
+    ],
+    "consequent": [
+      "docker",
+      "sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "docker",
+      "sql"
+    ],
+    "consequent": [
+      "pytorch"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "docker",
+      "pytorch"
+    ],
+    "consequent": [
+      "sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "python",
+      "tensorflow"
+    ],
+    "consequent": [
+      "docker"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "docker",
+      "tensorflow"
+    ],
+    "consequent": [
+      "python"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "tensorflow"
+    ],
+    "consequent": [
+      "docker",
+      "python"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "docker",
+      "python"
+    ],
+    "consequent": [
+      "tensorflow"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "sql",
+      "tensorflow"
+    ],
+    "consequent": [
+      "python"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "python",
+      "tensorflow"
+    ],
+    "consequent": [
+      "sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "tensorflow"
+    ],
+    "consequent": [
+      "python",
+      "sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "pytorch",
+      "tensorflow"
+    ],
+    "consequent": [
+      "docker"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "pytorch"
+    ],
+    "consequent": [
+      "docker",
+      "tensorflow"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "docker",
+      "tensorflow"
+    ],
+    "consequent": [
+      "pytorch"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "tensorflow"
+    ],
+    "consequent": [
+      "docker",
+      "pytorch"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "docker",
+      "pytorch"
+    ],
+    "consequent": [
+      "tensorflow"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "pytorch",
+      "sql"
+    ],
+    "consequent": [
+      "python"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "pytorch"
+    ],
+    "consequent": [
+      "python",
+      "sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "python",
+      "pytorch"
+    ],
+    "consequent": [
+      "sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "pytorch",
+      "tensorflow"
+    ],
+    "consequent": [
+      "python"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "pytorch"
+    ],
+    "consequent": [
+      "python",
+      "tensorflow"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "python",
+      "tensorflow"
+    ],
+    "consequent": [
+      "pytorch"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "tensorflow"
+    ],
+    "consequent": [
+      "python",
+      "pytorch"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "python",
+      "pytorch"
+    ],
+    "consequent": [
+      "tensorflow"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "sql",
+      "tensorflow"
+    ],
+    "consequent": [
+      "docker"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "docker",
+      "tensorflow"
+    ],
+    "consequent": [
+      "sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "tensorflow"
+    ],
+    "consequent": [
+      "docker",
+      "sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "docker",
+      "sql"
+    ],
+    "consequent": [
+      "tensorflow"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "pytorch"
+    ],
+    "consequent": [
+      "sql",
+      "tensorflow"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "sql",
+      "tensorflow"
+    ],
+    "consequent": [
+      "pytorch"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "pytorch",
+      "tensorflow"
+    ],
+    "consequent": [
+      "sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "tensorflow"
+    ],
+    "consequent": [
+      "pytorch",
+      "sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "pytorch",
+      "sql"
+    ],
+    "consequent": [
+      "tensorflow"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "ci/cd"
+    ],
+    "consequent": [
+      "kubernetes",
+      "terraform"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "kubernetes",
+      "terraform"
+    ],
+    "consequent": [
+      "ci/cd"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "kubernetes"
+    ],
+    "consequent": [
+      "ci/cd",
+      "terraform"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "ci/cd",
+      "terraform"
+    ],
+    "consequent": [
+      "kubernetes"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "terraform"
+    ],
+    "consequent": [
+      "ci/cd",
+      "kubernetes"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "ci/cd",
+      "kubernetes"
+    ],
+    "consequent": [
+      "terraform"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "ci/cd"
+    ],
+    "consequent": [
+      "docker",
+      "kubernetes"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "docker",
+      "kubernetes"
+    ],
+    "consequent": [
+      "ci/cd"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "ci/cd",
+      "kubernetes"
+    ],
+    "consequent": [
+      "docker"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "kubernetes"
+    ],
+    "consequent": [
+      "ci/cd",
+      "docker"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "ci/cd",
+      "docker"
+    ],
+    "consequent": [
+      "kubernetes"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "ci/cd"
+    ],
+    "consequent": [
+      "docker",
+      "terraform"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "docker",
+      "terraform"
+    ],
+    "consequent": [
+      "ci/cd"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "ci/cd",
+      "terraform"
+    ],
+    "consequent": [
+      "docker"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "terraform"
+    ],
+    "consequent": [
+      "ci/cd",
+      "docker"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "ci/cd",
+      "docker"
+    ],
+    "consequent": [
+      "terraform"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "aws"
+    ],
+    "consequent": [
+      "docker",
+      "terraform"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "docker",
+      "terraform"
+    ],
+    "consequent": [
+      "aws"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "aws",
+      "terraform"
+    ],
+    "consequent": [
+      "docker"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "terraform"
+    ],
+    "consequent": [
+      "aws",
+      "docker"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "aws",
+      "docker"
+    ],
+    "consequent": [
+      "terraform"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "aws"
+    ],
+    "consequent": [
+      "docker",
+      "kubernetes"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "docker",
+      "kubernetes"
+    ],
+    "consequent": [
+      "aws"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "aws",
+      "kubernetes"
+    ],
+    "consequent": [
+      "docker"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "kubernetes"
+    ],
+    "consequent": [
+      "aws",
+      "docker"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "aws",
+      "docker"
+    ],
+    "consequent": [
+      "kubernetes"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "aws"
+    ],
+    "consequent": [
+      "ci/cd",
+      "terraform"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "ci/cd",
+      "terraform"
+    ],
+    "consequent": [
+      "aws"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "ci/cd"
+    ],
+    "consequent": [
+      "aws",
+      "terraform"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "aws",
+      "terraform"
+    ],
+    "consequent": [
+      "ci/cd"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "terraform"
+    ],
+    "consequent": [
+      "aws",
+      "ci/cd"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "aws",
+      "ci/cd"
+    ],
+    "consequent": [
+      "terraform"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "aws"
+    ],
+    "consequent": [
+      "ci/cd",
+      "kubernetes"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "ci/cd",
+      "kubernetes"
+    ],
+    "consequent": [
+      "aws"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "ci/cd"
+    ],
+    "consequent": [
+      "aws",
+      "kubernetes"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "aws",
+      "kubernetes"
+    ],
+    "consequent": [
+      "ci/cd"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "kubernetes"
+    ],
+    "consequent": [
+      "aws",
+      "ci/cd"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "aws",
+      "ci/cd"
+    ],
+    "consequent": [
+      "kubernetes"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "aws"
+    ],
+    "consequent": [
+      "ci/cd",
+      "docker"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "ci/cd",
+      "docker"
+    ],
+    "consequent": [
+      "aws"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "ci/cd"
+    ],
+    "consequent": [
+      "aws",
+      "docker"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "aws",
+      "docker"
+    ],
+    "consequent": [
+      "ci/cd"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "aws",
+      "ci/cd"
+    ],
+    "consequent": [
+      "docker"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "kubernetes",
+      "terraform"
+    ],
+    "consequent": [
+      "docker"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "kubernetes"
+    ],
+    "consequent": [
+      "docker",
+      "terraform"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "docker",
+      "terraform"
+    ],
+    "consequent": [
+      "kubernetes"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "terraform"
+    ],
+    "consequent": [
+      "docker",
+      "kubernetes"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "docker",
+      "kubernetes"
+    ],
+    "consequent": [
+      "terraform"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "aws"
+    ],
+    "consequent": [
+      "kubernetes",
+      "terraform"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "kubernetes",
+      "terraform"
+    ],
+    "consequent": [
+      "aws"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "kubernetes"
+    ],
+    "consequent": [
+      "aws",
+      "terraform"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "aws",
+      "terraform"
+    ],
+    "consequent": [
+      "kubernetes"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "terraform"
+    ],
+    "consequent": [
+      "aws",
+      "kubernetes"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "aws",
+      "kubernetes"
+    ],
+    "consequent": [
+      "terraform"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "node.js",
+      "postgresql"
+    ],
+    "consequent": [
+      "mongodb"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "node.js"
+    ],
+    "consequent": [
+      "mongodb",
+      "postgresql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "mongodb",
+      "node.js"
+    ],
+    "consequent": [
+      "postgresql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "nestjs"
+    ],
+    "consequent": [
+      "node.js",
+      "redis"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "node.js",
+      "redis"
+    ],
+    "consequent": [
+      "nestjs"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "node.js"
+    ],
+    "consequent": [
+      "nestjs",
+      "redis"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "nestjs",
+      "redis"
+    ],
+    "consequent": [
+      "node.js"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "redis"
+    ],
+    "consequent": [
+      "nestjs",
+      "node.js"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "nestjs",
+      "node.js"
+    ],
+    "consequent": [
+      "redis"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "node.js",
+      "redis"
+    ],
+    "consequent": [
+      "mongodb"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "node.js"
+    ],
+    "consequent": [
+      "mongodb",
+      "redis"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "mongodb",
+      "redis"
+    ],
+    "consequent": [
+      "node.js"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "redis"
+    ],
+    "consequent": [
+      "mongodb",
+      "node.js"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "mongodb",
+      "node.js"
+    ],
+    "consequent": [
+      "redis"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "node.js"
+    ],
+    "consequent": [
+      "postgresql",
+      "redis"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "postgresql",
+      "redis"
+    ],
+    "consequent": [
+      "node.js"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "node.js",
+      "redis"
+    ],
+    "consequent": [
+      "postgresql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "redis"
+    ],
+    "consequent": [
+      "node.js",
+      "postgresql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "node.js",
+      "postgresql"
+    ],
+    "consequent": [
+      "redis"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "nestjs"
+    ],
+    "consequent": [
+      "postgresql",
+      "redis"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "postgresql",
+      "redis"
+    ],
+    "consequent": [
+      "nestjs"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "nestjs",
+      "redis"
+    ],
+    "consequent": [
+      "postgresql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "redis"
+    ],
+    "consequent": [
+      "nestjs",
+      "postgresql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "nestjs",
+      "postgresql"
+    ],
+    "consequent": [
+      "redis"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "nestjs",
+      "node.js"
+    ],
+    "consequent": [
+      "mongodb"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "nestjs"
+    ],
+    "consequent": [
+      "mongodb",
+      "node.js"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "mongodb",
+      "node.js"
+    ],
+    "consequent": [
+      "nestjs"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "node.js"
+    ],
+    "consequent": [
+      "mongodb",
+      "nestjs"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "mongodb",
+      "nestjs"
+    ],
+    "consequent": [
+      "node.js"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "nestjs",
+      "postgresql"
+    ],
+    "consequent": [
+      "mongodb"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "nestjs"
+    ],
+    "consequent": [
+      "mongodb",
+      "postgresql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "mongodb",
+      "nestjs"
+    ],
+    "consequent": [
+      "postgresql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "postgresql",
+      "redis"
+    ],
+    "consequent": [
+      "mongodb"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "mongodb",
+      "redis"
+    ],
+    "consequent": [
+      "postgresql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "redis"
+    ],
+    "consequent": [
+      "mongodb",
+      "postgresql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "nestjs",
+      "redis"
+    ],
+    "consequent": [
+      "mongodb"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "nestjs"
+    ],
+    "consequent": [
+      "mongodb",
+      "redis"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "mongodb",
+      "redis"
+    ],
+    "consequent": [
+      "nestjs"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "redis"
+    ],
+    "consequent": [
+      "mongodb",
+      "nestjs"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "mongodb",
+      "nestjs"
+    ],
+    "consequent": [
+      "redis"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "nestjs"
+    ],
+    "consequent": [
+      "node.js",
+      "postgresql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "node.js",
+      "postgresql"
+    ],
+    "consequent": [
+      "nestjs"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "node.js"
+    ],
+    "consequent": [
+      "nestjs",
+      "postgresql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "nestjs",
+      "postgresql"
+    ],
+    "consequent": [
+      "node.js"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "nestjs",
+      "node.js"
+    ],
+    "consequent": [
+      "postgresql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "java"
+    ],
+    "consequent": [
+      "oracle sql",
+      "spring boot"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "oracle sql",
+      "spring boot"
+    ],
+    "consequent": [
+      "java"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "oracle sql"
+    ],
+    "consequent": [
+      "java",
+      "spring boot"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "java",
+      "spring boot"
+    ],
+    "consequent": [
+      "oracle sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "spring boot"
+    ],
+    "consequent": [
+      "java",
+      "oracle sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "java",
+      "oracle sql"
+    ],
+    "consequent": [
+      "spring boot"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "hibernate"
+    ],
+    "consequent": [
+      "oracle sql",
+      "spring boot"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "oracle sql",
+      "spring boot"
+    ],
+    "consequent": [
+      "hibernate"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "oracle sql"
+    ],
+    "consequent": [
+      "hibernate",
+      "spring boot"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "hibernate",
+      "spring boot"
+    ],
+    "consequent": [
+      "oracle sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "spring boot"
+    ],
+    "consequent": [
+      "hibernate",
+      "oracle sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "hibernate",
+      "oracle sql"
+    ],
+    "consequent": [
+      "spring boot"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "java"
+    ],
+    "consequent": [
+      "microservices",
+      "oracle sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "microservices",
+      "oracle sql"
+    ],
+    "consequent": [
+      "java"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "microservices"
+    ],
+    "consequent": [
+      "java",
+      "oracle sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "java",
+      "oracle sql"
+    ],
+    "consequent": [
+      "microservices"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "oracle sql"
+    ],
+    "consequent": [
+      "java",
+      "microservices"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "java",
+      "microservices"
+    ],
+    "consequent": [
+      "oracle sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "hibernate"
+    ],
+    "consequent": [
+      "microservices",
+      "spring boot"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "microservices",
+      "spring boot"
+    ],
+    "consequent": [
+      "hibernate"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "microservices"
+    ],
+    "consequent": [
+      "hibernate",
+      "spring boot"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "hibernate",
+      "spring boot"
+    ],
+    "consequent": [
+      "microservices"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "spring boot"
+    ],
+    "consequent": [
+      "hibernate",
+      "microservices"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "hibernate",
+      "microservices"
+    ],
+    "consequent": [
+      "spring boot"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "hibernate"
+    ],
+    "consequent": [
+      "java",
+      "oracle sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "java",
+      "oracle sql"
+    ],
+    "consequent": [
+      "hibernate"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "java"
+    ],
+    "consequent": [
+      "hibernate",
+      "oracle sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "hibernate",
+      "oracle sql"
+    ],
+    "consequent": [
+      "java"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "oracle sql"
+    ],
+    "consequent": [
+      "hibernate",
+      "java"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "hibernate",
+      "java"
+    ],
+    "consequent": [
+      "oracle sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "microservices"
+    ],
+    "consequent": [
+      "oracle sql",
+      "spring boot"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "oracle sql",
+      "spring boot"
+    ],
+    "consequent": [
+      "microservices"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "oracle sql"
+    ],
+    "consequent": [
+      "microservices",
+      "spring boot"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "microservices",
+      "spring boot"
+    ],
+    "consequent": [
+      "oracle sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "spring boot"
+    ],
+    "consequent": [
+      "microservices",
+      "oracle sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "microservices",
+      "oracle sql"
+    ],
+    "consequent": [
+      "spring boot"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "hibernate"
+    ],
+    "consequent": [
+      "microservices",
+      "oracle sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "microservices",
+      "oracle sql"
+    ],
+    "consequent": [
+      "hibernate"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "microservices"
+    ],
+    "consequent": [
+      "hibernate",
+      "oracle sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "hibernate",
+      "oracle sql"
+    ],
+    "consequent": [
+      "microservices"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "oracle sql"
+    ],
+    "consequent": [
+      "hibernate",
+      "microservices"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "hibernate",
+      "microservices"
+    ],
+    "consequent": [
+      "oracle sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "java"
+    ],
+    "consequent": [
+      "microservices",
+      "spring boot"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "microservices",
+      "spring boot"
+    ],
+    "consequent": [
+      "java"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "microservices"
+    ],
+    "consequent": [
+      "java",
+      "spring boot"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "java",
+      "spring boot"
+    ],
+    "consequent": [
+      "microservices"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "spring boot"
+    ],
+    "consequent": [
+      "java",
+      "microservices"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "java",
+      "microservices"
+    ],
+    "consequent": [
+      "spring boot"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "hibernate"
+    ],
+    "consequent": [
+      "java",
+      "spring boot"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "java",
+      "spring boot"
+    ],
+    "consequent": [
+      "hibernate"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "java"
+    ],
+    "consequent": [
+      "hibernate",
+      "spring boot"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "hibernate",
+      "spring boot"
+    ],
+    "consequent": [
+      "java"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "spring boot"
+    ],
+    "consequent": [
+      "hibernate",
+      "java"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "hibernate",
+      "java"
+    ],
+    "consequent": [
+      "spring boot"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "hibernate"
+    ],
+    "consequent": [
+      "java",
+      "microservices"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "java",
+      "microservices"
+    ],
+    "consequent": [
+      "hibernate"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "java"
+    ],
+    "consequent": [
+      "hibernate",
+      "microservices"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "hibernate",
+      "microservices"
+    ],
+    "consequent": [
+      "java"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "microservices"
+    ],
+    "consequent": [
+      "hibernate",
+      "java"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "hibernate",
+      "java"
+    ],
+    "consequent": [
+      "microservices"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "figma"
+    ],
+    "consequent": [
+      "photoshop",
+      "ui/ux design"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "photoshop",
+      "ui/ux design"
+    ],
+    "consequent": [
+      "figma"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "photoshop"
+    ],
+    "consequent": [
+      "figma",
+      "ui/ux design"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "figma",
+      "ui/ux design"
+    ],
+    "consequent": [
+      "photoshop"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "ui/ux design"
+    ],
+    "consequent": [
+      "figma",
+      "photoshop"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "figma",
+      "photoshop"
+    ],
+    "consequent": [
+      "ui/ux design"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "figma"
+    ],
+    "consequent": [
+      "ui/ux design",
+      "wireframing"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "ui/ux design",
+      "wireframing"
+    ],
+    "consequent": [
+      "figma"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "ui/ux design"
+    ],
+    "consequent": [
+      "figma",
+      "wireframing"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "figma",
+      "wireframing"
+    ],
+    "consequent": [
+      "ui/ux design"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "wireframing"
+    ],
+    "consequent": [
+      "figma",
+      "ui/ux design"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "figma",
+      "ui/ux design"
+    ],
+    "consequent": [
+      "wireframing"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "photoshop"
+    ],
+    "consequent": [
+      "ui/ux design",
+      "wireframing"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "ui/ux design",
+      "wireframing"
+    ],
+    "consequent": [
+      "photoshop"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "ui/ux design"
+    ],
+    "consequent": [
+      "photoshop",
+      "wireframing"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "photoshop",
+      "wireframing"
+    ],
+    "consequent": [
+      "ui/ux design"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "wireframing"
+    ],
+    "consequent": [
+      "photoshop",
+      "ui/ux design"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "photoshop",
+      "ui/ux design"
+    ],
+    "consequent": [
+      "wireframing"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "figma"
+    ],
+    "consequent": [
+      "photoshop",
+      "wireframing"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "photoshop",
+      "wireframing"
+    ],
+    "consequent": [
+      "figma"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "photoshop"
+    ],
+    "consequent": [
+      "figma",
+      "wireframing"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "figma",
+      "wireframing"
+    ],
+    "consequent": [
+      "photoshop"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "wireframing"
+    ],
+    "consequent": [
+      "figma",
+      "photoshop"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "figma",
+      "photoshop"
+    ],
+    "consequent": [
+      "wireframing"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "qa/qc"
+    ],
+    "consequent": [
+      "selenium",
+      "sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "selenium",
+      "sql"
+    ],
+    "consequent": [
+      "qa/qc"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "selenium"
+    ],
+    "consequent": [
+      "qa/qc",
+      "sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "qa/qc",
+      "sql"
+    ],
+    "consequent": [
+      "selenium"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "qa/qc",
+      "selenium"
+    ],
+    "consequent": [
+      "sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "postman"
+    ],
+    "consequent": [
+      "qa/qc",
+      "selenium"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "qa/qc",
+      "selenium"
+    ],
+    "consequent": [
+      "postman"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "qa/qc"
+    ],
+    "consequent": [
+      "postman",
+      "selenium"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "postman",
+      "selenium"
+    ],
+    "consequent": [
+      "qa/qc"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "selenium"
+    ],
+    "consequent": [
+      "postman",
+      "qa/qc"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "postman",
+      "qa/qc"
+    ],
+    "consequent": [
+      "selenium"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "postman"
+    ],
+    "consequent": [
+      "selenium",
+      "sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "selenium",
+      "sql"
+    ],
+    "consequent": [
+      "postman"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "selenium"
+    ],
+    "consequent": [
+      "postman",
+      "sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "postman",
+      "sql"
+    ],
+    "consequent": [
+      "selenium"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "postman",
+      "selenium"
+    ],
+    "consequent": [
+      "sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "jira"
+    ],
+    "consequent": [
+      "selenium",
+      "sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "selenium",
+      "sql"
+    ],
+    "consequent": [
+      "jira"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "selenium"
+    ],
+    "consequent": [
+      "jira",
+      "sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "jira",
+      "sql"
+    ],
+    "consequent": [
+      "selenium"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "jira",
+      "selenium"
+    ],
+    "consequent": [
+      "sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "jira"
+    ],
+    "consequent": [
+      "postman",
+      "selenium"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "postman",
+      "selenium"
+    ],
+    "consequent": [
+      "jira"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "postman"
+    ],
+    "consequent": [
+      "jira",
+      "selenium"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "jira",
+      "selenium"
+    ],
+    "consequent": [
+      "postman"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "selenium"
+    ],
+    "consequent": [
+      "jira",
+      "postman"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "jira",
+      "postman"
+    ],
+    "consequent": [
+      "selenium"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "jira"
+    ],
+    "consequent": [
+      "qa/qc",
+      "selenium"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "qa/qc",
+      "selenium"
+    ],
+    "consequent": [
+      "jira"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "qa/qc"
+    ],
+    "consequent": [
+      "jira",
+      "selenium"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "jira",
+      "selenium"
+    ],
+    "consequent": [
+      "qa/qc"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "selenium"
+    ],
+    "consequent": [
+      "jira",
+      "qa/qc"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "jira",
+      "qa/qc"
+    ],
+    "consequent": [
+      "selenium"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "postman"
+    ],
+    "consequent": [
+      "qa/qc",
+      "sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "qa/qc",
+      "sql"
+    ],
+    "consequent": [
+      "postman"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "qa/qc"
+    ],
+    "consequent": [
+      "postman",
+      "sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "postman",
+      "sql"
+    ],
+    "consequent": [
+      "qa/qc"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "postman",
+      "qa/qc"
+    ],
+    "consequent": [
+      "sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "jira"
+    ],
+    "consequent": [
+      "qa/qc",
+      "sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "qa/qc",
+      "sql"
+    ],
+    "consequent": [
+      "jira"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "qa/qc"
+    ],
+    "consequent": [
+      "jira",
+      "sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "jira",
+      "sql"
+    ],
+    "consequent": [
+      "qa/qc"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "jira",
+      "qa/qc"
+    ],
+    "consequent": [
+      "sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "jira"
+    ],
+    "consequent": [
+      "postman",
+      "sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "postman",
+      "sql"
+    ],
+    "consequent": [
+      "jira"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "postman"
+    ],
+    "consequent": [
+      "jira",
+      "sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "jira",
+      "sql"
+    ],
+    "consequent": [
+      "postman"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "jira",
+      "postman"
+    ],
+    "consequent": [
+      "sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "jira"
+    ],
+    "consequent": [
+      "postman",
+      "qa/qc"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "postman",
+      "qa/qc"
+    ],
+    "consequent": [
+      "jira"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "postman"
+    ],
+    "consequent": [
+      "jira",
+      "qa/qc"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "jira",
+      "qa/qc"
+    ],
+    "consequent": [
+      "postman"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "qa/qc"
+    ],
+    "consequent": [
+      "jira",
+      "postman"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "jira",
+      "postman"
+    ],
+    "consequent": [
+      "qa/qc"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "content strategy"
+    ],
+    "consequent": [
+      "google analytics",
+      "seo"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "google analytics",
+      "seo"
+    ],
+    "consequent": [
+      "content strategy"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "google analytics"
+    ],
+    "consequent": [
+      "content strategy",
+      "seo"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "content strategy",
+      "seo"
+    ],
+    "consequent": [
+      "google analytics"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "seo"
+    ],
+    "consequent": [
+      "content strategy",
+      "google analytics"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "content strategy",
+      "google analytics"
+    ],
+    "consequent": [
+      "seo"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "google ads"
+    ],
+    "consequent": [
+      "google analytics",
+      "seo"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "google analytics",
+      "seo"
+    ],
+    "consequent": [
+      "google ads"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "google analytics"
+    ],
+    "consequent": [
+      "google ads",
+      "seo"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "google ads",
+      "seo"
+    ],
+    "consequent": [
+      "google analytics"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "seo"
+    ],
+    "consequent": [
+      "google ads",
+      "google analytics"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "google ads",
+      "google analytics"
+    ],
+    "consequent": [
+      "seo"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "content strategy"
+    ],
+    "consequent": [
+      "google ads",
+      "seo"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "google ads",
+      "seo"
+    ],
+    "consequent": [
+      "content strategy"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "google ads"
+    ],
+    "consequent": [
+      "content strategy",
+      "seo"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "content strategy",
+      "seo"
+    ],
+    "consequent": [
+      "google ads"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "seo"
+    ],
+    "consequent": [
+      "content strategy",
+      "google ads"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "content strategy",
+      "google ads"
+    ],
+    "consequent": [
+      "seo"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "content strategy"
+    ],
+    "consequent": [
+      "google ads",
+      "google analytics"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "google ads",
+      "google analytics"
+    ],
+    "consequent": [
+      "content strategy"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "google ads"
+    ],
+    "consequent": [
+      "content strategy",
+      "google analytics"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "content strategy",
+      "google analytics"
+    ],
+    "consequent": [
+      "google ads"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "google analytics"
+    ],
+    "consequent": [
+      "content strategy",
+      "google ads"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "content strategy",
+      "google ads"
+    ],
+    "consequent": [
+      "google analytics"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "communication"
+    ],
+    "consequent": [
+      "hrbp",
+      "recruitment"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "hrbp",
+      "recruitment"
+    ],
+    "consequent": [
+      "communication"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "hrbp"
+    ],
+    "consequent": [
+      "communication",
+      "recruitment"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "communication",
+      "recruitment"
+    ],
+    "consequent": [
+      "hrbp"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "recruitment"
+    ],
+    "consequent": [
+      "communication",
+      "hrbp"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "communication",
+      "hrbp"
+    ],
+    "consequent": [
+      "recruitment"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "communication"
+    ],
+    "consequent": [
+      "labor law",
+      "recruitment"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "labor law",
+      "recruitment"
+    ],
+    "consequent": [
+      "communication"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "labor law"
+    ],
+    "consequent": [
+      "communication",
+      "recruitment"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "communication",
+      "recruitment"
+    ],
+    "consequent": [
+      "labor law"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "recruitment"
+    ],
+    "consequent": [
+      "communication",
+      "labor law"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "communication",
+      "labor law"
+    ],
+    "consequent": [
+      "recruitment"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "hrbp"
+    ],
+    "consequent": [
+      "labor law",
+      "recruitment"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "labor law",
+      "recruitment"
+    ],
+    "consequent": [
+      "hrbp"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "labor law"
+    ],
+    "consequent": [
+      "hrbp",
+      "recruitment"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "hrbp",
+      "recruitment"
+    ],
+    "consequent": [
+      "labor law"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "recruitment"
+    ],
+    "consequent": [
+      "hrbp",
+      "labor law"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "hrbp",
+      "labor law"
+    ],
+    "consequent": [
+      "recruitment"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "communication"
+    ],
+    "consequent": [
+      "hrbp",
+      "labor law"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "hrbp",
+      "labor law"
+    ],
+    "consequent": [
+      "communication"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "hrbp"
+    ],
+    "consequent": [
+      "communication",
+      "labor law"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "communication",
+      "labor law"
+    ],
+    "consequent": [
+      "hrbp"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "labor law"
+    ],
+    "consequent": [
+      "communication",
+      "hrbp"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "communication",
+      "hrbp"
+    ],
+    "consequent": [
+      "labor law"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "javascript",
+      "reactjs",
+      "typescript"
+    ],
+    "consequent": [
+      "git"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "git",
+      "reactjs",
+      "typescript"
+    ],
+    "consequent": [
+      "javascript"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "git",
+      "javascript",
+      "typescript"
+    ],
+    "consequent": [
+      "reactjs"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "reactjs",
+      "tailwind css",
+      "typescript"
+    ],
+    "consequent": [
+      "javascript"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "javascript",
+      "tailwind css",
+      "typescript"
+    ],
+    "consequent": [
+      "reactjs"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "tailwind css"
+    ],
+    "consequent": [
+      "javascript",
+      "reactjs",
+      "typescript"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "javascript",
+      "reactjs",
+      "typescript"
+    ],
+    "consequent": [
+      "tailwind css"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "javascript",
+      "reactjs",
+      "tailwind css"
+    ],
+    "consequent": [
+      "typescript"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "reactjs",
+      "tailwind css",
+      "typescript"
+    ],
+    "consequent": [
+      "git"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "git",
+      "tailwind css",
+      "typescript"
+    ],
+    "consequent": [
+      "reactjs"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "tailwind css"
+    ],
+    "consequent": [
+      "git",
+      "reactjs",
+      "typescript"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "git",
+      "reactjs",
+      "typescript"
+    ],
+    "consequent": [
+      "tailwind css"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "git",
+      "reactjs",
+      "tailwind css"
+    ],
+    "consequent": [
+      "typescript"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "javascript",
+      "tailwind css",
+      "typescript"
+    ],
+    "consequent": [
+      "git"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "git",
+      "tailwind css",
+      "typescript"
+    ],
+    "consequent": [
+      "javascript"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "tailwind css"
+    ],
+    "consequent": [
+      "git",
+      "javascript",
+      "typescript"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "git",
+      "javascript",
+      "typescript"
+    ],
+    "consequent": [
+      "tailwind css"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "git",
+      "javascript",
+      "tailwind css"
+    ],
+    "consequent": [
+      "typescript"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "javascript",
+      "reactjs",
+      "tailwind css"
+    ],
+    "consequent": [
+      "git"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "git",
+      "reactjs",
+      "tailwind css"
+    ],
+    "consequent": [
+      "javascript"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "git",
+      "javascript",
+      "tailwind css"
+    ],
+    "consequent": [
+      "reactjs"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "tailwind css"
+    ],
+    "consequent": [
+      "git",
+      "javascript",
+      "reactjs"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "excel"
+    ],
+    "consequent": [
+      "misa",
+      "sap erp",
+      "tax accounting"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "misa",
+      "sap erp",
+      "tax accounting"
+    ],
+    "consequent": [
+      "excel"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "misa"
+    ],
+    "consequent": [
+      "excel",
+      "sap erp",
+      "tax accounting"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "excel",
+      "sap erp",
+      "tax accounting"
+    ],
+    "consequent": [
+      "misa"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "sap erp"
+    ],
+    "consequent": [
+      "excel",
+      "misa",
+      "tax accounting"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "excel",
+      "misa",
+      "tax accounting"
+    ],
+    "consequent": [
+      "sap erp"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "tax accounting"
+    ],
+    "consequent": [
+      "excel",
+      "misa",
+      "sap erp"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "excel",
+      "misa",
+      "sap erp"
+    ],
+    "consequent": [
+      "tax accounting"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "c++"
+    ],
+    "consequent": [
+      "embedded systems",
+      "iot",
+      "pcb design"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "embedded systems",
+      "iot",
+      "pcb design"
+    ],
+    "consequent": [
+      "c++"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "embedded systems"
+    ],
+    "consequent": [
+      "c++",
+      "iot",
+      "pcb design"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "c++",
+      "iot",
+      "pcb design"
+    ],
+    "consequent": [
+      "embedded systems"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "iot"
+    ],
+    "consequent": [
+      "c++",
+      "embedded systems",
+      "pcb design"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "c++",
+      "embedded systems",
+      "pcb design"
+    ],
+    "consequent": [
+      "iot"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "pcb design"
+    ],
+    "consequent": [
+      "c++",
+      "embedded systems",
+      "iot"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "c++",
+      "embedded systems",
+      "iot"
+    ],
+    "consequent": [
+      "pcb design"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "python",
+      "pytorch",
+      "tensorflow"
+    ],
+    "consequent": [
+      "docker"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "docker",
+      "pytorch",
+      "tensorflow"
+    ],
+    "consequent": [
+      "python"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "pytorch"
+    ],
+    "consequent": [
+      "docker",
+      "python",
+      "tensorflow"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "docker",
+      "python",
+      "tensorflow"
+    ],
+    "consequent": [
+      "pytorch"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "tensorflow"
+    ],
+    "consequent": [
+      "docker",
+      "python",
+      "pytorch"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "docker",
+      "python",
+      "pytorch"
+    ],
+    "consequent": [
+      "tensorflow"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "pytorch",
+      "sql",
+      "tensorflow"
+    ],
+    "consequent": [
+      "python"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "pytorch"
+    ],
+    "consequent": [
+      "python",
+      "sql",
+      "tensorflow"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "python",
+      "sql",
+      "tensorflow"
+    ],
+    "consequent": [
+      "pytorch"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "python",
+      "pytorch",
+      "tensorflow"
+    ],
+    "consequent": [
+      "sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "tensorflow"
+    ],
+    "consequent": [
+      "python",
+      "pytorch",
+      "sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "python",
+      "pytorch",
+      "sql"
+    ],
+    "consequent": [
+      "tensorflow"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "pytorch",
+      "sql",
+      "tensorflow"
+    ],
+    "consequent": [
+      "docker"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "pytorch"
+    ],
+    "consequent": [
+      "docker",
+      "sql",
+      "tensorflow"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "docker",
+      "sql",
+      "tensorflow"
+    ],
+    "consequent": [
+      "pytorch"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "docker",
+      "pytorch",
+      "tensorflow"
+    ],
+    "consequent": [
+      "sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "tensorflow"
+    ],
+    "consequent": [
+      "docker",
+      "pytorch",
+      "sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "docker",
+      "pytorch",
+      "sql"
+    ],
+    "consequent": [
+      "tensorflow"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "python",
+      "sql",
+      "tensorflow"
+    ],
+    "consequent": [
+      "docker"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "docker",
+      "sql",
+      "tensorflow"
+    ],
+    "consequent": [
+      "python"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "docker",
+      "python",
+      "tensorflow"
+    ],
+    "consequent": [
+      "sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "tensorflow"
+    ],
+    "consequent": [
+      "docker",
+      "python",
+      "sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "docker",
+      "python",
+      "sql"
+    ],
+    "consequent": [
+      "tensorflow"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "python",
+      "pytorch",
+      "sql"
+    ],
+    "consequent": [
+      "docker"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "docker",
+      "pytorch",
+      "sql"
+    ],
+    "consequent": [
+      "python"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "pytorch"
+    ],
+    "consequent": [
+      "docker",
+      "python",
+      "sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "docker",
+      "python",
+      "sql"
+    ],
+    "consequent": [
+      "pytorch"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "docker",
+      "python",
+      "pytorch"
+    ],
+    "consequent": [
+      "sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "aws"
+    ],
+    "consequent": [
+      "ci/cd",
+      "docker",
+      "terraform"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "ci/cd",
+      "docker",
+      "terraform"
+    ],
+    "consequent": [
+      "aws"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "ci/cd"
+    ],
+    "consequent": [
+      "aws",
+      "docker",
+      "terraform"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "aws",
+      "docker",
+      "terraform"
+    ],
+    "consequent": [
+      "ci/cd"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "aws",
+      "ci/cd",
+      "terraform"
+    ],
+    "consequent": [
+      "docker"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "terraform"
+    ],
+    "consequent": [
+      "aws",
+      "ci/cd",
+      "docker"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "aws",
+      "ci/cd",
+      "docker"
+    ],
+    "consequent": [
+      "terraform"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "aws"
+    ],
+    "consequent": [
+      "docker",
+      "kubernetes",
+      "terraform"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "docker",
+      "kubernetes",
+      "terraform"
+    ],
+    "consequent": [
+      "aws"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "aws",
+      "kubernetes",
+      "terraform"
+    ],
+    "consequent": [
+      "docker"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "kubernetes"
+    ],
+    "consequent": [
+      "aws",
+      "docker",
+      "terraform"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "aws",
+      "docker",
+      "terraform"
+    ],
+    "consequent": [
+      "kubernetes"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "terraform"
+    ],
+    "consequent": [
+      "aws",
+      "docker",
+      "kubernetes"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "aws",
+      "docker",
+      "kubernetes"
+    ],
+    "consequent": [
+      "terraform"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "aws"
+    ],
+    "consequent": [
+      "ci/cd",
+      "kubernetes",
+      "terraform"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "ci/cd",
+      "kubernetes",
+      "terraform"
+    ],
+    "consequent": [
+      "aws"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "ci/cd"
+    ],
+    "consequent": [
+      "aws",
+      "kubernetes",
+      "terraform"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "aws",
+      "kubernetes",
+      "terraform"
+    ],
+    "consequent": [
+      "ci/cd"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "kubernetes"
+    ],
+    "consequent": [
+      "aws",
+      "ci/cd",
+      "terraform"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "aws",
+      "ci/cd",
+      "terraform"
+    ],
+    "consequent": [
+      "kubernetes"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "terraform"
+    ],
+    "consequent": [
+      "aws",
+      "ci/cd",
+      "kubernetes"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "aws",
+      "ci/cd",
+      "kubernetes"
+    ],
+    "consequent": [
+      "terraform"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "aws"
+    ],
+    "consequent": [
+      "ci/cd",
+      "docker",
+      "kubernetes"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "ci/cd",
+      "docker",
+      "kubernetes"
+    ],
+    "consequent": [
+      "aws"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "ci/cd"
+    ],
+    "consequent": [
+      "aws",
+      "docker",
+      "kubernetes"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "aws",
+      "docker",
+      "kubernetes"
+    ],
+    "consequent": [
+      "ci/cd"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "aws",
+      "ci/cd",
+      "kubernetes"
+    ],
+    "consequent": [
+      "docker"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "kubernetes"
+    ],
+    "consequent": [
+      "aws",
+      "ci/cd",
+      "docker"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "aws",
+      "ci/cd",
+      "docker"
+    ],
+    "consequent": [
+      "kubernetes"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "ci/cd"
+    ],
+    "consequent": [
+      "docker",
+      "kubernetes",
+      "terraform"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "docker",
+      "kubernetes",
+      "terraform"
+    ],
+    "consequent": [
+      "ci/cd"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "ci/cd",
+      "kubernetes",
+      "terraform"
+    ],
+    "consequent": [
+      "docker"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "kubernetes"
+    ],
+    "consequent": [
+      "ci/cd",
+      "docker",
+      "terraform"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "ci/cd",
+      "docker",
+      "terraform"
+    ],
+    "consequent": [
+      "kubernetes"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "terraform"
+    ],
+    "consequent": [
+      "ci/cd",
+      "docker",
+      "kubernetes"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "ci/cd",
+      "docker",
+      "kubernetes"
+    ],
+    "consequent": [
+      "terraform"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "node.js",
+      "postgresql",
+      "redis"
+    ],
+    "consequent": [
+      "mongodb"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "node.js"
+    ],
+    "consequent": [
+      "mongodb",
+      "postgresql",
+      "redis"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "mongodb",
+      "postgresql",
+      "redis"
+    ],
+    "consequent": [
+      "node.js"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "mongodb",
+      "node.js",
+      "redis"
+    ],
+    "consequent": [
+      "postgresql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "redis"
+    ],
+    "consequent": [
+      "mongodb",
+      "node.js",
+      "postgresql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "mongodb",
+      "node.js",
+      "postgresql"
+    ],
+    "consequent": [
+      "redis"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "nestjs",
+      "node.js",
+      "postgresql"
+    ],
+    "consequent": [
+      "mongodb"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "nestjs"
+    ],
+    "consequent": [
+      "mongodb",
+      "node.js",
+      "postgresql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "mongodb",
+      "node.js",
+      "postgresql"
+    ],
+    "consequent": [
+      "nestjs"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "node.js"
+    ],
+    "consequent": [
+      "mongodb",
+      "nestjs",
+      "postgresql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "mongodb",
+      "nestjs",
+      "postgresql"
+    ],
+    "consequent": [
+      "node.js"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "mongodb",
+      "nestjs",
+      "node.js"
+    ],
+    "consequent": [
+      "postgresql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "nestjs"
+    ],
+    "consequent": [
+      "node.js",
+      "postgresql",
+      "redis"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "node.js",
+      "postgresql",
+      "redis"
+    ],
+    "consequent": [
+      "nestjs"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "node.js"
+    ],
+    "consequent": [
+      "nestjs",
+      "postgresql",
+      "redis"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "nestjs",
+      "postgresql",
+      "redis"
+    ],
+    "consequent": [
+      "node.js"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "nestjs",
+      "node.js",
+      "redis"
+    ],
+    "consequent": [
+      "postgresql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "redis"
+    ],
+    "consequent": [
+      "nestjs",
+      "node.js",
+      "postgresql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "nestjs",
+      "node.js",
+      "postgresql"
+    ],
+    "consequent": [
+      "redis"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "nestjs",
+      "postgresql",
+      "redis"
+    ],
+    "consequent": [
+      "mongodb"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "nestjs"
+    ],
+    "consequent": [
+      "mongodb",
+      "postgresql",
+      "redis"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "mongodb",
+      "postgresql",
+      "redis"
+    ],
+    "consequent": [
+      "nestjs"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "mongodb",
+      "nestjs",
+      "redis"
+    ],
+    "consequent": [
+      "postgresql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "redis"
+    ],
+    "consequent": [
+      "mongodb",
+      "nestjs",
+      "postgresql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "mongodb",
+      "nestjs",
+      "postgresql"
+    ],
+    "consequent": [
+      "redis"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "nestjs",
+      "node.js",
+      "redis"
+    ],
+    "consequent": [
+      "mongodb"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "nestjs"
+    ],
+    "consequent": [
+      "mongodb",
+      "node.js",
+      "redis"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "mongodb",
+      "node.js",
+      "redis"
+    ],
+    "consequent": [
+      "nestjs"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "node.js"
+    ],
+    "consequent": [
+      "mongodb",
+      "nestjs",
+      "redis"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "mongodb",
+      "nestjs",
+      "redis"
+    ],
+    "consequent": [
+      "node.js"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "redis"
+    ],
+    "consequent": [
+      "mongodb",
+      "nestjs",
+      "node.js"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "mongodb",
+      "nestjs",
+      "node.js"
+    ],
+    "consequent": [
+      "redis"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "hibernate"
+    ],
+    "consequent": [
+      "java",
+      "oracle sql",
+      "spring boot"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "java",
+      "oracle sql",
+      "spring boot"
+    ],
+    "consequent": [
+      "hibernate"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "java"
+    ],
+    "consequent": [
+      "hibernate",
+      "oracle sql",
+      "spring boot"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "hibernate",
+      "oracle sql",
+      "spring boot"
+    ],
+    "consequent": [
+      "java"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "oracle sql"
+    ],
+    "consequent": [
+      "hibernate",
+      "java",
+      "spring boot"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "hibernate",
+      "java",
+      "spring boot"
+    ],
+    "consequent": [
+      "oracle sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "spring boot"
+    ],
+    "consequent": [
+      "hibernate",
+      "java",
+      "oracle sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "hibernate",
+      "java",
+      "oracle sql"
+    ],
+    "consequent": [
+      "spring boot"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "hibernate"
+    ],
+    "consequent": [
+      "java",
+      "microservices",
+      "spring boot"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "java",
+      "microservices",
+      "spring boot"
+    ],
+    "consequent": [
+      "hibernate"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "java"
+    ],
+    "consequent": [
+      "hibernate",
+      "microservices",
+      "spring boot"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "hibernate",
+      "microservices",
+      "spring boot"
+    ],
+    "consequent": [
+      "java"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "microservices"
+    ],
+    "consequent": [
+      "hibernate",
+      "java",
+      "spring boot"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "hibernate",
+      "java",
+      "spring boot"
+    ],
+    "consequent": [
+      "microservices"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "spring boot"
+    ],
+    "consequent": [
+      "hibernate",
+      "java",
+      "microservices"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "hibernate",
+      "java",
+      "microservices"
+    ],
+    "consequent": [
+      "spring boot"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "java"
+    ],
+    "consequent": [
+      "microservices",
+      "oracle sql",
+      "spring boot"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "microservices",
+      "oracle sql",
+      "spring boot"
+    ],
+    "consequent": [
+      "java"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "microservices"
+    ],
+    "consequent": [
+      "java",
+      "oracle sql",
+      "spring boot"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "java",
+      "oracle sql",
+      "spring boot"
+    ],
+    "consequent": [
+      "microservices"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "oracle sql"
+    ],
+    "consequent": [
+      "java",
+      "microservices",
+      "spring boot"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "java",
+      "microservices",
+      "spring boot"
+    ],
+    "consequent": [
+      "oracle sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "spring boot"
+    ],
+    "consequent": [
+      "java",
+      "microservices",
+      "oracle sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "java",
+      "microservices",
+      "oracle sql"
+    ],
+    "consequent": [
+      "spring boot"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "hibernate"
+    ],
+    "consequent": [
+      "microservices",
+      "oracle sql",
+      "spring boot"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "microservices",
+      "oracle sql",
+      "spring boot"
+    ],
+    "consequent": [
+      "hibernate"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "microservices"
+    ],
+    "consequent": [
+      "hibernate",
+      "oracle sql",
+      "spring boot"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "hibernate",
+      "oracle sql",
+      "spring boot"
+    ],
+    "consequent": [
+      "microservices"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "oracle sql"
+    ],
+    "consequent": [
+      "hibernate",
+      "microservices",
+      "spring boot"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "hibernate",
+      "microservices",
+      "spring boot"
+    ],
+    "consequent": [
+      "oracle sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "spring boot"
+    ],
+    "consequent": [
+      "hibernate",
+      "microservices",
+      "oracle sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "hibernate",
+      "microservices",
+      "oracle sql"
+    ],
+    "consequent": [
+      "spring boot"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "hibernate"
+    ],
+    "consequent": [
+      "java",
+      "microservices",
+      "oracle sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "java",
+      "microservices",
+      "oracle sql"
+    ],
+    "consequent": [
+      "hibernate"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "java"
+    ],
+    "consequent": [
+      "hibernate",
+      "microservices",
+      "oracle sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "hibernate",
+      "microservices",
+      "oracle sql"
+    ],
+    "consequent": [
+      "java"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "microservices"
+    ],
+    "consequent": [
+      "hibernate",
+      "java",
+      "oracle sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "hibernate",
+      "java",
+      "oracle sql"
+    ],
+    "consequent": [
+      "microservices"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "oracle sql"
+    ],
+    "consequent": [
+      "hibernate",
+      "java",
+      "microservices"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "hibernate",
+      "java",
+      "microservices"
+    ],
+    "consequent": [
+      "oracle sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "figma"
+    ],
+    "consequent": [
+      "photoshop",
+      "ui/ux design",
+      "wireframing"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "photoshop",
+      "ui/ux design",
+      "wireframing"
+    ],
+    "consequent": [
+      "figma"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "photoshop"
+    ],
+    "consequent": [
+      "figma",
+      "ui/ux design",
+      "wireframing"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "figma",
+      "ui/ux design",
+      "wireframing"
+    ],
+    "consequent": [
+      "photoshop"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "ui/ux design"
+    ],
+    "consequent": [
+      "figma",
+      "photoshop",
+      "wireframing"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "figma",
+      "photoshop",
+      "wireframing"
+    ],
+    "consequent": [
+      "ui/ux design"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "wireframing"
+    ],
+    "consequent": [
+      "figma",
+      "photoshop",
+      "ui/ux design"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "figma",
+      "photoshop",
+      "ui/ux design"
+    ],
+    "consequent": [
+      "wireframing"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "jira"
+    ],
+    "consequent": [
+      "postman",
+      "qa/qc",
+      "sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "postman",
+      "qa/qc",
+      "sql"
+    ],
+    "consequent": [
+      "jira"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "postman"
+    ],
+    "consequent": [
+      "jira",
+      "qa/qc",
+      "sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "jira",
+      "qa/qc",
+      "sql"
+    ],
+    "consequent": [
+      "postman"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "qa/qc"
+    ],
+    "consequent": [
+      "jira",
+      "postman",
+      "sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "jira",
+      "postman",
+      "sql"
+    ],
+    "consequent": [
+      "qa/qc"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "jira",
+      "postman",
+      "qa/qc"
+    ],
+    "consequent": [
+      "sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "postman"
+    ],
+    "consequent": [
+      "qa/qc",
+      "selenium",
+      "sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "qa/qc",
+      "selenium",
+      "sql"
+    ],
+    "consequent": [
+      "postman"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "qa/qc"
+    ],
+    "consequent": [
+      "postman",
+      "selenium",
+      "sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "postman",
+      "selenium",
+      "sql"
+    ],
+    "consequent": [
+      "qa/qc"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "selenium"
+    ],
+    "consequent": [
+      "postman",
+      "qa/qc",
+      "sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "postman",
+      "qa/qc",
+      "sql"
+    ],
+    "consequent": [
+      "selenium"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "postman",
+      "qa/qc",
+      "selenium"
+    ],
+    "consequent": [
+      "sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "jira"
+    ],
+    "consequent": [
+      "postman",
+      "selenium",
+      "sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "postman",
+      "selenium",
+      "sql"
+    ],
+    "consequent": [
+      "jira"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "postman"
+    ],
+    "consequent": [
+      "jira",
+      "selenium",
+      "sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "jira",
+      "selenium",
+      "sql"
+    ],
+    "consequent": [
+      "postman"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "selenium"
+    ],
+    "consequent": [
+      "jira",
+      "postman",
+      "sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "jira",
+      "postman",
+      "sql"
+    ],
+    "consequent": [
+      "selenium"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "jira",
+      "postman",
+      "selenium"
+    ],
+    "consequent": [
+      "sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "jira"
+    ],
+    "consequent": [
+      "postman",
+      "qa/qc",
+      "selenium"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "postman",
+      "qa/qc",
+      "selenium"
+    ],
+    "consequent": [
+      "jira"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "postman"
+    ],
+    "consequent": [
+      "jira",
+      "qa/qc",
+      "selenium"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "jira",
+      "qa/qc",
+      "selenium"
+    ],
+    "consequent": [
+      "postman"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "qa/qc"
+    ],
+    "consequent": [
+      "jira",
+      "postman",
+      "selenium"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "jira",
+      "postman",
+      "selenium"
+    ],
+    "consequent": [
+      "qa/qc"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "selenium"
+    ],
+    "consequent": [
+      "jira",
+      "postman",
+      "qa/qc"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "jira",
+      "postman",
+      "qa/qc"
+    ],
+    "consequent": [
+      "selenium"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "jira"
+    ],
+    "consequent": [
+      "qa/qc",
+      "selenium",
+      "sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "qa/qc",
+      "selenium",
+      "sql"
+    ],
+    "consequent": [
+      "jira"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "qa/qc"
+    ],
+    "consequent": [
+      "jira",
+      "selenium",
+      "sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "jira",
+      "selenium",
+      "sql"
+    ],
+    "consequent": [
+      "qa/qc"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "selenium"
+    ],
+    "consequent": [
+      "jira",
+      "qa/qc",
+      "sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "jira",
+      "qa/qc",
+      "sql"
+    ],
+    "consequent": [
+      "selenium"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "jira",
+      "qa/qc",
+      "selenium"
+    ],
+    "consequent": [
+      "sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "content strategy"
+    ],
+    "consequent": [
+      "google ads",
+      "google analytics",
+      "seo"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "google ads",
+      "google analytics",
+      "seo"
+    ],
+    "consequent": [
+      "content strategy"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "google ads"
+    ],
+    "consequent": [
+      "content strategy",
+      "google analytics",
+      "seo"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "content strategy",
+      "google analytics",
+      "seo"
+    ],
+    "consequent": [
+      "google ads"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "google analytics"
+    ],
+    "consequent": [
+      "content strategy",
+      "google ads",
+      "seo"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "content strategy",
+      "google ads",
+      "seo"
+    ],
+    "consequent": [
+      "google analytics"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "seo"
+    ],
+    "consequent": [
+      "content strategy",
+      "google ads",
+      "google analytics"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "content strategy",
+      "google ads",
+      "google analytics"
+    ],
+    "consequent": [
+      "seo"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "communication"
+    ],
+    "consequent": [
+      "hrbp",
+      "labor law",
+      "recruitment"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "hrbp",
+      "labor law",
+      "recruitment"
+    ],
+    "consequent": [
+      "communication"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "hrbp"
+    ],
+    "consequent": [
+      "communication",
+      "labor law",
+      "recruitment"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "communication",
+      "labor law",
+      "recruitment"
+    ],
+    "consequent": [
+      "hrbp"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "labor law"
+    ],
+    "consequent": [
+      "communication",
+      "hrbp",
+      "recruitment"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "communication",
+      "hrbp",
+      "recruitment"
+    ],
+    "consequent": [
+      "labor law"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "recruitment"
+    ],
+    "consequent": [
+      "communication",
+      "hrbp",
+      "labor law"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "communication",
+      "hrbp",
+      "labor law"
+    ],
+    "consequent": [
+      "recruitment"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "javascript",
+      "reactjs",
+      "tailwind css",
+      "typescript"
+    ],
+    "consequent": [
+      "git"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "git",
+      "reactjs",
+      "tailwind css",
+      "typescript"
+    ],
+    "consequent": [
+      "javascript"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "git",
+      "javascript",
+      "tailwind css",
+      "typescript"
+    ],
+    "consequent": [
+      "reactjs"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "tailwind css"
+    ],
+    "consequent": [
+      "git",
+      "javascript",
+      "reactjs",
+      "typescript"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "git",
+      "javascript",
+      "reactjs",
+      "typescript"
+    ],
+    "consequent": [
+      "tailwind css"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "git",
+      "javascript",
+      "reactjs",
+      "tailwind css"
+    ],
+    "consequent": [
+      "typescript"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "python",
+      "pytorch",
+      "sql",
+      "tensorflow"
+    ],
+    "consequent": [
+      "docker"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "docker",
+      "pytorch",
+      "sql",
+      "tensorflow"
+    ],
+    "consequent": [
+      "python"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "pytorch"
+    ],
+    "consequent": [
+      "docker",
+      "python",
+      "sql",
+      "tensorflow"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "docker",
+      "python",
+      "sql",
+      "tensorflow"
+    ],
+    "consequent": [
+      "pytorch"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "docker",
+      "python",
+      "pytorch",
+      "tensorflow"
+    ],
+    "consequent": [
+      "sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "tensorflow"
+    ],
+    "consequent": [
+      "docker",
+      "python",
+      "pytorch",
+      "sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "docker",
+      "python",
+      "pytorch",
+      "sql"
+    ],
+    "consequent": [
+      "tensorflow"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "aws"
+    ],
+    "consequent": [
+      "ci/cd",
+      "docker",
+      "kubernetes",
+      "terraform"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "ci/cd",
+      "docker",
+      "kubernetes",
+      "terraform"
+    ],
+    "consequent": [
+      "aws"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "ci/cd"
+    ],
+    "consequent": [
+      "aws",
+      "docker",
+      "kubernetes",
+      "terraform"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "aws",
+      "docker",
+      "kubernetes",
+      "terraform"
+    ],
+    "consequent": [
+      "ci/cd"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "aws",
+      "ci/cd",
+      "kubernetes",
+      "terraform"
+    ],
+    "consequent": [
+      "docker"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "kubernetes"
+    ],
+    "consequent": [
+      "aws",
+      "ci/cd",
+      "docker",
+      "terraform"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "aws",
+      "ci/cd",
+      "docker",
+      "terraform"
+    ],
+    "consequent": [
+      "kubernetes"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "terraform"
+    ],
+    "consequent": [
+      "aws",
+      "ci/cd",
+      "docker",
+      "kubernetes"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "aws",
+      "ci/cd",
+      "docker",
+      "kubernetes"
+    ],
+    "consequent": [
+      "terraform"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "nestjs",
+      "node.js",
+      "postgresql",
+      "redis"
+    ],
+    "consequent": [
+      "mongodb"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "nestjs"
+    ],
+    "consequent": [
+      "mongodb",
+      "node.js",
+      "postgresql",
+      "redis"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "mongodb",
+      "node.js",
+      "postgresql",
+      "redis"
+    ],
+    "consequent": [
+      "nestjs"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "node.js"
+    ],
+    "consequent": [
+      "mongodb",
+      "nestjs",
+      "postgresql",
+      "redis"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "mongodb",
+      "nestjs",
+      "postgresql",
+      "redis"
+    ],
+    "consequent": [
+      "node.js"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "mongodb",
+      "nestjs",
+      "node.js",
+      "redis"
+    ],
+    "consequent": [
+      "postgresql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "redis"
+    ],
+    "consequent": [
+      "mongodb",
+      "nestjs",
+      "node.js",
+      "postgresql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "mongodb",
+      "nestjs",
+      "node.js",
+      "postgresql"
+    ],
+    "consequent": [
+      "redis"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "hibernate"
+    ],
+    "consequent": [
+      "java",
+      "microservices",
+      "oracle sql",
+      "spring boot"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "java",
+      "microservices",
+      "oracle sql",
+      "spring boot"
+    ],
+    "consequent": [
+      "hibernate"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "java"
+    ],
+    "consequent": [
+      "hibernate",
+      "microservices",
+      "oracle sql",
+      "spring boot"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "hibernate",
+      "microservices",
+      "oracle sql",
+      "spring boot"
+    ],
+    "consequent": [
+      "java"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "microservices"
+    ],
+    "consequent": [
+      "hibernate",
+      "java",
+      "oracle sql",
+      "spring boot"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "hibernate",
+      "java",
+      "oracle sql",
+      "spring boot"
+    ],
+    "consequent": [
+      "microservices"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "oracle sql"
+    ],
+    "consequent": [
+      "hibernate",
+      "java",
+      "microservices",
+      "spring boot"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "hibernate",
+      "java",
+      "microservices",
+      "spring boot"
+    ],
+    "consequent": [
+      "oracle sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "spring boot"
+    ],
+    "consequent": [
+      "hibernate",
+      "java",
+      "microservices",
+      "oracle sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "hibernate",
+      "java",
+      "microservices",
+      "oracle sql"
+    ],
+    "consequent": [
+      "spring boot"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "jira"
+    ],
+    "consequent": [
+      "postman",
+      "qa/qc",
+      "selenium",
+      "sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "postman",
+      "qa/qc",
+      "selenium",
+      "sql"
+    ],
+    "consequent": [
+      "jira"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "postman"
+    ],
+    "consequent": [
+      "jira",
+      "qa/qc",
+      "selenium",
+      "sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "jira",
+      "qa/qc",
+      "selenium",
+      "sql"
+    ],
+    "consequent": [
+      "postman"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "qa/qc"
+    ],
+    "consequent": [
+      "jira",
+      "postman",
+      "selenium",
+      "sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "jira",
+      "postman",
+      "selenium",
+      "sql"
+    ],
+    "consequent": [
+      "qa/qc"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "selenium"
+    ],
+    "consequent": [
+      "jira",
+      "postman",
+      "qa/qc",
+      "sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "jira",
+      "postman",
+      "qa/qc",
+      "sql"
+    ],
+    "consequent": [
+      "selenium"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "jira",
+      "postman",
+      "qa/qc",
+      "selenium"
+    ],
+    "consequent": [
+      "sql"
+    ],
+    "support": 0.077,
+    "confidence": 1.0
+  },
+  {
+    "antecedent": [
+      "javascript"
+    ],
+    "consequent": [
+      "typescript"
+    ],
+    "support": 0.092,
+    "confidence": 0.857
+  },
+  {
+    "antecedent": [
+      "git"
+    ],
+    "consequent": [
+      "reactjs"
+    ],
+    "support": 0.092,
+    "confidence": 0.857
+  },
+  {
+    "antecedent": [
+      "javascript"
+    ],
+    "consequent": [
+      "reactjs"
+    ],
+    "support": 0.092,
+    "confidence": 0.857
+  },
+  {
+    "antecedent": [
+      "git"
+    ],
+    "consequent": [
+      "javascript"
+    ],
+    "support": 0.092,
+    "confidence": 0.857
+  },
+  {
+    "antecedent": [
+      "javascript"
+    ],
+    "consequent": [
+      "git"
+    ],
+    "support": 0.092,
+    "confidence": 0.857
+  },
+  {
+    "antecedent": [
+      "git"
+    ],
+    "consequent": [
+      "javascript",
+      "reactjs"
+    ],
+    "support": 0.092,
+    "confidence": 0.857
+  },
+  {
+    "antecedent": [
+      "javascript"
+    ],
+    "consequent": [
+      "git",
+      "reactjs"
+    ],
+    "support": 0.092,
+    "confidence": 0.857
+  },
+  {
+    "antecedent": [
+      "reactjs"
+    ],
+    "consequent": [
+      "typescript"
+    ],
+    "support": 0.077,
+    "confidence": 0.833
+  },
+  {
+    "antecedent": [
+      "typescript"
+    ],
+    "consequent": [
+      "reactjs"
+    ],
+    "support": 0.077,
+    "confidence": 0.833
+  },
+  {
+    "antecedent": [
+      "typescript"
+    ],
+    "consequent": [
+      "git"
+    ],
+    "support": 0.077,
+    "confidence": 0.833
+  },
+  {
+    "antecedent": [
+      "typescript"
+    ],
+    "consequent": [
+      "tailwind css"
+    ],
+    "support": 0.077,
+    "confidence": 0.833
+  },
+  {
+    "antecedent": [
+      "reactjs"
+    ],
+    "consequent": [
+      "tailwind css"
+    ],
+    "support": 0.077,
+    "confidence": 0.833
+  },
+  {
+    "antecedent": [
+      "postgresql"
+    ],
+    "consequent": [
+      "redis"
+    ],
+    "support": 0.077,
+    "confidence": 0.833
+  },
+  {
+    "antecedent": [
+      "mongodb"
+    ],
+    "consequent": [
+      "nestjs"
+    ],
+    "support": 0.077,
+    "confidence": 0.833
+  },
+  {
+    "antecedent": [
+      "postgresql"
+    ],
+    "consequent": [
+      "node.js"
+    ],
+    "support": 0.077,
+    "confidence": 0.833
+  },
+  {
+    "antecedent": [
+      "postgresql"
+    ],
+    "consequent": [
+      "nestjs"
+    ],
+    "support": 0.077,
+    "confidence": 0.833
+  },
+  {
+    "antecedent": [
+      "mongodb"
+    ],
+    "consequent": [
+      "redis"
+    ],
+    "support": 0.077,
+    "confidence": 0.833
+  },
+  {
+    "antecedent": [
+      "mongodb"
+    ],
+    "consequent": [
+      "node.js"
+    ],
+    "support": 0.077,
+    "confidence": 0.833
+  },
+  {
+    "antecedent": [
+      "javascript",
+      "typescript"
+    ],
+    "consequent": [
+      "tailwind css"
+    ],
+    "support": 0.077,
+    "confidence": 0.833
+  },
+  {
+    "antecedent": [
+      "typescript"
+    ],
+    "consequent": [
+      "javascript",
+      "tailwind css"
+    ],
+    "support": 0.077,
+    "confidence": 0.833
+  },
+  {
+    "antecedent": [
+      "reactjs"
+    ],
+    "consequent": [
+      "javascript",
+      "tailwind css"
+    ],
+    "support": 0.077,
+    "confidence": 0.833
+  },
+  {
+    "antecedent": [
+      "javascript",
+      "reactjs"
+    ],
+    "consequent": [
+      "tailwind css"
+    ],
+    "support": 0.077,
+    "confidence": 0.833
+  },
+  {
+    "antecedent": [
+      "reactjs"
+    ],
+    "consequent": [
+      "javascript",
+      "typescript"
+    ],
+    "support": 0.077,
+    "confidence": 0.833
+  },
+  {
+    "antecedent": [
+      "javascript",
+      "typescript"
+    ],
+    "consequent": [
+      "reactjs"
+    ],
+    "support": 0.077,
+    "confidence": 0.833
+  },
+  {
+    "antecedent": [
+      "typescript"
+    ],
+    "consequent": [
+      "javascript",
+      "reactjs"
+    ],
+    "support": 0.077,
+    "confidence": 0.833
+  },
+  {
+    "antecedent": [
+      "javascript",
+      "reactjs"
+    ],
+    "consequent": [
+      "typescript"
+    ],
+    "support": 0.077,
+    "confidence": 0.833
+  },
+  {
+    "antecedent": [
+      "git",
+      "javascript"
+    ],
+    "consequent": [
+      "tailwind css"
+    ],
+    "support": 0.077,
+    "confidence": 0.833
+  },
+  {
+    "antecedent": [
+      "javascript",
+      "typescript"
+    ],
+    "consequent": [
+      "git"
+    ],
+    "support": 0.077,
+    "confidence": 0.833
+  },
+  {
+    "antecedent": [
+      "typescript"
+    ],
+    "consequent": [
+      "git",
+      "javascript"
+    ],
+    "support": 0.077,
+    "confidence": 0.833
+  },
+  {
+    "antecedent": [
+      "git",
+      "javascript"
+    ],
+    "consequent": [
+      "typescript"
+    ],
+    "support": 0.077,
+    "confidence": 0.833
+  },
+  {
+    "antecedent": [
+      "typescript"
+    ],
+    "consequent": [
+      "git",
+      "tailwind css"
+    ],
+    "support": 0.077,
+    "confidence": 0.833
+  },
+  {
+    "antecedent": [
+      "reactjs"
+    ],
+    "consequent": [
+      "git",
+      "tailwind css"
+    ],
+    "support": 0.077,
+    "confidence": 0.833
+  },
+  {
+    "antecedent": [
+      "git",
+      "reactjs"
+    ],
+    "consequent": [
+      "tailwind css"
+    ],
+    "support": 0.077,
+    "confidence": 0.833
+  },
+  {
+    "antecedent": [
+      "reactjs"
+    ],
+    "consequent": [
+      "git",
+      "typescript"
+    ],
+    "support": 0.077,
+    "confidence": 0.833
+  },
+  {
+    "antecedent": [
+      "typescript"
+    ],
+    "consequent": [
+      "git",
+      "reactjs"
+    ],
+    "support": 0.077,
+    "confidence": 0.833
+  },
+  {
+    "antecedent": [
+      "git",
+      "reactjs"
+    ],
+    "consequent": [
+      "typescript"
+    ],
+    "support": 0.077,
+    "confidence": 0.833
+  },
+  {
+    "antecedent": [
+      "reactjs"
+    ],
+    "consequent": [
+      "tailwind css",
+      "typescript"
+    ],
+    "support": 0.077,
+    "confidence": 0.833
+  },
+  {
+    "antecedent": [
+      "typescript"
+    ],
+    "consequent": [
+      "reactjs",
+      "tailwind css"
+    ],
+    "support": 0.077,
+    "confidence": 0.833
+  },
+  {
+    "antecedent": [
+      "python",
+      "sql"
+    ],
+    "consequent": [
+      "docker"
+    ],
+    "support": 0.077,
+    "confidence": 0.833
+  },
+  {
+    "antecedent": [
+      "python",
+      "sql"
+    ],
+    "consequent": [
+      "tensorflow"
+    ],
+    "support": 0.077,
+    "confidence": 0.833
+  },
+  {
+    "antecedent": [
+      "python",
+      "sql"
+    ],
+    "consequent": [
+      "pytorch"
+    ],
+    "support": 0.077,
+    "confidence": 0.833
+  },
+  {
+    "antecedent": [
+      "mongodb"
+    ],
+    "consequent": [
+      "node.js",
+      "postgresql"
+    ],
+    "support": 0.077,
+    "confidence": 0.833
+  },
+  {
+    "antecedent": [
+      "mongodb",
+      "postgresql"
+    ],
+    "consequent": [
+      "node.js"
+    ],
+    "support": 0.077,
+    "confidence": 0.833
+  },
+  {
+    "antecedent": [
+      "postgresql"
+    ],
+    "consequent": [
+      "mongodb",
+      "node.js"
+    ],
+    "support": 0.077,
+    "confidence": 0.833
+  },
+  {
+    "antecedent": [
+      "mongodb"
+    ],
+    "consequent": [
+      "node.js",
+      "redis"
+    ],
+    "support": 0.077,
+    "confidence": 0.833
+  },
+  {
+    "antecedent": [
+      "postgresql"
+    ],
+    "consequent": [
+      "node.js",
+      "redis"
+    ],
+    "support": 0.077,
+    "confidence": 0.833
+  },
+  {
+    "antecedent": [
+      "postgresql"
+    ],
+    "consequent": [
+      "nestjs",
+      "redis"
+    ],
+    "support": 0.077,
+    "confidence": 0.833
+  },
+  {
+    "antecedent": [
+      "mongodb"
+    ],
+    "consequent": [
+      "nestjs",
+      "node.js"
+    ],
+    "support": 0.077,
+    "confidence": 0.833
+  },
+  {
+    "antecedent": [
+      "mongodb"
+    ],
+    "consequent": [
+      "nestjs",
+      "postgresql"
+    ],
+    "support": 0.077,
+    "confidence": 0.833
+  },
+  {
+    "antecedent": [
+      "mongodb",
+      "postgresql"
+    ],
+    "consequent": [
+      "nestjs"
+    ],
+    "support": 0.077,
+    "confidence": 0.833
+  },
+  {
+    "antecedent": [
+      "postgresql"
+    ],
+    "consequent": [
+      "mongodb",
+      "nestjs"
+    ],
+    "support": 0.077,
+    "confidence": 0.833
+  },
+  {
+    "antecedent": [
+      "mongodb"
+    ],
+    "consequent": [
+      "postgresql",
+      "redis"
+    ],
+    "support": 0.077,
+    "confidence": 0.833
+  },
+  {
+    "antecedent": [
+      "postgresql"
+    ],
+    "consequent": [
+      "mongodb",
+      "redis"
+    ],
+    "support": 0.077,
+    "confidence": 0.833
+  },
+  {
+    "antecedent": [
+      "mongodb",
+      "postgresql"
+    ],
+    "consequent": [
+      "redis"
+    ],
+    "support": 0.077,
+    "confidence": 0.833
+  },
+  {
+    "antecedent": [
+      "mongodb"
+    ],
+    "consequent": [
+      "nestjs",
+      "redis"
+    ],
+    "support": 0.077,
+    "confidence": 0.833
+  },
+  {
+    "antecedent": [
+      "postgresql"
+    ],
+    "consequent": [
+      "nestjs",
+      "node.js"
+    ],
+    "support": 0.077,
+    "confidence": 0.833
+  },
+  {
+    "antecedent": [
+      "reactjs"
+    ],
+    "consequent": [
+      "git",
+      "javascript",
+      "typescript"
+    ],
+    "support": 0.077,
+    "confidence": 0.833
+  },
+  {
+    "antecedent": [
+      "typescript"
+    ],
+    "consequent": [
+      "git",
+      "javascript",
+      "reactjs"
+    ],
+    "support": 0.077,
+    "confidence": 0.833
+  },
+  {
+    "antecedent": [
+      "git",
+      "javascript",
+      "reactjs"
+    ],
+    "consequent": [
+      "typescript"
+    ],
+    "support": 0.077,
+    "confidence": 0.833
+  },
+  {
+    "antecedent": [
+      "reactjs"
+    ],
+    "consequent": [
+      "javascript",
+      "tailwind css",
+      "typescript"
+    ],
+    "support": 0.077,
+    "confidence": 0.833
+  },
+  {
+    "antecedent": [
+      "typescript"
+    ],
+    "consequent": [
+      "javascript",
+      "reactjs",
+      "tailwind css"
+    ],
+    "support": 0.077,
+    "confidence": 0.833
+  },
+  {
+    "antecedent": [
+      "reactjs"
+    ],
+    "consequent": [
+      "git",
+      "tailwind css",
+      "typescript"
+    ],
+    "support": 0.077,
+    "confidence": 0.833
+  },
+  {
+    "antecedent": [
+      "typescript"
+    ],
+    "consequent": [
+      "git",
+      "reactjs",
+      "tailwind css"
+    ],
+    "support": 0.077,
+    "confidence": 0.833
+  },
+  {
+    "antecedent": [
+      "typescript"
+    ],
+    "consequent": [
+      "git",
+      "javascript",
+      "tailwind css"
+    ],
+    "support": 0.077,
+    "confidence": 0.833
+  },
+  {
+    "antecedent": [
+      "reactjs"
+    ],
+    "consequent": [
+      "git",
+      "javascript",
+      "tailwind css"
+    ],
+    "support": 0.077,
+    "confidence": 0.833
+  },
+  {
+    "antecedent": [
+      "git",
+      "javascript",
+      "reactjs"
+    ],
+    "consequent": [
+      "tailwind css"
+    ],
+    "support": 0.077,
+    "confidence": 0.833
+  },
+  {
+    "antecedent": [
+      "mongodb"
+    ],
+    "consequent": [
+      "node.js",
+      "postgresql",
+      "redis"
+    ],
+    "support": 0.077,
+    "confidence": 0.833
+  },
+  {
+    "antecedent": [
+      "postgresql"
+    ],
+    "consequent": [
+      "mongodb",
+      "node.js",
+      "redis"
+    ],
+    "support": 0.077,
+    "confidence": 0.833
+  },
+  {
+    "antecedent": [
+      "mongodb"
+    ],
+    "consequent": [
+      "nestjs",
+      "node.js",
+      "postgresql"
+    ],
+    "support": 0.077,
+    "confidence": 0.833
+  },
+  {
+    "antecedent": [
+      "postgresql"
+    ],
+    "consequent": [
+      "mongodb",
+      "nestjs",
+      "node.js"
+    ],
+    "support": 0.077,
+    "confidence": 0.833
+  },
+  {
+    "antecedent": [
+      "postgresql"
+    ],
+    "consequent": [
+      "nestjs",
+      "node.js",
+      "redis"
+    ],
+    "support": 0.077,
+    "confidence": 0.833
+  },
+  {
+    "antecedent": [
+      "mongodb"
+    ],
+    "consequent": [
+      "nestjs",
+      "postgresql",
+      "redis"
+    ],
+    "support": 0.077,
+    "confidence": 0.833
+  },
+  {
+    "antecedent": [
+      "postgresql"
+    ],
+    "consequent": [
+      "mongodb",
+      "nestjs",
+      "redis"
+    ],
+    "support": 0.077,
+    "confidence": 0.833
+  },
+  {
+    "antecedent": [
+      "mongodb"
+    ],
+    "consequent": [
+      "nestjs",
+      "node.js",
+      "redis"
+    ],
+    "support": 0.077,
+    "confidence": 0.833
+  },
+  {
+    "antecedent": [
+      "reactjs"
+    ],
+    "consequent": [
+      "git",
+      "javascript",
+      "tailwind css",
+      "typescript"
+    ],
+    "support": 0.077,
+    "confidence": 0.833
+  },
+  {
+    "antecedent": [
+      "typescript"
+    ],
+    "consequent": [
+      "git",
+      "javascript",
+      "reactjs",
+      "tailwind css"
+    ],
+    "support": 0.077,
+    "confidence": 0.833
+  },
+  {
+    "antecedent": [
+      "mongodb"
+    ],
+    "consequent": [
+      "nestjs",
+      "node.js",
+      "postgresql",
+      "redis"
+    ],
+    "support": 0.077,
+    "confidence": 0.833
+  },
+  {
+    "antecedent": [
+      "postgresql"
+    ],
+    "consequent": [
+      "mongodb",
+      "nestjs",
+      "node.js",
+      "redis"
+    ],
+    "support": 0.077,
+    "confidence": 0.833
+  },
+  {
+    "antecedent": [
+      "python"
+    ],
+    "consequent": [
+      "sql"
+    ],
+    "support": 0.092,
+    "confidence": 0.75
+  },
+  {
+    "antecedent": [
+      "git"
+    ],
+    "consequent": [
+      "tailwind css"
+    ],
+    "support": 0.077,
+    "confidence": 0.714
+  },
+  {
+    "antecedent": [
+      "javascript"
+    ],
+    "consequent": [
+      "tailwind css"
+    ],
+    "support": 0.077,
+    "confidence": 0.714
+  },
+  {
+    "antecedent": [
+      "git"
+    ],
+    "consequent": [
+      "typescript"
+    ],
+    "support": 0.077,
+    "confidence": 0.714
+  },
+  {
+    "antecedent": [
+      "javascript"
+    ],
+    "consequent": [
+      "tailwind css",
+      "typescript"
+    ],
+    "support": 0.077,
+    "confidence": 0.714
+  },
+  {
+    "antecedent": [
+      "javascript"
+    ],
+    "consequent": [
+      "reactjs",
+      "tailwind css"
+    ],
+    "support": 0.077,
+    "confidence": 0.714
+  },
+  {
+    "antecedent": [
+      "javascript"
+    ],
+    "consequent": [
+      "reactjs",
+      "typescript"
+    ],
+    "support": 0.077,
+    "confidence": 0.714
+  },
+  {
+    "antecedent": [
+      "git"
+    ],
+    "consequent": [
+      "javascript",
+      "tailwind css"
+    ],
+    "support": 0.077,
+    "confidence": 0.714
+  },
+  {
+    "antecedent": [
+      "javascript"
+    ],
+    "consequent": [
+      "git",
+      "tailwind css"
+    ],
+    "support": 0.077,
+    "confidence": 0.714
+  },
+  {
+    "antecedent": [
+      "git"
+    ],
+    "consequent": [
+      "javascript",
+      "typescript"
+    ],
+    "support": 0.077,
+    "confidence": 0.714
+  },
+  {
+    "antecedent": [
+      "javascript"
+    ],
+    "consequent": [
+      "git",
+      "typescript"
+    ],
+    "support": 0.077,
+    "confidence": 0.714
+  },
+  {
+    "antecedent": [
+      "git"
+    ],
+    "consequent": [
+      "tailwind css",
+      "typescript"
+    ],
+    "support": 0.077,
+    "confidence": 0.714
+  },
+  {
+    "antecedent": [
+      "git"
+    ],
+    "consequent": [
+      "reactjs",
+      "tailwind css"
+    ],
+    "support": 0.077,
+    "confidence": 0.714
+  },
+  {
+    "antecedent": [
+      "git"
+    ],
+    "consequent": [
+      "reactjs",
+      "typescript"
+    ],
+    "support": 0.077,
+    "confidence": 0.714
+  },
+  {
+    "antecedent": [
+      "git"
+    ],
+    "consequent": [
+      "javascript",
+      "reactjs",
+      "typescript"
+    ],
+    "support": 0.077,
+    "confidence": 0.714
+  },
+  {
+    "antecedent": [
+      "javascript"
+    ],
+    "consequent": [
+      "git",
+      "reactjs",
+      "typescript"
+    ],
+    "support": 0.077,
+    "confidence": 0.714
+  },
+  {
+    "antecedent": [
+      "javascript"
+    ],
+    "consequent": [
+      "reactjs",
+      "tailwind css",
+      "typescript"
+    ],
+    "support": 0.077,
+    "confidence": 0.714
+  },
+  {
+    "antecedent": [
+      "git"
+    ],
+    "consequent": [
+      "reactjs",
+      "tailwind css",
+      "typescript"
+    ],
+    "support": 0.077,
+    "confidence": 0.714
+  },
+  {
+    "antecedent": [
+      "git"
+    ],
+    "consequent": [
+      "javascript",
+      "tailwind css",
+      "typescript"
+    ],
+    "support": 0.077,
+    "confidence": 0.714
+  },
+  {
+    "antecedent": [
+      "javascript"
+    ],
+    "consequent": [
+      "git",
+      "tailwind css",
+      "typescript"
+    ],
+    "support": 0.077,
+    "confidence": 0.714
+  },
+  {
+    "antecedent": [
+      "git"
+    ],
+    "consequent": [
+      "javascript",
+      "reactjs",
+      "tailwind css"
+    ],
+    "support": 0.077,
+    "confidence": 0.714
+  },
+  {
+    "antecedent": [
+      "javascript"
+    ],
+    "consequent": [
+      "git",
+      "reactjs",
+      "tailwind css"
+    ],
+    "support": 0.077,
+    "confidence": 0.714
+  },
+  {
+    "antecedent": [
+      "git"
+    ],
+    "consequent": [
+      "javascript",
+      "reactjs",
+      "tailwind css",
+      "typescript"
+    ],
+    "support": 0.077,
+    "confidence": 0.714
+  },
+  {
+    "antecedent": [
+      "javascript"
+    ],
+    "consequent": [
+      "git",
+      "reactjs",
+      "tailwind css",
+      "typescript"
+    ],
+    "support": 0.077,
+    "confidence": 0.714
+  },
+  {
+    "antecedent": [
+      "python"
+    ],
+    "consequent": [
+      "docker"
+    ],
+    "support": 0.077,
+    "confidence": 0.625
+  },
+  {
+    "antecedent": [
+      "python"
+    ],
+    "consequent": [
+      "tensorflow"
+    ],
+    "support": 0.077,
+    "confidence": 0.625
+  },
+  {
+    "antecedent": [
+      "python"
+    ],
+    "consequent": [
+      "pytorch"
+    ],
+    "support": 0.077,
+    "confidence": 0.625
+  },
+  {
+    "antecedent": [
+      "python"
+    ],
+    "consequent": [
+      "docker",
+      "pytorch"
+    ],
+    "support": 0.077,
+    "confidence": 0.625
+  },
+  {
+    "antecedent": [
+      "python"
+    ],
+    "consequent": [
+      "docker",
+      "sql"
+    ],
+    "support": 0.077,
+    "confidence": 0.625
+  },
+  {
+    "antecedent": [
+      "python"
+    ],
+    "consequent": [
+      "docker",
+      "tensorflow"
+    ],
+    "support": 0.077,
+    "confidence": 0.625
+  },
+  {
+    "antecedent": [
+      "python"
+    ],
+    "consequent": [
+      "sql",
+      "tensorflow"
+    ],
+    "support": 0.077,
+    "confidence": 0.625
+  },
+  {
+    "antecedent": [
+      "python"
+    ],
+    "consequent": [
+      "pytorch",
+      "sql"
+    ],
+    "support": 0.077,
+    "confidence": 0.625
+  },
+  {
+    "antecedent": [
+      "python"
+    ],
+    "consequent": [
+      "pytorch",
+      "tensorflow"
+    ],
+    "support": 0.077,
+    "confidence": 0.625
+  },
+  {
+    "antecedent": [
+      "python"
+    ],
+    "consequent": [
+      "docker",
+      "pytorch",
+      "tensorflow"
+    ],
+    "support": 0.077,
+    "confidence": 0.625
+  },
+  {
+    "antecedent": [
+      "python"
+    ],
+    "consequent": [
+      "pytorch",
+      "sql",
+      "tensorflow"
+    ],
+    "support": 0.077,
+    "confidence": 0.625
+  },
+  {
+    "antecedent": [
+      "python"
+    ],
+    "consequent": [
+      "docker",
+      "sql",
+      "tensorflow"
+    ],
+    "support": 0.077,
+    "confidence": 0.625
+  },
+  {
+    "antecedent": [
+      "python"
+    ],
+    "consequent": [
+      "docker",
+      "pytorch",
+      "sql"
+    ],
+    "support": 0.077,
+    "confidence": 0.625
+  },
+  {
+    "antecedent": [
+      "python"
+    ],
+    "consequent": [
+      "docker",
+      "pytorch",
+      "sql",
+      "tensorflow"
+    ],
+    "support": 0.077,
+    "confidence": 0.625
+  },
+  {
+    "antecedent": [
+      "sql"
+    ],
+    "consequent": [
+      "python"
+    ],
+    "support": 0.092,
+    "confidence": 0.5
+  },
+  {
+    "antecedent": [
+      "docker"
+    ],
+    "consequent": [
+      "python"
+    ],
+    "support": 0.077,
+    "confidence": 0.5
+  },
+  {
+    "antecedent": [
+      "docker"
+    ],
+    "consequent": [
+      "tensorflow"
+    ],
+    "support": 0.077,
+    "confidence": 0.5
+  },
+  {
+    "antecedent": [
+      "docker"
+    ],
+    "consequent": [
+      "pytorch"
+    ],
+    "support": 0.077,
+    "confidence": 0.5
+  },
+  {
+    "antecedent": [
+      "docker"
+    ],
+    "consequent": [
+      "sql"
+    ],
+    "support": 0.077,
+    "confidence": 0.5
+  },
+  {
+    "antecedent": [
+      "docker"
+    ],
+    "consequent": [
+      "ci/cd"
+    ],
+    "support": 0.077,
+    "confidence": 0.5
+  },
+  {
+    "antecedent": [
+      "docker"
+    ],
+    "consequent": [
+      "kubernetes"
+    ],
+    "support": 0.077,
+    "confidence": 0.5
+  },
+  {
+    "antecedent": [
+      "docker"
+    ],
+    "consequent": [
+      "aws"
+    ],
+    "support": 0.077,
+    "confidence": 0.5
+  },
+  {
+    "antecedent": [
+      "docker"
+    ],
+    "consequent": [
+      "terraform"
+    ],
+    "support": 0.077,
+    "confidence": 0.5
+  },
+  {
+    "antecedent": [
+      "docker"
+    ],
+    "consequent": [
+      "python",
+      "pytorch"
+    ],
+    "support": 0.077,
+    "confidence": 0.5
+  },
+  {
+    "antecedent": [
+      "docker"
+    ],
+    "consequent": [
+      "python",
+      "sql"
+    ],
+    "support": 0.077,
+    "confidence": 0.5
+  },
+  {
+    "antecedent": [
+      "docker"
+    ],
+    "consequent": [
+      "pytorch",
+      "sql"
+    ],
+    "support": 0.077,
+    "confidence": 0.5
+  },
+  {
+    "antecedent": [
+      "docker"
+    ],
+    "consequent": [
+      "python",
+      "tensorflow"
+    ],
+    "support": 0.077,
+    "confidence": 0.5
+  },
+  {
+    "antecedent": [
+      "docker"
+    ],
+    "consequent": [
+      "pytorch",
+      "tensorflow"
+    ],
+    "support": 0.077,
+    "confidence": 0.5
+  },
+  {
+    "antecedent": [
+      "docker"
+    ],
+    "consequent": [
+      "sql",
+      "tensorflow"
+    ],
+    "support": 0.077,
+    "confidence": 0.5
+  },
+  {
+    "antecedent": [
+      "docker"
+    ],
+    "consequent": [
+      "ci/cd",
+      "kubernetes"
+    ],
+    "support": 0.077,
+    "confidence": 0.5
+  },
+  {
+    "antecedent": [
+      "docker"
+    ],
+    "consequent": [
+      "ci/cd",
+      "terraform"
+    ],
+    "support": 0.077,
+    "confidence": 0.5
+  },
+  {
+    "antecedent": [
+      "docker"
+    ],
+    "consequent": [
+      "aws",
+      "terraform"
+    ],
+    "support": 0.077,
+    "confidence": 0.5
+  },
+  {
+    "antecedent": [
+      "docker"
+    ],
+    "consequent": [
+      "aws",
+      "kubernetes"
+    ],
+    "support": 0.077,
+    "confidence": 0.5
+  },
+  {
+    "antecedent": [
+      "docker"
+    ],
+    "consequent": [
+      "aws",
+      "ci/cd"
+    ],
+    "support": 0.077,
+    "confidence": 0.5
+  },
+  {
+    "antecedent": [
+      "docker"
+    ],
+    "consequent": [
+      "kubernetes",
+      "terraform"
+    ],
+    "support": 0.077,
+    "confidence": 0.5
+  },
+  {
+    "antecedent": [
+      "docker"
+    ],
+    "consequent": [
+      "python",
+      "pytorch",
+      "tensorflow"
+    ],
+    "support": 0.077,
+    "confidence": 0.5
+  },
+  {
+    "antecedent": [
+      "docker"
+    ],
+    "consequent": [
+      "pytorch",
+      "sql",
+      "tensorflow"
+    ],
+    "support": 0.077,
+    "confidence": 0.5
+  },
+  {
+    "antecedent": [
+      "docker"
+    ],
+    "consequent": [
+      "python",
+      "sql",
+      "tensorflow"
+    ],
+    "support": 0.077,
+    "confidence": 0.5
+  },
+  {
+    "antecedent": [
+      "docker"
+    ],
+    "consequent": [
+      "python",
+      "pytorch",
+      "sql"
+    ],
+    "support": 0.077,
+    "confidence": 0.5
+  },
+  {
+    "antecedent": [
+      "docker"
+    ],
+    "consequent": [
+      "aws",
+      "ci/cd",
+      "terraform"
+    ],
+    "support": 0.077,
+    "confidence": 0.5
+  },
+  {
+    "antecedent": [
+      "docker"
+    ],
+    "consequent": [
+      "aws",
+      "kubernetes",
+      "terraform"
+    ],
+    "support": 0.077,
+    "confidence": 0.5
+  },
+  {
+    "antecedent": [
+      "docker"
+    ],
+    "consequent": [
+      "aws",
+      "ci/cd",
+      "kubernetes"
+    ],
+    "support": 0.077,
+    "confidence": 0.5
+  },
+  {
+    "antecedent": [
+      "docker"
+    ],
+    "consequent": [
+      "ci/cd",
+      "kubernetes",
+      "terraform"
+    ],
+    "support": 0.077,
+    "confidence": 0.5
+  },
+  {
+    "antecedent": [
+      "docker"
+    ],
+    "consequent": [
+      "python",
+      "pytorch",
+      "sql",
+      "tensorflow"
+    ],
+    "support": 0.077,
+    "confidence": 0.5
+  },
+  {
+    "antecedent": [
+      "docker"
+    ],
+    "consequent": [
+      "aws",
+      "ci/cd",
+      "kubernetes",
+      "terraform"
+    ],
+    "support": 0.077,
+    "confidence": 0.5
+  },
+  {
+    "antecedent": [
+      "sql"
+    ],
+    "consequent": [
+      "pytorch"
+    ],
+    "support": 0.077,
+    "confidence": 0.417
+  },
+  {
+    "antecedent": [
+      "sql"
+    ],
+    "consequent": [
+      "tensorflow"
+    ],
+    "support": 0.077,
+    "confidence": 0.417
+  },
+  {
+    "antecedent": [
+      "sql"
+    ],
+    "consequent": [
+      "docker"
+    ],
+    "support": 0.077,
+    "confidence": 0.417
+  },
+  {
+    "antecedent": [
+      "sql"
+    ],
+    "consequent": [
+      "qa/qc"
+    ],
+    "support": 0.077,
+    "confidence": 0.417
+  },
+  {
+    "antecedent": [
+      "sql"
+    ],
+    "consequent": [
+      "postman"
+    ],
+    "support": 0.077,
+    "confidence": 0.417
+  },
+  {
+    "antecedent": [
+      "sql"
+    ],
+    "consequent": [
+      "selenium"
+    ],
+    "support": 0.077,
+    "confidence": 0.417
+  },
+  {
+    "antecedent": [
+      "sql"
+    ],
+    "consequent": [
+      "jira"
+    ],
+    "support": 0.077,
+    "confidence": 0.417
+  },
+  {
+    "antecedent": [
+      "sql"
+    ],
+    "consequent": [
+      "docker",
+      "python"
+    ],
+    "support": 0.077,
+    "confidence": 0.417
+  },
+  {
+    "antecedent": [
+      "sql"
+    ],
+    "consequent": [
+      "docker",
+      "pytorch"
+    ],
+    "support": 0.077,
+    "confidence": 0.417
+  },
+  {
+    "antecedent": [
+      "sql"
+    ],
+    "consequent": [
+      "python",
+      "tensorflow"
+    ],
+    "support": 0.077,
+    "confidence": 0.417
+  },
+  {
+    "antecedent": [
+      "sql"
+    ],
+    "consequent": [
+      "python",
+      "pytorch"
+    ],
+    "support": 0.077,
+    "confidence": 0.417
+  },
+  {
+    "antecedent": [
+      "sql"
+    ],
+    "consequent": [
+      "docker",
+      "tensorflow"
+    ],
+    "support": 0.077,
+    "confidence": 0.417
+  },
+  {
+    "antecedent": [
+      "sql"
+    ],
+    "consequent": [
+      "pytorch",
+      "tensorflow"
+    ],
+    "support": 0.077,
+    "confidence": 0.417
+  },
+  {
+    "antecedent": [
+      "sql"
+    ],
+    "consequent": [
+      "qa/qc",
+      "selenium"
+    ],
+    "support": 0.077,
+    "confidence": 0.417
+  },
+  {
+    "antecedent": [
+      "sql"
+    ],
+    "consequent": [
+      "postman",
+      "selenium"
+    ],
+    "support": 0.077,
+    "confidence": 0.417
+  },
+  {
+    "antecedent": [
+      "sql"
+    ],
+    "consequent": [
+      "jira",
+      "selenium"
+    ],
+    "support": 0.077,
+    "confidence": 0.417
+  },
+  {
+    "antecedent": [
+      "sql"
+    ],
+    "consequent": [
+      "postman",
+      "qa/qc"
+    ],
+    "support": 0.077,
+    "confidence": 0.417
+  },
+  {
+    "antecedent": [
+      "sql"
+    ],
+    "consequent": [
+      "jira",
+      "qa/qc"
+    ],
+    "support": 0.077,
+    "confidence": 0.417
+  },
+  {
+    "antecedent": [
+      "sql"
+    ],
+    "consequent": [
+      "jira",
+      "postman"
+    ],
+    "support": 0.077,
+    "confidence": 0.417
+  },
+  {
+    "antecedent": [
+      "sql"
+    ],
+    "consequent": [
+      "python",
+      "pytorch",
+      "tensorflow"
+    ],
+    "support": 0.077,
+    "confidence": 0.417
+  },
+  {
+    "antecedent": [
+      "sql"
+    ],
+    "consequent": [
+      "docker",
+      "pytorch",
+      "tensorflow"
+    ],
+    "support": 0.077,
+    "confidence": 0.417
+  },
+  {
+    "antecedent": [
+      "sql"
+    ],
+    "consequent": [
+      "docker",
+      "python",
+      "tensorflow"
+    ],
+    "support": 0.077,
+    "confidence": 0.417
+  },
+  {
+    "antecedent": [
+      "sql"
+    ],
+    "consequent": [
+      "docker",
+      "python",
+      "pytorch"
+    ],
+    "support": 0.077,
+    "confidence": 0.417
+  },
+  {
+    "antecedent": [
+      "sql"
+    ],
+    "consequent": [
+      "jira",
+      "postman",
+      "qa/qc"
+    ],
+    "support": 0.077,
+    "confidence": 0.417
+  },
+  {
+    "antecedent": [
+      "sql"
+    ],
+    "consequent": [
+      "postman",
+      "qa/qc",
+      "selenium"
+    ],
+    "support": 0.077,
+    "confidence": 0.417
+  },
+  {
+    "antecedent": [
+      "sql"
+    ],
+    "consequent": [
+      "jira",
+      "postman",
+      "selenium"
+    ],
+    "support": 0.077,
+    "confidence": 0.417
+  },
+  {
+    "antecedent": [
+      "sql"
+    ],
+    "consequent": [
+      "jira",
+      "qa/qc",
+      "selenium"
+    ],
+    "support": 0.077,
+    "confidence": 0.417
+  },
+  {
+    "antecedent": [
+      "sql"
+    ],
+    "consequent": [
+      "docker",
+      "python",
+      "pytorch",
+      "tensorflow"
+    ],
+    "support": 0.077,
+    "confidence": 0.417
+  },
+  {
+    "antecedent": [
+      "sql"
+    ],
+    "consequent": [
+      "jira",
+      "postman",
+      "qa/qc",
+      "selenium"
+    ],
+    "support": 0.077,
+    "confidence": 0.417
+  }
+]

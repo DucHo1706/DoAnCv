@@ -72,7 +72,7 @@ const InterviewQuestionsTab: React.FC<InterviewQuestionsTabProps> = ({ interview
           size="small"
           title={
             <span style={{ color: "#2563EB", fontWeight: 700, fontSize: 14.5 }}>
-              <ReadOutlined style={{ marginRight: 6 }} /> Danh sách {interviewQuestions.length} câu hỏi & chủ đề ôn tập
+              <ReadOutlined style={{ marginRight: 6 }} /> Danh sách {interviewQuestions.length} định hướng & chủ đề phỏng vấn
             </span>
           }
           style={{
@@ -96,7 +96,7 @@ const InterviewQuestionsTab: React.FC<InterviewQuestionsTabProps> = ({ interview
               >
                 <div style={{ marginBottom: 12 }}>
                   <Text strong style={{ fontSize: 15, color: "#0F172A", display: "block" }}>
-                    📚 Chủ đề {index + 1}: {item.question}
+                    📌 Định hướng {index + 1}: {item.question}
                   </Text>
                 </div>
 
@@ -106,13 +106,13 @@ const InterviewQuestionsTab: React.FC<InterviewQuestionsTabProps> = ({ interview
                 </div>
                 
                 <div style={{ marginBottom: 12 }}>
-                  <Text strong style={{ color: "#475569", fontSize: 13 }}>💡 Cách chuẩn bị theo STAR: </Text>
+                  <Text strong style={{ color: "#475569", fontSize: 13 }}>💡 Gợi ý chuẩn bị phỏng vấn: </Text>
                   <Paragraph style={{ color: "#64748B", margin: "4px 0 0", fontSize: 14 }}>{item.star_guide}</Paragraph>
                 </div>
 
                 <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px dashed #E2E8F0" }}>
                   <Text strong style={{ color: "#2563EB", fontSize: 13.5 }}>
-                    📖 Gợi ý ôn luyện & Tài liệu tham khảo:
+                    📖 Hướng dẫn ôn tập & Tài liệu gợi ý:
                   </Text>
                   <Paragraph style={{ color: "#334155", marginTop: 6, fontSize: 14, lineHeight: "1.6", whiteSpace: "pre-line" }}>
                     {renderTextWithLinks(item.best_answer)}

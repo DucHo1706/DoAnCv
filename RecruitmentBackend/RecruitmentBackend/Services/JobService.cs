@@ -1,4 +1,4 @@
-﻿﻿﻿﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using RecruitmentBackend.Data;
 using RecruitmentBackend.DTOs.Requests;
@@ -127,9 +127,9 @@ namespace RecruitmentBackend.Services
                               maxCandidates = j.MaxCandidates,
                               status = j.Status,
                               isApproved = j.Status == "Published",
-                              position = p != null ? new { name = p.PositionName } : null,
-                              branch = b != null ? new { name = b.BranchName } : null,
-                              category = c != null ? new { name = c.Name } : null
+                              position = p != null ? new { id = p.PositionID, name = p.PositionName } : null,
+                              branch = b != null ? new { id = b.BranchID, name = b.BranchName } : null,
+                              category = c != null ? new { id = c.CategoryID, name = c.Name } : null
                           }).ToListAsync();
         }
 
@@ -149,8 +149,8 @@ namespace RecruitmentBackend.Services
                               startDate = j.StartDate,
                               maxCandidates = j.MaxCandidates,
                               status = j.Status,
-                              position = p != null ? new { name = p.PositionName } : null,
-                              branch = b != null ? new { name = b.BranchName } : null
+                              position = p != null ? new { id = p.PositionID, name = p.PositionName } : null,
+                              branch = b != null ? new { id = b.BranchID, name = b.BranchName } : null
                           }).ToListAsync();
         }
 
@@ -172,6 +172,10 @@ namespace RecruitmentBackend.Services
                         from p in pj.DefaultIfEmpty()
                         join b in _context.Branches on j.BranchID equals b.BranchID into bj
                         from b in bj.DefaultIfEmpty()
+                        join c in _context.Categories on j.CategoryID equals c.CategoryID into cj
+                        from c in cj.DefaultIfEmpty()
+                        join jl in _context.JobLevels on j.JobLevelID equals jl.JobLevelID into jlj
+                        from jl in jlj.DefaultIfEmpty()
                         where j.JobID == jobId
                         select new {
                             id = j.JobID,
@@ -185,7 +189,10 @@ namespace RecruitmentBackend.Services
                             status = j.Status,
                             isApproved = j.Status == "Published",
                             position = p != null ? new { name = p.PositionName } : null,
-                            branch = b != null ? new { name = b.BranchName } : null
+                            branch = b != null ? new { name = b.BranchName } : null,
+                            category = c != null ? new { name = c.Name } : null,
+                            jobLevel = jl != null ? new { name = jl.Name } : null,
+                            viewCount = j.ViewCount
                         };
 
             var jobInfo = await query.FirstOrDefaultAsync();
@@ -201,6 +208,10 @@ namespace RecruitmentBackend.Services
                     weight = c.Weight
                 })
                 .ToListAsync();
+
+            var applicationCount = await _context.Applications.CountAsync(a => a.JobID == jobId);
+            double applyRate = jobInfo.viewCount > 0 ? Math.Round(((double)applicationCount / jobInfo.viewCount) * 100, 1) : 0;
+            int interestedCount = (int)Math.Round(jobInfo.viewCount * 0.12);
 
             return new
             {
@@ -218,9 +229,19 @@ namespace RecruitmentBackend.Services
                     jobInfo.isApproved,
                     jobInfo.position,
                     jobInfo.branch,
+                    jobInfo.category,
+                    jobInfo.jobLevel,
+                    viewCount = jobInfo.viewCount,
                     criteria = criteria
                 },
-                wordsToHighlight = new List<string>()
+                wordsToHighlight = new List<string>(),
+                stats = new
+                {
+                    applicationsCount = applicationCount,
+                    viewsCount = jobInfo.viewCount,
+                    interestedCount = interestedCount,
+                    applyRate = applyRate
+                }
             };
         }
 
@@ -253,8 +274,8 @@ namespace RecruitmentBackend.Services
                               deadline = j.Deadline,
                               startDate = j.StartDate,
                               maxCandidates = j.MaxCandidates,
-                              position = p != null ? new { name = p.PositionName } : null,
-                              branch = b != null ? new { name = b.BranchName } : null
+                              position = p != null ? new { id = p.PositionID, name = p.PositionName } : null,
+                              branch = b != null ? new { id = b.BranchID, name = b.BranchName } : null
                           }).ToListAsync();
         }
 
@@ -272,8 +293,8 @@ namespace RecruitmentBackend.Services
                               salaryRange = (j.SalaryMin == 0 && j.SalaryMax == 0) ? "Thỏa thuận" : (j.SalaryMax == 0 ? j.SalaryMin + " triệu" : j.SalaryMin + " - " + j.SalaryMax + " triệu"),
                               createdAt = j.CreatedAt,
                               deadline = j.Deadline,
-                              position = p != null ? new { name = p.PositionName } : null,
-                              branch = b != null ? new { name = b.BranchName } : null
+                              position = p != null ? new { id = p.PositionID, name = p.PositionName } : null,
+                              branch = b != null ? new { id = b.BranchID, name = b.BranchName } : null
                           }).ToListAsync();
         }
 
@@ -329,14 +350,14 @@ namespace RecruitmentBackend.Services
 
             if (totalCount == 0)
             {
-                // Fallback: Lấy Top 6 tin tuyển dụng nổi bật nhất (ViewCount cao nhất)
+                // Fallback: Lấy Top 6 tin tuyển dụng có GIÁ TRỊ LỢI ÍCH cao nhất (High-Utility: Lương * Lượt xem)
                 var fallbackQuery = from j in _context.JobPostings
                                     join p in _context.Positions on j.PositionID equals p.PositionID into pj
                                     from p in pj.DefaultIfEmpty()
                                     join b in _context.Branches on j.BranchID equals b.BranchID into bj
                                     from b in bj.DefaultIfEmpty()
                                     where j.Status == "Published"
-                                    orderby j.ViewCount descending, j.CreatedAt descending
+                                    orderby (j.SalaryMax > 0 ? (double)j.SalaryMax : 15.0) * j.ViewCount descending, j.CreatedAt descending
                                     select new { j, p, b };
 
                 var fallbackJobs = await fallbackQuery
@@ -355,7 +376,9 @@ namespace RecruitmentBackend.Services
                                         ? x.j.JobDescription.Substring(0, 200) + "..." 
                                         : x.j.JobDescription ?? "",
                         Skills = new List<string> { "Đang tuyển dụng" },
-                        AiScore = 0
+                        AiScore = 0,
+                        RecommendationType = "HighUtility",
+                        UtilityScore = (double)(x.j.SalaryMax > 0 ? x.j.SalaryMax : 15.0m) * x.j.ViewCount
                     })
                     .ToListAsync();
 
@@ -388,7 +411,9 @@ namespace RecruitmentBackend.Services
                                     ? x.j.JobDescription.Substring(0, 200) + "..." 
                                     : x.j.JobDescription ?? "",
                     Skills = new List<string> { "Đang tuyển dụng" },
-                    AiScore = 0 // Tương lai có thể tích hợp chấm điểm tự động tại đây
+                    AiScore = 0,
+                    RecommendationType = "Normal",
+                    UtilityScore = 0
                 })
                 .ToListAsync();
 

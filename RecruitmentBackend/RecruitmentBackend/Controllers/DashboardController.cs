@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RecruitmentBackend.Interfaces;
 using System.Security.Claims;
@@ -43,6 +43,13 @@ namespace RecruitmentBackend.Controllers
             }
 
             var result = await _dashboardService.GetHrDashboardStatsAsync(accountId, jobId, timeRange);
+            return Ok(result);
+        }
+
+        [HttpGet("simulator-candidates")]
+        public async Task<IActionResult> GetSimulatorCandidates()
+        {
+            var result = await _dashboardService.GetSimulatorCandidatesAsync();
             return Ok(result);
         }
     }

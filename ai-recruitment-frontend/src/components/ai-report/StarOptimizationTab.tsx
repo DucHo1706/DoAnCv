@@ -1,5 +1,5 @@
 import React from "react";
-import { Space, Typography, Card, Alert, Collapse, Row, Col } from "antd";
+import { Space, Typography, Card, Alert, Row, Col } from "antd";
 import { InfoCircleOutlined } from "@ant-design/icons";
 
 const { Title, Text, Paragraph } = Typography;
@@ -235,34 +235,34 @@ const StarOptimizationTab: React.FC<StarOptimizationTabProps> = ({ optimizationT
             key={group}
             size="small"
             title={
-              <span style={{ color: "#2563EB", fontWeight: 700, fontSize: 14.5 }}>
-                <InfoCircleOutlined style={{ marginRight: 6 }} /> Phần CV: {group} ({groupTips.length} đề xuất)
+              <span style={{ color: "#0F172A", fontWeight: 700, fontSize: 15 }}>
+                <InfoCircleOutlined style={{ color: "#2563EB", marginRight: 6 }} /> Phần CV: {group} ({groupTips.length} đề xuất)
               </span>
             }
             style={{
               borderRadius: 14,
-              background: "#EFF6FF",
-              border: "1px solid #BFDBFE",
-              marginBottom: 12,
+              background: "#FFFFFF",
+              border: "1px solid #E2E8F0",
+              borderLeft: "4px solid #2563EB",
+              marginBottom: 16,
             }}
-            bodyStyle={{ padding: "16px" }}
+            bodyStyle={{ padding: "20px" }}
           >
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
               {groupTips.map((tip: OptimizationTip, idx: number) => (
                 <div
                   key={idx}
                   style={{
-                    background: "#FFFFFF",
+                    background: "#F8FAFC",
                     border: "1px solid #E2E8F0",
                     borderRadius: 12,
                     padding: "18px",
-                    boxShadow: "0 2px 8px rgba(148, 163, 184, 0.02)",
                   }}
                 >
                   {/* Tip Header with Title and Priority Tag */}
                   <div style={{ marginBottom: 12, display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
                     <Text strong style={{ fontSize: 15, color: "#0F172A", display: "inline-block" }}>
-                       đề xuất {idx + 1}: {tip.title}
+                      Đề xuất {idx + 1}: {tip.title}
                     </Text>
                     {tip.priority === "high" && (
                       <span
@@ -270,8 +270,8 @@ const StarOptimizationTab: React.FC<StarOptimizationTabProps> = ({ optimizationT
                           fontSize: 10,
                           padding: "2px 8px",
                           borderRadius: 4,
-                          background: "#FEF2F2",
-                          border: "1px solid #FECACA",
+                          background: "rgba(239, 68, 68, 0.06)",
+                          border: "1px solid rgba(239, 68, 68, 0.15)",
                           color: "#EF4444",
                           fontWeight: 700,
                         }}
@@ -290,14 +290,15 @@ const StarOptimizationTab: React.FC<StarOptimizationTabProps> = ({ optimizationT
                   {tip.star_guidance && (
                     <div
                       style={{
-                        background: "#F8FAFC",
+                        background: "#FFFFFF",
+                        border: "1px solid #E2E8F0",
                         borderLeft: "3px solid #2563EB",
                         padding: "10px 14px",
                         borderRadius: 6,
                         marginBottom: 16,
                       }}
                     >
-                      <Text style={{ color: "#1E3A8A", fontSize: 13.5, display: "block", lineHeight: "1.5" }}>
+                      <Text style={{ color: "#1E293B", fontSize: 13.5, display: "block", lineHeight: "1.5" }}>
                         <strong>Hướng dẫn STAR:</strong> {tip.star_guidance}
                       </Text>
                     </div>
@@ -309,17 +310,18 @@ const StarOptimizationTab: React.FC<StarOptimizationTabProps> = ({ optimizationT
                       <Col xs={24} sm={12}>
                         <div
                           style={{
-                            padding: "12px 14px",
-                            background: "#FEF2F2",
+                            padding: "14px",
+                            background: "#FFFFFF",
                             borderRadius: 8,
-                            border: "1px solid #FEE2E2",
+                            border: "1px solid #E2E8F0",
+                            borderLeft: "3px solid #94A3B8",
                             height: "100%",
                           }}
                         >
                           <Text
                             strong
                             style={{
-                              color: "#B91C1C",
+                              color: "#64748B",
                               fontSize: 11,
                               display: "block",
                               marginBottom: 8,
@@ -329,7 +331,7 @@ const StarOptimizationTab: React.FC<StarOptimizationTabProps> = ({ optimizationT
                           >
                             ❌ Bản gốc CV chưa tối ưu:
                           </Text>
-                          <div style={{ color: "#991B1B", fontSize: 13.5 }}>
+                          <div style={{ color: "#334155", fontSize: 13.5 }}>
                             {renderFormattedStarText(tip.example_before || null)}
                           </div>
                         </div>
@@ -337,17 +339,18 @@ const StarOptimizationTab: React.FC<StarOptimizationTabProps> = ({ optimizationT
                       <Col xs={24} sm={12}>
                         <div
                           style={{
-                            padding: "12px 14px",
-                            background: "#F0FDF4",
+                            padding: "14px",
+                            background: "#FFFFFF",
                             borderRadius: 8,
-                            border: "1px solid #DCFCE7",
+                            border: "1px solid #E2E8F0",
+                            borderLeft: "3px solid #10B981",
                             height: "100%",
                           }}
                         >
                           <Text
                             strong
                             style={{
-                              color: "#15803D",
+                              color: "#10B981",
                               fontSize: 11,
                               display: "block",
                               marginBottom: 8,
@@ -357,7 +360,7 @@ const StarOptimizationTab: React.FC<StarOptimizationTabProps> = ({ optimizationT
                           >
                             ✔️ Đề xuất viết lại theo chuẩn STAR:
                           </Text>
-                          <div style={{ color: "#166534", fontSize: 13.5 }}>
+                          <div style={{ color: "#1E293B", fontSize: 13.5 }}>
                             {renderFormattedStarText(tip.example_after || null)}
                           </div>
                         </div>

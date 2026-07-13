@@ -53,12 +53,6 @@ function PublicLayout() {
   const isFullWidthPage = location.pathname === "/" || location.pathname.startsWith("/jobs");
 
   const customStyles = `
-    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
-
-    * {
-      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
-    }
-
     .header-nav-link {
       color: #475569 !important;
       font-weight: 500;

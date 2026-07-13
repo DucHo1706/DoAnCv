@@ -1,11 +1,12 @@
-import { Avatar, Button, Card, Input, Select, Space, Table, Tag, Tooltip, Typography, message } from "antd";
+import { Avatar, Button, Card, Input, Select, Space, Table, Tag, Tooltip, Typography, Row, Col } from "antd";
 import {
   SearchOutlined,
   UserOutlined,
-  SendOutlined,
   MailOutlined,
   TrophyOutlined,
   LockOutlined,
+  FilePdfOutlined,
+  EyeOutlined,
 } from "@ant-design/icons";
 import PageContainer from "../../../components/common/PageContainer";
 import { useTalentPool } from "./hooks/useTalentPool";
@@ -20,13 +21,25 @@ export default function TalentPoolPage() {
     setSearchText,
     filterStatus,
     setFilterStatus,
+    filterMinScore,
+    setFilterMinScore,
+    filterCategory,
+    setFilterCategory,
+    filterPosition,
+    setFilterPosition,
+    filterLevel,
+    setFilterLevel,
     talentPoolCandidates,
+    categories,
+    jobPositions,
+    jobLevels,
     loading,
     parseSkills,
     formatDate,
     filteredCandidates,
     readyCount,
     lockedCount,
+    averageAiScore,
   } = useTalentPool();
 
   const columns = [
@@ -37,7 +50,7 @@ export default function TalentPoolPage() {
       width: 260,
       render: (text: string, record: TalentPoolCandidateDto) => (
         <Space>
-          <Avatar icon={<UserOutlined />} style={{ backgroundColor: "#1677ff" }} />
+          <Avatar icon={<UserOutlined />} style={{ backgroundColor: "#2563EB" }} />
           <div style={{ maxWidth: 190 }}>
             <Text strong ellipsis style={{ display: "block" }}>
               {text || "Chưa cập nhật"}
@@ -137,39 +150,44 @@ export default function TalentPoolPage() {
     {
       title: "Thao tác",
       key: "actions",
-      width: 280,
+      width: 320,
       render: (_: any, record: TalentPoolCandidateDto) => (
         <Space size="small" wrap={false}>
-          <Tooltip
-            title={
-              record.isInviteLocked
-                ? record.inviteLockReason ||
-                  "Ứng viên đang tham gia quy trình tuyển dụng ở một vị trí khác."
-                : "Mời ứng viên ứng tuyển vị trí phù hợp"
-            }
-          >
-            <Button
-              size="small"
-              type="primary"
-              ghost
-              icon={<SendOutlined />}
-              disabled={record.isInviteLocked}
-              onClick={() => {
-                const talentPoolCandidateId =
-                  record.talentPoolCandidateId ||
-                  (record as any).talentPoolCandidateID ||
-                  (record as any).TalentPoolCandidateID;
+          <Button
+            size="small"
+            type="primary"
+            ghost
+            icon={<EyeOutlined />}
+            onClick={() => {
+              const talentPoolCandidateId =
+                record.talentPoolCandidateId ||
+                (record as any).talentPoolCandidateID ||
+                (record as any).TalentPoolCandidateID;
 
-                if (!talentPoolCandidateId) {
-                  message.error("Không tìm thấy ID ứng viên Talent Pool.");
-                  return;
-                }
-                navigate(`/recruiter/talent-pool/${talentPoolCandidateId}`);
-              }}
-            >
-              Mời ứng tuyển
-            </Button>
-          </Tooltip>
+              if (!talentPoolCandidateId) {
+                return;
+              }
+              navigate(`/recruiter/talent-pool/${talentPoolCandidateId}`);
+            }}
+          >
+            Xem chi tiết
+          </Button>
+          <Button
+            size="small"
+            type="dashed"
+            icon={<FilePdfOutlined />}
+            disabled={!record.latestCvUrl}
+            onClick={() => {
+              if (record.latestCvUrl) {
+                const url = record.latestCvUrl.startsWith("http")
+                  ? record.latestCvUrl
+                  : `https://localhost:7006${record.latestCvUrl.startsWith("/") ? "" : "/"}${record.latestCvUrl}`;
+                window.open(url, "_blank");
+              }
+            }}
+          >
+            Xem CV
+          </Button>
           <Button
             size="small"
             icon={<MailOutlined />}
@@ -206,48 +224,97 @@ export default function TalentPoolPage() {
             <div style={{ fontSize: 28, fontWeight: 700, marginTop: 8 }}>{lockedCount}</div>
             <Text type="secondary">Không thể mời ứng tuyển</Text>
           </Card>
+          <Card style={{ width: 260, borderRadius: 12 }}>
+            <Text type="secondary">Điểm AI trung bình</Text>
+            <div style={{ fontSize: 28, fontWeight: 700, marginTop: 8, color: "#16A34A" }}>
+              {averageAiScore}/100
+            </div>
+            <Text type="secondary">Độ tương hợp bình quân</Text>
+          </Card>
         </Space>
 
         <Card style={{ borderRadius: 12, overflow: "hidden" }}>
-          <div
-            style={{
-              marginBottom: 24,
-              display: "flex",
-              gap: 16,
-              justifyContent: "space-between",
-              flexWrap: "wrap",
-            }}
-          >
-            <Space wrap>
-              <Input
-                size="large"
-                placeholder="Tìm kiếm theo kỹ năng, tên, email, vị trí..."
-                prefix={<SearchOutlined />}
-                style={{ width: 380 }}
-                value={searchText}
-                onChange={(event) => setSearchText(event.target.value)}
-                allowClear
-              />
-              <Select
-                placeholder="Lọc trạng thái"
-                style={{ width: 220 }}
-                allowClear
-                value={filterStatus}
-                onChange={setFilterStatus}
-                size="large"
-                options={[
-                  { label: "Sẵn sàng mời", value: "ready" },
-                  { label: "Đang trong quy trình khác", value: "locked" },
-                ]}
-              />
-              <Button
-                size="large"
-                type="primary"
-                onClick={() => message.info("Tìm kiếm AI theo ngữ nghĩa chưa phát triển")}
-              >
-                Tìm kiếm AI
-              </Button>
-            </Space>
+          <div style={{ marginBottom: 24 }}>
+            <Row gutter={[16, 16]}>
+              <Col xs={24} md={8}>
+                <Input
+                  size="large"
+                  placeholder="Tìm kiếm theo kỹ năng, tên, email, vị trí..."
+                  prefix={<SearchOutlined />}
+                  style={{ width: "100%" }}
+                  value={searchText}
+                  onChange={(event) => setSearchText(event.target.value)}
+                  allowClear
+                />
+              </Col>
+              <Col xs={12} md={4}>
+                <Select
+                  placeholder="Trạng thái mời"
+                  style={{ width: "100%" }}
+                  allowClear
+                  value={filterStatus}
+                  onChange={setFilterStatus}
+                  size="large"
+                  options={[
+                    { label: "Sẵn sàng mời", value: "ready" },
+                    { label: "Đang trong quy trình khác", value: "locked" },
+                  ]}
+                />
+              </Col>
+              <Col xs={12} md={4}>
+                <Select
+                  placeholder="Điểm AI tối thiểu"
+                  style={{ width: "100%" }}
+                  allowClear
+                  value={filterMinScore}
+                  onChange={setFilterMinScore}
+                  size="large"
+                  options={[
+                    { label: "Xuất sắc (≥ 80)", value: 80 },
+                    { label: "Khá tốt (≥ 60)", value: 60 },
+                    { label: "Đạt yêu cầu (≥ 50)", value: 50 },
+                  ]}
+                />
+              </Col>
+              <Col xs={12} md={4}>
+                <Select
+                  placeholder="Ngành nghề / Lĩnh vực"
+                  style={{ width: "100%" }}
+                  allowClear
+                  value={filterCategory}
+                  onChange={setFilterCategory}
+                  size="large"
+                  options={categories.map(c => ({ label: c.name, value: c.id }))}
+                />
+              </Col>
+              <Col xs={12} md={4}>
+                <Select
+                  placeholder="Cấp bậc ứng tuyển"
+                  style={{ width: "100%" }}
+                  allowClear
+                  value={filterLevel}
+                  onChange={setFilterLevel}
+                  size="large"
+                  options={jobLevels.map(l => ({ label: l, value: l }))}
+                />
+              </Col>
+            </Row>
+
+            <Row gutter={[16, 16]} style={{ marginTop: 12 }}>
+              <Col xs={24} md={8}>
+                <Select
+                  placeholder="Lọc ứng viên khớp Vị trí tuyển dụng mở"
+                  style={{ width: "100%" }}
+                  allowClear
+                  value={filterPosition}
+                  onChange={setFilterPosition}
+                  size="large"
+                  showSearch
+                  optionFilterProp="label"
+                  options={jobPositions.map(p => ({ label: p.name, value: p.id }))}
+                />
+              </Col>
+            </Row>
           </div>
 
           <Table

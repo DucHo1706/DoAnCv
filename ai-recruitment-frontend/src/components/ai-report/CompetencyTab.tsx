@@ -1,16 +1,17 @@
 import React from "react";
-import { Space, Alert, Row, Col, Card, Tag, Typography, Table } from "antd";
+import { Space, Alert, Row, Col, Card, Tag, Typography } from "antd";
 import { CheckCircleOutlined, WarningOutlined, CloseCircleOutlined } from "@ant-design/icons";
 
 const { Text } = Typography;
 
 interface CompetencyTabProps {
   scoreAnalysis: any;
-  criteriaResults: any[];
+  criteriaResults?: any[];
   loading?: boolean;
 }
 
-const CompetencyTab: React.FC<CompetencyTabProps> = ({ scoreAnalysis, criteriaResults, loading = false }) => {
+const CompetencyTab: React.FC<CompetencyTabProps> = (props) => {
+  const { scoreAnalysis, loading = false } = props;
   if (loading) {
     return (
       <Space direction="vertical" size={20} style={{ width: "100%" }}>
@@ -93,17 +94,18 @@ const CompetencyTab: React.FC<CompetencyTabProps> = ({ scoreAnalysis, criteriaRe
           <Card
             size="small"
             title={
-              <span style={{ color: "#16a34a", fontWeight: 700 }}>
-                <CheckCircleOutlined /> Năng lực tương thích tốt ({matchedSkills.length})
+              <span style={{ color: "#0F172A", fontWeight: 700 }}>
+                <CheckCircleOutlined style={{ color: "#10B981", marginRight: 6 }} /> Năng lực tương thích tốt ({matchedSkills.length})
               </span>
             }
             style={{
               borderRadius: 12,
-              background: "#f0fdf4",
-              border: "1px solid #bbf7d0",
+              background: "#FFFFFF",
+              border: "1px solid #E2E8F0",
+              borderLeft: "4px solid #10B981",
               height: "100%",
             }}
-            bodyStyle={{ padding: "12px" }}
+            bodyStyle={{ padding: "12px 16px" }}
           >
             {matchedSkills.length > 0 ? (
               <div
@@ -146,17 +148,18 @@ const CompetencyTab: React.FC<CompetencyTabProps> = ({ scoreAnalysis, criteriaRe
           <Card
             size="small"
             title={
-              <span style={{ color: "#d97706", fontWeight: 700 }}>
-                <WarningOutlined /> Cần làm rõ / Cải thiện ({missingSkills.length})
+              <span style={{ color: "#0F172A", fontWeight: 700 }}>
+                <WarningOutlined style={{ color: "#F59E0B", marginRight: 6 }} /> Cần làm rõ / Cải thiện ({missingSkills.length})
               </span>
             }
             style={{
               borderRadius: 12,
-              background: "#fffbeb",
-              border: "1px solid #fde68a",
+              background: "#FFFFFF",
+              border: "1px solid #E2E8F0",
+              borderLeft: "4px solid #F59E0B",
               height: "100%",
             }}
-            bodyStyle={{ padding: "12px" }}
+            bodyStyle={{ padding: "12px 16px" }}
           >
             {missingSkills.length > 0 ? (
               <div
@@ -188,7 +191,7 @@ const CompetencyTab: React.FC<CompetencyTabProps> = ({ scoreAnalysis, criteriaRe
                 ))}
               </div>
             ) : (
-              <Text type="secondary" style={{ fontStyle: "italic", color: "#16a34a" }}>
+              <Text type="secondary" style={{ fontStyle: "italic", color: "#10B981" }}>
                 CV đã đáp ứng đủ kỹ năng cốt lõi 🎉
               </Text>
             )}
@@ -202,24 +205,41 @@ const CompetencyTab: React.FC<CompetencyTabProps> = ({ scoreAnalysis, criteriaRe
           <Text
             strong
             style={{
-              color: "#dc2626",
+              color: "#EF4444",
               display: "block",
               marginBottom: 12,
               textTransform: "uppercase",
+              fontSize: "14px",
+              fontWeight: 700,
             }}
           >
-            <CloseCircleOutlined /> Điểm cảnh báo cần lưu ý (Red Flags)
+            <CloseCircleOutlined style={{ marginRight: 6 }} /> Điểm cảnh báo cần lưu ý (Red Flags)
           </Text>
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {redFlags.map((flag: any, idx: number) => (
-              <Alert
+              <Card
                 key={idx}
-                type="error"
-                showIcon
-                message={<strong style={{ color: "#991b1b" }}>{flag.title || "Cảnh báo"}</strong>}
-                description={<span style={{ color: "#7f1d1d" }}>{flag.description}</span>}
-                style={{ borderRadius: 8 }}
-              />
+                size="small"
+                style={{
+                  borderRadius: 12,
+                  background: "#FFFFFF",
+                  border: "1px solid #E2E8F0",
+                  borderLeft: "4px solid #EF4444",
+                }}
+                bodyStyle={{ padding: "16px" }}
+              >
+                <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                  <CloseCircleOutlined style={{ color: "#EF4444", fontSize: "16px", marginTop: "3px" }} />
+                  <div>
+                    <Text strong style={{ color: "#0F172A", fontSize: "15px", display: "block", marginBottom: 4 }}>
+                      {flag.title || "Cảnh báo"}
+                    </Text>
+                    <Text type="secondary" style={{ color: "#64748B", fontSize: "14px" }}>
+                      {flag.description}
+                    </Text>
+                  </div>
+                </div>
+              </Card>
             ))}
           </div>
         </div>

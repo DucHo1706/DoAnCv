@@ -1,20 +1,24 @@
-﻿using System.Net.Http.Json;
+using System.Net.Http.Json;
 using System.Text.Json;
 using RecruitmentBackend.DTOs.Requests;
 using RecruitmentBackend.DTOs.Responses;
 using RecruitmentBackend.Interfaces;
+
+using Microsoft.Extensions.Configuration;
 
 namespace RecruitmentBackend.Services
 {
     public class CandidateEmailAiService : ICandidateEmailAiService
     {
         private readonly HttpClient _httpClient;
+        private readonly string _generateEmailUrl;
 
-        private const string PythonGenerateEmailUrl = "http://127.0.0.1:8000/generate-email";
-
-        public CandidateEmailAiService(HttpClient httpClient)
+        public CandidateEmailAiService(HttpClient httpClient, IConfiguration configuration)
         {
             _httpClient = httpClient;
+            string apiBase = configuration["PythonAiApiUrl"] ?? "http://127.0.0.1:8000";
+            if (!apiBase.EndsWith("/")) apiBase += "/";
+            _generateEmailUrl = apiBase + "generate-email";
         }
 
         public async Task<(bool IsSuccess, string Message, GenerateCandidateEmailResponse? Data)> GenerateEmailAsync(
@@ -72,7 +76,7 @@ namespace RecruitmentBackend.Services
             try
             {
                 HttpResponseMessage httpResponse = await _httpClient.PostAsJsonAsync(
-                    PythonGenerateEmailUrl,
+                    _generateEmailUrl,
                     pythonRequest);
 
                 string responseContent = await httpResponse.Content.ReadAsStringAsync();

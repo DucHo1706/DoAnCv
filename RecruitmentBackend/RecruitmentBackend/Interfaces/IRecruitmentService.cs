@@ -22,5 +22,21 @@ namespace RecruitmentBackend.Interfaces
             ClaimsPrincipal user
         );
         Task<(bool IsSuccess, string Message, object Data)> ReEvaluateApplicationAsync(string applicationId, ClaimsPrincipal user);
+        Task<(bool IsSuccess, string Message, object Data)> ScheduleInterviewAsync(
+            string applicationId,
+            ScheduleInterviewRequest request,
+            ClaimsPrincipal user
+        );
+        Task<(bool IsSuccess, string Message, object Data)> GetInterviewScheduleAsync(
+            string applicationId,
+            ClaimsPrincipal user
+        );
+        Task<(bool IsSuccess, string Message, object Data)> GetHrInterviewSchedulesAsync(
+            ClaimsPrincipal user
+        );
+        Task<(bool IsSuccess, string Message, object Data)> CancelInterviewScheduleAsync(
+            string applicationId,
+            ClaimsPrincipal user
+        );
     }
 }

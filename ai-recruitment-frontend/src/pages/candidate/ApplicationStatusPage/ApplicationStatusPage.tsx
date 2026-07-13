@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Typography,
   Card,
@@ -7,26 +8,153 @@ import {
   Input,
   Select,
   Button,
-  Drawer,
   Spin,
+  Tag,
+  Steps,
 } from "antd";
 import {
   ClockCircleOutlined,
   SearchOutlined,
   EyeOutlined,
   LoadingOutlined,
-  RobotOutlined,
   FileDoneOutlined,
   InfoCircleOutlined,
   TrophyOutlined,
   AppstoreOutlined,
+  CalendarOutlined,
+  VideoCameraOutlined,
 } from "@ant-design/icons";
 import { useApplicationStatus } from "./hooks/useApplicationStatus";
 import PageContainer from "../../../components/common/PageContainer";
 import AiDetailedTabs from "../../../components/ai-report/AiDetailedTabs";
+import AiCoreIcon from "../../../components/common/AiCoreIcon";
 import { appTheme } from "../../../constants/theme";
+import { recruitmentService, type InterviewScheduleDto } from "../../../services/recruitmentService";
+import { useEffect } from "react";
 
 const { Title, Text } = Typography;
+
+const InterviewScheduleWidget: React.FC<{ applicationId: string }> = ({ applicationId }) => {
+  const [schedule, setSchedule] = useState<InterviewScheduleDto | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    const fetchSchedule = async () => {
+      try {
+        setLoading(true);
+        const data = await recruitmentService.getInterviewSchedule(applicationId);
+        if (active) {
+          setSchedule(data);
+        }
+      } catch (err) {
+        console.error("Lỗi khi tải lịch phỏng vấn:", err);
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    };
+    fetchSchedule();
+    return () => {
+      active = false;
+    };
+  }, [applicationId]);
+
+  if (loading) {
+    return (
+      <div style={{ marginTop: 12, padding: "12px 16px", background: "#F1F5F9", borderRadius: 8, textAlign: "center" }}>
+        <Spin size="small" tip="Đang tải lịch phỏng vấn..." />
+      </div>
+    );
+  }
+
+  if (!schedule) return null;
+
+  const dateStr = schedule.interviewDate
+    ? new Date(schedule.interviewDate).toLocaleString("vi-VN", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : "Chưa xác định";
+
+  return (
+    <div
+      style={{
+        marginTop: 16,
+        padding: "16px 20px",
+        background: "rgba(37, 99, 235, 0.04)",
+        borderRadius: "12px",
+        border: "1px dashed rgba(37, 99, 235, 0.2)",
+        width: "100%",
+        fontFamily: appTheme.font.family,
+      }}
+    >
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 12 }}>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontWeight: 650, color: "#1E3A8A", fontSize: "15px", marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
+            <CalendarOutlined style={{ color: "#2563EB" }} /> LỊCH HẸN PHỎNG VẤN
+          </div>
+          <div style={{ marginBottom: 6, fontSize: "14px" }}>
+            <Text strong style={{ color: "#334155" }}>Thời gian: </Text>
+            <Text style={{ color: "#0F172A", fontWeight: 600 }}>{dateStr}</Text>
+          </div>
+          <div style={{ marginBottom: 6, fontSize: "14px" }}>
+            <Text strong style={{ color: "#334155" }}>Hình thức: </Text>
+            <Tag color={schedule.format === "Online" ? "blue" : "purple"} style={{ fontWeight: 600 }}>
+              {schedule.format === "Online" ? "Phỏng vấn Online" : "Trực tiếp tại văn phòng"}
+            </Tag>
+          </div>
+          {schedule.format === "Offline" && (
+            <div style={{ marginBottom: 6, fontSize: "14px" }}>
+              <Text strong style={{ color: "#334155" }}>Địa điểm: </Text>
+              <Text style={{ color: "#0F172A" }}>{schedule.locationOrLink}</Text>
+            </div>
+          )}
+          {schedule.meetingId && (
+            <div style={{ marginBottom: 6, fontSize: "14px" }}>
+              <Text strong style={{ color: "#334155" }}>Meeting ID: </Text>
+              <Text code>{schedule.meetingId}</Text>
+              {schedule.passcode && (
+                <>
+                  <Text strong style={{ color: "#334155", marginLeft: 12 }}>Mật mã: </Text>
+                  <Text code>{schedule.passcode}</Text>
+                </>
+              )}
+            </div>
+          )}
+          {schedule.notes && (
+            <div style={{ marginTop: 10, padding: "8px 12px", background: "#FFFFFF", borderRadius: 8, border: "1px solid #E2E8F0", fontSize: "13px" }}>
+              <Text type="secondary" style={{ fontStyle: "italic" }}><InfoCircleOutlined style={{ marginRight: 4 }} /> HR dặn dò: {schedule.notes}</Text>
+            </div>
+          )}
+        </div>
+
+        {schedule.format === "Online" && (
+          <Button
+            type="primary"
+            icon={<VideoCameraOutlined />}
+            href={schedule.locationOrLink.startsWith("http") ? schedule.locationOrLink : `https://${schedule.locationOrLink}`}
+            target="_blank"
+            style={{
+              backgroundColor: "#2563EB",
+              borderColor: "#2563EB",
+              borderRadius: "10px",
+              height: "40px",
+              fontWeight: 600,
+              boxShadow: "0 4px 10px rgba(37, 99, 235, 0.15)",
+            }}
+          >
+            Tham gia trực tuyến
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+};
 
 export default function ApplicationStatusPage() {
   const {
@@ -47,6 +175,26 @@ export default function ApplicationStatusPage() {
 
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 5;
+  const navigate = useNavigate();
+
+  const getApplicationStatusLabel = (status: string) => {
+    switch (status?.toLowerCase()) {
+      case "applied":
+        return { text: "Đã gửi hồ sơ (Chờ duyệt)", color: "#2563EB", bg: "rgba(37, 99, 235, 0.06)", border: "1px solid rgba(37, 99, 235, 0.12)" };
+      case "reviewed":
+        return { text: "HR đang xem xét", color: "#8B5CF6", bg: "rgba(139, 92, 246, 0.06)", border: "1px solid rgba(139, 92, 246, 0.12)" };
+      case "shortlisted":
+        return { text: "Hồ sơ đạt yêu cầu", color: "#06B6D4", bg: "rgba(6, 182, 212, 0.06)", border: "1px solid rgba(6, 182, 212, 0.12)" };
+      case "interviewing":
+        return { text: "Được chọn phỏng vấn", color: "#F59E0B", bg: "rgba(245, 158, 11, 0.06)", border: "1px solid rgba(245, 158, 11, 0.12)" };
+      case "accepted":
+        return { text: "Đã nhận việc 🎉", color: "#10B981", bg: "rgba(16, 185, 129, 0.06)", border: "1px solid rgba(16, 185, 129, 0.12)" };
+      case "rejected":
+        return { text: "Chưa phù hợp", color: "#EF4444", bg: "rgba(239, 68, 68, 0.06)", border: "1px solid rgba(239, 68, 68, 0.12)" };
+      default:
+        return { text: status || "Đã gửi hồ sơ", color: "#2563EB", bg: "rgba(37, 99, 235, 0.06)", border: "1px solid rgba(37, 99, 235, 0.12)" };
+    }
+  };
 
   // Reset page when filters change
   React.useEffect(() => {
@@ -160,6 +308,67 @@ export default function ApplicationStatusPage() {
       }
     }
   `;
+
+  if (isDetailModalOpen) {
+    return (
+      <PageContainer title="" subtitle="">
+        <style dangerouslySetInnerHTML={{ __html: customStyles }} />
+        <div
+          style={{
+            background: "#F8FAFC",
+            margin: "-24px",
+            padding: "40px 40px 80px",
+            minHeight: "calc(100vh - 80px)",
+            fontFamily: appTheme.font.family,
+          }}
+        >
+          <div style={{ maxWidth: 1300, margin: "0 auto" }}>
+            <div style={{ marginBottom: 32 }}>
+              <Title level={2} style={{ marginBottom: 8, color: "#0F172A", fontWeight: 700 }}>
+                Báo cáo phân tích chi tiết từ AI
+              </Title>
+              <Text type="secondary" style={{ fontSize: 16 }}>
+                Phân tích năng lực, tối ưu hóa STAR, ngôn từ chân thực và gợi ý phỏng vấn chuyên sâu cho hồ sơ ứng tuyển của bạn.
+              </Text>
+            </div>
+            
+            <Card 
+              style={{ 
+                borderRadius: 16, 
+                boxShadow: "0 4px 12px rgba(0,0,0,0.05)", 
+                marginBottom: 24,
+                background: "rgba(255, 255, 255, 0.85)",
+                backdropFilter: "blur(20px)",
+                border: "1px solid rgba(226, 232, 240, 0.8)",
+              }}
+              bodyStyle={{ padding: "24px" }}
+            >
+              <div style={{ marginBottom: 24 }}>
+                <Button
+                  type="primary"
+                  ghost
+                  onClick={() => {
+                    setIsDetailModalOpen(false);
+                    setSelectedApp(null);
+                  }}
+                  style={{ borderRadius: 8 }}
+                >
+                  ← Quay lại danh sách hồ sơ ứng tuyển
+                </Button>
+              </div>
+              {parsed ? (
+                <AiDetailedTabs parsedAnalysis={parsed} />
+              ) : (
+                <div style={{ textAlign: "center", padding: "60px 0" }}>
+                  <Spin tip="Đang đọc kết quả đánh giá hồ sơ..." />
+                </div>
+              )}
+            </Card>
+          </div>
+        </div>
+      </PageContainer>
+    );
+  }
 
   return (
     <PageContainer title="" subtitle="">
@@ -292,7 +501,7 @@ export default function ApplicationStatusPage() {
                     fontSize: 22,
                   }}
                 >
-                  <RobotOutlined />
+                  <AiCoreIcon size={24} style={{ filter: "brightness(0.9)" }} />
                 </div>
                 <div>
                   <Text type="secondary" style={{ fontSize: 13, fontWeight: 500, display: "block", marginBottom: 2 }}>
@@ -464,7 +673,7 @@ export default function ApplicationStatusPage() {
                         }}
                       >
                         {error ? (
-                          <RobotOutlined />
+                          <AiCoreIcon size={20} />
                         ) : ready ? (
                           <FileDoneOutlined />
                         ) : (
@@ -480,12 +689,20 @@ export default function ApplicationStatusPage() {
                             fontSize: "17px",
                             color: "#0F172A",
                             display: "block",
-                            marginBottom: 8,
+                            marginBottom: 4,
                             fontWeight: 650,
                           }}
                         >
                           {record.jobTitle || "Chưa cập nhật vị trí"}
                         </Text>
+                        <Button
+                          type="link"
+                          size="small"
+                          onClick={() => navigate(`/jobs/${record.jobId}`)}
+                          style={{ padding: 0, height: "auto", display: "block", marginBottom: 12, textAlign: "left", fontSize: "14px" }}
+                        >
+                          Xem chi tiết tin tuyển dụng
+                        </Button>
                         <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
                           <Text
                             type="secondary"
@@ -497,6 +714,29 @@ export default function ApplicationStatusPage() {
                               ? new Date(record.appliedAt).toLocaleDateString("vi-VN")
                               : "Chưa có thời gian"}
                           </Text>
+
+                          {/* HR status pill tag */}
+                          {(() => {
+                            const statusInfo = getApplicationStatusLabel(record.status);
+                            return (
+                              <span
+                                style={{
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: 6,
+                                  padding: "4px 10px",
+                                  borderRadius: "8px",
+                                  fontSize: "13px",
+                                  fontWeight: 550,
+                                  background: statusInfo.bg,
+                                  color: statusInfo.color,
+                                  border: statusInfo.border,
+                                }}
+                              >
+                                {statusInfo.text}
+                              </span>
+                            );
+                          })()}
 
                           {/* Status pill tag */}
                           {error ? (
@@ -554,6 +794,29 @@ export default function ApplicationStatusPage() {
                               AI đang đối sánh...
                             </span>
                           )}
+                        </div>
+                        {record.status?.toLowerCase() === "interview" && (
+                          <InterviewScheduleWidget applicationId={recordId} />
+                        )}
+
+                        <div style={{ marginTop: 24, paddingTop: 16, borderTop: "1px solid #F1F5F9" }}>
+                          <Steps
+                            size="small"
+                            current={(() => {
+                              const st = record.status?.toLowerCase();
+                              if (st === "offer" || st === "accepted") return 3;
+                              if (st === "interview" || st === "interviewing") return 2;
+                              if (st === "reviewed" || st === "reviewing" || st === "shortlisted") return 1;
+                              return 0;
+                            })()}
+                            status={record.status?.toLowerCase() === "rejected" ? "error" : "process"}
+                            items={[
+                              { title: "Nộp hồ sơ" },
+                              { title: "Lọc AI & HR" },
+                              { title: "Phỏng vấn" },
+                              { title: "Nhận việc" },
+                            ]}
+                          />
                         </div>
                       </div>
                     </div>
@@ -684,30 +947,6 @@ export default function ApplicationStatusPage() {
         </div>
       </div>
 
-      <Drawer
-        title={
-          <Title level={4} style={{ margin: 0, fontSize: 20, color: "#0F172A", fontWeight: 700 }}>
-            Báo cáo phân tích chi tiết từ AI
-          </Title>
-        }
-        placement="right"
-        onClose={() => {
-          setIsDetailModalOpen(false);
-          setSelectedApp(null);
-        }}
-        open={isDetailModalOpen}
-        width={750}
-        headerStyle={{ borderBottom: "1px solid #F1F5F9", padding: "16px 24px" }}
-        bodyStyle={{ padding: 24 }}
-      >
-        {parsed ? (
-          <AiDetailedTabs parsedAnalysis={parsed} />
-        ) : (
-          <div style={{ textAlign: "center", padding: "60px 0" }}>
-            <Spin tip="Đang đọc kết quả đánh giá hồ sơ..." />
-          </div>
-        )}
-      </Drawer>
     </PageContainer>
   );
 }

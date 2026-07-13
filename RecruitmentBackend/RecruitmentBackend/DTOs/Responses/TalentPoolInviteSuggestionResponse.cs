@@ -1,4 +1,4 @@
-﻿namespace RecruitmentBackend.DTOs.Responses
+namespace RecruitmentBackend.DTOs.Responses
 {
     public class TalentPoolInviteSuggestionResponse
     {
@@ -22,5 +22,9 @@
         public int MatchScore { get; set; }
 
         public string Reason { get; set; }
+
+        public string SalaryRange { get; set; }
+
+        public string Deadline { get; set; }
     }
 }

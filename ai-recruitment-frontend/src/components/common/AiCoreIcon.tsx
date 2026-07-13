@@ -1,0 +1,70 @@
+import React from "react";
+
+interface AiCoreIconProps {
+  size?: number;
+  style?: React.CSSProperties;
+  className?: string;
+  spin?: boolean;
+}
+
+export const AiCoreIcon: React.FC<AiCoreIconProps> = ({
+  size = 24,
+  style,
+  className,
+  spin = false,
+}) => {
+  const spinStyle: React.CSSProperties = spin
+    ? {
+        animation: "saas-icon-spin 2s linear infinite",
+        transformOrigin: "center",
+      }
+    : {};
+
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      style={{ ...spinStyle, ...style }}
+      className={className}
+    >
+      <defs>
+        <linearGradient id="saasGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#2563EB" />
+          <stop offset="50%" stopColor="#3B82F6" />
+          <stop offset="100%" stopColor="#10B981" />
+        </linearGradient>
+        <style>{`
+          @keyframes saas-icon-spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+          }
+        `}</style>
+      </defs>
+      <path
+        d="M12 2.5L4 7v10l8 4.5 8-4.5V7l-8-4.5z"
+        stroke="url(#saasGrad)"
+        strokeWidth="2"
+        strokeLinejoin="round"
+        fill="none"
+      />
+      <path
+        d="M12 7.5L7.5 10v4l4.5 2.5 4.5-2.5v-4L12 7.5z"
+        fill="url(#saasGrad)"
+        opacity="0.15"
+      />
+      <path
+        d="M12 7.5L7.5 10v4l4.5 2.5 4.5-2.5v-4L12 7.5z"
+        stroke="url(#saasGrad)"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+        fill="none"
+      />
+      <circle cx="12" cy="12" r="2" fill="url(#saasGrad)" />
+    </svg>
+  );
+};
+
+export default AiCoreIcon;

@@ -17,13 +17,16 @@ function LoginPage() {
       const response = await authService.login(values);
       messageApi.success("Đăng nhập thành công! Đang chuyển vào hệ thống...");
 
+      const queryParams = new URLSearchParams(window.location.search);
+      const redirectUrl = queryParams.get("redirect");
+
       // Kiểm tra Vai trò (Role) do Backend trả về để điều hướng cho đúng
       if (response.role === "Admin") {
-        navigate("/admin/dashboard");
+        navigate(redirectUrl || "/admin/dashboard");
       } else if (response.role === "Recruiter") {
-        navigate("/recruiter/dashboard");
+        navigate(redirectUrl || "/recruiter/dashboard");
       } else {
-        navigate("/"); // Trở về trang chủ nếu là Candidate
+        navigate(redirectUrl || "/"); // Trở về trang chủ nếu là Candidate
       }
     } catch (error: any) {
       console.error("Lỗi đăng nhập:", error);

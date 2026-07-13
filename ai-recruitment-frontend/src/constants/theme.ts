@@ -18,7 +18,7 @@ export const appTheme = {
   },
 
   font: {
-    family: `'Inter', 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif`,
+    family: `'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif`,
     size: 15,
     sizeSm: 13,
     sizeLg: 17,

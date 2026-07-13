@@ -15,11 +15,12 @@ namespace RecruitmentBackend.Services
     {
         private readonly HttpClient _httpClient;
 
-        public AiService(HttpClient httpClient)
+        public AiService(HttpClient httpClient, Microsoft.Extensions.Configuration.IConfiguration configuration)
         {
-            // Cấu hình base URL trỏ tới FastAPI của Python
             _httpClient = httpClient;
-            _httpClient.BaseAddress = new Uri("http://127.0.0.1:8000/");
+            string apiBase = configuration["PythonAiApiUrl"] ?? "http://127.0.0.1:8000";
+            if (!apiBase.EndsWith("/")) apiBase += "/";
+            _httpClient.BaseAddress = new Uri(apiBase);
         }
 
         public async Task<AiMatchingResponse> GetMatchingScoreAsync(IFormFile cvFile, string jobDescription, string criteriaJson)
@@ -143,6 +144,39 @@ namespace RecruitmentBackend.Services
                 return "{\"rules\":[]}";
             }
 
+            return await response.Content.ReadAsStringAsync();
+        }
+
+        public async Task<bool> TrainHuimAsync(object payload)
+        {
+            var jsonContent = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
+            var response = await _httpClient.PostAsync("train-huim", jsonContent);
+            return response.IsSuccessStatusCode;
+        }
+
+        public async Task<string> RecommendHighUtilitySkillsAsync(List<string> currentSkills, int topN = 5)
+        {
+            var payload = new
+            {
+                current_skills = currentSkills,
+                top_n = topN
+            };
+            var jsonContent = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
+            var response = await _httpClient.PostAsync("recommend-high-utility-skills", jsonContent);
+            if (response.IsSuccessStatusCode == false)
+            {
+                return "{\"recommended_skills\":[]}";
+            }
+            return await response.Content.ReadAsStringAsync();
+        }
+
+        public async Task<string> GetHighUtilityItemsetsJsonAsync()
+        {
+            var response = await _httpClient.GetAsync("high-utility-itemsets");
+            if (response.IsSuccessStatusCode == false)
+            {
+                return "{\"itemsets\":[]}";
+            }
             return await response.Content.ReadAsStringAsync();
         }
     }
