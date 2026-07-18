@@ -15,7 +15,7 @@ import CreateJobPage from "./pages/recruiter/CreateJobPage";
 import RecruiterDashboardPage from "./pages/recruiter/RecruiterDashboardPage";
 import CandidateDetailPage from "./pages/recruiter/CandidateDetailPage";
 import ApplicationManagementPage from "./pages/recruiter/ApplicationManagementPage";
-import CVRankingPage from "./pages/recruiter/CVRankingPage";
+import CandidateComparisonPage from "./pages/recruiter/CandidateComparisonPage";
 import EmailCandidatePage from "./pages/recruiter/EmailCandidatePage";
 import TalentPoolPage from "./pages/recruiter/TalentPoolPage";
 import TalentPoolDetailPage from "./pages/recruiter/TalentPoolDetailPage";
@@ -68,7 +68,8 @@ function App() {
           <Route path="applications" element={<ApplicationManagementPage />} />
           <Route path="candidates/:id" element={<CandidateDetailPage />} />
           <Route path="candidates/:id/email" element={<EmailCandidatePage />} />
-          <Route path="ranking" element={<CVRankingPage />} />
+          <Route path="ranking" element={<Navigate to="/recruiter/applications" replace />} />
+          <Route path="ranking/compare" element={<CandidateComparisonPage />} />
           <Route path="talent-pool" element={<TalentPoolPage />} />
           <Route path="talent-pool/:id" element={<TalentPoolDetailPage />} />
         </Route>

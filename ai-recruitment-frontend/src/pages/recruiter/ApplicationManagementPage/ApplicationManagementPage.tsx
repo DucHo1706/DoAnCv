@@ -6,12 +6,16 @@ import {
   MailOutlined,
   AppstoreOutlined,
   UnorderedListOutlined,
+  TeamOutlined,
+  CloseOutlined,
+  TrophyOutlined,
 } from "@ant-design/icons";
 import {
   Button,
   Card,
   Col,
   Drawer,
+  Empty,
   Row,
   Space,
   Table,
@@ -25,7 +29,9 @@ import {
   Modal,
   Input,
   message,
+  Tooltip,
 } from "antd";
+import type { TableProps } from "antd";
 import React from "react";
 import PageContainer from "../../../components/common/PageContainer";
 import StatCard from "../../../components/common/StatCard";
@@ -35,13 +41,41 @@ import type { ApplicationDto } from "../../../services/recruitmentService";
 
 const { Paragraph, Text, Title } = Typography;
 
+function renderAiDataStatusTag(application: ApplicationDto) {
+  let color = "default";
+  let label = "";
+
+  if (application.aiDataStatus === "partial") {
+    color = "gold";
+    label = "AI chưa đầy đủ";
+  } else if (application.aiDataStatus === "missing") {
+    label = "Chưa phân tích AI";
+  } else if (application.aiDataStatus === "error") {
+    color = "red";
+    label = "AI xử lý lỗi";
+  } else if (application.aiDataStatus === "invalid") {
+    color = "orange";
+    label = "Dữ liệu AI không hợp lệ";
+  }
+
+  if (label.length === 0) {
+    return null;
+  }
+
+  return (
+    <Tooltip title={application.aiDataMessage || label}>
+      <Tag color={color}>{label}</Tag>
+    </Tooltip>
+  );
+}
+
 export default function ApplicationManagementPage() {
   const {
     navigate,
     setApplications,
     jobs,
     selectedJobId,
-    setSelectedJobId,
+    handleSelectedJobChange,
     searchQuery,
     setSearchQuery,
     filterClassification,
@@ -71,6 +105,19 @@ export default function ApplicationManagementPage() {
     handleDrop,
     rejectTargetApplication,
     setRejectTargetApplication,
+    rankingError,
+    rankingCandidateCount,
+    eligibleComparisonCandidateCount,
+    selectedSortType,
+    selectedCriterion,
+    setSelectedCriterion,
+    availableCriteria,
+    handleSortTypeChange,
+    selectionMode,
+    selectedApplicationIds,
+    setSelectedApplicationIds,
+    handleEnableSelection,
+    handleCancelSelection,
   } = useApplicationManagement();
 
   // Helper to parse AI reason JSON
@@ -97,7 +144,7 @@ export default function ApplicationManagementPage() {
     return parseSkills(value);
   };
 
-  const columns = [
+  const columns: NonNullable<TableProps<ApplicationDto>["columns"]> = [
     {
       title: "Ứng viên",
       dataIndex: "candidateName",
@@ -138,20 +185,37 @@ export default function ApplicationManagementPage() {
       dataIndex: "aiScore",
       key: "aiScore",
       width: 180,
-      sorter: (a: ApplicationDto, b: ApplicationDto) => a.aiScore - b.aiScore,
-      render: (score: number) => {
-        let color = "success";
-        if (score < 50) {
-          color = "error";
-        } else if (score < 75) {
-          color = "warning";
+      sorter: (a: ApplicationDto, b: ApplicationDto) => {
+        if (a.aiScore == null || b.aiScore == null) {
+          return 0;
+        }
+
+        return a.aiScore - b.aiScore;
+      },
+      render: (score: number | null, record: ApplicationDto) => {
+        let scoreTag = <Tag>Chưa có đánh giá AI</Tag>;
+
+        if (score != null) {
+          let color = "success";
+          if (score < 50) {
+            color = "error";
+          } else if (score < 75) {
+            color = "warning";
+          }
+
+          scoreTag = (
+            <Tag color={color} style={{ fontSize: "14px", padding: "4px 8px" }}>
+              <RobotOutlined style={{ marginRight: 4 }} />
+              {score}/100
+            </Tag>
+          );
         }
 
         return (
-          <Tag color={color} style={{ fontSize: "14px", padding: "4px 8px" }}>
-            <RobotOutlined style={{ marginRight: 4 }} />
-            {score}/100
-          </Tag>
+          <Space direction="vertical" size={4}>
+            {scoreTag}
+            {renderAiDataStatusTag(record)}
+          </Space>
         );
       },
     },
@@ -236,6 +300,188 @@ export default function ApplicationManagementPage() {
     },
   ];
 
+  if (selectedJobId != null) {
+    columns.unshift({
+      title: "Hạng",
+      key: "rank",
+      width: 120,
+      render: (_: any, record: ApplicationDto) => {
+        let rank = record.overallRank;
+        if (selectedSortType === "criterion") {
+          rank = record.selectedCriterionRank;
+        }
+
+        if (rank == null) {
+          return <Tag>Chưa xếp hạng</Tag>;
+        }
+
+        if (rank === 1) {
+          return <Tag color="gold"><TrophyOutlined /> Hạng 1</Tag>;
+        }
+
+        if (rank === 2) {
+          return <Tag color="default">Hạng 2</Tag>;
+        }
+
+        if (rank === 3) {
+          return <Tag color="orange">Hạng 3</Tag>;
+        }
+
+        return <Tag>#{rank}</Tag>;
+      },
+    });
+
+    if (selectedSortType === "criterion" && selectedCriterion != null) {
+      columns.splice(4, 0, {
+        title: selectedCriterion,
+        key: "selectedCriterionScore",
+        width: 170,
+        render: (_: any, record: ApplicationDto) => {
+          const criterionResult = record.criteriaResults?.find(
+            (criterion) =>
+              (criterion.criterionName || criterion.criterion_name || "").toLowerCase() ===
+              selectedCriterion.toLowerCase()
+          );
+
+          const maxScore = criterionResult?.maxScore ?? criterionResult?.max_score ?? 0;
+
+          if (
+            criterionResult == null ||
+            criterionResult.score == null ||
+            criterionResult.hasData === false ||
+            maxScore <= 0
+          ) {
+            return <Text type="secondary">Chưa có dữ liệu</Text>;
+          }
+
+          return <Tag color="blue">{criterionResult.score}/{maxScore}</Tag>;
+        },
+      });
+    }
+  }
+
+  const isEligibleForComparison = (application: ApplicationDto) => {
+    if (application.aiDataStatus === "ready") {
+      return true;
+    }
+
+    if (application.aiDataStatus !== "partial") {
+      return false;
+    }
+
+    if (application.aiScore != null) {
+      return true;
+    }
+
+    return (
+      application.criteriaResults?.some((criterion) => {
+        const maxScore = criterion.maxScore ?? criterion.max_score ?? 0;
+        return (
+          criterion.hasData === true &&
+          criterion.score != null &&
+          maxScore > 0
+        );
+      }) === true
+    );
+  };
+
+  const getIneligibleComparisonReason = (application: ApplicationDto): string => {
+    if (application.aiDataStatus === "partial") {
+      return "Dữ liệu AI chưa đầy đủ và chưa có điểm tổng hoặc tiêu chí hợp lệ để so sánh.";
+    }
+
+    if (application.aiDataStatus === "missing") {
+      return "Hồ sơ chưa được AI phân tích.";
+    }
+
+    if (application.aiDataStatus === "error") {
+      return "Không thể lấy kết quả phân tích AI. Vui lòng thử đánh giá lại.";
+    }
+
+    if (application.aiDataStatus === "invalid") {
+      return "Dữ liệu phân tích AI không hợp lệ.";
+    }
+
+    return application.aiDataMessage || "Hồ sơ chưa có đủ dữ liệu AI để so sánh.";
+  };
+
+  const rowSelection: TableProps<ApplicationDto>["rowSelection"] = selectionMode
+    ? {
+        selectedRowKeys: selectedApplicationIds,
+        onChange: (selectedRowKeys: React.Key[]) => {
+          const normalizedIds = selectedRowKeys.map((key) => String(key));
+          if (normalizedIds.length > 4) {
+            message.warning("Chỉ được chọn tối đa bốn ứng viên.");
+            return;
+          }
+
+          setSelectedApplicationIds(normalizedIds);
+        },
+        getCheckboxProps: (application: ApplicationDto) => {
+          const isSelected = selectedApplicationIds.includes(application.id);
+          const reachedLimit = selectedApplicationIds.length >= 4 && isSelected === false;
+          const isEligible = isEligibleForComparison(application);
+
+          let disabledReason: string | undefined;
+          if (isEligible === false) {
+            disabledReason = getIneligibleComparisonReason(application);
+          } else if (reachedLimit) {
+            disabledReason = "Chỉ được chọn tối đa bốn ứng viên.";
+          }
+
+          return {
+            disabled: isEligible === false || reachedLimit,
+            title: disabledReason,
+          };
+        },
+      }
+    : undefined;
+
+  const handleCompareCandidates = () => {
+    if (selectedJobId == null || selectedApplicationIds.length < 2) {
+      return;
+    }
+
+    const encodedJobId = encodeURIComponent(selectedJobId);
+    const encodedApplicationIds = selectedApplicationIds
+      .map((applicationId) => encodeURIComponent(applicationId))
+      .join(",");
+
+    navigate(
+      `/recruiter/ranking/compare?jobId=${encodedJobId}&applicationIds=${encodedApplicationIds}`
+    );
+  };
+
+  const getSelectionDisabledReason = (): string | undefined => {
+    if (selectedJobId == null) {
+      return "Vui lòng chọn một công việc cụ thể trước.";
+    }
+
+    if (rankingCandidateCount < 2) {
+      return "Cần ít nhất 2 ứng viên để thực hiện so sánh.";
+    }
+
+    if (eligibleComparisonCandidateCount < 2) {
+      return "Cần ít nhất 2 ứng viên có dữ liệu AI sử dụng được để thực hiện so sánh.";
+    }
+
+    return undefined;
+  };
+
+  const getEmptyDescription = (): string => {
+    if (searchQuery.trim().length > 0 || filterClassification != null) {
+      return "Không tìm thấy hồ sơ phù hợp với bộ lọc hiện tại.";
+    }
+
+    if (selectedJobId != null) {
+      return "Chưa có ứng viên nào ứng tuyển vào công việc này.";
+    }
+
+    return "Chưa có hồ sơ ứng tuyển nào.";
+  };
+
+  const selectionDisabledReason = getSelectionDisabledReason();
+
   const renderKanbanBoard = () => {
     return (
       <div style={{ display: "flex", gap: 16, overflowX: "auto", paddingBottom: 16 }}>
@@ -296,9 +542,15 @@ export default function ApplicationManagementPage() {
                         alignItems: "center",
                       }}
                     >
-                      <Tag color={app.aiScore >= 80 ? "green" : app.aiScore >= 60 ? "gold" : "red"}>
-                        AI: {app.aiScore}đ
-                      </Tag>
+                      {app.aiScore == null ? (
+                        <Tag>Chưa có điểm AI</Tag>
+                      ) : (
+                        <Tag
+                          color={app.aiScore >= 80 ? "green" : app.aiScore >= 60 ? "gold" : "red"}
+                        >
+                          AI: {app.aiScore}đ
+                        </Tag>
+                      )}
                       <Space size="small">
                         <Button
                           size="small"
@@ -353,7 +605,7 @@ export default function ApplicationManagementPage() {
         <Col xs={24} sm={8}>
           <StatCard
             title="Hồ sơ tiềm năng (>75đ)"
-            value={filteredApplications.filter((a) => a.aiScore >= 75).length}
+            value={filteredApplications.filter((a) => a.aiScore != null && a.aiScore >= 75).length}
             subtitle="AI đánh giá phù hợp cao"
           />
         </Col>
@@ -365,13 +617,13 @@ export default function ApplicationManagementPage() {
           searchValue={searchQuery}
           onSearchChange={setSearchQuery}
           extra={
-            <Space>
+            <Space wrap>
               <Select
                 placeholder="Lọc theo tin tuyển dụng..."
                 style={{ width: 280 }}
                 allowClear
                 value={selectedJobId}
-                onChange={setSelectedJobId}
+                onChange={handleSelectedJobChange}
                 showSearch
                 filterOption={(input, option) =>
                   ((option?.label as string) ?? "").toLowerCase().includes(input.toLowerCase())
@@ -403,6 +655,51 @@ export default function ApplicationManagementPage() {
                   { label: "Chưa phù hợp", value: "Chưa phù hợp" },
                 ]}
               />
+              <Select
+                aria-label="Xếp hạng theo"
+                style={{ width: 180 }}
+                value={selectedSortType}
+                disabled={selectedJobId == null}
+                onChange={handleSortTypeChange}
+                options={[
+                  { label: "Điểm tổng thể", value: "overall" },
+                  {
+                    label: "Theo tiêu chí",
+                    value: "criterion",
+                    disabled: availableCriteria.length === 0,
+                  },
+                ]}
+              />
+              {selectedSortType === "criterion" ? (
+                <Select
+                  aria-label="Chọn tiêu chí xếp hạng"
+                  placeholder="Chọn tiêu chí"
+                  style={{ width: 210 }}
+                  value={selectedCriterion}
+                  onChange={(criterionName) => {
+                    setSelectedCriterion(criterionName);
+                    setSelectedApplicationIds([]);
+                  }}
+                  options={availableCriteria.map((criterion) => ({
+                    label: `${criterion.criterionName} (${criterion.weight}%)`,
+                    value: criterion.criterionName,
+                  }))}
+                />
+              ) : null}
+              <Tooltip
+                title={selectionDisabledReason}
+              >
+                <span>
+                  <Button
+                    type="primary"
+                    icon={<TeamOutlined />}
+                    disabled={selectionDisabledReason != null || selectionMode}
+                    onClick={handleEnableSelection}
+                  >
+                    Chọn ứng viên
+                  </Button>
+                </span>
+              </Tooltip>
               <Radio.Group
                 value={viewMode}
                 onChange={(e) => setViewMode(e.target.value)}
@@ -412,22 +709,87 @@ export default function ApplicationManagementPage() {
                 <Radio.Button value="table">
                   <UnorderedListOutlined /> Bảng
                 </Radio.Button>
-                <Radio.Button value="kanban">
+                <Radio.Button value="kanban" disabled={selectionMode}>
                   <AppstoreOutlined /> Kanban
                 </Radio.Button>
               </Radio.Group>
             </Space>
           }
         />
-        {viewMode === "table" ? (
+        {rankingError.length > 0 ? (
+          <Alert
+            type="error"
+            showIcon
+            message="Không thể tải dữ liệu xếp hạng"
+            description={rankingError}
+            style={{ marginBottom: 16 }}
+          />
+        ) : null}
+        {selectedJobId != null &&
+        rankingError.length === 0 &&
+        loading === false &&
+        rankingCandidateCount === 1 ? (
+          <Alert
+            type="info"
+            showIcon
+            message="Cần ít nhất 2 ứng viên để thực hiện so sánh."
+            style={{ marginBottom: 16 }}
+          />
+        ) : null}
+        {selectionMode ? (
+          <Card
+            size="small"
+            style={{
+              marginBottom: 16,
+              border: "1px solid #E2E8F0",
+              borderRadius: 12,
+              background: "#F8FAFC",
+            }}
+          >
+            <Row gutter={[16, 12]} align="middle" justify="space-between">
+              <Col xs={24} md={8}>
+                <Text strong>Đã chọn {selectedApplicationIds.length}/4 ứng viên</Text>
+              </Col>
+              <Col xs={24} md={16} style={{ textAlign: "right" }}>
+                <Space wrap style={{ justifyContent: "flex-end", width: "100%" }}>
+                  <Button
+                    disabled={selectedApplicationIds.length === 0}
+                    onClick={() => setSelectedApplicationIds([])}
+                  >
+                    Xóa lựa chọn
+                  </Button>
+                  <Button icon={<CloseOutlined />} onClick={handleCancelSelection}>
+                    Hủy chọn
+                  </Button>
+                  <Button
+                    type="primary"
+                    icon={<TeamOutlined />}
+                    disabled={selectedApplicationIds.length < 2}
+                    onClick={handleCompareCandidates}
+                  >
+                    So sánh ứng viên
+                  </Button>
+                </Space>
+              </Col>
+            </Row>
+          </Card>
+        ) : null}
+        {rankingError.length > 0 ? null : loading === false && filteredApplications.length === 0 ? (
+          <Empty
+            description={getEmptyDescription()}
+            style={{ padding: "40px 16px" }}
+          />
+        ) : viewMode === "table" ? (
           <Table
             columns={columns}
             dataSource={filteredApplications}
             rowKey="id"
+            rowSelection={rowSelection}
             loading={loading}
             pagination={{ pageSize: 10 }}
             scroll={{ x: 1050 }}
             tableLayout="fixed"
+            locale={{ emptyText: getEmptyDescription() }}
           />
         ) : (
           renderKanbanBoard()
@@ -460,18 +822,22 @@ export default function ApplicationManagementPage() {
           <div>
             <Row gutter={[16, 16]} align="middle" style={{ marginBottom: 24, marginTop: 16 }}>
               <Col span={6} style={{ textAlign: "center" }}>
-                <Progress
-                  type="dashboard"
-                  percent={selectedApp.aiScore}
-                  strokeColor={
-                    selectedApp.aiScore >= 80
-                      ? "#52c41a"
-                      : selectedApp.aiScore >= 60
-                        ? "#faad14"
-                        : "#ff4d4f"
-                  }
-                  format={(percent) => `${percent} Điểm`}
-                />
+                {selectedApp.aiScore == null ? (
+                  <Tag>Chưa có điểm AI</Tag>
+                ) : (
+                  <Progress
+                    type="dashboard"
+                    percent={selectedApp.aiScore}
+                    strokeColor={
+                      selectedApp.aiScore >= 80
+                        ? "#52c41a"
+                        : selectedApp.aiScore >= 60
+                          ? "#faad14"
+                          : "#ff4d4f"
+                    }
+                    format={(percent) => `${percent} Điểm`}
+                  />
+                )}
               </Col>
               <Col span={18}>
                 <Title level={4} style={{ margin: 0 }}>

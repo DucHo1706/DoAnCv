@@ -85,6 +85,11 @@ function MainLayout() {
   ];
 
   const menuItems = isAdminRoute ? adminMenuItems : hrMenuItems;
+  let selectedMenuKey = location.pathname;
+
+  if (location.pathname.startsWith("/recruiter/ranking")) {
+    selectedMenuKey = "/recruiter/applications";
+  }
 
   return (
     <Layout style={{ minHeight: "100vh" }}>
@@ -101,7 +106,7 @@ function MainLayout() {
         </div>
         <Menu
           mode="inline"
-          selectedKeys={[location.pathname]}
+          selectedKeys={[selectedMenuKey]}
           items={menuItems}
           style={{ borderRight: 0 }}
         />
