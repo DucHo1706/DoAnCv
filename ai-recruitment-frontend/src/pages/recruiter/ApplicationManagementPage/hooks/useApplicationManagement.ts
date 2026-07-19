@@ -455,22 +455,9 @@ export function useApplicationManagement() {
       const matchesClassification = filterClassification
         ? app.classification === filterClassification
         : true;
-<<<<<<< HEAD
-      const matchesSkill = searchSkill
-        ? (Array.isArray(app.matchedSkills) ? app.matchedSkills.join(",") : (app.matchedSkills || "")).toLowerCase().includes(searchSkill.toLowerCase()) ||
-          (Array.isArray(app.missingSkills) ? app.missingSkills.join(",") : (app.missingSkills || "")).toLowerCase().includes(searchSkill.toLowerCase())
-        : true;
-      const matchesMinScore = minScore !== null
-        ? app.aiScore >= minScore
-        : true;
-      return matchesJob && matchesSearch && matchesClassification && matchesSkill && matchesMinScore;
-    });
-  }, [applications, selectedJobId, searchQuery, filterClassification, searchSkill, minScore]);
-=======
       return matchesSearch && matchesClassification;
     });
   }, [applications, rankingApplications, selectedJobId, searchQuery, filterClassification]);
->>>>>>> feature/candidate-ranking-comparison
 
   useEffect(() => {
     const groupedData: Record<string, ApplicationDto[]> = {};
@@ -565,20 +552,12 @@ export function useApplicationManagement() {
     setSearchQuery,
     filterClassification,
     setFilterClassification,
-<<<<<<< HEAD
-    searchSkill,
-    setSearchSkill,
-    minScore,
-    setMinScore,
-    loading,
-=======
     loading: loading || rankingLoading,
     rankingError,
     rankingCandidateCount: rankingCandidates.length,
     eligibleComparisonCandidateCount: rankingCandidates.filter(
       isCandidateEligibleForComparison
     ).length,
->>>>>>> feature/candidate-ranking-comparison
     isModalOpen,
     setIsModalOpen,
     selectedApp,
@@ -606,24 +585,22 @@ export function useApplicationManagement() {
     setRejectTargetApplication,
     getStageLabelByStatus,
     getStatusByStageLabel,
-<<<<<<< HEAD
     scheduleModalOpen,
     setScheduleModalOpen,
     scheduleTargetApplication,
     scheduleSubmitting,
     openScheduleModal,
     handleConfirmSchedule,
-=======
     selectedSortType,
     selectedCriterion,
     setSelectedCriterion,
     availableCriteria,
     handleSortTypeChange,
     selectionMode,
+    setSelectionMode,
     selectedApplicationIds,
     setSelectedApplicationIds,
     handleEnableSelection,
     handleCancelSelection,
->>>>>>> feature/candidate-ranking-comparison
   };
 }

@@ -497,8 +497,6 @@ function CVRankingPage() {
           </Card>
         </Col>
       </Row>
-        </Col>
-      </Row>
 
       <Card style={cardStyle} bodyStyle={{ padding: appTheme.spacing.lg }}>
         <TableToolbar

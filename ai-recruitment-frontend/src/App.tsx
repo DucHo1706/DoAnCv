@@ -27,7 +27,6 @@ import HomePage from "./pages/recruiter/HomePage";
 import AboutPage from "./pages/candidate/AboutPage";
 import RecruiterProfilePage from "./pages/recruiter/RecruiterProfilePage";
 import RecruiterJobDetailPage from "./pages/recruiter/RecruiterJobDetailPage";
-import CandidateComparisonPage from "./pages/recruiter/CandidateComparisonPage";
 
 // Candidate pages
 import CandidateJobPage from "./pages/candidate/CandidateJobPage";
