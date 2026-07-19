@@ -6,6 +6,14 @@ import { recruitmentService } from "../../../../services/recruitmentService";
 import type { ApplicationDto } from "../../../../services/recruitmentService";
 import { jobService } from "../../../../services/jobService";
 import type { JobDto } from "../../../../services/jobService";
+import {
+  candidateComparisonService,
+  getCandidateComparisonErrorMessage,
+  isCandidateEligibleForComparison,
+  type CandidateCriterionDefinition,
+  type CandidateRankingItem,
+  type CandidateRankingSortType,
+} from "../../../../services/candidateComparisonService";
 
 export function useApplicationManagement() {
   const navigate = useNavigate();
@@ -23,6 +31,15 @@ export function useApplicationManagement() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedApp, setSelectedApp] = useState<ApplicationDto | null>(null);
   const [viewMode, setViewMode] = useState<"table" | "kanban">("table");
+  const [selectedSortType, setSelectedSortType] =
+    useState<CandidateRankingSortType>("overall");
+  const [selectedCriterion, setSelectedCriterion] = useState<string | null>(null);
+  const [availableCriteria, setAvailableCriteria] = useState<CandidateCriterionDefinition[]>([]);
+  const [rankingCandidates, setRankingCandidates] = useState<CandidateRankingItem[]>([]);
+  const [rankingLoading, setRankingLoading] = useState(false);
+  const [rankingError, setRankingError] = useState("");
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedApplicationIds, setSelectedApplicationIds] = useState<string[]>([]);
 
   const applicationStatusStages = [
     { status: "Applied", label: "Mới nộp" },
@@ -260,6 +277,125 @@ export function useApplicationManagement() {
     };
   }, []);
 
+  useEffect(() => {
+    if (selectedJobId == null) {
+      setRankingCandidates([]);
+      setAvailableCriteria([]);
+      setRankingError("");
+      return;
+    }
+
+    if (selectedSortType === "criterion" && selectedCriterion == null) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(async () => {
+      try {
+        setRankingLoading(true);
+        setRankingError("");
+
+        const query: {
+          sortBy: CandidateRankingSortType;
+          criterionName?: string;
+          search?: string;
+        } = {
+          sortBy: selectedSortType,
+        };
+
+        if (selectedSortType === "criterion" && selectedCriterion != null) {
+          query.criterionName = selectedCriterion;
+        }
+
+        if (searchQuery.trim().length > 0) {
+          query.search = searchQuery.trim();
+        }
+
+        const response = await candidateComparisonService.getCandidateRankings(
+          selectedJobId,
+          query
+        );
+
+        setRankingCandidates(response.candidates);
+        setAvailableCriteria(response.availableCriteria);
+        setSelectedApplicationIds((previousApplicationIds) =>
+          previousApplicationIds.filter((applicationId) =>
+            response.candidates.some(
+              (candidate) =>
+                candidate.applicationId === applicationId &&
+                isCandidateEligibleForComparison(candidate)
+            )
+          )
+        );
+      } catch (error: unknown) {
+        const errorMessage = getCandidateComparisonErrorMessage(
+          error,
+          "Không thể tải dữ liệu xếp hạng ứng viên."
+        );
+        setRankingCandidates([]);
+        setAvailableCriteria([]);
+        setRankingError(errorMessage);
+      } finally {
+        setRankingLoading(false);
+      }
+    }, 350);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [selectedJobId, selectedSortType, selectedCriterion, searchQuery]);
+
+  const handleSelectedJobChange = (jobId: string | null | undefined) => {
+    setSelectedJobId(jobId || null);
+    setRankingCandidates([]);
+    setAvailableCriteria([]);
+    setRankingError("");
+    setSelectedSortType("overall");
+    setSelectedCriterion(null);
+    setSelectedApplicationIds([]);
+    setSelectionMode(false);
+  };
+
+  const handleSortTypeChange = (sortType: CandidateRankingSortType) => {
+    setSelectedSortType(sortType);
+    setSelectedApplicationIds([]);
+
+    if (sortType === "overall") {
+      setSelectedCriterion(null);
+      return;
+    }
+
+    if (selectedCriterion == null && availableCriteria.length > 0) {
+      setSelectedCriterion(availableCriteria[0].criterionName);
+    }
+  };
+
+  const handleEnableSelection = () => {
+    if (selectedJobId == null) {
+      message.info("Vui lòng chọn một công việc trước khi chọn ứng viên.");
+      return;
+    }
+
+    if (rankingCandidates.length < 2) {
+      message.info("Cần ít nhất 2 ứng viên để thực hiện so sánh.");
+      return;
+    }
+
+    const eligibleCandidateCount = rankingCandidates.filter(
+      isCandidateEligibleForComparison
+    ).length;
+    if (eligibleCandidateCount < 2) {
+      message.info("Cần ít nhất 2 ứng viên có dữ liệu AI sử dụng được để thực hiện so sánh.");
+      return;
+    }
+
+    setSelectedApplicationIds([]);
+    setSelectionMode(true);
+    setViewMode("table");
+  };
+
+  const handleCancelSelection = () => {
+    setSelectedApplicationIds([]);
+    setSelectionMode(false);
+  };
+
   const handleViewDetail = (record: ApplicationDto) => {
     setSelectedApp(record);
     setIsModalOpen(true);
@@ -276,16 +412,50 @@ export function useApplicationManagement() {
     }
   };
 
+  const rankingApplications = useMemo(() => {
+    return rankingCandidates.map((candidate) => {
+      const existingApplication = applications.find(
+        (application) => application.id === candidate.applicationId
+      );
+
+      return {
+        id: candidate.applicationId,
+        candidateId: candidate.candidateId,
+        jobId: candidate.jobId,
+        jobTitle: candidate.jobTitle,
+        candidateName: candidate.candidateName,
+        email: candidate.candidateEmail,
+        phone: candidate.candidatePhone,
+        cvUrl: candidate.cvUrl,
+        aiScore: candidate.aiScore as number,
+        aiReason: candidate.summary,
+        matchedSkills: candidate.matchedSkills,
+        missingSkills: candidate.missingSkills,
+        classification: candidate.classification,
+        criteriaResults: candidate.criteriaResults as ApplicationDto["criteriaResults"],
+        status: existingApplication?.status || candidate.applicationStatus,
+        appliedAt: candidate.appliedAt,
+        overallRank: candidate.overallRank,
+        selectedCriterionRank: candidate.selectedCriterionRank,
+        aiDataStatus: candidate.aiDataStatus,
+        aiDataMessage: candidate.aiDataMessage,
+      };
+    });
+  }, [applications, rankingCandidates]);
+
   const filteredApplications = useMemo(() => {
-    return applications.filter((app) => {
-      const matchesJob = selectedJobId ? app.jobId === selectedJobId : true;
+    const sourceApplications = selectedJobId == null ? applications : rankingApplications;
+
+    return sourceApplications.filter((app) => {
       const matchesSearch = searchQuery
-        ? (app.candidateName || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+        ? selectedJobId != null ||
+          (app.candidateName || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
           (app.email || "").toLowerCase().includes(searchQuery.toLowerCase())
         : true;
       const matchesClassification = filterClassification
         ? app.classification === filterClassification
         : true;
+<<<<<<< HEAD
       const matchesSkill = searchSkill
         ? (Array.isArray(app.matchedSkills) ? app.matchedSkills.join(",") : (app.matchedSkills || "")).toLowerCase().includes(searchSkill.toLowerCase()) ||
           (Array.isArray(app.missingSkills) ? app.missingSkills.join(",") : (app.missingSkills || "")).toLowerCase().includes(searchSkill.toLowerCase())
@@ -296,6 +466,11 @@ export function useApplicationManagement() {
       return matchesJob && matchesSearch && matchesClassification && matchesSkill && matchesMinScore;
     });
   }, [applications, selectedJobId, searchQuery, filterClassification, searchSkill, minScore]);
+=======
+      return matchesSearch && matchesClassification;
+    });
+  }, [applications, rankingApplications, selectedJobId, searchQuery, filterClassification]);
+>>>>>>> feature/candidate-ranking-comparison
 
   useEffect(() => {
     const groupedData: Record<string, ApplicationDto[]> = {};
@@ -385,15 +560,25 @@ export function useApplicationManagement() {
     jobsWithStats,
     selectedJobId,
     setSelectedJobId,
+    handleSelectedJobChange,
     searchQuery,
     setSearchQuery,
     filterClassification,
     setFilterClassification,
+<<<<<<< HEAD
     searchSkill,
     setSearchSkill,
     minScore,
     setMinScore,
     loading,
+=======
+    loading: loading || rankingLoading,
+    rankingError,
+    rankingCandidateCount: rankingCandidates.length,
+    eligibleComparisonCandidateCount: rankingCandidates.filter(
+      isCandidateEligibleForComparison
+    ).length,
+>>>>>>> feature/candidate-ranking-comparison
     isModalOpen,
     setIsModalOpen,
     selectedApp,
@@ -421,11 +606,24 @@ export function useApplicationManagement() {
     setRejectTargetApplication,
     getStageLabelByStatus,
     getStatusByStageLabel,
+<<<<<<< HEAD
     scheduleModalOpen,
     setScheduleModalOpen,
     scheduleTargetApplication,
     scheduleSubmitting,
     openScheduleModal,
     handleConfirmSchedule,
+=======
+    selectedSortType,
+    selectedCriterion,
+    setSelectedCriterion,
+    availableCriteria,
+    handleSortTypeChange,
+    selectionMode,
+    selectedApplicationIds,
+    setSelectedApplicationIds,
+    handleEnableSelection,
+    handleCancelSelection,
+>>>>>>> feature/candidate-ranking-comparison
   };
 }

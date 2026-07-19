@@ -34,10 +34,11 @@ export interface CriteriaResultDto {
   criterion_name?: string;
   criterionName?: string;
   weight: number;
-  score: number;
+  score: number | null;
   max_score?: number;
   maxScore?: number;
   comment: string;
+  hasData?: boolean;
 }
 
 export interface ApplicationDto {
@@ -56,6 +57,11 @@ export interface ApplicationDto {
   criteriaResults?: CriteriaResultDto[];
   status?: string;
   appliedAt?: string;
+  candidateId?: string;
+  overallRank?: number | null;
+  selectedCriterionRank?: number | null;
+  aiDataStatus?: "ready" | "partial" | "missing" | "error" | "invalid";
+  aiDataMessage?: string;
 }
 
 export interface RejectApplicationRequest {

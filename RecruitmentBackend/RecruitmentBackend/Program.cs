@@ -91,6 +91,7 @@ builder.Services.AddScoped<ITalentPoolService, TalentPoolService>();
 builder.Services.AddScoped<IAprioriService, AprioriService>();
 builder.Services.AddScoped<IHighUtilityService, HighUtilityService>();
 builder.Services.AddHostedService<MiningSchedulerService>();
+builder.Services.AddScoped<ICandidateComparisonService, CandidateComparisonService>();
 
 
 var jwtSettings = builder.Configuration.GetSection("Jwt");
