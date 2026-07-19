@@ -309,7 +309,7 @@ function CategoryManagementPage() {
 
                   <Popconfirm
                     title={selectedCategory.isActive ? "Khóa mục này?" : "Mở khóa mục này?"}
-                    onConfirm={() => handleToggleStatus(selectedId)}
+                    onConfirm={() => handleToggleStatus(selectedId!)}
                   >
                     <Button
                       icon={selectedCategory.isActive ? <LockOutlined /> : <UnlockOutlined />}
@@ -325,7 +325,7 @@ function CategoryManagementPage() {
                   </Popconfirm>
                   <Popconfirm
                     title="Bạn có chắc chắn muốn xóa danh mục này?"
-                    onConfirm={() => handleDelete(selectedId)}
+                    onConfirm={() => handleDelete(selectedId!)}
                   >
                     <Button danger icon={<DeleteOutlined />}>
                       Xóa

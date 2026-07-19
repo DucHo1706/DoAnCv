@@ -48,6 +48,8 @@ export interface CreateJobPayload {
   startDate?: string | null;
   deadline?: string | null;
   maxCandidates?: number | null;
+  categoryId?: string | null;
+  jobLevelId?: string | null;
   criteria: JobCriterionPayload[];
 }
 
