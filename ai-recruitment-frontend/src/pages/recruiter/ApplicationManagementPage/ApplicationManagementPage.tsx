@@ -367,6 +367,7 @@ export default function ApplicationManagementPage() {
       title: "Điểm AI Đánh giá",
       dataIndex: "aiScore",
       key: "aiScore",
+      width: 180,
       sorter: (a: ApplicationDto, b: ApplicationDto) => {
         if (a.aiScore == null) return -1;
         if (b.aiScore == null) return 1;

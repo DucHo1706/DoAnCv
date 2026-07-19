@@ -15,7 +15,7 @@ type ComparisonQuery = {
 export function useCandidateComparison() {
   const [searchParams] = useSearchParams();
   const jobIdParam = searchParams.get("jobId") || "";
-  const applicationIdsParam = searchParams.get("applicationIds") || "";
+  const applicationIdsParam = searchParams.get("applicationIds") || searchParams.get("ids") || "";
   const [comparisonData, setComparisonData] = useState<CandidateComparisonResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
