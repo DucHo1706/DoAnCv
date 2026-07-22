@@ -6,9 +6,9 @@ import {
   type CandidateCriterionResult,
   type CandidateRankingItem,
   type CandidateRankingSortType,
-} from "../../../services/candidateComparisonService";
-import { jobService, type JobDto } from "../../../services/jobService";
-import { recruitmentService, type ApplicationDto } from "../../../services/recruitmentService";
+} from "../../../../services/candidateComparisonService";
+import { jobService, type JobDto } from "../../../../services/jobService";
+import { recruitmentService, type ApplicationDto } from "../../../../services/recruitmentService";
 
 export function useCVRanking() {
   const navigate = useNavigate();
@@ -227,11 +227,11 @@ function mapApplicationsToRankingItems(
 ): CandidateRankingItem[] {
   return applications
     .slice()
-    .sort((a, b) => (b.aiMatchScore ?? -1) - (a.aiMatchScore ?? -1))
+    .sort((a, b) => (((b as any).aiMatchScore ?? (b as any).fitScore ?? -1) - ((a as any).aiMatchScore ?? (a as any).fitScore ?? -1)))
     .map((application, index) => {
       let aiDataStatus: CandidateRankingItem["aiDataStatus"] = "ready";
       let aiDataMessage = "Dữ liệu AI đầy đủ.";
-      let aiScore = application.aiMatchScore ?? null;
+      let aiScore = (application as any).aiMatchScore ?? (application as any).fitScore ?? null;
 
       if (application.classification === "AI_ERROR") {
         aiDataStatus = "error";

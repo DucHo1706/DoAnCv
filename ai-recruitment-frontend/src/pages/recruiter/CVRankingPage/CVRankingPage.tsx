@@ -259,7 +259,7 @@ export default function CVRankingPage() {
                     <div style={{ fontSize: 20, fontWeight: 800, color: "#059669" }}>
                       {topCandidate ? (
                         (() => {
-                          const crit = topCandidate.criteriaResults.find((c) => c.criterionName.toLowerCase() === selectedCriterion.toLowerCase());
+                          const crit = topCandidate.criteriaResults.find((c: any) => c.criterionName.toLowerCase() === selectedCriterion.toLowerCase());
                           return crit?.score != null ? `${crit.score}/${crit.maxScore}` : "--";
                         })()
                       ) : "--"}
@@ -310,7 +310,7 @@ export default function CVRankingPage() {
                 onChange={handleJobChange}
                 options={jobs.map((job) => ({
                   value: job.id,
-                  label: job.title,
+                  label: job.position?.name || (job as any).title || "Tin tuyển dụng",
                 }))}
               />
             </Col>
