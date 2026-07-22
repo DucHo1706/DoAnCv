@@ -10,10 +10,12 @@ namespace RecruitmentBackend.Controllers
     public class AprioriController : ControllerBase
     {
         private readonly IAprioriService _aprioriService;
+        private readonly IAuditLogService _auditLogService;
 
-        public AprioriController(IAprioriService aprioriService)
+        public AprioriController(IAprioriService aprioriService, IAuditLogService auditLogService)
         {
             _aprioriService = aprioriService;
+            _auditLogService = auditLogService;
         }
 
         [HttpPost("train")]
@@ -24,6 +26,11 @@ namespace RecruitmentBackend.Controllers
             {
                 return BadRequest(new { status = "error", message = result.Message });
             }
+
+            var adminEmail = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? "Admin";
+            var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
+            await _auditLogService.WriteLogAsync(adminEmail, "Huấn luyện AI (Apriori)", "Mô hình Tương quan Kỹ năng", ipAddress);
+
             return Ok(new { status = "success", message = result.Message });
         }
 

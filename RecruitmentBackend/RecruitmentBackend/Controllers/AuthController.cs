@@ -16,12 +16,14 @@ namespace RecruitmentBackend.Controllers
         private readonly IAuthService _authService;
         private readonly AppDbContext _context;
         private readonly IEmailSenderService _emailSenderService;
+        private readonly IAuditLogService _auditLogService;
 
-        public AuthController(IAuthService authService, AppDbContext context, IEmailSenderService emailSenderService)
+        public AuthController(IAuthService authService, AppDbContext context, IEmailSenderService emailSenderService, IAuditLogService auditLogService)
         {
             _authService = authService;
             _context = context;
             _emailSenderService = emailSenderService;
+            _auditLogService = auditLogService;
         }
 
         [HttpPost("login")]
@@ -30,6 +32,11 @@ namespace RecruitmentBackend.Controllers
             try
             {
                 var response = await _authService.LoginAsync(request);
+                
+                // GHI NHẬT KÝ BẢO MẬT ĐĂNG NHẬP
+                var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
+                await _auditLogService.WriteLogAsync(request.Email ?? "User", "Đăng nhập hệ thống", "Xác thực tài khoản thành công", ipAddress);
+
                 return Ok(response);
             }
             catch (Exception ex)

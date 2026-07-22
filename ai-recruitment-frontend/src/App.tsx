@@ -2,51 +2,51 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import ScrollToTop from "./components/common/ScrollToTop";
 
 // Auth
-import LoginPage from "./pages/auth/LoginPage";
-import RegisterPage from "./pages/auth/RegisterPage";
-import ForgotPasswordPage from "./pages/auth/ForgotPasswordPage";
+import LoginPage from "./features/auth/pages/LoginPage";
+import RegisterPage from "./features/auth/pages/RegisterPage";
+import ForgotPasswordPage from "./features/auth/pages/ForgotPasswordPage";
 
 // Layout chung
-import MainLayout from "./pages/recruiter/MainLayout";
+import MainLayout from "./layouts/MainLayout";
 import AuthLayout from "./layouts/AuthLayout";
+import PublicLayout from "./layouts/PublicLayout";
 
 // Recruiter pages
-import JobManagementPage from "./pages/recruiter/JobManagementPage";
-import CreateJobPage from "./pages/recruiter/CreateJobPage";
-import RecruiterDashboardPage from "./pages/recruiter/RecruiterDashboardPage";
-import CandidateDetailPage from "./pages/recruiter/CandidateDetailPage";
-import ApplicationManagementPage from "./pages/recruiter/ApplicationManagementPage";
-import CandidateComparisonPage from "./pages/recruiter/CandidateComparisonPage";
-import EmailCandidatePage from "./pages/recruiter/EmailCandidatePage";
-import TalentPoolPage from "./pages/recruiter/TalentPoolPage";
-import TalentPoolDetailPage from "./pages/recruiter/TalentPoolDetailPage";
-import InterviewSchedulePage from "./pages/recruiter/InterviewSchedulePage/InterviewSchedulePage";
-import EmailLogsPage from "./pages/recruiter/EmailLogsPage/EmailLogsPage";
-import PublicLayout from "./pages/recruiter/PublicLayout";
-import HomePage from "./pages/recruiter/HomePage";
-import AboutPage from "./pages/candidate/AboutPage";
-import RecruiterProfilePage from "./pages/recruiter/RecruiterProfilePage";
-import RecruiterJobDetailPage from "./pages/recruiter/RecruiterJobDetailPage";
+import JobManagementPage from "./features/jobs/pages/JobManagementPage";
+import CreateJobPage from "./features/jobs/pages/CreateJobPage";
+import RecruiterDashboardPage from "./features/dashboard/pages/RecruiterDashboardPage";
+import CandidateDetailPage from "./features/candidates/pages/CandidateDetailPage";
+import ApplicationManagementPage from "./features/applications/pages/ApplicationManagementPage";
+import CandidateComparisonPage from "./features/cv-analysis/pages/CandidateComparisonPage";
+import EmailCandidatePage from "./features/email/pages/EmailCandidatePage";
+import TalentPoolPage from "./features/talent-pool/pages/TalentPoolPage";
+import TalentPoolDetailPage from "./features/talent-pool/pages/TalentPoolDetailPage";
+import InterviewSchedulePage from "./features/interviews/pages/InterviewSchedulePage";
+import EmailLogsPage from "./features/email/pages/EmailLogsPage";
+import HomePage from "./features/public/pages/HomePage";
+import AboutPage from "./features/public/pages/AboutPage";
+import RecruiterProfilePage from "./features/recruiter-profile/pages/RecruiterProfilePage";
+import RecruiterJobDetailPage from "./features/jobs/pages/RecruiterJobDetailPage";
 
 // Candidate pages
-import CandidateJobPage from "./pages/candidate/CandidateJobPage";
-import ApplicationStatusPage from "./pages/candidate/ApplicationStatusPage";
-import CandidateProfilePage from "./pages/candidate/CandidateProfilePage";
-import CandidateJobDetailPage from "./pages/candidate/CandidateJobDetailPage";
-import CvAnalysisResultPage from "./pages/candidate/CvAnalysisResultPage";
-import CandidateDashboardPage from "./pages/candidate/CandidateDashboardPage";
-import SavedJobsPage from "./pages/candidate/SavedJobsPage";
+import CandidateJobPage from "./features/jobs/pages/CandidateJobPage";
+import ApplicationStatusPage from "./features/applications/pages/ApplicationStatusPage";
+import CandidateProfilePage from "./features/candidates/pages/CandidateProfilePage";
+import CandidateJobDetailPage from "./features/jobs/pages/CandidateJobDetailPage";
+import CvAnalysisResultPage from "./features/cv-analysis/pages/CvAnalysisResultPage";
+import CandidateDashboardPage from "./features/candidates/pages/CandidateDashboardPage";
+import SavedJobsPage from "./features/jobs/pages/SavedJobsPage";
 
 // Admin pages
-import AdminDashboardPage from "./pages/admin/AdminDashboardPage";
-import JobApprovalPage from "./pages/admin/JobApprovalPage";
-import UserManagementPage from "./pages/admin/UserManagementPage";
-import AuditLogsPage from "./pages/admin/AuditLogsPage";
-import RolePermissionPage from "./pages/admin/RolePermissionPage";
-import BranchManagementPage from "./pages/admin/BranchManagementPage";
-import CategoryManagementPage from "./pages/admin/CategoryManagementPage";
-import JobPositionManagementPage from "./pages/admin/JobPositionManagementPage";
-import JobLevelManagementPage from "./pages/admin/JobLevelManagementPage";
+import AdminDashboardPage from "./features/dashboard/pages/AdminDashboardPage";
+import JobApprovalPage from "./features/jobs/pages/JobApprovalPage";
+import UserManagementPage from "./features/admin-settings/pages/UserManagementPage";
+import AuditLogsPage from "./features/admin-settings/pages/AuditLogsPage";
+import RolePermissionPage from "./features/admin-settings/pages/RolePermissionPage";
+import BranchManagementPage from "./features/admin-settings/pages/BranchManagementPage";
+import CategoryManagementPage from "./features/admin-settings/pages/CategoryManagementPage";
+import JobPositionManagementPage from "./features/admin-settings/pages/JobPositionManagementPage";
+import JobLevelManagementPage from "./features/admin-settings/pages/JobLevelManagementPage";
 
 function App() {
   return (

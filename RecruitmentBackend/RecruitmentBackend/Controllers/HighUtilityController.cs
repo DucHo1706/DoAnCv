@@ -10,10 +10,12 @@ namespace RecruitmentBackend.Controllers
     public class HighUtilityController : ControllerBase
     {
         private readonly IHighUtilityService _huimService;
+        private readonly IAuditLogService _auditLogService;
 
-        public HighUtilityController(IHighUtilityService huimService)
+        public HighUtilityController(IHighUtilityService huimService, IAuditLogService auditLogService)
         {
             _huimService = huimService;
+            _auditLogService = auditLogService;
         }
 
         [HttpPost("train")]
@@ -24,6 +26,11 @@ namespace RecruitmentBackend.Controllers
             {
                 return BadRequest(new { status = "error", message = result.Message });
             }
+
+            var adminEmail = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? "Admin";
+            var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
+            await _auditLogService.WriteLogAsync(adminEmail, "Huấn luyện AI (HUIM)", "Mô hình Kỹ năng Giá trị Cao", ipAddress);
+
             return Ok(new { status = "success", message = result.Message });
         }
 

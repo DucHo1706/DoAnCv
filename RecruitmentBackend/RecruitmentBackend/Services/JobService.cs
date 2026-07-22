@@ -166,23 +166,39 @@ namespace RecruitmentBackend.Services
 
         public async Task<IEnumerable<object>> GetAdminJobsAsync()
         {
-            return await (from j in _context.JobPostings
-                          join p in _context.Positions on j.PositionID equals p.PositionID into pj
-                          from p in pj.DefaultIfEmpty()
-                          join b in _context.Branches on j.BranchID equals b.BranchID into bj
-                          from b in bj.DefaultIfEmpty()
-                          orderby j.CreatedAt descending
-                          select new {
-                              id = j.JobID,
-                              salaryRange = (j.SalaryMin == 0 && j.SalaryMax == 0) ? "Thỏa thuận" : (j.SalaryMax == 0 ? j.SalaryMin + " triệu" : j.SalaryMin + " - " + j.SalaryMax + " triệu"),
-                              createdAt = j.CreatedAt,
-                              deadline = j.Deadline,
-                              startDate = j.StartDate,
-                              maxCandidates = j.MaxCandidates,
-                              status = j.Status,
-                              position = p != null ? new { id = p.PositionID, name = p.PositionName } : null,
-                              branch = b != null ? new { id = b.BranchID, name = b.BranchName } : null
-                          }).ToListAsync();
+            var defaultRecruiter = await _context.Recruiters.FirstOrDefaultAsync();
+
+            var rawJobs = await (from j in _context.JobPostings
+                                 join p in _context.Positions on j.PositionID equals p.PositionID into pj
+                                 from p in pj.DefaultIfEmpty()
+                                 join b in _context.Branches on j.BranchID equals b.BranchID into bj
+                                 from b in bj.DefaultIfEmpty()
+                                 join r in _context.Recruiters on j.RecruiterID equals r.RecruiterID into rj
+                                 from r in rj.DefaultIfEmpty()
+                                 join acc in _context.Accounts on r.AccountID equals acc.AccountID into accj
+                                 from acc in accj.DefaultIfEmpty()
+                                 join c in _context.Categories on j.CategoryID equals c.CategoryID into cj
+                                 from c in cj.DefaultIfEmpty()
+                                 orderby j.CreatedAt descending
+                                 select new {
+                                     id = j.JobID,
+                                     salaryRange = (j.SalaryMin == 0 && j.SalaryMax == 0) ? "Thỏa thuận" : (j.SalaryMax == 0 ? j.SalaryMin + " triệu" : j.SalaryMin + " - " + j.SalaryMax + " triệu"),
+                                     createdAt = j.CreatedAt,
+                                     deadline = j.Deadline,
+                                     startDate = j.StartDate,
+                                     maxCandidates = j.MaxCandidates,
+                                     status = j.Status,
+                                     description = j.JobDescription,
+                                     requirements = j.JobRequirement,
+                                     position = p != null ? new { id = p.PositionID, name = p.PositionName, categoryId = p.CategoryID } : null,
+                                     branch = b != null ? new { id = b.BranchID, name = b.BranchName } : null,
+                                     category = c != null ? new { id = c.CategoryID, name = c.Name } : null,
+                                     recruiter = r != null ? new { id = r.RecruiterID, name = r.FullName, email = acc != null ? acc.Email : "hr@system.com" } : 
+                                                 (defaultRecruiter != null ? new { id = defaultRecruiter.RecruiterID, name = defaultRecruiter.FullName, email = "hr@system.com" } : 
+                                                 new { id = "HR_SYSTEM", name = "Chuyên viên HR (Hệ thống)", email = "hr@system.com" })
+                                 }).ToListAsync();
+
+            return rawJobs;
         }
 
         public async Task<bool> ToggleJobStatusAsync(string jobId)

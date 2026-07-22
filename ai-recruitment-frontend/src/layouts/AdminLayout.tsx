@@ -24,7 +24,7 @@ function AdminLayout() {
   const menuItems: ItemType[] = [
     { key: "/admin/dashboard", icon: <DashboardOutlined />, label: "Dashboard" },
     { key: "/admin/users", icon: <TeamOutlined />, label: "Quản lý người dùng" },
-    { key: "/admin/job-approvals", icon: <FileSearchOutlined />, label: "Duyệt tin tuyển dụng" },
+    { key: "/admin/job-approvals", icon: <FileSearchOutlined />, label: "Quản lý & Duyệt Tin tuyển dụng" },
 
     // Lôi 3 mục này ra khỏi dropdown "Danh mục"
     { key: "/admin/branches", icon: <BranchesOutlined />, label: "Quản lý Chi nhánh" },
