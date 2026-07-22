@@ -61,8 +61,8 @@ export default function RecruiterDashboardPage() {
 
   return (
     <PageContainer
-      title="Recruiting Overview"
-      subtitle="Tổng quan chiến dịch tuyển dụng, chất lượng hồ sơ và phân tích chấm điểm AI."
+      title="Tổng quan tuyển dụng"
+      subtitle="Theo dõi hiệu suất phễu ứng viên và phân tích chất lượng hồ sơ theo thời gian thực."
     >
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
         <Col span={24}>
