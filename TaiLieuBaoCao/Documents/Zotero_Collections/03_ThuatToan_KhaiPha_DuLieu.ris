@@ -1,0 +1,23 @@
+TY  - CONF
+AU  - Agrawal, Rakesh
+AU  - Srikant, Ramakrishnan
+TI  - Fast algorithms for mining association rules in large databases
+JO  - Proceedings of the 20th International Conference on Very Large Data Bases (VLDB)
+SP  - 487
+EP  - 499
+PY  - 1994
+L1  - d:\KhoaLuan\TaiLieuBaoCao\Documents\References_PDF\11_Agrawal_1994_Apriori_VLDB.pdf
+ER  - 
+
+TY  - CONF
+AU  - Liu, Ying
+AU  - Liao, Wei-keng
+AU  - Choudhary, Alok
+TI  - A two-phase algorithm for fast discovery of high utility itemsets
+JO  - Proceedings of the 9th Pacific-Asia Conference on Knowledge Discovery and Data Mining (PAKDD)
+SP  - 689
+EP  - 695
+PY  - 2005
+DO  - 10.1007/11425217_79
+L1  - d:\KhoaLuan\TaiLieuBaoCao\Documents\References_PDF\12_Liu_2005_Two_Phase_HUIM.pdf
+ER  -

@@ -1291,7 +1291,7 @@ export default function ApplicationManagementPage() {
           <Button
             type="primary"
             icon={<FilePdfOutlined />}
-            href={selectedApp?.cvUrl ? (selectedApp.cvUrl.startsWith("http") ? selectedApp.cvUrl : `https://localhost:7006${selectedApp.cvUrl.startsWith("/") ? "" : "/"}${selectedApp.cvUrl}`) : "#"}
+            href={selectedApp?.cvUrl ? (selectedApp.cvUrl.startsWith("http") ? selectedApp.cvUrl : `https://recruitinsightai.com${selectedApp.cvUrl.startsWith("/") ? "" : "/"}${selectedApp.cvUrl}`) : "#"}
             target="_blank"
           >
             Xem CV

@@ -57,7 +57,7 @@ function AppHeader({ title, userName, roleLabel, onLogout }: AppHeaderProps) {
   useEffect(() => {
     if (!accountId) return;
 
-    const apiUrl = import.meta.env.VITE_API_URL || "https://localhost:7006/api";
+    const apiUrl = import.meta.env.VITE_API_URL || "https://recruitinsightai.com/api";
     const hubUrl = apiUrl.replace("/api", "/hubs/notifications");
 
     const connection = new signalR.HubConnectionBuilder()
