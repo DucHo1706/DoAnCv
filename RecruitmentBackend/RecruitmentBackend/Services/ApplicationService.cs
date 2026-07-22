@@ -127,13 +127,38 @@ namespace RecruitmentBackend.Services
                     }
                     cvUrl = candidate.DefaultCvUrl;
                     originalFileName = candidate.DefaultCvName ?? "CV_MacDinh.pdf";
-                    contentType = originalFileName.EndsWith(".docx") 
+                    contentType = originalFileName.EndsWith(".docx", StringComparison.OrdinalIgnoreCase) 
                         ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document" 
                         : "application/pdf";
 
-                    using (var httpClient = new System.Net.Http.HttpClient())
+                    if (cvUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase))
                     {
-                        cvFileBytes = await httpClient.GetByteArrayAsync(cvUrl);
+                        using (var httpClient = new System.Net.Http.HttpClient())
+                        {
+                            httpClient.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)");
+                            var httpResponse = await httpClient.GetAsync(cvUrl);
+                            if (!httpResponse.IsSuccessStatusCode)
+                            {
+                                return (false, $"Không thể tải file CV từ Cloudinary (Mã lỗi: {httpResponse.StatusCode}). Vui lòng kiểm tra lại link CV.", null);
+                            }
+                            cvFileBytes = await httpResponse.Content.ReadAsByteArrayAsync();
+                        }
+                    }
+                    else
+                    {
+                        string localPath = Path.Combine(Directory.GetCurrentDirectory(), cvUrl.TrimStart('/'));
+                        if (!File.Exists(localPath))
+                        {
+                            localPath = Path.Combine(Directory.GetCurrentDirectory(), "Uploads", Path.GetFileName(cvUrl));
+                        }
+                        if (File.Exists(localPath))
+                        {
+                            cvFileBytes = await File.ReadAllBytesAsync(localPath);
+                        }
+                        else
+                        {
+                            return (false, "File CV mặc định không tồn tại trên hệ thống.", null);
+                        }
                     }
                 }
                 else

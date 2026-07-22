@@ -355,7 +355,13 @@ namespace RecruitmentBackend.Services
                 if (cv.FilePath.StartsWith("http", StringComparison.OrdinalIgnoreCase))
                 {
                     using var httpClient = new HttpClient();
-                    cvFileBytes = await httpClient.GetByteArrayAsync(cv.FilePath);
+                    httpClient.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)");
+                    var response = await httpClient.GetAsync(cv.FilePath);
+                    if (!response.IsSuccessStatusCode)
+                    {
+                        return (false, $"Không thể tải file CV từ Cloudinary (Mã lỗi: {response.StatusCode}).", null);
+                    }
+                    cvFileBytes = await response.Content.ReadAsByteArrayAsync();
                 }
                 else
                 {
