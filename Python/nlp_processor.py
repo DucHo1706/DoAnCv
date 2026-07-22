@@ -1,13 +1,17 @@
 import re
-import spacy
 import json
 import os
 
 try:
-    nlp = spacy.load("en_core_web_sm")
-except Exception as e:
-    print("Warning: Model en_core_web_sm not found. Using dummy function.")
-    nlp = lambda x: x
+    import spacy
+    try:
+        nlp = spacy.load("en_core_web_sm")
+    except Exception as e:
+        print("Warning: Model en_core_web_sm not found. Using dummy function.")
+        nlp = lambda x: str(x)
+except ImportError:
+    spacy = None
+    nlp = lambda x: str(x)
 
 SKILL_DB = set()
 
