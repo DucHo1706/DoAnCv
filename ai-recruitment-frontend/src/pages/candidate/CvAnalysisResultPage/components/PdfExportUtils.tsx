@@ -2,6 +2,17 @@ import React, { useRef, useState } from "react";
 import { message, Button } from "antd";
 import { DownloadOutlined } from "@ant-design/icons";
 
+const getAiApiUrl = (endpoint: string) => {
+  const cleanEndpoint = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
+  if (import.meta.env.VITE_AI_API_URL) {
+    return `${import.meta.env.VITE_AI_API_URL}${cleanEndpoint}`;
+  }
+  if (typeof window !== "undefined" && window.location.hostname !== "localhost" && window.location.hostname !== "127.0.0.1") {
+    return `/ai-api${cleanEndpoint}`;
+  }
+  return `http://127.0.0.1:8000${cleanEndpoint}`;
+};
+
 interface PdfExportUtilsProps {
   analysisData: any;
   meta: any;
@@ -65,7 +76,7 @@ const PdfExportUtils: React.FC<PdfExportUtilsProps> = ({
 
         if (isTipsMissing) {
           promises.push(
-            fetch("http://127.0.0.1:8000/analyze-cv-star", {
+            fetch(getAiApiUrl("/analyze-cv-star"), {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify(payload),
@@ -76,7 +87,7 @@ const PdfExportUtils: React.FC<PdfExportUtilsProps> = ({
         }
         if (isLangMissing) {
           promises.push(
-            fetch("http://127.0.0.1:8000/analyze-cv-language", {
+            fetch(getAiApiUrl("/analyze-cv-language"), {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify(payload),
@@ -87,7 +98,7 @@ const PdfExportUtils: React.FC<PdfExportUtilsProps> = ({
         }
         if (isInterviewMissing) {
           promises.push(
-            fetch("http://127.0.0.1:8000/analyze-cv-interview", {
+            fetch(getAiApiUrl("/analyze-cv-interview"), {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify(payload),

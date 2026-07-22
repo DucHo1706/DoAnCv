@@ -10,6 +10,17 @@ import AiCoreIcon from "../../../components/common/AiCoreIcon";
 
 const { Title, Text, Paragraph } = Typography;
 
+const getAiApiUrl = (endpoint: string) => {
+  const cleanEndpoint = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
+  if (import.meta.env.VITE_AI_API_URL) {
+    return `${import.meta.env.VITE_AI_API_URL}${cleanEndpoint}`;
+  }
+  if (typeof window !== "undefined" && window.location.hostname !== "localhost" && window.location.hostname !== "127.0.0.1") {
+    return `/ai-api${cleanEndpoint}`;
+  }
+  return `http://127.0.0.1:8000${cleanEndpoint}`;
+};
+
 interface RedFlag {
   type: string;
   title: string;
@@ -134,7 +145,7 @@ export default function CvAnalysisResultPage() {
       formData.append("job_title", locationJobTitle || "");
       formData.append("company_name", locationCompanyName || "AI Recruitment");
 
-      const response = await fetch("http://127.0.0.1:8000/analyze-cv-preview", {
+      const response = await fetch(getAiApiUrl("/analyze-cv-preview"), {
         method: "POST",
         body: formData,
       });
@@ -200,7 +211,7 @@ export default function CvAnalysisResultPage() {
       const taskStar = async () => {
         setTipsLoading(true);
         try {
-          const res = await fetch("http://127.0.0.1:8000/analyze-cv-star", {
+          const res = await fetch(getAiApiUrl("/analyze-cv-star"), {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload),
@@ -232,7 +243,7 @@ export default function CvAnalysisResultPage() {
       const taskLang = async () => {
         setLangLoading(true);
         try {
-          const res = await fetch("http://127.0.0.1:8000/analyze-cv-language", {
+          const res = await fetch(getAiApiUrl("/analyze-cv-language"), {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload),
@@ -264,7 +275,7 @@ export default function CvAnalysisResultPage() {
       const taskInterview = async () => {
         setInterviewLoading(true);
         try {
-          const res = await fetch("http://127.0.0.1:8000/analyze-cv-interview", {
+          const res = await fetch(getAiApiUrl("/analyze-cv-interview"), {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload),
