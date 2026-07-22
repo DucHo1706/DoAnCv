@@ -310,8 +310,8 @@ export default function InterviewSchedulePage() {
 
   return (
     <PageContainer
-      title="Lịch Phỏng Vấn Ứng Viên"
-      subtitle="Theo dõi, lên lịch và quản lý chi tiết thời gian phỏng vấn của các ứng viên."
+      title="Lịch phỏng vấn ứng viên"
+      subtitle="Theo dõi và điều phối lịch phỏng vấn theo thời gian thực."
     >
       <div style={{ padding: "8px 0 24px" }}>
         {/* View Mode Toggle */}
@@ -355,7 +355,7 @@ export default function InterviewSchedulePage() {
             >
               <div>
                 <Title level={3} style={{ color: "#FFFFFF", margin: 0, fontWeight: 700 }}>
-                  📅 Bảng Phân Công Lịch Phỏng Vấn Tuần
+                  Bảng phân công lịch phỏng vấn
                 </Title>
                 <Text style={{ color: "rgba(255,255,255,0.85)", fontSize: 14, display: "block", marginTop: 6 }}>
                   Lịch tuần từ <strong>{weekDays[0].format("DD/MM/YYYY")}</strong> đến <strong>{weekDays[6].format("DD/MM/YYYY")}</strong>

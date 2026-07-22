@@ -202,8 +202,8 @@ export default function TalentPoolPage() {
 
   return (
     <PageContainer
-      title="Ngân hàng Ứng viên (Talent Pool)"
-      subtitle="Quản lý và tìm kiếm lại những ứng viên tiềm năng cũ cho các chiến dịch mới."
+      title="Kho dữ liệu tài năng (Talent Pool)"
+      subtitle="Lưu trữ, quản lý và gợi ý tự động ứng viên tiềm năng cho đợt tuyển dụng mới."
     >
       <Space direction="vertical" size="large" style={{ width: "100%" }}>
         <Space size="middle" wrap>

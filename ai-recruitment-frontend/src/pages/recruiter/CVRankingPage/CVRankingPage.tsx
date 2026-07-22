@@ -207,7 +207,7 @@ export default function CVRankingPage() {
   return (
     <PageContainer
       title="Xếp hạng ứng viên"
-      subtitle="Sàng lọc hồ sơ theo điểm tổng thể hoặc từng tiêu chí của công việc."
+      subtitle="Đánh giá và sắp xếp ứng viên theo tiêu chuẩn năng lực và chỉ số phù hợp."
     >
       {errorMessage.length > 0 ? (
         <Alert
@@ -234,7 +234,7 @@ export default function CVRankingPage() {
             <Space direction="vertical" size={12} style={{ width: "100%" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <Tag color="gold" style={{ fontSize: 13, padding: "4px 10px", borderRadius: 8, fontWeight: 700 }}>
-                  🏆 UNIFIED TOP CANDIDATE
+                  ỨNG VIÊN HÀNG ĐẦU
                 </Tag>
                 <TrophyOutlined style={{ fontSize: 28, color: "#D97706" }} />
               </div>
