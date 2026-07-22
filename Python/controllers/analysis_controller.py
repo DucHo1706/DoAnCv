@@ -31,11 +31,13 @@ router = APIRouter()
 
 @router.post("/score-cv")
 async def score_cv(
+    request: Request,
     file: UploadFile = File(...),
     job_description: str = Form(...),
     criteria: str = Form(...)
 ):
     try:
+        check_rate_limit(request)
         try:
             criteria_list = json.loads(criteria)
         except Exception:
