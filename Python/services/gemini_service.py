@@ -26,10 +26,12 @@ if extra_keys:
 api_keys = list(dict.fromkeys(api_keys))
 
 if not api_keys:
-    raise ValueError("Khong tim thay khoa API trong env.")
-
-clients = [genai.Client(api_key=key) for key in api_keys] if api_keys else []
-client = clients[0] if clients else None
+    logger.warning("[Gemini Service] Warning: No valid GEMINI_API_KEY found in environment. Python server will start with fallback AI modes.")
+    clients = []
+    client = None
+else:
+    clients = [genai.Client(api_key=key) for key in api_keys]
+    client = clients[0] if clients else None
 
 def clean_json_text(text: str) -> str:
     """
