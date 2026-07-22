@@ -91,12 +91,9 @@ def generate_content_with_retry(prompt: str, is_json: bool = True, models: list 
         raise Exception("Khong cau hinh API keys truc tiep.")
 
     models_to_try = models if models is not None else [
-        "gemini-3.5-flash",
         "gemini-2.0-flash", 
         "gemini-1.5-flash",
-        "gemini-2.0-flash-lite", 
-        "gemini-2.5-flash-lite", 
-        "gemini-flash-latest"
+        "gemini-1.5-pro"
     ]
     config = types.GenerateContentConfig(
         response_mime_type="application/json" if is_json else "text/plain"
