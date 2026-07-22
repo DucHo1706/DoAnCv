@@ -26,7 +26,7 @@ function LoginPage() {
       } else if (response.role === "Recruiter") {
         navigate(redirectUrl || "/recruiter/dashboard");
       } else {
-        navigate(redirectUrl || "/"); // Trở về trang chủ nếu là Candidate
+        navigate(redirectUrl || "/candidate/dashboard");
       }
     } catch (error: any) {
       console.error("Lỗi đăng nhập:", error);

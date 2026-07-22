@@ -23,10 +23,17 @@ import {
   AppstoreOutlined,
   CalendarOutlined,
   VideoCameraOutlined,
+  DownloadOutlined,
 } from "@ant-design/icons";
 import { useApplicationStatus } from "./hooks/useApplicationStatus";
 import PageContainer from "../../../components/common/PageContainer";
 import AiDetailedTabs from "../../../components/ai-report/AiDetailedTabs";
+import CompetencyTab from "../../../components/ai-report/CompetencyTab";
+import StarOptimizationTab from "../../../components/ai-report/StarOptimizationTab";
+import LanguageReviewTab from "../../../components/ai-report/LanguageReviewTab";
+import InterviewQuestionsTab from "../../../components/ai-report/InterviewQuestionsTab";
+// @ts-ignore
+import html2pdf from "html2pdf.js";
 import AiCoreIcon from "../../../components/common/AiCoreIcon";
 import { appTheme } from "../../../constants/theme";
 import { recruitmentService, type InterviewScheduleDto } from "../../../services/recruitmentService";
@@ -162,6 +169,7 @@ export default function ApplicationStatusPage() {
     loading,
     isDetailModalOpen,
     setIsDetailModalOpen,
+    selectedApp,
     setSelectedApp,
     searchText,
     setSearchText,
@@ -172,6 +180,33 @@ export default function ApplicationStatusPage() {
     handleViewDetail,
     parsed,
   } = useApplicationStatus();
+
+  const handleExportPDF = () => {
+    const element = document.getElementById("ai-report-printable-area");
+    if (!element) {
+      message.error("Không tìm thấy vùng báo cáo để xuất!");
+      return;
+    }
+    const hideMessage = message.loading("Đang khởi tạo tệp PDF báo cáo AI...", 0);
+    element.style.display = "block";
+    const opt = {
+      margin: [15, 15, 15, 15] as [number, number, number, number],
+      filename: `BaoCao_AI_${selectedApp?.jobTitle || "UngVien"}.pdf`,
+      image: { type: "jpeg" as const, quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true },
+      jsPDF: { unit: "mm" as const, format: "a4" as const, orientation: "portrait" as const }
+    };
+    html2pdf().set(opt).from(element).save().then(() => {
+      element.style.display = "none";
+      hideMessage();
+      message.success("Xuất báo cáo PDF thành công!");
+    }).catch((err: any) => {
+      console.error(err);
+      element.style.display = "none";
+      hideMessage();
+      message.error("Có lỗi xảy ra khi xuất PDF!");
+    });
+  };
 
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 5;
@@ -343,7 +378,7 @@ export default function ApplicationStatusPage() {
               }}
               bodyStyle={{ padding: "24px" }}
             >
-              <div style={{ marginBottom: 24 }}>
+              <div style={{ marginBottom: 24, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
                 <Button
                   type="primary"
                   ghost
@@ -355,9 +390,71 @@ export default function ApplicationStatusPage() {
                 >
                   ← Quay lại danh sách hồ sơ ứng tuyển
                 </Button>
+                {parsed && (
+                  <Button
+                    type="primary"
+                    icon={<DownloadOutlined />}
+                    onClick={handleExportPDF}
+                    style={{ borderRadius: 8, fontWeight: 600, background: appTheme.colors.primary, borderColor: appTheme.colors.primary }}
+                  >
+                    Xuất báo cáo PDF
+                  </Button>
+                )}
               </div>
               {parsed ? (
-                <AiDetailedTabs parsedAnalysis={parsed} />
+                <>
+                  <AiDetailedTabs parsedAnalysis={parsed} />
+
+                  {/* Printable Area for PDF Export */}
+                  <div id="ai-report-printable-area" style={{ display: "none", padding: "24px", background: "#FFFFFF", color: "#0F172A", fontFamily: appTheme.font.family }}>
+                    <div style={{ textAlign: "center", marginBottom: "30px", borderBottom: "2px solid #2563EB", paddingBottom: "16px" }}>
+                      <h1 style={{ fontSize: "22px", fontWeight: 800, color: "#1E3A8A", margin: "0 0 8px" }}>
+                        BÁO CÁO PHÂN TÍCH HỒ SƠ TUYỂN DỤNG CÁ NHÂN (AI)
+                      </h1>
+                      <p style={{ color: "#64748B", fontSize: "14px", margin: 0 }}>
+                        Hệ thống AI Recruitment Screening & Recommendation - {new Date().toLocaleDateString("vi-VN")}
+                      </p>
+                    </div>
+
+                    <div style={{ marginBottom: "24px", background: "#F8FAFC", padding: "16px 20px", borderRadius: "12px", border: "1px solid #E2E8F0" }}>
+                      <h3 style={{ margin: "0 0 12px", fontSize: "15px", fontWeight: 700, color: "#0F172A" }}>THÔNG TIN HỒ SƠ</h3>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px 24px", fontSize: "14px" }}>
+                        <div><strong>Vị trí ứng tuyển:</strong> {selectedApp?.jobTitle}</div>
+                        <div><strong>Điểm tương hợp AI:</strong> <span style={{ color: "#2563EB", fontWeight: 700 }}>{selectedApp?.aiScore} / 100</span></div>
+                        <div><strong>Phân loại:</strong> {selectedApp?.classification || "Chờ xử lý"}</div>
+                        <div><strong>Thời gian nộp:</strong> {selectedApp?.appliedAt ? new Date(selectedApp.appliedAt).toLocaleDateString("vi-VN") : ""}</div>
+                      </div>
+                    </div>
+
+                    <div style={{ marginTop: "24px" }}>
+                      <h2 style={{ fontSize: "16px", color: "#1E3A8A", borderBottom: "1px solid #E2E8F0", paddingBottom: "6px", fontWeight: 700 }}>
+                        1. NĂNG LỰC & CẢNH BÁO
+                      </h2>
+                      <CompetencyTab scoreAnalysis={parsed.score_analysis || {}} criteriaResults={parsed.criteria_results || []} />
+                    </div>
+
+                    <div style={{ marginTop: "34px", pageBreakBefore: "always" }}>
+                      <h2 style={{ fontSize: "16px", color: "#1E3A8A", borderBottom: "1px solid #E2E8F0", paddingBottom: "6px", fontWeight: 700 }}>
+                        2. TỐI ƯU HÓA (STAR)
+                      </h2>
+                      <StarOptimizationTab optimizationTips={parsed.optimization_tips || []} />
+                    </div>
+
+                    <div style={{ marginTop: "34px", pageBreakBefore: "always" }}>
+                      <h2 style={{ fontSize: "16px", color: "#1E3A8A", borderBottom: "1px solid #E2E8F0", paddingBottom: "6px", fontWeight: 700 }}>
+                        3. NGÔN TỪ & CHÂN THỰC
+                      </h2>
+                      <LanguageReviewTab languageReview={parsed.language_review || {}} />
+                    </div>
+
+                    <div style={{ marginTop: "34px", pageBreakBefore: "always" }}>
+                      <h2 style={{ fontSize: "16px", color: "#1E3A8A", borderBottom: "1px solid #E2E8F0", paddingBottom: "6px", fontWeight: 700 }}>
+                        4. GỢI Ý PHỎNG VẤN
+                      </h2>
+                      <InterviewQuestionsTab interviewQuestions={parsed.mock_interview || []} />
+                    </div>
+                  </div>
+                </>
               ) : (
                 <div style={{ textAlign: "center", padding: "60px 0" }}>
                   <Spin tip="Đang đọc kết quả đánh giá hồ sơ..." />
@@ -805,8 +902,13 @@ export default function ApplicationStatusPage() {
                             current={(() => {
                               const st = record.status?.toLowerCase();
                               if (st === "offer" || st === "accepted") return 3;
-                              if (st === "interview" || st === "interviewing") return 2;
+                              if (st === "interview" || st === "interviewing" || st === "interview") return 2;
                               if (st === "reviewed" || st === "reviewing" || st === "shortlisted") return 1;
+                              if (st === "rejected") {
+                                // Nếu có lịch phỏng vấn, chứng tỏ bị loại sau vòng phỏng vấn (bước 2)
+                                if (record.interviewSchedule || record.status === "Interview") return 2;
+                                return 1; // Ngược lại bị loại từ vòng lọc hồ sơ
+                              }
                               return 0;
                             })()}
                             status={record.status?.toLowerCase() === "rejected" ? "error" : "process"}

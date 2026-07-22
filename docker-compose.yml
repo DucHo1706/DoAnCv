@@ -27,6 +27,8 @@ services:
       - ASPNETCORE_URLS=http://+:8080
       - ASPNETCORE_ENVIRONMENT=Production
       - PythonAiApiUrl=http://ai-service:8000
+    volumes:
+      - uploads_data:/app/Uploads
     restart: always
 
   # 3. Frontend Service (React + Nginx)

@@ -43,3 +43,7 @@ img {
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: #94A3B8;
 }
+
+.hover-bg-slate:hover {
+  background-color: #F1F5F9 !important;
+}

@@ -3,6 +3,7 @@ import {
   DownloadOutlined,
 } from "@ant-design/icons";
 import {
+  Alert,
   Button,
   Card,
   Col,
@@ -10,181 +11,35 @@ import {
   Progress,
   Row,
   Space,
+  Spin,
   Tag,
   Timeline,
   Typography,
-  Spin,
-  message,
-  Alert,
 } from "antd";
-import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import PageContainer from "../../components/common/PageContainer";
-import { recruitmentService } from "../../services/recruitmentService";
-import AiDetailedTabs from "../../components/ai-report/AiDetailedTabs";
-import { appTheme } from "../../constants/theme";
-import AiCoreIcon from "../../components/common/AiCoreIcon";
+import PageContainer from "../../../components/common/PageContainer";
+import AiDetailedTabs from "../../../components/ai-report/AiDetailedTabs";
+import CompetencyTab from "../../../components/ai-report/CompetencyTab";
+import StarOptimizationTab from "../../../components/ai-report/StarOptimizationTab";
+import LanguageReviewTab from "../../../components/ai-report/LanguageReviewTab";
+import InterviewQuestionsTab from "../../../components/ai-report/InterviewQuestionsTab";
+import { appTheme } from "../../../constants/theme";
+import AiCoreIcon from "../../../components/common/AiCoreIcon";
+import { useCandidateDetail } from "./hooks/useCandidateDetail";
 
 const { Text, Paragraph } = Typography;
 
-function CandidateDetailPage() {
-  const navigate = useNavigate();
-  const { id } = useParams();
-
-  const [candidate, setCandidate] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [reEvaluating, setReEvaluating] = useState(false);
-  const [evalProgress, setEvalProgress] = useState<number | null>(null);
-  const [evalStatusText, setEvalStatusText] = useState<string>("");
-
-  // ====== HELPER PHÂN TÍCH NHANH CHO BÁO CÁO CHI TIẾT TỪ AI ======
-  const getParsedAnalysis = (app: any) => {
-    if (!app || !app.aiReason) return null;
-    if (typeof app.aiReason === "object" && !Array.isArray(app.aiReason)) return app.aiReason;
-    try {
-      let reasonStr = String(app.aiReason).trim();
-      const firstBrace = reasonStr.indexOf("{");
-      if (firstBrace > 0) reasonStr = reasonStr.substring(firstBrace);
-      if (reasonStr.startsWith("{")) {
-        return JSON.parse(reasonStr);
-      }
-    } catch (e) {
-      return null;
-    }
-    return null;
-  };
-
-  const fetchDetail = async (showLoading = false) => {
-    try {
-      if (showLoading) setLoading(true);
-      const data = await recruitmentService.getHrApplications();
-      const apps = Array.isArray(data) ? data : (data as any)?.$values || [];
-      const found = apps.find((app: any) => app.id === id);
-      setCandidate(found || null);
-      return found;
-    } catch (error: any) {
-      const errMsg =
-        error?.response?.status === 403
-          ? "Bạn không có quyền truy cập hồ sơ này (403). Vui lòng đăng nhập lại."
-          : error?.response?.status === 401
-            ? "Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại."
-            : "Lỗi khi tải chi tiết hồ sơ";
-      message.error(errMsg);
-      return null;
-    } finally {
-      if (showLoading) setLoading(false);
-    }
-  };
-
-  const handleReEvaluate = async () => {
-    if (!id) return;
-    setReEvaluating(true);
-    setEvalProgress(10);
-    setEvalStatusText("Khởi chạy quy trình phân tích AI...");
-
-    message.loading({
-      content: "Đang gửi yêu cầu phân tích lại cho AI...",
-      key: "reeval",
-    });
-    try {
-      await recruitmentService.reEvaluateApplication(id);
-      message.success({
-        content: "Đã kích hoạt AI chạy lại thành công! Hệ thống đang phân tích...",
-        key: "reeval",
-        duration: 3,
-      });
-
-      // Poll every 3 seconds as a fallback in case SignalR connection fails
-      let attempts = 0;
-      const maxAttempts = 20; // 60 seconds fallback max
-      const intervalId = setInterval(async () => {
-        attempts++;
-        const updatedCandidate = await fetchDetail(false);
-        const parsedReport = getParsedAnalysis(updatedCandidate);
-        
-        if (parsedReport || attempts >= maxAttempts) {
-          clearInterval(intervalId);
-          setReEvaluating(false);
-          setEvalProgress(null);
-          if (parsedReport) {
-            message.success("Đã hoàn tất phân tích và cập nhật báo cáo AI chi tiết mới! 🎉");
-          } else {
-            message.warning("Yêu cầu AI phân tích lại đang chạy ngầm hoặc gặp gián đoạn. Hãy tải lại trang sau.");
-          }
-        }
-      }, 3000);
-      
-    } catch (error: any) {
-      const errMsg = error?.response?.data?.message || "Không thể yêu cầu AI phân tích lại.";
-      message.error({ content: errMsg, key: "reeval" });
-      setReEvaluating(false);
-      setEvalProgress(null);
-    }
-  };
-
-  useEffect(() => {
-    fetchDetail(true);
-  }, [id]);
-
-  // Real-time AI Progress listener using SignalR
-  useEffect(() => {
-    if (!id || !reEvaluating) return;
-
-    let connection: any = null;
-    let isSubscribed = true;
-
-    const startSignalR = async () => {
-      try {
-        const signalR = await import("@microsoft/signalr");
-        const apiBase = import.meta.env.VITE_API_URL || "https://localhost:7006/api";
-        const hubUrl = apiBase.replace(/\/api\/?$/, "") + "/hubs/ai-evaluation";
-        connection = new signalR.HubConnectionBuilder()
-          .withUrl(hubUrl)
-          .withAutomaticReconnect()
-          .build();
-
-        connection.on("ReceiveProgress", (data: { progress: number; stage: string; message: string }) => {
-          if (!isSubscribed) return;
-          setEvalProgress(data.progress);
-          setEvalStatusText(data.message || data.stage);
-        });
-
-        connection.on("ReceiveResult", (data: { aiStatus: string; message?: string }) => {
-          if (!isSubscribed) return;
-          if (data.aiStatus === "Success") {
-            setEvalProgress(100);
-            setEvalStatusText("Đã hoàn tất phân tích AI! 🎉");
-            fetchDetail(false);
-            setTimeout(() => {
-              if (isSubscribed) {
-                setReEvaluating(false);
-                setEvalProgress(null);
-              }
-            }, 800);
-          } else {
-            message.error(data.message || "Phân tích AI thất bại.");
-            setReEvaluating(false);
-            setEvalProgress(null);
-          }
-        });
-
-        await connection.start();
-        await connection.invoke("JoinApplicationGroup", id);
-        console.log("[SignalR] Connected to AI Evaluation Hub!");
-      } catch (err: any) {
-        console.warn("[SignalR] Connection failed, falling back to polling.", err);
-      }
-    };
-
-    startSignalR();
-
-    return () => {
-      isSubscribed = false;
-      if (connection) {
-        connection.stop().catch((err: any) => console.error("[SignalR] Stop error", err));
-      }
-    };
-  }, [id, reEvaluating]);
+export default function CandidateDetailPage() {
+  const {
+    navigate,
+    candidate,
+    loading,
+    reEvaluating,
+    evalProgress,
+    evalStatusText,
+    parsed,
+    handleExportPDF,
+    handleReEvaluate,
+  } = useCandidateDetail();
 
   if (loading) {
     return (
@@ -212,8 +67,6 @@ function CandidateDetailPage() {
       </PageContainer>
     );
   }
-
-  const parsed = getParsedAnalysis(candidate);
 
   return (
     <PageContainer
@@ -421,7 +274,7 @@ function CandidateDetailPage() {
                             const braceIdx = raw.indexOf("{");
                             const prefix = braceIdx > 0 ? raw.substring(0, braceIdx) : "";
                             const jsonStr = braceIdx >= 0 ? raw.substring(braceIdx) : raw;
-                            const parsed = JSON.parse(jsonStr);
+                            const parsedData = JSON.parse(jsonStr);
                             return (
                               <span>
                                 {prefix && (
@@ -430,28 +283,28 @@ function CandidateDetailPage() {
                                     <br />
                                   </span>
                                 )}
-                                {parsed.score_analysis?.summary && (
+                                {parsedData.score_analysis?.summary && (
                                   <Paragraph style={{ marginBottom: 8, fontStyle: "italic" }}>
-                                    "{parsed.score_analysis.summary}"
+                                    "{parsedData.score_analysis.summary}"
                                   </Paragraph>
                                 )}
-                                {parsed.score_analysis?.matched_skills?.length > 0 && (
+                                {parsedData.score_analysis?.matched_skills?.length > 0 && (
                                   <span>
                                     ✅ Kỹ năng khớp:{" "}
-                                    {parsed.score_analysis.matched_skills.join(", ")}
+                                    {parsedData.score_analysis.matched_skills.join(", ")}
                                     <br />
                                   </span>
                                 )}
-                                {parsed.score_analysis?.missing_skills?.length > 0 && (
+                                {parsedData.score_analysis?.missing_skills?.length > 0 && (
                                   <span>
                                     ❌ Kỹ năng thiếu:{" "}
-                                    {parsed.score_analysis.missing_skills.join(", ")}
+                                    {parsedData.score_analysis.missing_skills.join(", ")}
                                     <br />
                                   </span>
                                 )}
-                                {parsed.score_analysis?.total_score && (
+                                {parsedData.score_analysis?.total_score && (
                                   <span>
-                                    🏆 Điểm tổng quan: {parsed.score_analysis.total_score}/100
+                                    🏆 Điểm tổng quan: {parsedData.score_analysis.total_score}/100
                                     <br />
                                   </span>
                                 )}
@@ -502,25 +355,87 @@ function CandidateDetailPage() {
           </Card>
  
           {parsed && (
-            <Card
-              title={
-                <span style={{ display: "inline-flex", alignItems: "center", fontWeight: 700, fontFamily: appTheme.font.family, fontSize: 16 }}>
-                  <AiCoreIcon size={18} style={{ marginRight: 8 }} />
-                  Báo cáo Phân tích chi tiết từ AI
-                </span>
-              }
-              style={{
-                borderRadius: 16,
-                border: `1px solid ${appTheme.colors.border}`,
-                boxShadow: appTheme.shadow.card,
-                background: appTheme.colors.surface,
-              }}
-              bodyStyle={{ padding: "20px 24px" }}
-            >
-              <AiDetailedTabs
-                parsedAnalysis={parsed}
-              />
-            </Card>
+            <>
+              <Card
+                title={
+                  <span style={{ display: "inline-flex", alignItems: "center", fontWeight: 700, fontFamily: appTheme.font.family, fontSize: 16 }}>
+                    <AiCoreIcon size={18} style={{ marginRight: 8 }} />
+                    Báo cáo Phân tích chi tiết từ AI
+                  </span>
+                }
+                extra={
+                  <Button
+                    type="primary"
+                    icon={<DownloadOutlined />}
+                    onClick={handleExportPDF}
+                    style={{ borderRadius: 10, fontWeight: 600, background: appTheme.colors.primary, borderColor: appTheme.colors.primary }}
+                  >
+                    Xuất báo cáo PDF
+                  </Button>
+                }
+                style={{
+                  borderRadius: 16,
+                  border: `1px solid ${appTheme.colors.border}`,
+                  boxShadow: appTheme.shadow.card,
+                  background: appTheme.colors.surface,
+                }}
+                bodyStyle={{ padding: "20px 24px" }}
+              >
+                <AiDetailedTabs
+                  parsedAnalysis={parsed}
+                />
+              </Card>
+
+              {/* Printable Area for PDF Export */}
+              <div id="ai-report-printable-area" style={{ display: "none", padding: "24px", background: "#FFFFFF", color: "#0F172A", fontFamily: appTheme.font.family }}>
+                <div style={{ textAlign: "center", marginBottom: "30px", borderBottom: "2px solid #2563EB", paddingBottom: "16px" }}>
+                  <h1 style={{ fontSize: "22px", fontWeight: 800, color: "#1E3A8A", margin: "0 0 8px" }}>
+                    BÁO CÁO PHÂN TÍCH HỒ SƠ TUYỂN DỤNG CÁ NHÂN (AI)
+                  </h1>
+                  <p style={{ color: "#64748B", fontSize: "14px", margin: 0 }}>
+                    Hệ thống AI Recruitment Screening & Recommendation - {new Date().toLocaleDateString("vi-VN")}
+                  </p>
+                </div>
+
+                <div style={{ marginBottom: "24px", background: "#F8FAFC", padding: "16px 20px", borderRadius: "12px", border: "1px solid #E2E8F0" }}>
+                  <h3 style={{ margin: "0 0 12px", fontSize: "15px", fontWeight: 700, color: "#0F172A" }}>THÔNG TIN HỒ SƠ</h3>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px 24px", fontSize: "14px" }}>
+                    <div><strong>Ứng viên:</strong> {candidate.candidateName}</div>
+                    <div><strong>Email:</strong> {candidate.email}</div>
+                    <div><strong>Vị trí ứng tuyển:</strong> {candidate.jobTitle}</div>
+                    <div><strong>Điểm tương hợp AI:</strong> <span style={{ color: "#2563EB", fontWeight: 700 }}>{candidate.aiScore} / 100</span></div>
+                  </div>
+                </div>
+
+                <div style={{ marginTop: "24px" }}>
+                  <h2 style={{ fontSize: "16px", color: "#1E3A8A", borderBottom: "1px solid #E2E8F0", paddingBottom: "6px", fontWeight: 700 }}>
+                    1. NĂNG LỰC & CẢNH BÁO
+                  </h2>
+                  <CompetencyTab scoreAnalysis={parsed.score_analysis || {}} criteriaResults={parsed.criteria_results || []} />
+                </div>
+
+                <div style={{ marginTop: "34px", pageBreakBefore: "always" }}>
+                  <h2 style={{ fontSize: "16px", color: "#1E3A8A", borderBottom: "1px solid #E2E8F0", paddingBottom: "6px", fontWeight: 700 }}>
+                    2. TỐI ƯU HÓA (STAR)
+                  </h2>
+                  <StarOptimizationTab optimizationTips={parsed.optimization_tips || []} />
+                </div>
+
+                <div style={{ marginTop: "34px", pageBreakBefore: "always" }}>
+                  <h2 style={{ fontSize: "16px", color: "#1E3A8A", borderBottom: "1px solid #E2E8F0", paddingBottom: "6px", fontWeight: 700 }}>
+                    3. NGÔN TỪ & CHÂN THỰC
+                  </h2>
+                  <LanguageReviewTab languageReview={parsed.language_review || {}} />
+                </div>
+
+                <div style={{ marginTop: "34px", pageBreakBefore: "always" }}>
+                  <h2 style={{ fontSize: "16px", color: "#1E3A8A", borderBottom: "1px solid #E2E8F0", paddingBottom: "6px", fontWeight: 700 }}>
+                    4. GỢI Ý PHỎNG VẤN
+                  </h2>
+                  <InterviewQuestionsTab interviewQuestions={parsed.mock_interview || []} />
+                </div>
+              </div>
+            </>
           )}
         </Col>
  
@@ -595,5 +510,3 @@ function CandidateDetailPage() {
     </PageContainer>
   );
 }
- 
-export default CandidateDetailPage;

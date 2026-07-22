@@ -148,7 +148,7 @@ export default function InviteCandidatePage() {
               <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8 }}>
                 <RobotOutlined style={{ color: "#16a34a", fontSize: 20 }} />
                 <Text strong style={{ color: "#16a34a", fontSize: 16 }}>
-                  AI Phân tích & Đề xuất
+                  Phân tích & Đề xuất
                 </Text>
               </div>
               <Text>
@@ -251,7 +251,7 @@ export default function InviteCandidatePage() {
               </Text>
             </Paragraph>
             <Paragraph>
-              <Text type="secondary">Điểm AI cao nhất từng đạt:</Text> <br />
+              <Text type="secondary">Điểm hệ thống cao nhất từng đạt:</Text> <br />
               <Text strong style={{ color: "#faad14" }}>
                 {candidate.maxAiScore} / 100
               </Text>

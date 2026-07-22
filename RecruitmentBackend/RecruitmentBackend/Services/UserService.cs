@@ -61,16 +61,17 @@ namespace RecruitmentBackend.Services
                 return (false, "Email này đã được sử dụng trong hệ thống!");
 
             var accountId = Guid.NewGuid().ToString();
+            var passwordHasher = new Microsoft.AspNetCore.Identity.PasswordHasher<Account>();
             var account = new Account
             {
                 AccountID = accountId,
                 Email = request.Email,
-                PasswordHash = request.Password,
                 Role = request.Role,
                 Status = "Active",
                 CreatedAt = DateTime.Now,
                 UpdatedAt = DateTime.Now
             };
+            account.PasswordHash = passwordHasher.HashPassword(account, request.Password);
             _context.Accounts.Add(account);
 
             if (request.Role == "Recruiter")

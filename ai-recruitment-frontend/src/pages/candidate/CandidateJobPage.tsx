@@ -14,12 +14,15 @@ import {
   Radio,
   InputNumber,
   Spin,
+  message,
 } from "antd";
 import {
   SearchOutlined,
   EnvironmentOutlined,
   ExclamationCircleOutlined,
   ClockCircleOutlined,
+  StarOutlined,
+  StarFilled,
 } from "@ant-design/icons";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import axiosClient from "../../services/axiosClient";
@@ -49,6 +52,10 @@ export default function CandidateJobPage() {
   const [pageIndex, setPageIndex] = useState(1);
   const [loading, setLoading] = useState(false);
   const [isFallback, setIsFallback] = useState(false);
+
+  const isLoggedIn = !!localStorage.getItem("token");
+  const isCandidate = JSON.parse(localStorage.getItem("user") || "{}").role === "Candidate";
+  const [savedJobIds, setSavedJobIds] = useState<Set<string>>(new Set());
 
   // State cho Bộ lọc nâng cao
   const [categoryId, setCategoryId] = useState("all");
@@ -102,6 +109,22 @@ export default function CandidateJobPage() {
     };
     fetchMetadata();
   }, []);
+
+  useEffect(() => {
+    const fetchSavedJobIds = async () => {
+      try {
+        if (isLoggedIn && isCandidate) {
+          const response = await axiosClient.get("/jobs/saved");
+          if (Array.isArray(response.data)) {
+            setSavedJobIds(new Set(response.data.map((j: any) => j.id)));
+          }
+        }
+      } catch (error) {
+        console.error("Lỗi khi lấy danh sách việc làm đã lưu:", error);
+      }
+    };
+    fetchSavedJobIds();
+  }, [isLoggedIn, isCandidate]);
 
 
 
@@ -541,10 +564,47 @@ export default function CandidateJobPage() {
                             {job.company}
                           </Text>
                         </div>
-                        <div style={{ textAlign: "right", flexShrink: 0 }}>
+                        <div style={{ textAlign: "right", flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8 }}>
                           <Text strong style={{ color: appTheme.colors.success, fontSize: 16, display: "block", fontFamily: appTheme.font.family }}>
                             {job.salary}
                           </Text>
+                          {isLoggedIn && isCandidate && (
+                            <Button
+                              type="text"
+                              shape="circle"
+                              icon={
+                                savedJobIds.has(job.id) ? (
+                                  <StarFilled style={{ color: "#F59E0B", fontSize: 20 }} />
+                                ) : (
+                                  <StarOutlined style={{ color: "#94A3B8", fontSize: 20 }} />
+                                )
+                              }
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                try {
+                                  if (savedJobIds.has(job.id)) {
+                                    await axiosClient.delete(`/jobs/${job.id}/unsave`);
+                                    setSavedJobIds((prev) => {
+                                      const next = new Set(prev);
+                                      next.delete(job.id);
+                                      return next;
+                                    });
+                                    message.success("Đã bỏ lưu công việc!");
+                                  } else {
+                                    await axiosClient.post(`/jobs/${job.id}/save`);
+                                    setSavedJobIds((prev) => {
+                                      const next = new Set(prev);
+                                      next.add(job.id);
+                                      return next;
+                                    });
+                                    message.success("Đã lưu công việc thành công!");
+                                  }
+                                } catch (err) {
+                                  message.error("Lỗi khi thực hiện thao tác.");
+                                }
+                              }}
+                            />
+                          )}
                         </div>
                       </div>
 

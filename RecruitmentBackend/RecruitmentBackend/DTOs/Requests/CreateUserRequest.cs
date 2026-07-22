@@ -13,6 +13,6 @@ namespace RecruitmentBackend.DTOs.Requests
         [Required]
         public string Password { get; set; }
         public string Role { get; set; }
-        public List<string> BranchIds { get; set; }
+        public List<string>? BranchIds { get; set; }
     }
 }

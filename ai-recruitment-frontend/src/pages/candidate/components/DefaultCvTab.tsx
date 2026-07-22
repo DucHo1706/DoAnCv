@@ -1,6 +1,6 @@
-import React from "react";
-import { Card, Row, Col, Button, Alert, Upload, Typography, Tag } from "antd";
-import { FilePdfOutlined, InboxOutlined, CheckCircleOutlined } from "@ant-design/icons";
+import React, { useState } from "react";
+import { Card, Row, Col, Button, Upload, Typography, Tag, Modal } from "antd";
+import { FilePdfOutlined, InboxOutlined, CheckCircleOutlined, EyeOutlined } from "@ant-design/icons";
 
 const { Text } = Typography;
 const { Dragger } = Upload;
@@ -18,16 +18,10 @@ export const DefaultCvTab: React.FC<DefaultCvTabProps> = ({
   onRemove,
   onUpload,
 }) => {
+  const [previewVisible, setPreviewVisible] = useState(false);
+
   return (
     <div style={{ marginTop: 16 }}>
-      <Alert
-        message="Thông tin tính năng"
-        description="Ứng dụng AI hỗ trợ lưu trữ 01 CV chính làm bản mẫu mặc định. Khi ứng tuyển nhanh 1-Click tại các tin tuyển dụng, CV mẫu này sẽ được tự động gửi đi để AI chấm điểm."
-        type="info"
-        showIcon
-        style={{ borderRadius: 12, marginBottom: 24 }}
-      />
-
       <Row gutter={[24, 24]}>
         {/* Left Side: Current CV Template */}
         <Col xs={24} md={12}>
@@ -76,12 +70,11 @@ export const DefaultCvTab: React.FC<DefaultCvTabProps> = ({
                 <Button
                   type="primary"
                   ghost
-                  href={defaultCvUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                  icon={<EyeOutlined />}
+                  onClick={() => setPreviewVisible(true)}
                   style={{ borderRadius: 8 }}
                 >
-                  Xem CV mẫu
+                  Xem nhanh
                 </Button>
                 <Button
                   danger
@@ -138,6 +131,28 @@ export const DefaultCvTab: React.FC<DefaultCvTabProps> = ({
           </Dragger>
         </Col>
       </Row>
+
+      {/* PDF Inline Preview Modal */}
+      {defaultCvUrl && (
+        <Modal
+          title={<span style={{ fontWeight: 600 }}>Xem nhanh CV Mẫu</span>}
+          open={previewVisible}
+          onCancel={() => setPreviewVisible(false)}
+          footer={null}
+          width={900}
+          bodyStyle={{ padding: 0 }}
+          style={{ top: 30 }}
+          destroyOnClose
+        >
+          <iframe
+            src={defaultCvUrl}
+            title="CV Preview"
+            width="100%"
+            height="700px"
+            style={{ border: "none", borderRadius: "0 0 8px 8px" }}
+          />
+        </Modal>
+      )}
     </div>
   );
 };

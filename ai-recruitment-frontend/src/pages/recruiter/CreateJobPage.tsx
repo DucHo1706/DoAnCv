@@ -249,7 +249,7 @@ function CreateJobPage() {
             <Input.TextArea rows={4} placeholder="Nhập yêu cầu công việc..." />
           </Form.Item>
 
-          <Divider orientation={"left" as any}>Tiêu chí đánh giá (AI sẽ dựa vào đây để chấm điểm)</Divider>
+          <Divider orientation={"left" as any}>Tiêu chí đánh giá (Hệ thống sẽ dựa vào đây để chấm điểm)</Divider>
           <Form.List
             name="criteria"
             initialValue={[

@@ -250,6 +250,26 @@ namespace RecruitmentBackend.Services
             decimal? averageProcessingSeconds = BuildAverageProcessingSeconds(performanceApplications);
             string aiServerStatus = BuildAiServerStatus(averageProcessingSeconds);
 
+            // TÍNH TOÁN CÁC CHỈ SỐ BỔ SUNG CHO DOANH NGHIỆP
+            int highMatchCount = analyzedApplications.Count(item => item.AiEvaluation != null && item.AiEvaluation.FitScore >= 75);
+            double highMatchRate = analyzedCvs > 0 ? Math.Round((double)highMatchCount / analyzedCvs * 100, 1) : 0;
+
+            // Tối ưu hóa tính toán Time-to-hire và Chi nhánh hiệu quả trực tiếp trên Database
+            var avgDays = await (from app in _context.Applications
+                                 join schedule in _context.InterviewSchedules on app.ApplicationID equals schedule.ApplicationID
+                                 select EF.Functions.DateDiffDay(app.AppliedAt, schedule.InterviewDate))
+                                .AverageAsync(val => (double?)val);
+            double timeToHireDays = avgDays.HasValue ? Math.Round(avgDays.Value, 1) : 0;
+
+            var topBranches = await (from job in _context.JobPostings
+                                     where job.Status == "Published"
+                                     join branch in _context.Branches on job.BranchID equals branch.BranchID
+                                     group job by branch.BranchName into g
+                                     select new { branchName = g.Key, count = g.Count() })
+                                    .OrderByDescending(x => x.count)
+                                    .Take(5)
+                                    .ToListAsync();
+
             var quickMetrics = new
             {
                 totalUsers,
@@ -258,7 +278,10 @@ namespace RecruitmentBackend.Services
                 activeJobs,
                 analyzedCvs,
                 aiServerStatus,
-                averageProcessingSeconds
+                averageProcessingSeconds,
+                highMatchRate,
+                timeToHireDays,
+                topBranches
             };
 
             /*

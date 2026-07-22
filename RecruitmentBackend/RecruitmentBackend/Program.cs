@@ -4,6 +4,7 @@ using RecruitmentBackend.Data;
 using RecruitmentBackend.Interfaces;
 using RecruitmentBackend.Services;
 using RecruitmentBackend.Settings;
+using RecruitmentBackend.Models;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -92,6 +93,8 @@ builder.Services.AddScoped<IAprioriService, AprioriService>();
 builder.Services.AddScoped<IHighUtilityService, HighUtilityService>();
 builder.Services.AddHostedService<MiningSchedulerService>();
 builder.Services.AddScoped<ICandidateComparisonService, CandidateComparisonService>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
+builder.Services.AddScoped<IAuditLogService, AuditLogService>();
 
 
 var jwtSettings = builder.Configuration.GetSection("Jwt");
@@ -138,6 +141,7 @@ app.MapControllers();
 
 // Map SignalR Hub
 app.MapHub<RecruitmentBackend.Hubs.AIEvaluationHub>("/hubs/ai-evaluation");
+app.MapHub<RecruitmentBackend.Hubs.NotificationHub>("/hubs/notifications");
 
 var uploadPath = Path.Combine(builder.Environment.ContentRootPath, "Uploads");
 if (!Directory.Exists(uploadPath))
@@ -150,4 +154,33 @@ app.UseStaticFiles(new StaticFileOptions
     FileProvider = new PhysicalFileProvider(uploadPath),
     RequestPath = "/Uploads"
 });
+using (var scope = app.Services.CreateScope())
+{
+    var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    var passwordHasher = new Microsoft.AspNetCore.Identity.PasswordHasher<Account>();
+    var accounts = await context.Accounts.ToListAsync();
+    bool updatedAny = false;
+    
+    foreach (var account in accounts)
+    {
+        if (string.IsNullOrEmpty(account.PasswordHash))
+        {
+            continue;
+        }
+        
+        if (account.PasswordHash.StartsWith("AQAAAA") == false)
+        {
+            Console.WriteLine($"Migrating account password to secure hash: {account.Email}");
+            account.PasswordHash = passwordHasher.HashPassword(account, account.PasswordHash);
+            updatedAny = true;
+        }
+    }
+    
+    if (updatedAny)
+    {
+        await context.SaveChangesAsync();
+        Console.WriteLine("All plain-text passwords successfully migrated to secure hashes!");
+    }
+}
+
 app.Run();

@@ -61,6 +61,15 @@ namespace RecruitmentBackend.Controllers
                 await _context.SaveChangesAsync();
             }
 
+            CandidateCV defaultCv = null;
+            if (string.IsNullOrEmpty(candidate.DefaultCvUrl) == false)
+            {
+                defaultCv = await _context.CandidateCVs
+                    .Where(cv => cv.CandidateID == candidate.CandidateID && cv.FilePath == candidate.DefaultCvUrl)
+                    .OrderByDescending(cv => cv.CreatedAt)
+                    .FirstOrDefaultAsync();
+            }
+
             return Ok(new
             {
                 fullName = candidate.FullName,
@@ -70,7 +79,13 @@ namespace RecruitmentBackend.Controllers
                 address = candidate.Address,
                 avatarUrl = candidate.AvatarUrl,
                 defaultCvUrl = candidate.DefaultCvUrl,
-                defaultCvName = candidate.DefaultCvName
+                defaultCvName = candidate.DefaultCvName,
+                skills = defaultCv != null ? defaultCv.CVExtractedSkills : "[]",
+                degree = defaultCv != null ? defaultCv.Degree : null,
+                major = defaultCv != null ? defaultCv.Major : null,
+                university = defaultCv != null ? defaultCv.University : null,
+                yearsOfExperience = defaultCv != null ? defaultCv.YearsOfExperience : 0,
+                extractedPhone = defaultCv != null ? defaultCv.ExtractedPhone : null
             });
         }
 
@@ -161,5 +176,41 @@ namespace RecruitmentBackend.Controllers
             }
         }
 
+        public class UpdateSkillsRequest
+        {
+            public System.Collections.Generic.List<string> Skills { get; set; }
+        }
+
+        [HttpPut("skills")]
+        public async Task<IActionResult> UpdateSkills([FromBody] UpdateSkillsRequest request)
+        {
+            if (request == null || request.Skills == null) return BadRequest("Danh sách kỹ năng không hợp lệ.");
+
+            string accountId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(accountId)) return Unauthorized("Không xác định được tài khoản.");
+
+            var candidate = await _context.Candidates
+                .FirstOrDefaultAsync(c => c.AccountID == accountId);
+
+            if (candidate == null) return NotFound("Không tìm thấy thông tin ứng viên.");
+
+            if (string.IsNullOrEmpty(candidate.DefaultCvUrl))
+            {
+                return BadRequest("Vui lòng tải lên CV mẫu trước khi cập nhật kỹ năng.");
+            }
+
+            var defaultCv = await _context.CandidateCVs
+                .Where(cv => cv.CandidateID == candidate.CandidateID && cv.FilePath == candidate.DefaultCvUrl)
+                .OrderByDescending(cv => cv.CreatedAt)
+                .FirstOrDefaultAsync();
+
+            if (defaultCv == null) return NotFound("Không tìm thấy thông tin CV mẫu trong hệ thống.");
+
+            defaultCv.CVExtractedSkills = System.Text.Json.JsonSerializer.Serialize(request.Skills);
+            _context.CandidateCVs.Update(defaultCv);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Cập nhật danh sách kỹ năng thành công!" });
+        }
     }
 }

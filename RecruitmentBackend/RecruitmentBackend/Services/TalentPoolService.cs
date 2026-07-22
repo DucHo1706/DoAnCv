@@ -386,6 +386,7 @@ namespace RecruitmentBackend.Services
                         on job.BranchID equals branch.BranchID
                     where job.Status == "Published"
                           && job.Deadline >= DateTime.Now
+                          && job.RecruiterID == recruiter.RecruiterID
                     select new
                     {
                         job.JobID,

@@ -42,10 +42,6 @@ namespace RecruitmentBackend.Services
             }
 
             string normalizedJobId = jobId.Trim();
-            if (Guid.TryParse(normalizedJobId, out _) == false)
-            {
-                return (false, "JobId không đúng định dạng.", null);
-            }
 
             var ownershipResult = await GetOwnedJobAsync(normalizedJobId, user);
             if (ownershipResult.IsSuccess == false)
@@ -141,10 +137,6 @@ namespace RecruitmentBackend.Services
             }
 
             string normalizedJobId = request.JobId.Trim();
-            if (Guid.TryParse(normalizedJobId, out _) == false)
-            {
-                return (false, "JobId không đúng định dạng.", null);
-            }
 
             if (request.ApplicationIds == null)
             {
@@ -164,15 +156,6 @@ namespace RecruitmentBackend.Services
             if (applicationIds.Count != request.ApplicationIds.Count)
             {
                 return (false, "applicationIds không được chứa ID rỗng.", null);
-            }
-
-            bool hasInvalidApplicationId = applicationIds.Any(applicationId =>
-                Guid.TryParse(applicationId, out _) == false
-            );
-
-            if (hasInvalidApplicationId == true)
-            {
-                return (false, "Một hoặc nhiều applicationId không đúng định dạng.", null);
             }
 
             int distinctApplicationCount = applicationIds

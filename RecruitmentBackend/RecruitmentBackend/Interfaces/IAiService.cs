@@ -15,5 +15,6 @@ namespace RecruitmentBackend.Interfaces
         Task<bool> TrainHuimAsync(object payload);
         Task<string> RecommendHighUtilitySkillsAsync(List<string> currentSkills, int topN = 5);
         Task<string> GetHighUtilityItemsetsJsonAsync();
+        Task<List<SemanticSearchResultItemDto>> SearchSemanticAsync(string query, List<DTOs.Requests.SemanticSearchJobItemDto> jobs);
     }
 }

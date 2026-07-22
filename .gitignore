@@ -50,3 +50,6 @@ Python/download_references.py
 Python/generate_thesis_docx.py
 Python/hoan_thanh_bao_cao.py
 Python/test_links.py
+
+# Temporary test PDF files
+test*.pdf

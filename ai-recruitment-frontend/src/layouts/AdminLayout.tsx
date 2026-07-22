@@ -7,6 +7,7 @@ import {
   SolutionOutlined,
   TagsOutlined,
   TeamOutlined,
+  HistoryOutlined,
 } from "@ant-design/icons";
 import { Breadcrumb, Layout } from "antd";
 import type { ItemType } from "antd/es/menu/interface";
@@ -32,6 +33,7 @@ function AdminLayout() {
 
     { key: "/admin/roles", icon: <SafetyCertificateOutlined />, label: "Phân quyền" },
     { key: "/admin/reports", icon: <BarChartOutlined />, label: "Báo cáo" },
+    { key: "/admin/audit-logs", icon: <HistoryOutlined />, label: "Nhật ký hoạt động" },
   ];
 
   return (

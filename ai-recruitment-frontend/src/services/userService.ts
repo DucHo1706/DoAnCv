@@ -25,4 +25,9 @@ export const userService = {
     const response = await axiosClient.post("/users/register", payload);
     return response.data;
   },
+
+  async getAuditLogs() {
+    const response = await axiosClient.get("/AuditLogs");
+    return response.data;
+  },
 };

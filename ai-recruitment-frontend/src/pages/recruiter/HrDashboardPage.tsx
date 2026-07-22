@@ -290,7 +290,7 @@ export default function HrDashboardPage() {
               <Card
                 title={
                   <span style={{ fontFamily: appTheme.font.family, fontWeight: 700, fontSize: 15, color: appTheme.colors.textPrimary }}>
-                    Ứng viên tiềm năng mới nhất (AI Xếp hạng)
+                    Ứng viên tiềm năng mới nhất 
                   </span>
                 }
                 style={{

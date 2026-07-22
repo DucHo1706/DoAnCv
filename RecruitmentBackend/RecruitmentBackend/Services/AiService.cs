@@ -179,5 +179,33 @@ namespace RecruitmentBackend.Services
             }
             return await response.Content.ReadAsStringAsync();
         }
+
+        public async Task<List<SemanticSearchResultItemDto>> SearchSemanticAsync(string query, List<DTOs.Requests.SemanticSearchJobItemDto> jobs)
+        {
+            try
+            {
+                var payload = new DTOs.Requests.SemanticSearchRequest
+                {
+                    Query = query,
+                    Jobs = jobs
+                };
+                var jsonContent = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
+                var response = await _httpClient.PostAsync("semantic-search", jsonContent);
+                if (response.IsSuccessStatusCode == false)
+                {
+                    return new List<SemanticSearchResultItemDto>();
+                }
+                var jsonResponse = await response.Content.ReadAsStringAsync();
+                var result = JsonSerializer.Deserialize<SemanticSearchResponse>(
+                    jsonResponse,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                );
+                return result?.Results ?? new List<SemanticSearchResultItemDto>();
+            }
+            catch
+            {
+                return new List<SemanticSearchResultItemDto>();
+            }
+        }
     }
 }

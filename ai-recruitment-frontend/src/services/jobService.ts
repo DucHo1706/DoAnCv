@@ -122,6 +122,11 @@ export const jobService = {
     const response = await axiosClient.put(`/jobs/${id}/toggle-status`);
     return response.data;
   },
+
+  async toggleRecruiterJobStatus(id: string) {
+    const response = await axiosClient.put(`/jobs/${id}/toggle-status-recruiter`);
+    return response.data;
+  },
 };
 
 export interface BranchPayload {

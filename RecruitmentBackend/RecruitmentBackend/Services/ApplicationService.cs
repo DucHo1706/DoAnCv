@@ -28,17 +28,20 @@ namespace RecruitmentBackend.Services
         private readonly IFileService _fileService;
         private readonly IServiceScopeFactory _serviceScopeFactory;
         private readonly IHubContext<AIEvaluationHub> _hubContext;
+        private readonly INotificationService _notificationService;
 
         public ApplicationService(
             AppDbContext context,
             IFileService fileService,
             IServiceScopeFactory serviceScopeFactory,
-            IHubContext<AIEvaluationHub> hubContext)
+            IHubContext<AIEvaluationHub> hubContext,
+            INotificationService notificationService)
         {
             _context = context;
             _fileService = fileService;
             _serviceScopeFactory = serviceScopeFactory;
             _hubContext = hubContext;
+            _notificationService = notificationService;
         }
 
         public async Task<(bool IsSuccess, string Message, object Data)> ApplyJobAsync(ApplyJobRequest request, ClaimsPrincipal user)
@@ -185,6 +188,29 @@ namespace RecruitmentBackend.Services
 
                 await _context.SaveChangesAsync();
 
+                // 9.5. Send notification to Recruiter
+                try
+                {
+                    var recruiter = await _context.Recruiters.FindAsync(job.RecruiterID);
+                    if (recruiter != null)
+                    {
+                        string positionName = "Chưa cập nhật";
+                        var position = await _context.Positions.FindAsync(job.PositionID);
+                        if (position != null) positionName = position.PositionName;
+
+                        await _notificationService.CreateNotificationAsync(
+                            recruiter.AccountID,
+                            "Đơn ứng tuyển mới",
+                            $"Ứng viên {candidate.FullName} đã nộp hồ sơ cho công việc {positionName}",
+                            $"/recruiter/cv-ranking"
+                        );
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("Lỗi gửi thông báo ứng tuyển mới: " + ex.Message);
+                }
+
                 // 10. Kích hoạt AI chạy nền
                 string applicationIdForAi = newApplication.ApplicationID;
 
@@ -240,10 +266,15 @@ namespace RecruitmentBackend.Services
                     return (false, "Không tìm thấy thông tin Nhà tuyển dụng.", null);
                 }
 
+                var branchIds = await _context.RecruiterBranches
+                    .Where(rb => rb.RecruiterID == recruiter.RecruiterID)
+                    .Select(rb => rb.BranchID)
+                    .ToListAsync();
+
                 var rawApplications = await (
                     from app in _context.Applications
                     join job in _context.JobPostings on app.JobID equals job.JobID
-                    where job.RecruiterID == recruiter.RecruiterID
+                    where branchIds.Contains(job.BranchID)
                     join cv in _context.CandidateCVs on app.CVID equals cv.CVID
                     join cand in _context.Candidates on cv.CandidateID equals cand.CandidateID
                     join acc in _context.Accounts on cand.AccountID equals acc.AccountID
@@ -510,6 +541,14 @@ namespace RecruitmentBackend.Services
                         classification = application.classification;
                     }
 
+                    // Query real-time details from DB
+                    var schedule = await _context.InterviewSchedules
+                        .FirstOrDefaultAsync(s => s.ApplicationID == application.id);
+
+                    var rejection = await _context.TalentPoolInteractions
+                        .Where(i => i.ApplicationID == application.id && i.Type == "Rejected")
+                        .FirstOrDefaultAsync();
+
                     var applicationItem = new
                     {
                         id = application.id,
@@ -528,7 +567,16 @@ namespace RecruitmentBackend.Services
                         matchedSkills = matchedSkillsList,
                         missingSkills = missingSkillsList,
                         classification = classification,
-                        criteriaResults = criteriaResults
+                        criteriaResults = criteriaResults,
+                        interviewSchedule = schedule != null ? new {
+                            interviewDate = schedule.InterviewDate,
+                            format = schedule.Format,
+                            locationOrLink = schedule.LocationOrLink,
+                            meetingId = schedule.MeetingID,
+                            passcode = schedule.Passcode,
+                            notes = schedule.Notes
+                        } : null,
+                        rejectionFeedback = rejection != null ? rejection.Content : null
                     };
 
                     applications.Add(applicationItem);
@@ -616,6 +664,42 @@ namespace RecruitmentBackend.Services
                 application.Status = newStatus;
 
                 await _context.SaveChangesAsync();
+
+                // Trigger notification to candidate
+                try
+                {
+                    var cv = await _context.CandidateCVs.FindAsync(application.CVID);
+                    if (cv != null)
+                    {
+                        var candidateItem = await _context.Candidates.FindAsync(cv.CandidateID);
+                        if (candidateItem != null)
+                        {
+                            string positionName = "Chưa cập nhật";
+                            var position = await _context.Positions.FindAsync(job.PositionID);
+                            if (position != null) positionName = position.PositionName;
+
+                            string statusText = newStatus switch
+                            {
+                                "Reviewing" => "Đang xem xét",
+                                "Interview" => "Lên lịch phỏng vấn",
+                                "Shortlisted" => "Trúng tuyển vòng hồ sơ",
+                                "Accepted" => "Đạt yêu cầu (Nhận việc)",
+                                _ => newStatus
+                            };
+
+                            await _notificationService.CreateNotificationAsync(
+                                candidateItem.AccountID,
+                                "Cập nhật trạng thái hồ sơ",
+                                $"Đơn ứng tuyển vị trí {positionName} của bạn đã chuyển sang trạng thái: {statusText}",
+                                "/candidate/application-status"
+                            );
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("Lỗi gửi thông báo đổi trạng thái: " + ex.Message);
+                }
 
                 // Phát SignalR thông báo
                 try
@@ -829,6 +913,21 @@ namespace RecruitmentBackend.Services
                 await _context.TalentPoolInteractions.AddAsync(interaction);
 
                 await _context.SaveChangesAsync();
+
+                // Trigger notification to candidate
+                try
+                {
+                    await _notificationService.CreateNotificationAsync(
+                        candidate.AccountID,
+                        "Hồ sơ chưa phù hợp",
+                        $"Đơn ứng tuyển vị trí {jobTitle} của bạn đã bị từ chối với lý do: {reasonType}",
+                        "/candidate/application-status"
+                    );
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("Lỗi gửi thông báo từ chối: " + ex.Message);
+                }
 
                 // Phát SignalR thông báo
                 try

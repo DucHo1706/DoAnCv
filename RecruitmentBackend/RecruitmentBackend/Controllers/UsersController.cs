@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using RecruitmentBackend.DTOs.Requests;
 using RecruitmentBackend.Interfaces;
+using RecruitmentBackend.Data;
+using System.Security.Claims;
 using System.Threading.Tasks;
 
 namespace RecruitmentBackend.Controllers
@@ -12,10 +14,14 @@ namespace RecruitmentBackend.Controllers
     public class UsersController : ControllerBase
     {
         private readonly IUserService _userService;
+        private readonly IAuditLogService _auditLogService;
+        private readonly AppDbContext _context;
 
-        public UsersController(IUserService userService)
+        public UsersController(IUserService userService, IAuditLogService auditLogService, AppDbContext context)
         {
             _userService = userService;
+            _auditLogService = auditLogService;
+            _context = context;
         }
 
         // 1. API Lấy danh sách toàn bộ người dùng cho Admin
@@ -30,9 +36,18 @@ namespace RecruitmentBackend.Controllers
         [HttpPut("{id}/toggle-status")]
         public async Task<IActionResult> ToggleUserStatus(string id)
         {
+            var targetAccount = await _context.Accounts.FindAsync(id);
+            var targetEmail = targetAccount?.Email ?? id;
+
             var result = await _userService.ToggleUserStatusAsync(id);
             if (!result.Success) return NotFound(new { message = result.Message });
             
+            // GHI NHẬT KÝ HỆ THỐNG
+            var adminEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? "Admin";
+            var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
+            var actionText = result.NewStatus == "Active" ? "Mở khóa tài khoản" : "Khóa tài khoản";
+            await _auditLogService.WriteLogAsync(adminEmail, actionText, $"Tài khoản: {targetEmail}", ipAddress);
+
             return Ok(new { message = result.Message, newStatus = result.NewStatus });
         }
 
@@ -43,6 +58,11 @@ namespace RecruitmentBackend.Controllers
             var result = await _userService.CreateUserAsync(request);
             if (!result.Success) return BadRequest(new { message = result.Message });
 
+            // GHI NHẬT KÝ HỆ THỐNG
+            var adminEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? "Admin";
+            var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
+            await _auditLogService.WriteLogAsync(adminEmail, "Tạo tài khoản", $"Tài khoản: {request.Email} ({request.Role})", ipAddress);
+
             return Ok(new { message = result.Message });
         }
 
@@ -50,8 +70,16 @@ namespace RecruitmentBackend.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateUser(string id, [FromBody] UpdateUserRequest request)
         {
+            var targetAccount = await _context.Accounts.FindAsync(id);
+            var targetEmail = targetAccount?.Email ?? id;
+
             var result = await _userService.UpdateUserAsync(id, request);
             if (!result.Success) return BadRequest(new { message = result.Message });
+
+            // GHI NHẬT KÝ HỆ THỐNG
+            var adminEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? "Admin";
+            var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
+            await _auditLogService.WriteLogAsync(adminEmail, "Cập nhật tài khoản", $"Tài khoản: {targetEmail}", ipAddress);
 
             return Ok(new { message = result.Message });
         }

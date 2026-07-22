@@ -1,4 +1,23 @@
-# React + TypeScript + Vite
+# AI Recruitment Frontend (React + TypeScript + Vite)
+
+Ứng dụng Frontend Tuyển dụng AI (HR Portal, Admin Portal, Candidate Portal) xây dựng trên nền tảng React 18, TypeScript, Ant Design v5 và Vite.
+
+## Kiến trúc thư mục (Architecture & Folder Structure)
+
+Dự án áp dụng mô hình **Feature-Based / Component-Driven Architecture**. Xem chi tiết tại tài liệu [FRONTEND_ARCHITECTURE.md](../FRONTEND_ARCHITECTURE.md).
+
+```text
+src/pages/<domain>/<FeaturePageName>/
+├── index.ts                           # Barrel export
+├── <FeaturePageName>.tsx              # View Orchestrator & Layout
+├── hooks/                             # Custom hook quản lý State & Logic
+│   └── use<FeaturePageName>.ts
+└── components/                        # Sub-components theo vùng giao diện
+```
+
+---
+
+## Technical Stack & Guidelines
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 

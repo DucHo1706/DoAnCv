@@ -34,12 +34,14 @@ import ApplicationStatusPage from "./pages/candidate/ApplicationStatusPage";
 import CandidateProfilePage from "./pages/candidate/CandidateProfilePage";
 import CandidateJobDetailPage from "./pages/candidate/CandidateJobDetailPage";
 import CvAnalysisResultPage from "./pages/candidate/CvAnalysisResultPage";
+import CandidateDashboardPage from "./pages/candidate/CandidateDashboardPage";
+import SavedJobsPage from "./pages/candidate/SavedJobsPage";
 
 // Admin pages
 import AdminDashboardPage from "./pages/admin/AdminDashboardPage";
 import JobApprovalPage from "./pages/admin/JobApprovalPage";
 import UserManagementPage from "./pages/admin/UserManagementPage";
-import ReportsPage from "./pages/admin/ReportsPage";
+import AuditLogsPage from "./pages/admin/AuditLogsPage";
 import RolePermissionPage from "./pages/admin/RolePermissionPage";
 import BranchManagementPage from "./pages/admin/BranchManagementPage";
 import CategoryManagementPage from "./pages/admin/CategoryManagementPage";
@@ -67,6 +69,8 @@ function App() {
           <Route path="jobs/:id/cv-analysis" element={<CvAnalysisResultPage />} />
           <Route path="my-applications" element={<ApplicationStatusPage />} />
           <Route path="profile" element={<CandidateProfilePage />} />
+          <Route path="candidate/dashboard" element={<CandidateDashboardPage />} />
+          <Route path="candidate/saved-jobs" element={<SavedJobsPage />} />
         </Route>
 
         {/* Recruiter */}
@@ -94,7 +98,8 @@ function App() {
           <Route path="approval" element={<JobApprovalPage />} />
           <Route path="users" element={<UserManagementPage />} />
           <Route path="roles" element={<RolePermissionPage />} />
-          <Route path="reports" element={<ReportsPage />} />
+          <Route path="reports" element={<Navigate to="/admin/dashboard" replace />} />
+          <Route path="audit-logs" element={<AuditLogsPage />} />
           <Route path="branches" element={<BranchManagementPage />} />
           <Route path="categories" element={<CategoryManagementPage />} />
           <Route path="job-levels" element={<JobLevelManagementPage />} />

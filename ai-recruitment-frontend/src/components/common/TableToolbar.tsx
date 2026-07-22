@@ -7,6 +7,8 @@ type TableToolbarProps = {
   onSearchChange?: (val: string) => void;
   onSearch?: (val: string) => void;
   extra?: ReactNode;
+  action?: ReactNode;
+  actions?: ReactNode;
 };
 
 function TableToolbar({
@@ -15,7 +17,10 @@ function TableToolbar({
   onSearchChange,
   onSearch,
   extra,
+  action,
+  actions,
 }: TableToolbarProps) {
+  const toolbarExtra = extra ?? action ?? actions;
   return (
     <div
       style={{
@@ -36,7 +41,7 @@ function TableToolbar({
         onSearch={onSearch}
       />
 
-      <Space wrap>{extra}</Space>
+      {toolbarExtra && <Space wrap>{toolbarExtra}</Space>}
     </div>
   );
 }

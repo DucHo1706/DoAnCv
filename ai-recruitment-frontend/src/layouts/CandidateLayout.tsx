@@ -3,6 +3,8 @@ import {
   ProfileOutlined,
   SolutionOutlined,
   UploadOutlined,
+  DashboardOutlined,
+  StarOutlined,
 } from "@ant-design/icons";
 import { Breadcrumb, Layout } from "antd";
 import type { ItemType } from "antd/es/menu/interface";
@@ -17,7 +19,12 @@ function CandidateLayout() {
   const navigate = useNavigate();
   const location = useLocation();
 
+  const userStr = localStorage.getItem("user");
+  const userObj = userStr ? JSON.parse(userStr) : null;
+  const userName = userObj?.fullName || userObj?.FullName || "Ứng viên";
+
   const menuItems: ItemType[] = [
+    { key: "/candidate/dashboard", icon: <DashboardOutlined />, label: "Báo cáo năng lực" },
     { key: "/candidate/profile", icon: <ProfileOutlined />, label: "Hồ sơ cá nhân" },
     { key: "/candidate/upload-cv", icon: <UploadOutlined />, label: "Upload CV" },
     { key: "/candidate/job-suggestions", icon: <FileSearchOutlined />, label: "Gợi ý việc làm" },
@@ -26,7 +33,15 @@ function CandidateLayout() {
       icon: <SolutionOutlined />,
       label: "Trạng thái ứng tuyển",
     },
+    { key: "/candidate/saved-jobs", icon: <StarOutlined />, label: "Việc làm đã lưu" },
   ];
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    localStorage.removeItem("tokenExpiry");
+    navigate("/login");
+  };
 
   return (
     <Layout style={{ minHeight: "100vh" }}>
@@ -35,9 +50,9 @@ function CandidateLayout() {
       <Layout>
         <AppHeader
           title="Candidate Workspace"
-          userName="Trần Thị B"
+          userName={userName}
           roleLabel="Candidate"
-          onLogout={() => navigate("/login")}
+          onLogout={handleLogout}
         />
 
         <Content style={{ margin: 24 }}>

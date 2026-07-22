@@ -5,6 +5,7 @@ using RecruitmentBackend.Data;
 using RecruitmentBackend.DTOs.Requests;
 using RecruitmentBackend.DTOs.Responses;
 using RecruitmentBackend.Interfaces;
+using RecruitmentBackend.Models;
 using System;
 using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
@@ -46,7 +47,14 @@ namespace RecruitmentBackend.Services
                 throw new Exception("Tài khoản của bạn đã bị khóa.");
             }
 
-            if (account.PasswordHash != request.Password)
+            var passwordHasher = new Microsoft.AspNetCore.Identity.PasswordHasher<Account>();
+            var verificationResult = passwordHasher.VerifyHashedPassword(
+                account,
+                account.PasswordHash ?? string.Empty,
+                request.Password
+            );
+
+            if (verificationResult == Microsoft.AspNetCore.Identity.PasswordVerificationResult.Failed)
             {
                 account.AccessFailedCount += 1;
                 if (account.AccessFailedCount >= 5)

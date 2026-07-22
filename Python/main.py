@@ -15,6 +15,7 @@ from services.skills_sync_service import fetch_skills_from_db_on_startup
 from controllers.analysis_controller import router as analysis_router
 from controllers.chat_controller import router as chat_router
 from controllers.skills_controller import router as skills_router
+from controllers.search_controller import router as search_router
 from utils.logger import logger
 
 @asynccontextmanager
@@ -42,6 +43,7 @@ app.add_middleware(
 app.include_router(analysis_router)
 app.include_router(chat_router)
 app.include_router(skills_router)
+app.include_router(search_router)
 
 @app.get("/")
 async def root():

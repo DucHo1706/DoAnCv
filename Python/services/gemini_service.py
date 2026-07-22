@@ -130,3 +130,41 @@ def generate_content_with_retry(prompt: str, is_json: bool = True, models: list 
         logger.warning(f"Model {model_name} khong kha dung tren cac Keys hien co. Dang thu model tiep theo...")
         
     raise last_error or Exception("Khong the ket noi den Google Gemini API sau khi xoay vong cac keys va models.")
+
+
+def embed_content_with_retry(texts: list) -> list:
+    """
+    Goi Gemini Embedding API de lay vector bieu dien van ban (1D list of floats).
+    Ho tro xoay vong API Keys de tranh dat gioi han rate limit.
+    Tra ve danh sach cac vector (moi vector la List[float]).
+    """
+    if not clients:
+        raise Exception("Khong cau hinh API keys.")
+        
+    last_error = None
+    import random
+    
+    # Xáo trộn danh sách clients để chia đều tải ngẫu nhiên
+    shuffled_clients = list(enumerate(clients))
+    random.shuffle(shuffled_clients)
+    
+    for client_idx, active_client in shuffled_clients:
+        try:
+            vectors = []
+            for t in texts:
+                response = active_client.models.embed_content(
+                    model="gemini-embedding-2",
+                    contents=t
+                )
+                if hasattr(response, "embeddings") and response.embeddings:
+                    vectors.append(response.embeddings[0].values)
+                elif hasattr(response, "embedding") and response.embedding:
+                    vectors.append(response.embedding.values)
+                else:
+                    raise Exception("No embedding values in API response")
+            return vectors
+        except Exception as e:
+            last_error = e
+            logger.warning(f"Loi goi Embedding voi Key #{client_idx+1}: {e}")
+            
+    raise last_error or Exception("Khong the ket noi den Google Gemini Embedding API sau khi xoay vong cac keys.")

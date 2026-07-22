@@ -41,9 +41,9 @@ export function useRecruiterDashboard() {
     return getFitScoreColor(score);
   };
 
-  const handleChangeSelectedJob = (value: string | undefined) => {
-    if (value) {
-      setSelectedJob(value);
+  const handleChangeSelectedJob = (value?: string | number) => {
+    if (value !== undefined && value !== null) {
+      setSelectedJob(String(value));
     } else {
       setSelectedJob(null);
     }

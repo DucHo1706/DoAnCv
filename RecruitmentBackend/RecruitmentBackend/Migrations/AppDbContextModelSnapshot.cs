@@ -135,11 +135,43 @@ namespace RecruitmentBackend.Migrations
 
                     b.HasKey("ApplicationID");
 
+                    b.HasIndex("AppliedAt");
+
                     b.HasIndex("CVID");
 
                     b.HasIndex("JobID");
 
                     b.ToTable("Applications");
+                });
+
+            modelBuilder.Entity("RecruitmentBackend.Models.AuditLog", b =>
+                {
+                    b.Property<string>("AuditLogID")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("IPAddress")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Target")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("UserEmail")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("AuditLogID");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.ToTable("AuditLogs");
                 });
 
             modelBuilder.Entity("RecruitmentBackend.Models.Branch", b =>
@@ -522,7 +554,7 @@ namespace RecruitmentBackend.Migrations
 
                     b.Property<string>("Status")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<int>("ViewCount")
                         .HasColumnType("int");
@@ -531,9 +563,46 @@ namespace RecruitmentBackend.Migrations
 
                     b.HasIndex("CategoryID");
 
+                    b.HasIndex("CreatedAt");
+
                     b.HasIndex("JobLevelID");
 
+                    b.HasIndex("Status");
+
                     b.ToTable("JobPostings");
+                });
+
+            modelBuilder.Entity("RecruitmentBackend.Models.Notification", b =>
+                {
+                    b.Property<string>("NotificationID")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("AccountID")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("RedirectUrl")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("NotificationID");
+
+                    b.HasIndex("AccountID");
+
+                    b.ToTable("Notifications");
                 });
 
             modelBuilder.Entity("RecruitmentBackend.Models.Position", b =>
@@ -595,6 +664,31 @@ namespace RecruitmentBackend.Migrations
                     b.HasKey("RecruiterID", "BranchID");
 
                     b.ToTable("RecruiterBranches");
+                });
+
+            modelBuilder.Entity("RecruitmentBackend.Models.SavedJob", b =>
+                {
+                    b.Property<string>("SavedJobID")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("CandidateID")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("JobID")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("SavedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("SavedJobID");
+
+                    b.HasIndex("CandidateID");
+
+                    b.HasIndex("JobID");
+
+                    b.ToTable("SavedJobs");
                 });
 
             modelBuilder.Entity("RecruitmentBackend.Models.Skill", b =>
@@ -816,6 +910,17 @@ namespace RecruitmentBackend.Migrations
                     b.Navigation("JobLevel");
                 });
 
+            modelBuilder.Entity("RecruitmentBackend.Models.Notification", b =>
+                {
+                    b.HasOne("RecruitmentBackend.Models.Account", "Account")
+                        .WithMany()
+                        .HasForeignKey("AccountID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Account");
+                });
+
             modelBuilder.Entity("RecruitmentBackend.Models.Position", b =>
                 {
                     b.HasOne("RecruitmentBackend.Models.Category", "Category")
@@ -845,6 +950,25 @@ namespace RecruitmentBackend.Migrations
                         .HasForeignKey("RecruiterID")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("RecruitmentBackend.Models.SavedJob", b =>
+                {
+                    b.HasOne("RecruitmentBackend.Models.Candidate", "Candidate")
+                        .WithMany()
+                        .HasForeignKey("CandidateID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("RecruitmentBackend.Models.JobPosting", "JobPosting")
+                        .WithMany()
+                        .HasForeignKey("JobID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Candidate");
+
+                    b.Navigation("JobPosting");
                 });
 
             modelBuilder.Entity("RecruitmentBackend.Models.Account", b =>

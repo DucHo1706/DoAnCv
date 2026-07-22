@@ -3,6 +3,8 @@ import {
   PlusOutlined,
   CheckCircleOutlined,
   ClockCircleOutlined,
+  LockOutlined,
+  UnlockOutlined,
 } from "@ant-design/icons";
 import {
   Button,
@@ -15,6 +17,7 @@ import {
   Table,
   Tag,
   Typography,
+  Popconfirm,
 } from "antd";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -29,7 +32,7 @@ import type {
 import { appTheme } from "../../constants/theme";
 
 const { Text } = Typography;
-type JobStatus = "approved" | "pending";
+type JobStatus = "approved" | "pending" | "closed";
 
 type JobDtoExtended = JobDto & {
   category?: { name: string };
@@ -49,7 +52,10 @@ type JobTableItem = {
 
 function getStatusMeta(status: JobStatus) {
   if (status === "approved") {
-    return { label: "Đã duyệt", color: "green" as const };
+    return { label: "Đang hiển thị", color: "green" as const };
+  }
+  if (status === "closed") {
+    return { label: "Tạm ẩn", color: "red" as const };
   }
   return { label: "Chờ duyệt", color: "gold" as const };
 }
@@ -93,7 +99,12 @@ function JobManagementPage() {
 
   // ── Table data ─────────────────────────────────────────
   const tableData: JobTableItem[] = jobs.map((job) => {
-    const status: JobStatus = job.isApproved ? "approved" : "pending";
+    let status: JobStatus = "pending";
+    if (job.status === "Published") {
+      status = "approved";
+    } else if (job.status === "Closed") {
+      status = "closed";
+    }
     const categoryNames = job.category?.name || "Chưa cập nhật";
     const isExpired = job.deadline ? new Date(job.deadline) < new Date() : false;
 
@@ -130,6 +141,16 @@ function JobManagementPage() {
   // ── Xem chi tiết ──────────────────────────────────────
   const handleViewJob = (record: JobTableItem) => {
     navigate(`/recruiter/jobs/${record.id}`);
+  };
+
+  const handleToggleStatus = async (id: string) => {
+    try {
+      await jobService.toggleRecruiterJobStatus(id);
+      message.success("Cập nhật trạng thái hiển thị thành công!");
+      fetchJobs();
+    } catch (error: any) {
+      message.error(error.response?.data?.message || "Lỗi khi thay đổi trạng thái!");
+    }
   };
 
   // ── Columns ───────────────────────────────────────────
@@ -180,6 +201,26 @@ function JobManagementPage() {
           <Button icon={<EyeOutlined />} onClick={() => handleViewJob(record)}>
             Xem chi tiết
           </Button>
+          {(record.status === "approved" || record.status === "closed") && (
+            <Popconfirm
+              title={
+                record.status === "approved"
+                  ? "Bạn có chắc muốn tạm ẩn tin này?"
+                  : "Mở hiển thị lại tin này?"
+              }
+              onConfirm={() => handleToggleStatus(record.id)}
+              okText="Đồng ý"
+              cancelText="Hủy"
+              placement="topRight"
+            >
+              <Button
+                icon={record.status === "approved" ? <LockOutlined /> : <UnlockOutlined />}
+                danger={record.status === "approved"}
+              >
+                {record.status === "approved" ? "Tạm ẩn" : "Hiển thị"}
+              </Button>
+            </Popconfirm>
+          )}
         </Space>
       ),
     },
@@ -253,7 +294,8 @@ function JobManagementPage() {
                 value={filterStatus}
                 onChange={setFilterStatus}
                 options={[
-                  { label: "Đã duyệt", value: "approved" },
+                  { label: "Đang hiển thị", value: "approved" },
+                  { label: "Tạm ẩn", value: "closed" },
                   { label: "Chờ duyệt", value: "pending" },
                 ]}
               />

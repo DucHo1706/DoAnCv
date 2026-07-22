@@ -15,10 +15,12 @@ namespace RecruitmentBackend.Services
     public class InterviewService : IInterviewService
     {
         private readonly AppDbContext _context;
+        private readonly INotificationService _notificationService;
 
-        public InterviewService(AppDbContext context)
+        public InterviewService(AppDbContext context, INotificationService notificationService)
         {
             _context = context;
+            _notificationService = notificationService;
         }
 
         public async Task<(bool IsSuccess, string Message, object Data)> ScheduleInterviewAsync(
@@ -98,6 +100,32 @@ namespace RecruitmentBackend.Services
                 }
 
                 await _context.SaveChangesAsync();
+
+                // Trigger notification to candidate
+                try
+                {
+                    var candidate = await _context.Candidates.FindAsync(application.CandidateCV.CandidateID);
+                    if (candidate != null)
+                    {
+                        string positionName = "Chưa cập nhật";
+                        if (job != null)
+                        {
+                            var position = await _context.Positions.FindAsync(job.PositionID);
+                            if (position != null) positionName = position.PositionName;
+                        }
+
+                        await _notificationService.CreateNotificationAsync(
+                            candidate.AccountID,
+                            "Lịch hẹn phỏng vấn mới",
+                            $"Nhà tuyển dụng đã lên lịch phỏng vấn cho vị trí {positionName} lúc {request.InterviewDate.ToString("dd/MM/yyyy HH:mm")}",
+                            "/candidate/application-status"
+                        );
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("Lỗi gửi thông báo lịch phỏng vấn: " + ex.Message);
+                }
 
                 var dataToReturn = new
                 {
@@ -272,6 +300,33 @@ namespace RecruitmentBackend.Services
                 application.Status = "Reviewed";
 
                 await _context.SaveChangesAsync();
+
+                // Trigger notification to candidate
+                try
+                {
+                    var cv = await _context.CandidateCVs.FindAsync(application.CVID);
+                    if (cv != null)
+                    {
+                        var candidate = await _context.Candidates.FindAsync(cv.CandidateID);
+                        if (candidate != null)
+                        {
+                            string positionName = "Chưa cập nhật";
+                            var position = await _context.Positions.FindAsync(application.JobPosting.PositionID);
+                            if (position != null) positionName = position.PositionName;
+
+                            await _notificationService.CreateNotificationAsync(
+                                candidate.AccountID,
+                                "Lịch phỏng vấn đã bị hủy",
+                                $"Lịch hẹn phỏng vấn cho vị trí {positionName} đã bị nhà tuyển dụng hủy.",
+                                "/candidate/application-status"
+                            );
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("Lỗi gửi thông báo hủy lịch: " + ex.Message);
+                }
 
                 return (true, "Đã hủy lịch phỏng vấn và đưa hồ sơ về trạng thái xem xét thành công.", null);
             }

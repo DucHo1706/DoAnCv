@@ -47,7 +47,7 @@ function UploadCVPage() {
     setUploading(true);
     setTimeout(() => {
       setUploading(false);
-      message.success("AI đã bắt đầu phân tích CV của bạn. Vui lòng kiểm tra kết quả tại Lịch sử ứng tuyển!");
+      message.success("Hệ thống đã bắt đầu phân tích CV của bạn. Vui lòng kiểm tra kết quả tại Lịch sử ứng tuyển!");
     }, 1500);
   };
 
@@ -84,7 +84,7 @@ function UploadCVPage() {
               Tải lên CV cá nhân
             </Title>
             <Paragraph style={{ color: appTheme.colors.textSecondary, fontSize: 14, margin: 0 }}>
-              Tải lên hồ sơ của bạn để AI phân tích chuyên sâu các kỹ năng, điểm mạnh và đề xuất cơ hội phù hợp.
+              Tải lên hồ sơ của bạn để hệ thống phân tích chuyên sâu các kỹ năng, điểm mạnh và đề xuất cơ hội phù hợp.
             </Paragraph>
           </div>
 
@@ -131,7 +131,7 @@ function UploadCVPage() {
                 padding: "0 32px"
               }}
             >
-              Phân tích CV bằng AI
+              Phân tích CV
             </Button>
           </div>
         </Card>

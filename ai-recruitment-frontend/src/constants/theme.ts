@@ -1,9 +1,11 @@
 export const appTheme = {
   colors: {
+    // 30% - Màu Thương Hiệu (Primary Brand Color)
     primary: "#2563EB",
     primaryHover: "#1D4ED8",
     primaryActive: "#1E40AF",
 
+    // 60% - Màu Nền Trung Tính (Neutral Background & Surface)
     background: "#F8FAFC",
     surface: "#FFFFFF",
     border: "#E2E8F0",
@@ -11,10 +13,12 @@ export const appTheme = {
     textPrimary: "#0F172A",
     textSecondary: "#64748B",
 
-    success: "#16A34A",
-    warning: "#F59E0B",
-    error: "#DC2626",
-    info: "#0EA5E9",
+    // 10% - Màu Nhấn (Accent & Highlights)
+    accent: "#F97316", // Amber Orange làm màu nhấn chính (CTA đặc biệt, AI Highlight, Match Score)
+    success: "#10B981", // Emerald Green (Phù hợp cao / Đã duyệt)
+    warning: "#F59E0B", // Amber Yellow (Cần chú ý)
+    error: "#EF4444",   // Crimson Red (Cảnh báo / Red Flag)
+    info: "#0EA5E9",    // Sky Blue
   },
 
   font: {

@@ -25,17 +25,20 @@ namespace RecruitmentBackend.Services
         private readonly IAiService _aiService;
         private readonly IServiceScopeFactory _serviceScopeFactory;
         private readonly IHubContext<AIEvaluationHub> _hubContext;
+        private readonly INotificationService _notificationService;
 
         public AiEvaluationService(
             AppDbContext context,
             IAiService aiService,
             IServiceScopeFactory serviceScopeFactory,
-            IHubContext<AIEvaluationHub> hubContext)
+            IHubContext<AIEvaluationHub> hubContext,
+            INotificationService notificationService)
         {
             _context = context;
             _aiService = aiService;
             _serviceScopeFactory = serviceScopeFactory;
             _hubContext = hubContext;
+            _notificationService = notificationService;
         }
 
         private async Task SendProgressAsync(string applicationId, int progress, string stage, string messageStr = "")
@@ -267,6 +270,34 @@ namespace RecruitmentBackend.Services
 
                 _context.AIEvaluations.Add(newEvaluation);
                 await _context.SaveChangesAsync();
+
+                // Trigger notification to candidate that AI evaluation is completed
+                try
+                {
+                    var candidate = await _context.Candidates.FindAsync(application.CandidateCV.CandidateID);
+                    if (candidate != null)
+                    {
+                        string positionName = "Chưa cập nhật";
+                        if (job != null)
+                        {
+                            var position = await _context.Positions.FindAsync(job.PositionID);
+                            if (position != null) positionName = position.PositionName;
+                        }
+
+                        int fitScore = Convert.ToInt32(Math.Round(newEvaluation.FitScore));
+
+                        await _notificationService.CreateNotificationAsync(
+                            candidate.AccountID,
+                            "Phân tích AI hoàn tất",
+                            $"AI đã hoàn tất chấm điểm hồ sơ vị trí {positionName} của bạn. Điểm tương hợp: {fitScore}%",
+                            "/candidate/application-status"
+                        );
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("Lỗi gửi thông báo AI hoàn tất: " + ex.Message);
+                }
 
                 if (matchedSkills.Count > 0)
                 {

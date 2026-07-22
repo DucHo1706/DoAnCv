@@ -77,66 +77,72 @@ function MainLayout() {
   const hrMenuItems = [
     {
       key: "/recruiter/dashboard",
-      label: <Link to="/recruiter/dashboard">Dashboard Thống Kê</Link>,
+      label: <Link to="/recruiter/dashboard">Recruiting Overview</Link>,
     },
     {
       key: "/recruiter/jobs",
-      label: <Link to="/recruiter/jobs">Quản lý Tin Tuyển Dụng</Link>,
+      label: <Link to="/recruiter/jobs">Job Requisitions</Link>,
     },
     {
       key: "/recruiter/applications",
-      label: <Link to="/recruiter/applications">Hồ sơ & Xếp hạng AI</Link>,
+      label: <Link to="/recruiter/applications">Candidate Pipeline</Link>,
     },
     {
       key: "/recruiter/schedules",
-      label: <Link to="/recruiter/schedules">Lịch phỏng vấn</Link>,
+      label: <Link to="/recruiter/schedules">Interview Schedule</Link>,
     },
     {
       key: "/recruiter/talent-pool",
-      label: <Link to="/recruiter/talent-pool">Ngân hàng Ứng viên</Link>,
+      label: <Link to="/recruiter/talent-pool">Talent Pool (CRM)</Link>,
     },
     {
       key: "/recruiter/email-logs",
-      label: <Link to="/recruiter/email-logs">Nhật ký gửi mail</Link>,
+      label: <Link to="/recruiter/email-logs">Email Logs</Link>,
     },
   ];
 
   const adminMenuItems = [
     {
       key: "/admin/dashboard",
-      label: <Link to="/admin/dashboard">Admin Dashboard</Link>,
+      label: <Link to="/admin/dashboard">Analytics & Insights</Link>,
     },
     {
       key: "/admin/approval",
-      label: <Link to="/admin/approval">Duyệt Tin Tuyển Dụng</Link>,
+      label: <Link to="/admin/approval">Job Requisitions Approval</Link>,
     },
     {
       key: "/admin/users",
-      label: <Link to="/admin/users">Quản lý HR & Người Dùng</Link>,
+      label: <Link to="/admin/users">Team & Permissions</Link>,
     },
     {
-      key: "/admin/branches",
-      label: <Link to="/admin/branches">Quản lý Chi Nhánh</Link>,
-    },
-    {
-      key: "/admin/categories",
-      label: <Link to="/admin/categories">Quản lý Lĩnh Vực</Link>,
-    },
-    {
-      key: "/admin/job-levels",
-      label: <Link to="/admin/job-levels">Quản lý Cấp Bậc</Link>,
-    },
-    {
-      key: "/admin/job-positions",
-      label: <Link to="/admin/job-positions">Quản lý Vị Trí</Link>,
+      key: "organization",
+      label: "Organization",
+      children: [
+        {
+          key: "/admin/branches",
+          label: <Link to="/admin/branches">Branches</Link>,
+        },
+        {
+          key: "/admin/categories",
+          label: <Link to="/admin/categories">Categories & Industries</Link>,
+        },
+        {
+          key: "/admin/job-levels",
+          label: <Link to="/admin/job-levels">Job Levels</Link>,
+        },
+        {
+          key: "/admin/job-positions",
+          label: <Link to="/admin/job-positions">Job Positions</Link>,
+        },
+      ],
     },
     {
       key: "/admin/roles",
-      label: <Link to="/admin/roles">Phân Quyền & Vai Trò</Link>,
+      label: <Link to="/admin/roles">Role & Access Control</Link>,
     },
     {
-      key: "/admin/reports",
-      label: <Link to="/admin/reports">Báo cáo Hệ thống</Link>,
+      key: "/admin/audit-logs",
+      label: <Link to="/admin/audit-logs">Security & Audit Log</Link>,
     },
   ];
 
@@ -190,7 +196,7 @@ function MainLayout() {
           }}
         >
           <Text strong style={{ fontSize: 16, color: "#334155" }}>
-            {isAdminRoute ? "Hệ thống quản trị" : "Không gian tuyển dụng"}
+            {isAdminRoute ? "Workspace Administration" : "Recruiting Workspace"}
           </Text>
           
           <Dropdown menu={{ items: userMenuItems, onClick: handleMenuClick }} placement="bottomRight" trigger={["click"]}>

@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using RecruitmentBackend.Models;
 
 namespace RecruitmentBackend.Data
@@ -31,6 +31,9 @@ namespace RecruitmentBackend.Data
         public DbSet<TalentPoolInteraction> TalentPoolInteractions { get; set; }
         public DbSet<InterviewSchedule> InterviewSchedules { get; set; }
         public DbSet<EmailLog> EmailLogs { get; set; }
+        public DbSet<Notification> Notifications { get; set; }
+        public DbSet<SavedJob> SavedJobs { get; set; }
+        public DbSet<AuditLog> AuditLogs { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -66,6 +69,18 @@ namespace RecruitmentBackend.Data
             modelBuilder.Entity<TalentPoolCandidate>()
                 .HasIndex(talentPoolCandidate => talentPoolCandidate.CandidateID)
                 .IsUnique(false);
+
+            // Tạo Index tối ưu hóa truy vấn tìm kiếm/lọc thống kê (Performance Optimization)
+            modelBuilder.Entity<JobPosting>()
+                .HasIndex(j => j.Status);
+            modelBuilder.Entity<JobPosting>()
+                .HasIndex(j => j.CreatedAt);
+
+            modelBuilder.Entity<Application>()
+                .HasIndex(a => a.AppliedAt);
+
+            modelBuilder.Entity<AuditLog>()
+                .HasIndex(al => al.CreatedAt);
         }
     }
 }

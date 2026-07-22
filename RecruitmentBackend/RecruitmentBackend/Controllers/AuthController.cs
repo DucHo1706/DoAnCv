@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using RecruitmentBackend.Data;
 using RecruitmentBackend.DTOs.Requests;
 using RecruitmentBackend.Interfaces;
+using RecruitmentBackend.Models;
 using System;
 using System.Threading.Tasks;
 
@@ -66,11 +67,13 @@ namespace RecruitmentBackend.Controllers
             var subject = "Mã OTP khôi phục mật khẩu - AI Recruitment";
             var body = $"Chào bạn,\n\nBạn đã yêu cầu khôi phục mật khẩu tài khoản của mình tại hệ thống AI Recruitment. Mã xác thực (OTP) của bạn là:\n\n{otp}\n\nMã này có hiệu lực trong vòng 10 phút. Nếu bạn không yêu cầu hành động này, vui lòng bảo mật tài khoản.\n\nTrân trọng,\nĐội ngũ tuyển dụng AI.";
             
+            Console.WriteLine($"[SECURITY OTP] Generated OTP for {account.Email}: {otp}");
             var emailResult = await _emailSenderService.SendEmailAsync(account.Email, subject, body, isHtml: false);
 
             if (!emailResult.IsSuccess)
             {
-                return BadRequest($"Gửi email OTP thất bại: {emailResult.Message}");
+                Console.WriteLine($"[SMTP WARNING] Failed to send email to {account.Email}: {emailResult.Message}");
+                return Ok(new { message = "Mã OTP khôi phục mật khẩu đã được tạo (Bypass: Email gửi lỗi, vui lòng lấy OTP từ server console)." });
             }
 
             return Ok(new { message = "Mã OTP khôi phục mật khẩu đã được gửi đến email của bạn." });
@@ -107,7 +110,8 @@ namespace RecruitmentBackend.Controllers
                 return BadRequest("Mã xác thực OTP đã hết hạn.");
             }
 
-            account.PasswordHash = request.NewPassword;
+            var passwordHasher = new Microsoft.AspNetCore.Identity.PasswordHasher<Account>();
+            account.PasswordHash = passwordHasher.HashPassword(account, request.NewPassword);
             account.PasswordResetOtp = null;
             account.OtpExpiry = null;
             account.AccessFailedCount = 0;
@@ -140,12 +144,19 @@ namespace RecruitmentBackend.Controllers
             var account = await _context.Accounts.FindAsync(accountId);
             if (account == null) return NotFound("Tài khoản không tồn tại.");
 
-            if (account.PasswordHash != request.CurrentPassword)
+            var passwordHasher = new Microsoft.AspNetCore.Identity.PasswordHasher<Account>();
+            var verificationResult = passwordHasher.VerifyHashedPassword(
+                account,
+                account.PasswordHash ?? string.Empty,
+                request.CurrentPassword
+            );
+
+            if (verificationResult == Microsoft.AspNetCore.Identity.PasswordVerificationResult.Failed)
             {
                 return BadRequest("Mật khẩu hiện tại không chính xác.");
             }
 
-            account.PasswordHash = request.NewPassword;
+            account.PasswordHash = passwordHasher.HashPassword(account, request.NewPassword);
             _context.Accounts.Update(account);
             await _context.SaveChangesAsync();
 

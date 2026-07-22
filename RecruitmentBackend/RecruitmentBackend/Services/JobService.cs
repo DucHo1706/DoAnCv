@@ -13,12 +13,18 @@ namespace RecruitmentBackend.Services
         private readonly AppDbContext _context;
         private readonly IAiService _aiService;
         private readonly ILogger<JobService> _logger;
+        private readonly INotificationService _notificationService;
 
-        public JobService(AppDbContext context, IAiService aiService, ILogger<JobService> logger)
+        public JobService(
+            AppDbContext context, 
+            IAiService aiService, 
+            ILogger<JobService> logger,
+            INotificationService notificationService)
         {
             _context = context;
             _aiService = aiService;
             _logger = logger;
+            _notificationService = notificationService;
         }
 
         public async Task<string> CreatePendingJobAsync(CreateJobRequest request, string accountId)
@@ -100,6 +106,26 @@ namespace RecruitmentBackend.Services
 
             _context.JobCriteria.AddRange(criteriaEntities);
             await _context.SaveChangesAsync();
+
+            // Trigger notification to Admins
+            try
+            {
+                var admins = await _context.Accounts.Where(a => a.Role == "Admin").ToListAsync();
+                foreach (var admin in admins)
+                {
+                    await _notificationService.CreateNotificationAsync(
+                        admin.AccountID,
+                        "Tin tuyển dụng chờ duyệt",
+                        $"Tin tuyển dụng {position.PositionName} do HR {recruiter.FullName} đăng tuyển đang chờ phê duyệt.",
+                        "/admin/job-approval"
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Lỗi gửi thông báo tuyển dụng cho Admin: " + ex.Message);
+            }
+
             return newJob.JobID;
         }
 
@@ -108,6 +134,11 @@ namespace RecruitmentBackend.Services
             var recruiter = await _context.Recruiters.FirstOrDefaultAsync(r => r.AccountID == accountId);
             if (recruiter == null) return new List<object>();
 
+            var branchIds = await _context.RecruiterBranches
+                .Where(rb => rb.RecruiterID == recruiter.RecruiterID)
+                .Select(rb => rb.BranchID)
+                .ToListAsync();
+
             return await (from j in _context.JobPostings
                           join p in _context.Positions on j.PositionID equals p.PositionID into pj
                           from p in pj.DefaultIfEmpty()
@@ -115,7 +146,7 @@ namespace RecruitmentBackend.Services
                           from c in cj.DefaultIfEmpty()
                           join b in _context.Branches on j.BranchID equals b.BranchID into bj
                           from b in bj.DefaultIfEmpty()
-                          where j.RecruiterID == recruiter.RecruiterID
+                          where branchIds.Contains(j.BranchID)
                           orderby j.CreatedAt descending
                           select new {
                               id = j.JobID,
@@ -160,6 +191,24 @@ namespace RecruitmentBackend.Services
             if (job == null || job.Status == "Pending") return false;
 
             // Nếu đang mở thì khóa, nếu đang khóa thì mở lại
+            job.Status = job.Status == "Published" ? "Closed" : "Published";
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> ToggleRecruiterJobStatusAsync(string jobId, string accountId)
+        {
+            var recruiter = await _context.Recruiters.FirstOrDefaultAsync(r => r.AccountID == accountId);
+            if (recruiter == null) return false;
+
+            var job = await _context.JobPostings.FindAsync(jobId);
+            if (job == null || job.Status == "Pending") return false;
+
+            var isAssignedToBranch = await _context.RecruiterBranches.AnyAsync(rb => 
+                rb.RecruiterID == recruiter.RecruiterID && rb.BranchID == job.BranchID);
+
+            if (!isAssignedToBranch) return false;
+
             job.Status = job.Status == "Published" ? "Closed" : "Published";
             await _context.SaveChangesAsync();
             return true;
@@ -253,6 +302,30 @@ namespace RecruitmentBackend.Services
             job.Status = "Published";
             job.ApprovedAt = DateTime.Now;
             await _context.SaveChangesAsync();
+
+            // Trigger notification to Recruiter
+            try
+            {
+                var recruiter = await _context.Recruiters.FindAsync(job.RecruiterID);
+                if (recruiter != null)
+                {
+                    string positionName = "Chưa cập nhật";
+                    var position = await _context.Positions.FindAsync(job.PositionID);
+                    if (position != null) positionName = position.PositionName;
+
+                    await _notificationService.CreateNotificationAsync(
+                        recruiter.AccountID,
+                        "Tin tuyển dụng đã được duyệt",
+                        $"Tin tuyển dụng {positionName} của bạn đã được phê duyệt và hiển thị công khai.",
+                        "/recruiter/jobs"
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Lỗi gửi thông báo duyệt tin tuyển dụng cho HR: " + ex.Message);
+            }
+
             return true;
         }
 
@@ -320,8 +393,23 @@ namespace RecruitmentBackend.Services
 
             if (!string.IsNullOrWhiteSpace(request.Location))
             {
-                var loc = request.Location.ToLower();
-                query = query.Where(x => x.b != null && x.b.BranchName.ToLower().Contains(loc));
+                var loc = request.Location.ToLower().Trim();
+                if (loc == "hcm" || loc == "tphcm" || loc == "tp.hcm" || loc == "hồ chí minh")
+                {
+                    query = query.Where(x => x.b != null && (x.b.BranchName.ToLower().Contains("hồ chí minh") || x.b.BranchName.ToLower().Contains("hcm")));
+                }
+                else if (loc == "hn" || loc == "hà nội")
+                {
+                    query = query.Where(x => x.b != null && (x.b.BranchName.ToLower().Contains("hà nội") || x.b.BranchName.ToLower().Contains("hn")));
+                }
+                else if (loc == "dn" || loc == "đà nẵng")
+                {
+                    query = query.Where(x => x.b != null && (x.b.BranchName.ToLower().Contains("đà nẵng") || x.b.BranchName.ToLower().Contains("dn")));
+                }
+                else
+                {
+                    query = query.Where(x => x.b != null && x.b.BranchName.ToLower().Contains(loc));
+                }
             }
 
             // Lọc theo Lĩnh vực công việc
@@ -392,11 +480,8 @@ namespace RecruitmentBackend.Services
                 };
             }
 
-            // 4. Phân trang & Chuyển đổi dữ liệu
-            var jobs = await query
-                .OrderByDescending(x => x.j.CreatedAt)
-                .Skip((request.PageIndex - 1) * request.PageSize)
-                .Take(request.PageSize)
+            // Load all matched jobs into memory to apply semantic search if keyword exists
+            var allRawJobs = await query
                 .Select(x => new JobSummaryDto
                 {
                     Id = x.j.JobID,
@@ -406,10 +491,8 @@ namespace RecruitmentBackend.Services
                     Location = x.b != null ? x.b.BranchName : "Chưa cập nhật",
                     Type = "Toàn thời gian", 
                     UpdatedAt = x.j.ApprovedAt ?? x.j.CreatedAt,
-                    Logo = "https://cdn-icons-png.flaticon.com/512/3061/3061341.png", // Logo mặc định
-                    Description = x.j.JobDescription != null && x.j.JobDescription.Length > 200 
-                                    ? x.j.JobDescription.Substring(0, 200) + "..." 
-                                    : x.j.JobDescription ?? "",
+                    Logo = "https://cdn-icons-png.flaticon.com/512/3061/3061341.png",
+                    Description = x.j.JobDescription ?? "",
                     Skills = new List<string> { "Đang tuyển dụng" },
                     AiScore = 0,
                     RecommendationType = "Normal",
@@ -417,13 +500,106 @@ namespace RecruitmentBackend.Services
                 })
                 .ToListAsync();
 
+            List<JobSummaryDto> processedJobs = allRawJobs;
+            bool isFallbackUsed = false;
+
+            if (!string.IsNullOrWhiteSpace(request.Keyword))
+            {
+                var searchItems = allRawJobs.Select(job => new DTOs.Requests.SemanticSearchJobItemDto
+                {
+                    Id = job.Id,
+                    Text = $"Tiêu đề: {job.Title}. Địa điểm: {job.Location}. Mô tả: {job.Description}."
+                }).ToList();
+
+                var searchResults = await _aiService.SearchSemanticAsync(request.Keyword, searchItems);
+
+                if (searchResults != null && searchResults.Count > 0)
+                {
+                    var scoreMap = new Dictionary<string, double>();
+                    foreach (var res in searchResults)
+                    {
+                        scoreMap[res.Id] = res.Score;
+                    }
+
+                    // Assign scores and filter by minimum similarity threshold of 0.40
+                    foreach (var job in processedJobs)
+                    {
+                        if (scoreMap.TryGetValue(job.Id, out double score))
+                        {
+                            job.AiScore = (int)Math.Round(score * 100);
+                        }
+                    }
+
+                    processedJobs = processedJobs
+                        .Where(job => job.AiScore >= 40)
+                        .OrderByDescending(job => job.AiScore)
+                        .ThenByDescending(job => job.UpdatedAt)
+                        .ToList();
+
+                    if (processedJobs.Count == 0)
+                    {
+                        // If no job meets the 40% similarity threshold, fallback to High-Utility jobs
+                        isFallbackUsed = true;
+                        var fallbackQuery = from j in _context.JobPostings
+                                            join p in _context.Positions on j.PositionID equals p.PositionID into pj
+                                            from p in pj.DefaultIfEmpty()
+                                            join b in _context.Branches on j.BranchID equals b.BranchID into bj
+                                            from b in bj.DefaultIfEmpty()
+                                            where j.Status == "Published"
+                                            orderby (j.SalaryMax > 0 ? (double)j.SalaryMax : 15.0) * j.ViewCount descending, j.CreatedAt descending
+                                            select new { j, p, b };
+
+                        processedJobs = await fallbackQuery
+                            .Take(6)
+                            .Select(x => new JobSummaryDto
+                            {
+                                Id = x.j.JobID,
+                                Title = x.p != null ? x.p.PositionName : "Vị trí chưa cập nhật",
+                                Company = "Công Ty AI Recruitment", 
+                                Salary = (x.j.SalaryMin == 0 && x.j.SalaryMax == 0) ? "Thỏa thuận" : $"{x.j.SalaryMin:N0} - {x.j.SalaryMax:N0} triệu",
+                                Location = x.b != null ? x.b.BranchName : "Chưa cập nhật",
+                                Type = "Toàn thời gian", 
+                                UpdatedAt = x.j.ApprovedAt ?? x.j.CreatedAt,
+                                Logo = "https://cdn-icons-png.flaticon.com/512/3061/3061341.png",
+                                Description = x.j.JobDescription != null && x.j.JobDescription.Length > 200 
+                                                ? x.j.JobDescription.Substring(0, 200) + "..." 
+                                                : x.j.JobDescription ?? "",
+                                Skills = new List<string> { "Đang tuyển dụng" },
+                                AiScore = 0,
+                                RecommendationType = "HighUtility",
+                                UtilityScore = (double)(x.j.SalaryMax > 0 ? x.j.SalaryMax : 15.0m) * x.j.ViewCount
+                            })
+                            .ToListAsync();
+                    }
+                }
+            }
+            else
+            {
+                // No keyword, sort by update date descending
+                processedJobs = processedJobs.OrderByDescending(j => j.UpdatedAt).ToList();
+            }
+
+            // Refactor descriptions to fit search list display preview
+            foreach (var job in processedJobs)
+            {
+                if (job.Description.Length > 200)
+                {
+                    job.Description = job.Description.Substring(0, 200) + "...";
+                }
+            }
+
+            var paginatedJobs = processedJobs
+                .Skip((request.PageIndex - 1) * request.PageSize)
+                .Take(request.PageSize)
+                .ToList();
+
             return new PagedResult<JobSummaryDto>
             {
-                Items = jobs,
-                TotalCount = totalCount,
+                Items = paginatedJobs,
+                TotalCount = isFallbackUsed ? processedJobs.Count : (string.IsNullOrWhiteSpace(request.Keyword) ? totalCount : processedJobs.Count),
                 PageIndex = request.PageIndex,
                 PageSize = request.PageSize,
-                IsFallback = false
+                IsFallback = isFallbackUsed
             };
         }
 
@@ -552,6 +728,69 @@ namespace RecruitmentBackend.Services
                     AiScore = 0
                 })
                 .ToListAsync();
+        }
+
+        public async Task<bool> SaveJobAsync(string jobId, string accountId)
+        {
+            var candidate = await _context.Candidates.FirstOrDefaultAsync(c => c.AccountID == accountId);
+            if (candidate == null) return false;
+
+            var exists = await _context.SavedJobs.AnyAsync(sj => sj.CandidateID == candidate.CandidateID && sj.JobID == jobId);
+            if (exists) return true; // Already saved
+
+            var savedJob = new SavedJob
+            {
+                CandidateID = candidate.CandidateID,
+                JobID = jobId,
+                SavedAt = DateTime.Now
+            };
+
+            _context.SavedJobs.Add(savedJob);
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> UnsaveJobAsync(string jobId, string accountId)
+        {
+            var candidate = await _context.Candidates.FirstOrDefaultAsync(c => c.AccountID == accountId);
+            if (candidate == null) return false;
+
+            var savedJob = await _context.SavedJobs.FirstOrDefaultAsync(sj => sj.CandidateID == candidate.CandidateID && sj.JobID == jobId);
+            if (savedJob == null) return true; // Already unsaved
+
+            _context.SavedJobs.Remove(savedJob);
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<IEnumerable<object>> GetSavedJobsAsync(string accountId)
+        {
+            var candidate = await _context.Candidates.FirstOrDefaultAsync(c => c.AccountID == accountId);
+            if (candidate == null) return new List<object>();
+
+            var jobs = await (from sj in _context.SavedJobs
+                              join j in _context.JobPostings on sj.JobID equals j.JobID
+                              join p in _context.Positions on j.PositionID equals p.PositionID into pj
+                              from p in pj.DefaultIfEmpty()
+                              join b in _context.Branches on j.BranchID equals b.BranchID into bj
+                              from b in bj.DefaultIfEmpty()
+                              where sj.CandidateID == candidate.CandidateID && j.Status == "Published"
+                              orderby sj.SavedAt descending
+                              select new
+                              {
+                                  id = j.JobID,
+                                  description = j.JobDescription,
+                                  salaryRange = (j.SalaryMin == 0 && j.SalaryMax == 0) ? "Thỏa thuận" : (j.SalaryMax == 0 ? j.SalaryMin + " triệu" : j.SalaryMin + " - " + j.SalaryMax + " triệu"),
+                                  createdAt = j.CreatedAt,
+                                  deadline = j.Deadline,
+                                  startDate = j.StartDate,
+                                  maxCandidates = j.MaxCandidates,
+                                  position = p != null ? new { id = p.PositionID, name = p.PositionName } : null,
+                                  branch = b != null ? new { id = b.BranchID, name = b.BranchName } : null,
+                                  savedAt = sj.SavedAt
+                              }).ToListAsync();
+
+            return jobs;
         }
     }
 }

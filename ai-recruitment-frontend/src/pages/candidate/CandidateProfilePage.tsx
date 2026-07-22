@@ -12,12 +12,16 @@ import {
   message,
   Form,
   Upload,
+  Progress,
 } from "antd";
 import {
   CheckCircleOutlined,
   UserOutlined,
   SolutionOutlined,
   SettingOutlined,
+  LockOutlined,
+  DatabaseOutlined,
+  CameraOutlined,
 } from "@ant-design/icons";
 import PageContainer from "../../components/common/PageContainer";
 import axiosClient from "../../services/axiosClient";
@@ -26,6 +30,8 @@ import dayjs from "dayjs";
 import { ApplicationHistoryTab } from "./components/ApplicationHistoryTab";
 import { PersonalInfoTab } from "./components/PersonalInfoTab";
 import { DefaultCvTab } from "./components/DefaultCvTab";
+import { CapabilitiesTab } from "./components/CapabilitiesTab";
+import { AccountSecurityTab } from "./components/AccountSecurityTab";
 import AiDetailedTabs from "../../components/ai-report/AiDetailedTabs";
 
 const { Title, Text } = Typography;
@@ -110,6 +116,60 @@ function CandidateProfilePage() {
     fetchProfile();
   }, []);
 
+  // Real-time updates using SignalR
+  useEffect(() => {
+    if (!applications || applications.length === 0) return;
+
+    let connection: any = null;
+    let isSubscribed = true;
+
+    const startSignalR = async () => {
+      try {
+        const signalR = await import("@microsoft/signalr");
+        const apiBase = import.meta.env.VITE_API_URL || "https://localhost:7006/api";
+        const hubUrl = apiBase.replace(/\/api\/?$/, "") + "/hubs/ai-evaluation";
+        connection = new signalR.HubConnectionBuilder()
+          .withUrl(hubUrl)
+          .withAutomaticReconnect()
+          .build();
+
+        connection.on("ReceiveStatusUpdate", (data: { applicationId: string; status: string }) => {
+          if (!isSubscribed) return;
+          message.info("Trạng thái đơn ứng tuyển của bạn vừa được cập nhật! 🔔");
+          fetchMyApplications();
+        });
+
+        connection.on("ReceiveResult", () => {
+          if (!isSubscribed) return;
+          message.success("AI đã hoàn tất đánh giá hồ sơ của bạn! 🎉");
+          fetchMyApplications();
+          fetchProfile(); // reload profile to update capabilities sidebar
+        });
+
+        await connection.start();
+
+        for (const app of applications) {
+          const appId = app.id || app.applicationId;
+          if (appId) {
+            await connection.invoke("JoinApplicationGroup", appId);
+          }
+        }
+        console.log("[SignalR] Profile Page joined application groups.");
+      } catch (err) {
+        console.warn("[SignalR] Connection failed in Profile Page", err);
+      }
+    };
+
+    startSignalR();
+
+    return () => {
+      isSubscribed = false;
+      if (connection) {
+        connection.stop().catch((err: any) => console.error("[SignalR] Stop error", err));
+      }
+    };
+  }, [applications.length]);
+
   const handleUpdateProfile = async (values: any) => {
     try {
       setSubmittingProfile(true);
@@ -180,16 +240,30 @@ function CandidateProfilePage() {
           "Content-Type": "multipart/form-data",
         },
       });
-      setProfile((prev: any) => ({
-        ...prev,
-        defaultCvUrl: res.data.defaultCvUrl,
-        defaultCvName: res.data.defaultCvName,
-      }));
-      message.success({ content: "Tải lên CV mặc định thành công!", key: "cv_upload" });
+      message.success({ content: "Tải lên CV mặc định thành công! Đang đồng bộ hóa hồ sơ...", key: "cv_upload" });
+      fetchProfile();
     } catch (err) {
       message.error({ content: "Lỗi khi tải lên CV mặc định.", key: "cv_upload" });
     }
   };
+
+  // Calculate profile completion percentage
+  const profileCompletion = (() => {
+    let score = 20; // Default base registered score
+    if (profile?.defaultCvUrl) score += 40;
+    if (profile?.phone && profile?.address) score += 20;
+    
+    let skillsList: string[] = [];
+    if (profile?.cvExtractedSkills) {
+      try {
+        skillsList = JSON.parse(profile.cvExtractedSkills);
+      } catch {
+        skillsList = [];
+      }
+    }
+    if (skillsList.length > 0) score += 20;
+    return score;
+  })();
 
   return (
     <PageContainer title="Hồ sơ của tôi" subtitle="Quản lý thông tin cá nhân và lịch sử ứng tuyển">
@@ -203,30 +277,68 @@ function CandidateProfilePage() {
               boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
             }}
           >
-            {profile?.avatarUrl ? (
-              <Avatar
-                size={100}
-                src={profile.avatarUrl}
-                style={{ marginBottom: 16, border: "2px solid #2563EB" }}
-              />
-            ) : (
-              <Avatar
-                size={100}
-                icon={<UserOutlined />}
-                style={{ backgroundColor: "#2563EB", marginBottom: 16 }}
-              />
-            )}
-            
-            <div style={{ marginBottom: 12 }}>
+            {/* Visual Hover-to-Upload Avatar container */}
+            <div 
+              style={{ 
+                position: "relative", 
+                width: 100, 
+                height: 100, 
+                margin: "0 auto 16px", 
+                cursor: "pointer",
+                borderRadius: "50%",
+                overflow: "hidden",
+                border: "2px solid #2563EB"
+              }}
+              className="avatar-hover-container"
+            >
               <Upload
                 showUploadList={false}
                 beforeUpload={() => false}
                 onChange={handleAvatarUpload}
                 accept="image/*"
               >
-                <Button size="small" type="primary" ghost style={{ borderRadius: 6 }}>
-                  Thay ảnh đại diện
-                </Button>
+                <div style={{ position: "relative", width: 100, height: 100 }}>
+                  {profile?.avatarUrl ? (
+                    <Avatar
+                      size={100}
+                      src={profile.avatarUrl}
+                      style={{ border: "none" }}
+                    />
+                  ) : (
+                    <Avatar
+                      size={100}
+                      icon={<UserOutlined />}
+                      style={{ backgroundColor: "#2563EB", border: "none" }}
+                    />
+                  )}
+                  {/* Dark hover overlay */}
+                  <div 
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      width: "100%",
+                      height: "100%",
+                      background: "rgba(15, 23, 42, 0.65)",
+                      color: "#FFFFFF",
+                      display: "flex",
+                      flexDirection: "column",
+                      justifyContent: "center",
+                      alignItems: "center",
+                      opacity: 0,
+                      transition: "opacity 0.25s ease",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.opacity = "1";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.opacity = "0";
+                    }}
+                  >
+                    <CameraOutlined style={{ fontSize: 18, marginBottom: 4 }} />
+                    <span style={{ fontSize: 11, fontWeight: 500 }}>Thay ảnh</span>
+                  </div>
+                </div>
               </Upload>
             </div>
 
@@ -235,9 +347,25 @@ function CandidateProfilePage() {
             </Title>
             <Text type="secondary" style={{ display: "block", marginBottom: 16 }}>{user?.email || "Chưa cập nhật email"}</Text>
 
+            {/* AI Profile Completion tracker */}
+            <div style={{ margin: "16px 0 24px", padding: "0 8px", textAlign: "left" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                <Text type="secondary" style={{ fontSize: 12, fontWeight: 500 }}>Hoàn thiện hồ sơ AI</Text>
+                <Text strong style={{ fontSize: 12, color: "#2563EB" }}>{profileCompletion}%</Text>
+              </div>
+              <Progress 
+                percent={profileCompletion} 
+                showInfo={false} 
+                strokeColor="#2563EB" 
+                trailColor="#E2E8F0" 
+                size="small" 
+                style={{ margin: 0 }}
+              />
+            </div>
+
             <div
               style={{
-                marginTop: 24,
+                marginTop: 16,
                 textAlign: "left",
                 background: "#f8fafc",
                 padding: 16,
@@ -292,11 +420,23 @@ function CandidateProfilePage() {
                 <Tabs.TabPane
                   tab={
                     <span>
+                      <DatabaseOutlined />
+                      Năng lực & Kỹ năng
+                    </span>
+                  }
+                  key="1"
+                >
+                  <CapabilitiesTab profile={profile} onRefreshProfile={fetchProfile} />
+                </Tabs.TabPane>
+
+                <Tabs.TabPane
+                  tab={
+                    <span>
                       <CheckCircleOutlined />
                       Lịch sử ứng tuyển
                     </span>
                   }
-                  key="1"
+                  key="2"
                 >
                   <div style={{ marginTop: 12 }}>
                     <ApplicationHistoryTab 
@@ -315,7 +455,7 @@ function CandidateProfilePage() {
                       Thông tin cá nhân
                     </span>
                   }
-                  key="2"
+                  key="3"
                 >
                   {profileLoading ? (
                     <div style={{ textAlign: "center", padding: 40 }}>
@@ -326,6 +466,7 @@ function CandidateProfilePage() {
                       form={form}
                       submittingProfile={submittingProfile}
                       onFinish={handleUpdateProfile}
+                      profile={profile}
                     />
                   )}
                 </Tabs.TabPane>
@@ -337,7 +478,7 @@ function CandidateProfilePage() {
                       Quản lý CV mẫu
                     </span>
                   }
-                  key="3"
+                  key="4"
                 >
                   <DefaultCvTab
                     defaultCvUrl={profile?.defaultCvUrl}
@@ -352,6 +493,18 @@ function CandidateProfilePage() {
                     }}
                     onUpload={handleCvUpload}
                   />
+                </Tabs.TabPane>
+
+                <Tabs.TabPane
+                  tab={
+                    <span>
+                      <LockOutlined />
+                      Bảo mật tài khoản
+                    </span>
+                  }
+                  key="5"
+                >
+                  <AccountSecurityTab />
                 </Tabs.TabPane>
               </Tabs>
             </Card>

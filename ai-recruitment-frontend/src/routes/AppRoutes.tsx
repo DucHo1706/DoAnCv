@@ -15,6 +15,7 @@ import UploadCVPage from "../pages/candidate/UploadCVPage";
 
 import AdminDashboardPage from "../pages/admin/AdminDashboardPage";
 import ReportsPage from "../pages/admin/ReportsPage";
+import AuditLogsPage from "../pages/admin/AuditLogsPage";
 import RolePermissionPage from "../pages/admin/RolePermissionPage";
 import UserManagementPage from "../pages/admin/UserManagementPage";
 import JobApprovalPage from "../pages/admin/JobApprovalPage";
@@ -60,6 +61,7 @@ function AppRoutes() {
           <Route path="users" element={<UserManagementPage />} />
           <Route path="roles" element={<RolePermissionPage />} />
           <Route path="reports" element={<ReportsPage />} />
+          <Route path="audit-logs" element={<AuditLogsPage />} />
           <Route path="job-approvals" element={<JobApprovalPage />} />
           <Route path="branches" element={<BranchManagementPage />} />
           <Route path="categories" element={<CategoryManagementPage />} />

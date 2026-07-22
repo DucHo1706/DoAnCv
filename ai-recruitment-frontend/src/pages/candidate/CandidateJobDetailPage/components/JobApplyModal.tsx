@@ -39,7 +39,7 @@ const JobApplyModal: React.FC<JobApplyModalProps> = ({
       width={500}
     >
       <div style={{ marginBottom: 20, color: "#64748b", fontSize: "14px" }}>
-        Vui lòng chọn phương thức nộp CV của bạn. AI sẽ phân tích CV để đánh giá độ phù hợp với tin tuyển dụng này.
+        Vui lòng chọn phương thức nộp CV của bạn. Hệ thống sẽ phân tích CV để đánh giá độ phù hợp với tin tuyển dụng này.
       </div>
 
       {hasDefaultCv ? (
