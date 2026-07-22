@@ -40,8 +40,7 @@ services:
       dockerfile: Dockerfile
     container_name: recruitment_frontend
     ports:
-      - "80:80" # Hỗ trợ HTTP
-      - "443:80" # Hỗ trợ HTTPS Cloudflare Proxy
+      - "80:80" # Hỗ trợ kết nối Cloudflare Proxy qua HTTP (port 80)
     depends_on:
       - backend
     restart: always
