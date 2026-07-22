@@ -483,9 +483,7 @@ export default function TalentPoolDetailPage() {
                 disabled={!candidate.latestCvUrl}
                 onClick={() => {
                   if (candidate.latestCvUrl) {
-                    const url = candidate.latestCvUrl.startsWith("http")
-                      ? candidate.latestCvUrl
-                      : `https://recruitinsightai.com${candidate.latestCvUrl.startsWith("/") ? "" : "/"}${candidate.latestCvUrl}`;
+                    const url = candidate.latestCvUrl.replace(/https?:\/\/localhost:(7006|5286)/gi, "https://recruitinsightai.com");
                     window.open(url, "_blank");
                   }
                 }}

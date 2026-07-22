@@ -104,7 +104,7 @@ export default function CandidateDetailPage() {
           <Button
             type="primary"
             icon={<DownloadOutlined />}
-            href={candidate.cvUrl ? (candidate.cvUrl.startsWith("http") ? candidate.cvUrl : `https://recruitinsightai.com${candidate.cvUrl.startsWith("/") ? "" : "/"}${candidate.cvUrl}`) : "#"}
+            href={candidate.cvUrl ? candidate.cvUrl.replace(/https?:\/\/localhost:(7006|5286)/gi, "https://recruitinsightai.com") : "#"}
             target="_blank"
             style={{
               background: appTheme.colors.primary,
