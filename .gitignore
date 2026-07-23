@@ -43,6 +43,11 @@ appsettings.Development.json
 BaoCao_CoSoLyLuan_Prompts*.docx
 ~$*.docx
 TaiLieuThamKhao/
+TaiLieuBaoCao/
+*.docx
+*.doc
+*.pdf
+*.ris
 
 # Thesis helper scripts
 Python/download_pdfs.py
@@ -50,6 +55,10 @@ Python/download_references.py
 Python/generate_thesis_docx.py
 Python/hoan_thanh_bao_cao.py
 Python/test_links.py
+Python/check_refs.py
+Python/extract_docx_urls.py
+Python/generate_visual_guide.py
+
 
 # Temporary test PDF files
-test*.pdf
+test*.pdf
