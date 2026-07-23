@@ -91,9 +91,12 @@ def generate_content_with_retry(prompt: str, is_json: bool = True, models: list 
         raise Exception("Khong cau hinh API keys truc tiep.")
 
     models_to_try = models if models is not None else [
-        "gemini-2.0-flash", 
-        "gemini-1.5-flash",
-        "gemini-1.5-pro"
+        "gemini-2.5-flash",
+        "gemini-2.0-flash",
+        "gemini-2.0-flash-lite",
+        "gemini-2.5-flash-lite",
+        "gemini-flash-latest",
+        "gemini-pro-latest"
     ]
     config = types.GenerateContentConfig(
         response_mime_type="application/json" if is_json else "text/plain"
@@ -125,6 +128,8 @@ def generate_content_with_retry(prompt: str, is_json: bool = True, models: list 
                 last_error = e
                 err_str = str(e).lower()
                 logger.warning(f"Loi goi model {model_name} voi Key #{client_idx+1}: {e}")
+                if "429" in err_str or "resource_exhausted" in err_str:
+                    time.sleep(0.5) # Sleep briefly on rate limit before trying next key/model
                 
         logger.warning(f"Model {model_name} khong kha dung tren cac Keys hien co. Dang thu model tiep theo...")
         
