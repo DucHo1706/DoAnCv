@@ -131,7 +131,31 @@ namespace RecruitmentBackend.Services
                         ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document" 
                         : "application/pdf";
 
+                    // Trích xuất tên file nguyên bản
+                    string fileNameOnly = Path.GetFileName(cvUrl);
                     if (cvUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+                    {
+                        try
+                        {
+                            var uri = new Uri(cvUrl);
+                            fileNameOnly = Path.GetFileName(uri.AbsolutePath);
+                        }
+                        catch {}
+                    }
+
+                    // Ưu tiên đọc file từ đĩa cục bộ (Hoạt động cả trên Docker volume ./Uploads:/app/Uploads)
+                    string localPath1 = Path.Combine(Directory.GetCurrentDirectory(), "Uploads", fileNameOnly);
+                    string localPath2 = Path.Combine(Directory.GetCurrentDirectory(), cvUrl.TrimStart('/'));
+
+                    if (File.Exists(localPath1))
+                    {
+                        cvFileBytes = await File.ReadAllBytesAsync(localPath1);
+                    }
+                    else if (File.Exists(localPath2))
+                    {
+                        cvFileBytes = await File.ReadAllBytesAsync(localPath2);
+                    }
+                    else if (cvUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase))
                     {
                         using (var httpClient = new System.Net.Http.HttpClient())
                         {
@@ -139,25 +163,24 @@ namespace RecruitmentBackend.Services
                             var httpResponse = await httpClient.GetAsync(cvUrl);
                             if (!httpResponse.IsSuccessStatusCode)
                             {
-                                return (false, $"Không thể tải file CV từ Cloudinary (Mã lỗi: {httpResponse.StatusCode}). Vui lòng kiểm tra lại link CV.", null);
+                                return (false, $"Không thể tải file CV (Mã lỗi: {httpResponse.StatusCode}). Vui lòng kiểm tra lại file CV.", null);
                             }
                             cvFileBytes = await httpResponse.Content.ReadAsByteArrayAsync();
                         }
                     }
                     else
                     {
-                        string localPath = Path.Combine(Directory.GetCurrentDirectory(), cvUrl.TrimStart('/'));
-                        if (!File.Exists(localPath))
+                        return (false, "File CV mặc định không tồn tại trên hệ thống. Vui lòng tải lại CV mới trong hồ sơ.", null);
+                    }
+
+                    // Kiểm tra phản hồi trả về có phải trang lỗi HTML 404 hay không
+                    if (cvFileBytes != null && cvFileBytes.Length > 0 && cvFileBytes.Length < 2000)
+                    {
+                        string headerText = System.Text.Encoding.UTF8.GetString(cvFileBytes);
+                        if (headerText.TrimStart().StartsWith("<html", StringComparison.OrdinalIgnoreCase) || 
+                            headerText.TrimStart().StartsWith("<!DOCTYPE", StringComparison.OrdinalIgnoreCase))
                         {
-                            localPath = Path.Combine(Directory.GetCurrentDirectory(), "Uploads", Path.GetFileName(cvUrl));
-                        }
-                        if (File.Exists(localPath))
-                        {
-                            cvFileBytes = await File.ReadAllBytesAsync(localPath);
-                        }
-                        else
-                        {
-                            return (false, "File CV mặc định không tồn tại trên hệ thống.", null);
+                            return (false, "File CV mặc định bị lỗi liên kết (trả về trang HTML 404). Vui lòng chọn hoặc tải lại file CV.", null);
                         }
                     }
                 }
