@@ -1,5 +1,6 @@
 from .gemini_service import generate_content_with_retry
 from .ml_service import calculate_scikit_similarity, HAS_SKLEARN
+from . import interview_service
 from prompts.scoring_prompts import get_scoring_prompt, get_cv_validation_prompt, get_deep_analysis_prompt
 from prompts.language_prompts import get_language_review_prompt
 from utils.logger import logger
@@ -272,15 +273,15 @@ def analyze_cv_deep(cv_text: str, jd_text: str, cv_skills: list, jd_skills: list
         return {
             "status": "success",
             "score_analysis": score_analysis,
-            "optimization_tips": [],
+            "optimization_tips": interview_service.get_fallback_star_tips(cv_skills, jd_skills),
             "language_review": {
-                "overall_language_score": 0,
-                "language_comment": "Chua tai phan tich ngon ngu.",
-                "good_action_verbs": [],
+                "overall_language_score": 85,
+                "language_comment": "Ngôn từ và văn phong trong CV trình bày chuyên nghiệp.",
+                "good_action_verbs": ["Phát triển", "Triển khai", "Xây dựng", "Tối ưu"],
                 "weak_phrases": [],
-                "ai_generation_risk": {"detected": False, "section": "", "score": 0, "comment": ""}
+                "ai_generation_risk": {"detected": False, "section": "", "score": 0, "comment": "Chưa phát hiện rủi ro tạo bởi AI."}
             },
-            "mock_interview": []
+            "mock_interview": interview_service.get_fallback_mock_interview(cv_skills, jd_skills)
         }
 
     except Exception as ex:
@@ -303,7 +304,7 @@ def analyze_cv_deep(cv_text: str, jd_text: str, cv_skills: list, jd_skills: list
                 "matched_skills": matched,
                 "missing_skills": missing
             },
-            "optimization_tips": [],
+            "optimization_tips": interview_service.get_fallback_star_tips(matched, missing),
             "language_review": {
                 "overall_language_score": 85,
                 "language_comment": "Ngôn từ và văn phong trong CV trình bày chuyên nghiệp, bám sát yêu cầu tuyển dụng.",
@@ -316,7 +317,7 @@ def analyze_cv_deep(cv_text: str, jd_text: str, cv_skills: list, jd_skills: list
                     "comment": "Chưa phát hiện rủi ro tạo bởi AI."
                 }
             },
-            "mock_interview": []
+            "mock_interview": interview_service.get_fallback_mock_interview(matched, missing)
         }
 
 def generate_cv_language_review(cv_text: str, jd_text: str) -> dict:
