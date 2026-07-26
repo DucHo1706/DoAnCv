@@ -227,7 +227,7 @@ namespace RecruitmentBackend.Services
                             recruiter.AccountID,
                             "Đơn ứng tuyển mới",
                             $"Ứng viên {candidate.FullName} đã nộp hồ sơ cho công việc {positionName}",
-                            $"/recruiter/cv-ranking"
+                            "/recruiter/applications"
                         );
                     }
                 }
@@ -716,7 +716,7 @@ namespace RecruitmentBackend.Services
                                 candidateItem.AccountID,
                                 "Cập nhật trạng thái hồ sơ",
                                 $"Đơn ứng tuyển vị trí {positionName} của bạn đã chuyển sang trạng thái: {statusText}",
-                                "/candidate/application-status"
+                                "/my-applications"
                             );
                         }
                     }

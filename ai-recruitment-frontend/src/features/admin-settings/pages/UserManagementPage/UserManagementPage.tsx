@@ -200,7 +200,7 @@ function UserManagementPage() {
               color: isOpt.color,
             }}
           >
-            {role === "Admin" ? "Admin Portal" : role === "Recruiter" ? "Recruiter (HR)" : "Candidate"}
+            {role === "Admin" ? "Quản trị viên" : role === "Recruiter" ? "Nhà tuyển dụng" : "Ứng viên"}
           </span>
         );
       },
@@ -337,9 +337,9 @@ function UserManagementPage() {
                 onChange={setSelectedRole}
                 options={[
                   { label: "Tất cả vai trò", value: "all" },
-                  { label: "Admin Portal", value: "admin" },
-                  { label: "Recruiter (HR)", value: "hr" },
-                  { label: "Ứng viên (Candidate)", value: "candidate" },
+                  { label: "Quản trị viên", value: "admin" },
+                  { label: "Nhà tuyển dụng", value: "hr" },
+                  { label: "Ứng viên", value: "candidate" },
                 ]}
               />
               <Select

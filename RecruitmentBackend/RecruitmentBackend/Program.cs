@@ -95,6 +95,7 @@ builder.Services.AddHostedService<MiningSchedulerService>();
 builder.Services.AddScoped<ICandidateComparisonService, CandidateComparisonService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<IAuditLogService, AuditLogService>();
+builder.Services.AddScoped<IProfileService, ProfileService>();
 
 
 var jwtSettings = builder.Configuration.GetSection("Jwt");
@@ -133,10 +134,12 @@ if (app.Environment.IsDevelopment())
 
 // Sử dụng CORS
 app.UseCors("AllowReactApp");
-app.UseCors("AllowFrontend");
 app.UseAuthentication();
 app.UseAuthorization();
-app.UseHttpsRedirection();
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 app.MapControllers();
 
 // Map SignalR Hub

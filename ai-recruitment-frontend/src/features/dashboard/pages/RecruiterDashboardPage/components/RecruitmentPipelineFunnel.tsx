@@ -18,17 +18,17 @@ interface RecruitmentPipelineFunnelProps {
 export default function RecruitmentPipelineFunnel({ funnel }: RecruitmentPipelineFunnelProps) {
   const safeFunnel = funnel || { applied: 0, reviewing: 0, interview: 0, offer: 0, rejected: 0 };
   const stages = [
-    { label: "Mới nộp (Applied)", count: safeFunnel.applied, color: "#2563EB" },
-    { label: "Đang xem xét (Reviewing)", count: safeFunnel.reviewing, color: "#7C3AED" },
-    { label: "Phỏng vấn (Interview)", count: safeFunnel.interview, color: "#F59E0B" },
-    { label: "Nhận việc (Offer)", count: safeFunnel.offer, color: "#10B981" },
-    { label: "Từ chối (Rejected)", count: safeFunnel.rejected, color: "#EF4444" },
+    { label: "Mới nộp", count: safeFunnel.applied, color: "#2563EB" },
+    { label: "Đang xem xét", count: safeFunnel.reviewing, color: "#7C3AED" },
+    { label: "Phỏng vấn", count: safeFunnel.interview, color: "#F59E0B" },
+    { label: "Nhận việc", count: safeFunnel.offer, color: "#10B981" },
+    { label: "Từ chối", count: safeFunnel.rejected, color: "#EF4444" },
   ];
   const maxCount = Math.max(...stages.map((s) => s.count), 1);
 
   return (
     <Card
-      title="Phễu quy trình tuyển dụng (Recruitment Pipeline Funnel)"
+      title="Phễu quy trình tuyển dụng"
       style={{
         borderRadius: 16,
         boxShadow: appTheme.shadow.card,

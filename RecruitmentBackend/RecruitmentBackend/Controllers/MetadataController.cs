@@ -49,5 +49,21 @@ namespace RecruitmentBackend.Controllers
 
             return Ok(levels);
         }
+
+        // Lấy danh sách Chi nhánh / Địa điểm
+        [HttpGet("branches")]
+        public async Task<IActionResult> GetBranches()
+        {
+            var branches = await _context.Branches
+                .Where(b => b.IsActive)
+                .OrderBy(b => b.BranchName)
+                .Select(b => new {
+                    id = b.BranchID,
+                    name = b.BranchName
+                })
+                .ToListAsync();
+
+            return Ok(branches);
+        }
     }
 }

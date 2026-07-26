@@ -309,10 +309,7 @@ export default function InterviewSchedulePage() {
   ];
 
   return (
-    <PageContainer
-      title="Lịch phỏng vấn ứng viên"
-      subtitle="Theo dõi và điều phối lịch phỏng vấn theo thời gian thực."
-    >
+    <PageContainer title="Lịch phỏng vấn ứng viên">
       <div style={{ padding: "8px 0 24px" }}>
         {/* View Mode Toggle */}
         <div style={{ marginBottom: 20 }}>
@@ -337,28 +334,28 @@ export default function InterviewSchedulePage() {
           </div>
         ) : viewMode === "calendar" ? (
           <div>
-            {/* Weekly Header Banner matching the screenshot */}
+            {/* Weekly Header Banner */}
             <div
               style={{
-                background: "linear-gradient(135deg, #10B981 0%, #059669 100%)",
+                background: "linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 60%, #EFF6FF 100%)",
                 borderRadius: "16px",
                 padding: "24px 32px",
-                color: "#FFFFFF",
+                border: "1px solid #E2E8F0",
                 marginBottom: "24px",
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
                 flexWrap: "wrap",
                 gap: 16,
-                boxShadow: "0 10px 25px -5px rgba(16, 185, 129, 0.15)",
+                boxShadow: "0 4px 12px rgba(15, 23, 42, 0.03)",
               }}
             >
               <div>
-                <Title level={3} style={{ color: "#FFFFFF", margin: 0, fontWeight: 700 }}>
+                <Title level={3} style={{ color: "#0F172A", margin: 0, fontWeight: 700 }}>
                   Bảng phân công lịch phỏng vấn
                 </Title>
-                <Text style={{ color: "rgba(255,255,255,0.85)", fontSize: 14, display: "block", marginTop: 6 }}>
-                  Lịch tuần từ <strong>{weekDays[0].format("DD/MM/YYYY")}</strong> đến <strong>{weekDays[6].format("DD/MM/YYYY")}</strong>
+                <Text style={{ color: "#64748B", fontSize: 14, display: "block", marginTop: 4 }}>
+                  Lịch tuần từ <strong style={{ color: "#2563EB" }}>{weekDays[0].format("DD/MM/YYYY")}</strong> đến <strong style={{ color: "#2563EB" }}>{weekDays[6].format("DD/MM/YYYY")}</strong>
                 </Text>
               </div>
 
@@ -368,20 +365,19 @@ export default function InterviewSchedulePage() {
                   style={{
                     borderRadius: 8,
                     fontWeight: 600,
-                    color: "#059669",
-                    border: "none",
+                    color: "#475569",
+                    borderColor: "#E2E8F0",
                     height: 40,
                   }}
                 >
                   ← Tuần trước
                 </Button>
                 <Button
+                  type="primary"
                   onClick={handleCurrentWeek}
                   style={{
                     borderRadius: 8,
                     fontWeight: 600,
-                    color: "#059669",
-                    border: "none",
                     height: 40,
                   }}
                 >
@@ -392,8 +388,8 @@ export default function InterviewSchedulePage() {
                   style={{
                     borderRadius: 8,
                     fontWeight: 600,
-                    color: "#059669",
-                    border: "none",
+                    color: "#475569",
+                    borderColor: "#E2E8F0",
                     height: 40,
                   }}
                 >

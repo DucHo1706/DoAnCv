@@ -118,7 +118,7 @@ namespace RecruitmentBackend.Services
                             candidate.AccountID,
                             "Lịch hẹn phỏng vấn mới",
                             $"Nhà tuyển dụng đã lên lịch phỏng vấn cho vị trí {positionName} lúc {request.InterviewDate.ToString("dd/MM/yyyy HH:mm")}",
-                            "/candidate/application-status"
+                            "/my-applications"
                         );
                     }
                 }

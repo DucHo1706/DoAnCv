@@ -91,6 +91,93 @@ namespace RecruitmentBackend.Controllers
             return Ok(new { message = "Đã duyệt bài đăng thành công!" });
         }
 
+        // 4b. Từ chối Job kèm lý do
+        [HttpPost("{id}/reject")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> RejectJob(string id, [FromBody] RejectJobRequest request)
+        {
+            if (request == null || string.IsNullOrWhiteSpace(request.Reason))
+            {
+                return BadRequest(new { message = "Vui lòng nhập lý do từ chối tin tuyển dụng." });
+            }
+
+            var job = await _context.JobPostings.FindAsync(id);
+            var parsedTitle = job != null ? $"Tin tuyển dụng ID: {id}" : $"ID: {id}";
+
+            var success = await _jobService.RejectJobAsync(id, request.Reason.Trim());
+            if (!success) return BadRequest(new { message = "Không thể từ chối công việc này (có thể đã được xử lý)." });
+
+            // GHI NHẬT KÝ HỆ THỐNG
+            var adminEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? "Admin";
+            var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
+            await _auditLogService.WriteLogAsync(adminEmail, "Từ chối tin tuyển dụng", $"{parsedTitle} - Lý do: {request.Reason.Trim()}", ipAddress);
+
+            return Ok(new { message = "Đã từ chối tin tuyển dụng thành công!" });
+        }
+
+        // 4c. Duyệt hàng loạt nhiều tin tuyển dụng cùng lúc
+        [HttpPost("bulk-approve")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> BulkApproveJobs([FromBody] BulkApproveJobsRequest request)
+        {
+            if (request == null || request.JobIds == null || request.JobIds.Count == 0)
+            {
+                return BadRequest(new { message = "Vui lòng chọn ít nhất 1 tin tuyển dụng để duyệt." });
+            }
+
+            var (successCount, failCount) = await _jobService.BulkApproveJobsAsync(request.JobIds);
+
+            // GHI NHẬT KÝ HỆ THỐNG
+            var adminEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? "Admin";
+            var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
+            await _auditLogService.WriteLogAsync(
+                adminEmail,
+                "Duyệt hàng loạt tin tuyển dụng",
+                $"Đã duyệt {successCount}/{request.JobIds.Count} tin tuyển dụng (thất bại: {failCount})",
+                ipAddress
+            );
+
+            return Ok(new
+            {
+                message = failCount == 0
+                    ? $"Đã duyệt thành công {successCount} tin tuyển dụng!"
+                    : $"Đã duyệt {successCount} tin, {failCount} tin thất bại (có thể đã được xử lý trước đó).",
+                successCount,
+                failCount
+            });
+        }
+
+        // 4d. Gắn cờ cảnh báo / Kiểm duyệt nội dung vi phạm tin tuyển dụng
+        [HttpPost("{id}/flag")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> FlagJob(string id, [FromBody] RejectJobRequest request)
+        {
+            var reason = request?.Reason ?? "Cần kiểm duyệt nội dung";
+            var success = await _jobService.FlagJobAsync(id, reason);
+            if (!success) return BadRequest(new { message = "Không tìm thấy tin tuyển dụng." });
+
+            var adminEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? "Admin";
+            var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
+            await _auditLogService.WriteLogAsync(adminEmail, "Kiểm duyệt: Gắn cờ vi phạm", $"Tin tuyển dụng ID: {id} - Lý do: {reason}", ipAddress);
+
+            return Ok(new { message = "Đã gắn cờ kiểm duyệt tin tuyển dụng thành công!" });
+        }
+
+        // 4e. Bỏ cờ vi phạm tin tuyển dụng
+        [HttpPost("{id}/unflag")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> UnflagJob(string id)
+        {
+            var success = await _jobService.UnflagJobAsync(id);
+            if (!success) return BadRequest(new { message = "Không thể gỡ cờ (tin không trong trạng thái bị gắn cờ)." });
+
+            var adminEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? "Admin";
+            var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
+            await _auditLogService.WriteLogAsync(adminEmail, "Kiểm duyệt: Gỡ cờ vi phạm", $"Tin tuyển dụng ID: {id}", ipAddress);
+
+            return Ok(new { message = "Đã gỡ cờ kiểm duyệt tin tuyển dụng!" });
+        }
+
         // 5. Lấy danh sách Job đang chờ duyệt
         [HttpGet("pending")]
         [Authorize(Roles = "Admin")]
@@ -263,5 +350,15 @@ namespace RecruitmentBackend.Controllers
             var result = await _jobService.GetSavedJobsAsync(accountId);
             return Ok(result);
         }
+    }
+
+    public class RejectJobRequest
+    {
+        public string Reason { get; set; } = "";
+    }
+
+    public class BulkApproveJobsRequest
+    {
+        public List<string> JobIds { get; set; } = new List<string>();
     }
 }

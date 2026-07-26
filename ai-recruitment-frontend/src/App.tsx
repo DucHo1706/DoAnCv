@@ -47,6 +47,10 @@ import BranchManagementPage from "./features/admin-settings/pages/BranchManageme
 import CategoryManagementPage from "./features/admin-settings/pages/CategoryManagementPage";
 import JobPositionManagementPage from "./features/admin-settings/pages/JobPositionManagementPage";
 import JobLevelManagementPage from "./features/admin-settings/pages/JobLevelManagementPage";
+import RecruiterPerformancePage from "./features/dashboard/pages/RecruiterPerformancePage/RecruiterPerformancePage";
+import SystemSettingsPage from "./features/admin-settings/pages/SystemSettingsPage/SystemSettingsPage";
+import OrganizationManagementPage from "./features/admin-settings/pages/OrganizationManagementPage/OrganizationManagementPage";
+import AdminProfilePage from "./features/admin-settings/pages/AdminProfilePage/AdminProfilePage";
 
 function App() {
   return (
@@ -77,7 +81,7 @@ function App() {
         <Route path="/recruiter" element={<MainLayout />}>
           <Route path="dashboard" element={<RecruiterDashboardPage />} />
           <Route path="jobs" element={<JobManagementPage />} />
-          <Route path="jobs/create" element={<CreateJobPage />} /> {/* <--- Thêm dòng này */}
+          <Route path="jobs/create" element={<CreateJobPage />} />
           <Route path="jobs/:id" element={<RecruiterJobDetailPage />} />
           <Route path="applications" element={<ApplicationManagementPage />} />
           <Route path="schedules" element={<InterviewSchedulePage />} />
@@ -97,13 +101,17 @@ function App() {
           <Route path="dashboard" element={<AdminDashboardPage />} />
           <Route path="approval" element={<JobApprovalPage />} />
           <Route path="users" element={<UserManagementPage />} />
+          <Route path="recruiter-performance" element={<RecruiterPerformancePage />} />
           <Route path="roles" element={<RolePermissionPage />} />
           <Route path="reports" element={<Navigate to="/admin/dashboard" replace />} />
           <Route path="audit-logs" element={<AuditLogsPage />} />
-          <Route path="branches" element={<BranchManagementPage />} />
-          <Route path="categories" element={<CategoryManagementPage />} />
-          <Route path="job-levels" element={<JobLevelManagementPage />} />
-          <Route path="job-positions" element={<JobPositionManagementPage />} />
+          <Route path="organization" element={<OrganizationManagementPage />} />
+          <Route path="branches" element={<Navigate to="/admin/organization?tab=branches" replace />} />
+          <Route path="categories" element={<Navigate to="/admin/organization?tab=categories" replace />} />
+          <Route path="job-levels" element={<Navigate to="/admin/organization?tab=job-levels" replace />} />
+          <Route path="job-positions" element={<Navigate to="/admin/organization?tab=job-positions" replace />} />
+          <Route path="settings" element={<SystemSettingsPage />} />
+          <Route path="profile" element={<AdminProfilePage />} />
         </Route>
 
         {/* Fallback */}

@@ -200,16 +200,16 @@ function AuditLogsPage() {
     >
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
         <Col xs={24} sm={12} md={6}>
-          <StatCard title="Tổng vết thao tác" value={logs.length} subtitle="Ghi nhận trên CSDL" />
+          <StatCard title="Tổng vết thao tác" value={logs.length} subtitle="Ghi nhận trên CSDL" accent="primary" index={0} />
         </Col>
         <Col xs={24} sm={12} md={6}>
-          <StatCard title="Thao tác Admin" value={logs.filter((l) => (l.userEmail || "").includes("admin")).length} subtitle="Quản trị viên thực hiện" />
+          <StatCard title="Thao tác Admin" value={logs.filter((l) => (l.userEmail || "").includes("admin")).length} subtitle="Quản trị viên thực hiện" accent="info" index={1} />
         </Col>
         <Col xs={24} sm={12} md={6}>
-          <StatCard title="Vận hành AI Engine" value={logs.filter((l) => (l.action || "").toLowerCase().includes("ai") || (l.action || "").toLowerCase().includes("apriori") || (l.action || "").toLowerCase().includes("huim")).length} subtitle="Lượt huấn luyện AI" />
+          <StatCard title="Vận hành AI Engine" value={logs.filter((l) => (l.action || "").toLowerCase().includes("ai") || (l.action || "").toLowerCase().includes("apriori") || (l.action || "").toLowerCase().includes("huim")).length} subtitle="Lượt huấn luyện AI" accent="success" index={2} />
         </Col>
         <Col xs={24} sm={12} md={6}>
-          <StatCard title="Sự kiện bảo mật" value={logs.filter((l) => (l.action || "").toLowerCase().includes("đăng nhập")).length} subtitle="Lượt truy cập hệ thống" />
+          <StatCard title="Sự kiện bảo mật" value={logs.filter((l) => (l.action || "").toLowerCase().includes("đăng nhập")).length} subtitle="Lượt truy cập hệ thống" accent="warning" index={3} />
         </Col>
       </Row>
 

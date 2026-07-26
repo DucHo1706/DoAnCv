@@ -50,7 +50,7 @@ function AuthLayout() {
   const featureItems = [
     {
       icon: <AiCoreIcon size={20} />,
-      title: "AI Screening",
+      title: "Sàng lọc CV bằng AI",
       description: "Tự động hỗ trợ đánh giá và sàng lọc hồ sơ ứng viên.",
     },
     {

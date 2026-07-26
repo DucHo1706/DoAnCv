@@ -3,7 +3,6 @@ import { Avatar, Dropdown, Space, Typography, Badge, Popover, List, Button, mess
 import type { MenuProps } from "antd";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import * as signalR from "@microsoft/signalr";
 import axiosClient from "../../services/axiosClient";
 
 const { Text } = Typography;
@@ -53,22 +52,28 @@ function AppHeader({ title, userName, roleLabel, onLogout }: AppHeaderProps) {
     }
   }, [accountId]);
 
-  // 2. Set up SignalR connection
+  // 2. Set up SignalR connection (lazy-loaded to keep it out of the main bundle)
   useEffect(() => {
     if (!accountId) return;
 
-    const apiUrl = import.meta.env.VITE_API_URL || "https://recruitinsightai.com/api";
-    const hubUrl = apiUrl.replace("/api", "/hubs/notifications");
-
-    const connection = new signalR.HubConnectionBuilder()
-      .withUrl(hubUrl, {
-        accessTokenFactory: () => localStorage.getItem("token") || ""
-      })
-      .withAutomaticReconnect()
-      .configureLogging(signalR.LogLevel.Warning)
-      .build();
+    let connection: import("@microsoft/signalr").HubConnection | undefined;
+    let cancelled = false;
 
     const startConnection = async () => {
+      const signalR = await import("@microsoft/signalr");
+      if (cancelled) return;
+
+      const apiUrl = import.meta.env.VITE_API_URL || "https://recruitinsightai.com/api";
+      const hubUrl = apiUrl.replace("/api", "/hubs/notifications");
+
+      connection = new signalR.HubConnectionBuilder()
+        .withUrl(hubUrl, {
+          accessTokenFactory: () => localStorage.getItem("token") || ""
+        })
+        .withAutomaticReconnect()
+        .configureLogging(signalR.LogLevel.Warning)
+        .build();
+
       try {
         await connection.start();
         console.log("Đã kết nối SignalR NotificationHub.");
@@ -118,7 +123,8 @@ function AppHeader({ title, userName, roleLabel, onLogout }: AppHeaderProps) {
     startConnection();
 
     return () => {
-      connection.stop();
+      cancelled = true;
+      connection?.stop();
     };
   }, [accountId]);
 

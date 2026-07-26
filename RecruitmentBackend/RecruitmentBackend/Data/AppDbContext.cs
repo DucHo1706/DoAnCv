@@ -34,6 +34,7 @@ namespace RecruitmentBackend.Data
         public DbSet<Notification> Notifications { get; set; }
         public DbSet<SavedJob> SavedJobs { get; set; }
         public DbSet<AuditLog> AuditLogs { get; set; }
+        public DbSet<Role> Roles { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -81,6 +82,56 @@ namespace RecruitmentBackend.Data
 
             modelBuilder.Entity<AuditLog>()
                 .HasIndex(al => al.CreatedAt);
+
+            // Cấu hình Kiểu Dữ liệu Decimal Precision chuẩn cho SQL Server / PostgreSQL
+            modelBuilder.Entity<AIEvaluation>()
+                .Property(e => e.FitScore)
+                .HasColumnType("decimal(18,2)");
+
+            modelBuilder.Entity<AIEvaluation>()
+                .Property(e => e.WhiteboxScore)
+                .HasColumnType("decimal(18,2)");
+
+            modelBuilder.Entity<AIEvaluation>()
+                .Property(e => e.BlackboxScore)
+                .HasColumnType("decimal(18,2)");
+
+            modelBuilder.Entity<JobPosting>()
+                .Property(j => j.SalaryMin)
+                .HasColumnType("decimal(18,2)");
+
+            modelBuilder.Entity<JobPosting>()
+                .Property(j => j.SalaryMax)
+                .HasColumnType("decimal(18,2)");
+
+            // Seed 3 vai trò mặc định (giữ nguyên dữ liệu như bản in-memory cũ)
+            var seedCreatedAt = new DateTime(2026, 1, 1);
+            modelBuilder.Entity<Role>().HasData(
+                new Role
+                {
+                    RoleID = "1",
+                    Name = "Admin",
+                    Description = "Quản trị viên toàn quyền hệ thống tuyển dụng & AI",
+                    PermissionsRaw = "manage_users,approve_jobs,publish_close_jobs,manage_roles,view_audit_logs,manage_branches,view_reports,train_ai_models",
+                    CreatedAt = seedCreatedAt
+                },
+                new Role
+                {
+                    RoleID = "2",
+                    Name = "Recruiter",
+                    Description = "Nhà tuyển dụng (Trưởng phòng / Chuyên viên HR)",
+                    PermissionsRaw = "create_jobs,publish_close_jobs,view_candidates,view_ai_scores,send_interview_emails,manage_talent_pool",
+                    CreatedAt = seedCreatedAt
+                },
+                new Role
+                {
+                    RoleID = "3",
+                    Name = "Candidate",
+                    Description = "Ứng viên tìm việc & nộp hồ sơ CV",
+                    PermissionsRaw = "apply_jobs,view_jobs,manage_profile,use_chatbot",
+                    CreatedAt = seedCreatedAt
+                }
+            );
         }
     }
 }

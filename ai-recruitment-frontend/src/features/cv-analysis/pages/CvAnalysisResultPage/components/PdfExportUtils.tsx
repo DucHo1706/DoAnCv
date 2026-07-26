@@ -184,7 +184,7 @@ const PdfExportUtils: React.FC<PdfExportUtilsProps> = ({
             width: "800px",
             padding: "40px 50px",
             background: "#ffffff",
-            color: "#000000",
+            color: "#0F172A",
             fontFamily: "Arial, sans-serif",
           }}
         >

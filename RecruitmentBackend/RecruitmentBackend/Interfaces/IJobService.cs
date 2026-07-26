@@ -1,4 +1,4 @@
-﻿﻿﻿using RecruitmentBackend.DTOs.Requests;
+using RecruitmentBackend.DTOs.Requests;
 using RecruitmentBackend.DTOs.Responses;
 using RecruitmentBackend.Models;
 using System.Threading.Tasks;
@@ -18,6 +18,10 @@ namespace RecruitmentBackend.Interfaces
         Task<string> CreatePendingJobAsync(CreateJobRequest request, string accountId);
         Task<object> ReviewJobAsync(string jobId);
         Task<bool> ApproveJobAndSyncAiAsync(string jobId);
+        Task<bool> RejectJobAsync(string jobId, string reason);
+        Task<bool> FlagJobAsync(string jobId, string reason);
+        Task<bool> UnflagJobAsync(string jobId);
+        Task<(int successCount, int failCount)> BulkApproveJobsAsync(List<string> jobIds);
         Task<bool> ToggleJobStatusAsync(string jobId);
         Task<bool> ToggleRecruiterJobStatusAsync(string jobId, string accountId);
         Task<IEnumerable<JobSummaryDto>> GetTrendingJobsAsync(int limit = 6);

@@ -265,8 +265,96 @@ function CandidateProfilePage() {
     return score;
   })();
 
+  const [activeNavKey, setActiveNavKey] = useState("1");
+
+  const navItems = [
+    {
+      key: "1",
+      label: "Năng lực & Kỹ năng",
+      icon: <DatabaseOutlined style={{ color: "#2563EB" }} />,
+    },
+    {
+      key: "2",
+      label: "Lịch sử ứng tuyển",
+      icon: <CheckCircleOutlined style={{ color: "#10B981" }} />,
+    },
+    {
+      key: "3",
+      label: "CV Mẫu Mặc Định",
+      icon: <SolutionOutlined style={{ color: "#3B82F6" }} />,
+    },
+    {
+      key: "4",
+      label: "Thông tin cá nhân",
+      icon: <UserOutlined style={{ color: "#6366F1" }} />,
+    },
+    {
+      key: "5",
+      label: "Bảo mật tài khoản",
+      icon: <LockOutlined style={{ color: "#64748B" }} />,
+    },
+  ];
+
+  const profileStyles = `
+    .saas-sidebar-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 500;
+      font-size: 14px;
+      color: #475569;
+      background: transparent;
+      border-left: 3px solid transparent;
+      transition: all 0.2s ease-in-out;
+    }
+    .saas-sidebar-item:hover {
+      background: #F8FAFC;
+      color: #0F172A;
+    }
+    .saas-sidebar-item.active {
+      background: rgba(37, 99, 235, 0.08);
+      color: #2563EB;
+      font-weight: 600;
+      border-left: 3px solid #2563EB;
+    }
+
+    @media (max-width: 768px) {
+      .desktop-sidebar-card {
+        display: none !important;
+      }
+      .mobile-segmented-bar {
+        display: block !important;
+        margin-bottom: 16px !important;
+      }
+      .ant-card-head-wrapper {
+        flex-wrap: wrap !important;
+        gap: 8px !important;
+      }
+      .ant-card-extra {
+        margin-left: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+      }
+      .ant-card-body {
+        padding: 16px !important;
+      }
+    }
+    @media (min-width: 769px) {
+      .desktop-sidebar-card {
+        display: block !important;
+      }
+      .mobile-segmented-bar {
+        display: none !important;
+      }
+    }
+  `;
+
   return (
     <PageContainer title="Hồ sơ của tôi" subtitle="Quản lý thông tin cá nhân và lịch sử ứng tuyển">
+      <style dangerouslySetInnerHTML={{ __html: profileStyles }} />
       <Row gutter={[24, 24]}>
         {/* Cột trái: Thông tin cá nhân cơ bản */}
         <Col xs={24} md={8} lg={6}>
@@ -367,30 +455,87 @@ function CandidateProfilePage() {
               style={{
                 marginTop: 16,
                 textAlign: "left",
-                background: "#f8fafc",
-                padding: 16,
-                borderRadius: 8,
+                background: "#F8FAFC",
+                padding: "12px 16px",
+                borderRadius: 10,
+                border: "1px solid #F1F5F9"
               }}
             >
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-                <Text type="secondary">Loại tài khoản</Text>
-                <Tag color="blue" style={{ margin: 0 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                <Text type="secondary" style={{ fontSize: 13 }}>Loại tài khoản</Text>
+                <Tag color="blue" style={{ margin: 0, fontWeight: 600 }}>
                   Candidate
                 </Tag>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <Text type="secondary">Đã ứng tuyển</Text>
-                <Text strong>{applications.length} công việc</Text>
+                <Text type="secondary" style={{ fontSize: 13 }}>Đã ứng tuyển</Text>
+                <Text strong style={{ fontSize: 13 }}>{applications.length} công việc</Text>
               </div>
+            </div>
+          </Card>
+
+          {/* Card 2: Sidebar Navigation (Desktop Only) */}
+          <Card
+            className="desktop-sidebar-card"
+            style={{
+              borderRadius: 16,
+              background: "#FFFFFF",
+              border: "1px solid #E2E8F0",
+              boxShadow: "0 4px 20px rgba(15, 23, 42, 0.03)",
+            }}
+            bodyStyle={{ padding: "12px" }}
+          >
+            <div style={{ padding: "8px 12px 10px", fontSize: 11, fontWeight: 700, color: "#94A3B8", letterSpacing: "0.06em", textTransform: "uppercase" }}>
+              DANH MỤC HỒ SƠ
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              {navItems.map((item) => (
+                <div
+                  key={item.key}
+                  onClick={() => {
+                    setSelectedAppForReport(null);
+                    setActiveNavKey(item.key);
+                  }}
+                  className={`saas-sidebar-item ${activeNavKey === item.key ? "active" : ""}`}
+                >
+                  {item.icon}
+                  <span>{item.label}</span>
+                </div>
+              ))}
             </div>
           </Card>
         </Col>
 
-        {/* Cột phải: Tabs quản lý thông tin hoặc Báo cáo AI */}
-        <Col xs={24} md={16} lg={18}>
+        {/* Cột phải: Khung hiển thị nội dung chi tiết */}
+        <Col xs={24} md={16} lg={17}>
+          {/* Thanh chọn phân đoạn trên Mobile (Mobile Only) */}
+          <div className="mobile-segmented-bar" style={{ overflowX: "auto", whiteSpace: "nowrap", paddingBottom: 4 }}>
+            <div style={{ display: "flex", gap: 8 }}>
+              {navItems.map(item => (
+                <Button
+                  key={item.key}
+                  type={activeNavKey === item.key ? "primary" : "default"}
+                  icon={item.icon}
+                  onClick={() => {
+                    setSelectedAppForReport(null);
+                    setActiveNavKey(item.key);
+                  }}
+                  style={{
+                    borderRadius: 8,
+                    fontWeight: activeNavKey === item.key ? 600 : 500,
+                    whiteSpace: "nowrap",
+                    background: activeNavKey === item.key ? "#2563EB" : "#FFFFFF"
+                  }}
+                >
+                  {item.label}
+                </Button>
+              ))}
+            </div>
+          </div>
+
           {selectedAppForReport ? (
             <Card 
-              style={{ borderRadius: 16, boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}
+              style={{ borderRadius: 16, border: "1px solid #E2E8F0", boxShadow: "0 4px 20px rgba(15, 23, 42, 0.03)" }}
               bodyStyle={{ padding: "24px" }}
             >
               <div style={{ marginBottom: 24 }}>
@@ -415,98 +560,62 @@ function CandidateProfilePage() {
               })()}
             </Card>
           ) : (
-            <Card style={{ borderRadius: 16, boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}>
-              <Tabs defaultActiveKey="1" size="large">
-                <Tabs.TabPane
-                  tab={
-                    <span>
-                      <DatabaseOutlined />
-                      Năng lực & Kỹ năng
-                    </span>
-                  }
-                  key="1"
-                >
-                  <CapabilitiesTab profile={profile} onRefreshProfile={fetchProfile} />
-                </Tabs.TabPane>
+            <Card
+              style={{
+                borderRadius: 16,
+                background: "#FFFFFF",
+                border: "1px solid #E2E8F0",
+                boxShadow: "0 4px 20px rgba(15, 23, 42, 0.03)",
+              }}
+              bodyStyle={{ padding: "28px" }}
+            >
+              {activeNavKey === "1" && (
+                <CapabilitiesTab profile={profile} onRefreshProfile={fetchProfile} />
+              )}
 
-                <Tabs.TabPane
-                  tab={
-                    <span>
-                      <CheckCircleOutlined />
-                      Lịch sử ứng tuyển
-                    </span>
-                  }
-                  key="2"
-                >
-                  <div style={{ marginTop: 12 }}>
-                    <ApplicationHistoryTab 
-                      loading={loading} 
-                      applications={applications} 
-                      onViewReport={setSelectedAppForReport} 
-                      onReEvaluate={handleReEvaluate}
-                    />
+              {activeNavKey === "2" && (
+                <ApplicationHistoryTab 
+                  loading={loading} 
+                  applications={applications} 
+                  onViewReport={setSelectedAppForReport} 
+                  onReEvaluate={handleReEvaluate}
+                />
+              )}
+
+              {activeNavKey === "3" && (
+                <DefaultCvTab
+                  defaultCvUrl={profile?.defaultCvUrl}
+                  defaultCvName={profile?.defaultCvName}
+                  onRemove={() => {
+                    setProfile((prev: any) => ({
+                      ...prev,
+                      defaultCvUrl: null,
+                      defaultCvName: null,
+                    }));
+                    message.success("Đã gỡ CV mẫu khỏi hồ sơ.");
+                  }}
+                  onUpload={handleCvUpload}
+                />
+              )}
+
+              {activeNavKey === "4" && (
+                profileLoading ? (
+                  <div style={{ textAlign: "center", padding: 40 }}>
+                    <Spin />
                   </div>
-                </Tabs.TabPane>
-
-                <Tabs.TabPane
-                  tab={
-                    <span>
-                      <SolutionOutlined />
-                      Thông tin cá nhân
-                    </span>
-                  }
-                  key="3"
-                >
-                  {profileLoading ? (
-                    <div style={{ textAlign: "center", padding: 40 }}>
-                      <Spin />
-                    </div>
-                  ) : (
-                    <PersonalInfoTab
-                      form={form}
-                      submittingProfile={submittingProfile}
-                      onFinish={handleUpdateProfile}
-                      profile={profile}
-                    />
-                  )}
-                </Tabs.TabPane>
-
-                <Tabs.TabPane
-                  tab={
-                    <span>
-                      <SettingOutlined />
-                      Quản lý CV mẫu
-                    </span>
-                  }
-                  key="4"
-                >
-                  <DefaultCvTab
-                    defaultCvUrl={profile?.defaultCvUrl}
-                    defaultCvName={profile?.defaultCvName}
-                    onRemove={() => {
-                      setProfile((prev: any) => ({
-                        ...prev,
-                        defaultCvUrl: null,
-                        defaultCvName: null,
-                      }));
-                      message.success("Đã gỡ CV mẫu khỏi hồ sơ.");
-                    }}
-                    onUpload={handleCvUpload}
+                ) : (
+                  <PersonalInfoTab
+                    form={form}
+                    submittingProfile={submittingProfile}
+                    onFinish={handleUpdateProfile}
+                    profile={profile}
                   />
-                </Tabs.TabPane>
+                )
+              )}
 
-                <Tabs.TabPane
-                  tab={
-                    <span>
-                      <LockOutlined />
-                      Bảo mật tài khoản
-                    </span>
-                  }
-                  key="5"
-                >
-                  <AccountSecurityTab />
-                </Tabs.TabPane>
-              </Tabs>
+              {activeNavKey === "5" && (
+                <AccountSecurityTab />
+              )}
             </Card>
           )}
         </Col>

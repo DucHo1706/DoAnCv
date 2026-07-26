@@ -1,6 +1,9 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using RecruitmentBackend.Data;
 using RecruitmentBackend.Interfaces;
+using RecruitmentBackend.Models;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -12,43 +15,35 @@ namespace RecruitmentBackend.Controllers
     [Authorize(Roles = "Admin")]
     public class RolesController : ControllerBase
     {
+        private readonly AppDbContext _context;
         private readonly IAuditLogService _auditLogService;
 
-        // Persistent in-memory dynamic role database store for roles & permissions
-        private static List<RoleItemDto> _rolesStore = new List<RoleItemDto>
+        public RolesController(AppDbContext context, IAuditLogService auditLogService)
         {
-            new RoleItemDto
-            {
-                Id = "1",
-                Name = "Admin",
-                Description = "Quản trị viên toàn quyền hệ thống tuyển dụng & AI",
-                Permissions = new List<string> { "manage_users", "approve_jobs", "publish_close_jobs", "manage_roles", "view_audit_logs", "manage_branches", "view_reports", "train_ai_models" }
-            },
-            new RoleItemDto
-            {
-                Id = "2",
-                Name = "Recruiter",
-                Description = "Nhà tuyển dụng (Trưởng phòng / Chuyên viên HR)",
-                Permissions = new List<string> { "create_jobs", "publish_close_jobs", "view_candidates", "view_ai_scores", "send_interview_emails", "manage_talent_pool" }
-            },
-            new RoleItemDto
-            {
-                Id = "3",
-                Name = "Candidate",
-                Description = "Ứng viên tìm việc & nộp hồ sơ CV",
-                Permissions = new List<string> { "apply_jobs", "view_jobs", "manage_profile", "use_chatbot" }
-            }
-        };
-
-        public RolesController(IAuditLogService auditLogService)
-        {
+            _context = context;
             _auditLogService = auditLogService;
         }
 
-        [HttpGet]
-        public IActionResult GetRoles()
+        private static RoleItemDto ToDto(Role role)
         {
-            return Ok(_rolesStore);
+            return new RoleItemDto
+            {
+                Id = role.RoleID,
+                Name = role.Name,
+                Description = role.Description,
+                Permissions = role.GetPermissions()
+            };
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetRoles()
+        {
+            var roles = await _context.Roles
+                .OrderBy(role => role.CreatedAt)
+                .ToListAsync();
+
+            var result = roles.Select(ToDto).ToList();
+            return Ok(result);
         }
 
         [HttpPost]
@@ -57,43 +52,55 @@ namespace RecruitmentBackend.Controllers
             if (string.IsNullOrWhiteSpace(request.Name))
                 return BadRequest("Tên vai trò không được để trống.");
 
-            request.Id = System.DateTime.Now.Ticks.ToString();
-            request.Permissions ??= new List<string>();
-            _rolesStore.Add(request);
+            var newRole = new Role
+            {
+                Name = request.Name,
+                Description = request.Description ?? "",
+            };
+            newRole.SetPermissions(request.Permissions ?? new List<string>());
+
+            _context.Roles.Add(newRole);
+            await _context.SaveChangesAsync();
 
             var adminEmail = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? "Admin";
             var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
-            await _auditLogService.WriteLogAsync(adminEmail, "Tạo vai trò mới", $"Vai trò: {request.Name}", ipAddress);
+            await _auditLogService.WriteLogAsync(adminEmail, "Tạo vai trò mới", $"Vai trò: {newRole.Name}", ipAddress);
 
-            return Ok(new { message = "Thêm mới vai trò thành công!", role = request });
+            return Ok(new { message = "Thêm mới vai trò thành công!", role = ToDto(newRole) });
         }
 
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateRole(string id, [FromBody] RoleItemDto request)
         {
-            var existing = _rolesStore.FirstOrDefault(r => r.Id == id);
+            var existing = await _context.Roles.FirstOrDefaultAsync(role => role.RoleID == id);
             if (existing == null)
                 return NotFound("Không tìm thấy vai trò.");
 
             existing.Name = request.Name ?? existing.Name;
             existing.Description = request.Description ?? existing.Description;
-            existing.Permissions = request.Permissions ?? existing.Permissions;
+            if (request.Permissions != null)
+            {
+                existing.SetPermissions(request.Permissions);
+            }
+
+            await _context.SaveChangesAsync();
 
             var adminEmail = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? "Admin";
             var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
             await _auditLogService.WriteLogAsync(adminEmail, "Cập nhật phân quyền vai trò", $"Vai trò: {existing.Name}", ipAddress);
 
-            return Ok(new { message = "Cập nhật vai trò thành công!", role = existing });
+            return Ok(new { message = "Cập nhật vai trò thành công!", role = ToDto(existing) });
         }
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteRole(string id)
         {
-            var existing = _rolesStore.FirstOrDefault(r => r.Id == id);
+            var existing = await _context.Roles.FirstOrDefaultAsync(role => role.RoleID == id);
             if (existing == null)
                 return NotFound("Không tìm thấy vai trò.");
 
-            _rolesStore.Remove(existing);
+            _context.Roles.Remove(existing);
+            await _context.SaveChangesAsync();
 
             var adminEmail = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? "Admin";
             var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();

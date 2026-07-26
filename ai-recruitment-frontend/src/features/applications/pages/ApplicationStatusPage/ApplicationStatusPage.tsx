@@ -33,8 +33,6 @@ import CompetencyTab from "../../../../components/ai-report/CompetencyTab";
 import StarOptimizationTab from "../../../../components/ai-report/StarOptimizationTab";
 import LanguageReviewTab from "../../../../components/ai-report/LanguageReviewTab";
 import InterviewQuestionsTab from "../../../../components/ai-report/InterviewQuestionsTab";
-// @ts-ignore
-import html2pdf from "html2pdf.js";
 import AiCoreIcon from "../../../../components/common/AiCoreIcon";
 import { appTheme } from "../../../../constants/theme";
 import { recruitmentService, type InterviewScheduleDto } from "../../services/recruitmentService";
@@ -182,7 +180,7 @@ export default function ApplicationStatusPage() {
     parsed,
   } = useApplicationStatus();
 
-  const handleExportPDF = () => {
+  const handleExportPDF = async () => {
     const element = document.getElementById("ai-report-printable-area");
     if (!element) {
       message.error("Không tìm thấy vùng báo cáo để xuất!");
@@ -197,16 +195,19 @@ export default function ApplicationStatusPage() {
       html2canvas: { scale: 2, useCORS: true },
       jsPDF: { unit: "mm" as const, format: "a4" as const, orientation: "portrait" as const }
     };
-    html2pdf().set(opt).from(element).save().then(() => {
+    try {
+      // @ts-ignore
+      const html2pdf = (await import("html2pdf.js")).default;
+      await html2pdf().set(opt).from(element).save();
       element.style.display = "none";
       hideMessage();
       message.success("Xuất báo cáo PDF thành công!");
-    }).catch((err: any) => {
+    } catch (err: any) {
       console.error(err);
       element.style.display = "none";
       hideMessage();
       message.error("Có lỗi xảy ra khi xuất PDF!");
-    });
+    }
   };
 
   const [currentPage, setCurrentPage] = useState(1);

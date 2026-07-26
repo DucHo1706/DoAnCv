@@ -46,6 +46,14 @@ namespace RecruitmentBackend.Controllers
             return Ok(result);
         }
 
+        [HttpGet("recruiter-performance")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetRecruiterPerformance()
+        {
+            var result = await _dashboardService.GetRecruiterPerformanceStatsAsync();
+            return Ok(result);
+        }
+
         [HttpGet("simulator-candidates")]
         public async Task<IActionResult> GetSimulatorCandidates()
         {

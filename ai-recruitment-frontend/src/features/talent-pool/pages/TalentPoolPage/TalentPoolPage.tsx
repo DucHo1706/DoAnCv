@@ -7,10 +7,12 @@ import {
   LockOutlined,
   FilePdfOutlined,
   EyeOutlined,
+  RedoOutlined,
 } from "@ant-design/icons";
 import PageContainer from "../../../../components/common/PageContainer";
 import { useTalentPool } from "./hooks/useTalentPool";
 import type { TalentPoolCandidateDto } from "../../services/talentPoolService";
+import { appTheme } from "../../../../constants/theme";
 
 const { Text } = Typography;
 
@@ -35,12 +37,28 @@ export default function TalentPoolPage() {
     jobLevels,
     loading,
     parseSkills,
-    formatDate,
     filteredCandidates,
     readyCount,
     lockedCount,
     averageAiScore,
   } = useTalentPool();
+
+  const handleResetFilters = () => {
+    setSearchText("");
+    setFilterStatus(null);
+    setFilterMinScore(null);
+    setFilterCategory(null);
+    setFilterPosition(null);
+    setFilterLevel(null);
+  };
+
+  const hasActiveFilter =
+    searchText.trim() !== "" ||
+    filterStatus != null ||
+    filterMinScore != null ||
+    filterCategory != null ||
+    filterPosition != null ||
+    filterLevel != null;
 
   const columns = [
     {
@@ -49,13 +67,13 @@ export default function TalentPoolPage() {
       key: "fullName",
       width: 260,
       render: (text: string, record: TalentPoolCandidateDto) => (
-        <Space>
+        <Space align="center">
           <Avatar icon={<UserOutlined />} style={{ backgroundColor: "#2563EB" }} />
           <div style={{ maxWidth: 190 }}>
-            <Text strong ellipsis style={{ display: "block" }}>
+            <Text strong ellipsis style={{ display: "block", color: "#0F172A" }}>
               {text || "Chưa cập nhật"}
             </Text>
-            <Text type="secondary" style={{ fontSize: 12 }} ellipsis>
+            <Text type="secondary" style={{ fontSize: 12, color: "#64748B" }} ellipsis>
               {record.email || "Chưa có email"}
             </Text>
           </div>
@@ -75,13 +93,13 @@ export default function TalentPoolPage() {
         return (
           <Space wrap>
             {skills.slice(0, 5).map((skill: string) => (
-              <Tag color="blue" key={skill}>
+              <Tag color="geekblue" key={skill} style={{ borderRadius: 6 }}>
                 {skill}
               </Tag>
             ))}
             {skills.length > 5 && (
               <Tooltip title={skills.slice(5).join(", ")}>
-                <Tag>+{skills.length - 5}</Tag>
+                <Tag style={{ borderRadius: 6 }}>+{skills.length - 5}</Tag>
               </Tooltip>
             )}
           </Space>
@@ -97,86 +115,56 @@ export default function TalentPoolPage() {
           <Text type="secondary" style={{ display: "block", fontSize: 12 }}>
             Từng nộp: {record.highestScoreJobTitle || "Chưa cập nhật"}
           </Text>
-          <Tag color="green" icon={<TrophyOutlined />} style={{ marginTop: 4 }}>
-            AI Điểm cao nhất: {record.highestAiScore || 0}
+          <Tag color="green" icon={<TrophyOutlined />} style={{ marginTop: 4, borderRadius: 6 }}>
+            {record.highestAiScore ? `${record.highestAiScore}/100` : "N/A"}
           </Tag>
         </div>
       ),
     },
     {
       title: "Trạng thái",
+      dataIndex: "isLockedInOtherProcess",
       key: "status",
-      width: 210,
-      render: (_: any, record: TalentPoolCandidateDto) => {
-        if (record.isInviteLocked === true) {
-          return (
-            <Tooltip
-              title={
-                record.inviteLockReason ||
-                "Ứng viên đang tham gia quy trình tuyển dụng ở một vị trí khác."
-              }
-            >
-              <Tag color="orange" icon={<LockOutlined />}>
-                Đang trong quy trình khác
-              </Tag>
-            </Tooltip>
-          );
-        }
-        return <Tag color="success">Sẵn sàng tìm việc</Tag>;
-      },
-    },
-    {
-      title: (
-        <Tooltip title="Cập nhật lần cuối">
-          <span style={{ whiteSpace: "nowrap" }}>Cập nhật</span>
-        </Tooltip>
-      ),
-      dataIndex: "lastUpdatedAt",
-      key: "lastUpdatedAt",
-      width: 120,
-      align: "center" as const,
-      render: (value: string) => (
-        <Text
-          type="secondary"
-          style={{
-            whiteSpace: "nowrap",
-            display: "inline-block",
-          }}
-        >
-          {formatDate(value)}
-        </Text>
-      ),
+      width: 160,
+      render: (isLocked: boolean) =>
+        isLocked ? (
+          <Tag color="error" icon={<LockOutlined />} style={{ borderRadius: 6 }}>
+            Đã khóa
+          </Tag>
+        ) : (
+          <Tag color="success" icon={<EyeOutlined />} style={{ borderRadius: 6 }}>
+            Sẵn sàng
+          </Tag>
+        ),
     },
     {
       title: "Thao tác",
       key: "actions",
-      width: 320,
+      width: 300,
+      fixed: "right" as const,
       render: (_: any, record: TalentPoolCandidateDto) => (
-        <Space size="small" wrap={false}>
+        <Space size="small">
           <Button
             size="small"
             type="primary"
             ghost
             icon={<EyeOutlined />}
+            style={{ borderRadius: 6 }}
             onClick={() => {
-              const talentPoolCandidateId =
+              const id =
                 record.talentPoolCandidateId ||
                 (record as any).talentPoolCandidateID ||
                 (record as any).TalentPoolCandidateID;
-
-              if (!talentPoolCandidateId) {
-                return;
-              }
-              navigate(`/recruiter/talent-pool/${talentPoolCandidateId}`);
+              if (id) navigate(`/recruiter/talent-pool/${id}`);
             }}
           >
-            Xem chi tiết
+            Chi tiết
           </Button>
           <Button
             size="small"
-            type="dashed"
             icon={<FilePdfOutlined />}
             disabled={!record.latestCvUrl}
+            style={{ borderRadius: 6 }}
             onClick={() => {
               if (record.latestCvUrl) {
                 const url = record.latestCvUrl.startsWith("http")
@@ -186,11 +174,12 @@ export default function TalentPoolPage() {
               }
             }}
           >
-            Xem CV
+            CV
           </Button>
           <Button
             size="small"
             icon={<MailOutlined />}
+            style={{ borderRadius: 6 }}
             onClick={() => navigate(`/recruiter/candidates/${record.candidateId}/email`)}
           >
             Email
@@ -201,129 +190,198 @@ export default function TalentPoolPage() {
   ];
 
   return (
-    <PageContainer
-      title="Kho dữ liệu tài năng (Talent Pool)"
-      subtitle="Lưu trữ, quản lý và gợi ý tự động ứng viên tiềm năng cho đợt tuyển dụng mới."
-    >
+    <PageContainer title="Kho ứng viên tiềm năng (Talent Pool)">
       <Space direction="vertical" size="large" style={{ width: "100%" }}>
-        <Space size="middle" wrap>
-          <Card style={{ width: 260, borderRadius: 12 }}>
-            <Text type="secondary">Tổng ứng viên</Text>
-            <div style={{ fontSize: 28, fontWeight: 700, marginTop: 8 }}>
-              {talentPoolCandidates.length}
-            </div>
-            <Text type="secondary">Trong Ngân hàng Ứng viên</Text>
-          </Card>
-          <Card style={{ width: 260, borderRadius: 12 }}>
-            <Text type="secondary">Sẵn sàng mời</Text>
-            <div style={{ fontSize: 28, fontWeight: 700, marginTop: 8 }}>{readyCount}</div>
-            <Text type="secondary">Không bị khóa quy trình</Text>
-          </Card>
-          <Card style={{ width: 260, borderRadius: 12 }}>
-            <Text type="secondary">Đang trong quy trình khác</Text>
-            <div style={{ fontSize: 28, fontWeight: 700, marginTop: 8 }}>{lockedCount}</div>
-            <Text type="secondary">Không thể mời ứng tuyển</Text>
-          </Card>
-          <Card style={{ width: 260, borderRadius: 12 }}>
-            <Text type="secondary">Điểm AI trung bình</Text>
-            <div style={{ fontSize: 28, fontWeight: 700, marginTop: 8, color: "#16A34A" }}>
-              {averageAiScore}/100
-            </div>
-            <Text type="secondary">Độ tương hợp bình quân</Text>
-          </Card>
-        </Space>
+        {/* Stat Cards Grid */}
+        <Row gutter={[16, 16]}>
+          <Col xs={24} sm={12} lg={6}>
+            <Card
+              bodyStyle={{ padding: 20 }}
+              style={{
+                borderRadius: appTheme.radius.md,
+                border: "1px solid #E2E8F0",
+                boxShadow: appTheme.shadow.card,
+              }}
+            >
+              <Space align="center" size="middle">
+                <div style={{ width: 44, height: 44, borderRadius: 12, background: "#EFF6FF", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <UserOutlined style={{ fontSize: 22, color: "#2563EB" }} />
+                </div>
+                <div>
+                  <Text type="secondary" style={{ fontSize: 13 }}>Tổng ứng viên</Text>
+                  <div style={{ fontSize: 22, fontWeight: 700, color: "#0F172A", lineHeight: 1.2 }}>
+                    {talentPoolCandidates.length}
+                  </div>
+                </div>
+              </Space>
+            </Card>
+          </Col>
 
-        <Card style={{ borderRadius: 12, overflow: "hidden" }}>
-          <div style={{ marginBottom: 24 }}>
-            <Row gutter={[16, 16]}>
-              <Col xs={24} md={8}>
+          <Col xs={24} sm={12} lg={6}>
+            <Card
+              bodyStyle={{ padding: 20 }}
+              style={{
+                borderRadius: appTheme.radius.md,
+                border: "1px solid #E2E8F0",
+                boxShadow: appTheme.shadow.card,
+              }}
+            >
+              <Space align="center" size="middle">
+                <div style={{ width: 44, height: 44, borderRadius: 12, background: "#F0FDF4", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <EyeOutlined style={{ fontSize: 22, color: "#10B981" }} />
+                </div>
+                <div>
+                  <Text type="secondary" style={{ fontSize: 13 }}>Sẵn sàng mời</Text>
+                  <div style={{ fontSize: 22, fontWeight: 700, color: "#0F172A", lineHeight: 1.2 }}>
+                    {readyCount}
+                  </div>
+                </div>
+              </Space>
+            </Card>
+          </Col>
+
+          <Col xs={24} sm={12} lg={6}>
+            <Card
+              bodyStyle={{ padding: 20 }}
+              style={{
+                borderRadius: appTheme.radius.md,
+                border: "1px solid #E2E8F0",
+                boxShadow: appTheme.shadow.card,
+              }}
+            >
+              <Space align="center" size="middle">
+                <div style={{ width: 44, height: 44, borderRadius: 12, background: "#FEF2F2", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <LockOutlined style={{ fontSize: 22, color: "#EF4444" }} />
+                </div>
+                <div>
+                  <Text type="secondary" style={{ fontSize: 13 }}>Đang quy trình khác</Text>
+                  <div style={{ fontSize: 22, fontWeight: 700, color: "#0F172A", lineHeight: 1.2 }}>
+                    {lockedCount}
+                  </div>
+                </div>
+              </Space>
+            </Card>
+          </Col>
+
+          <Col xs={24} sm={12} lg={6}>
+            <Card
+              bodyStyle={{ padding: 20 }}
+              style={{
+                borderRadius: appTheme.radius.md,
+                border: "1px solid #E2E8F0",
+                boxShadow: appTheme.shadow.card,
+              }}
+            >
+              <Space align="center" size="middle">
+                <div style={{ width: 44, height: 44, borderRadius: 12, background: "#FFFBEB", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <TrophyOutlined style={{ fontSize: 22, color: "#F59E0B" }} />
+                </div>
+                <div>
+                  <Text type="secondary" style={{ fontSize: 13 }}>Điểm AI TB</Text>
+                  <div style={{ fontSize: 22, fontWeight: 700, color: "#0F172A", lineHeight: 1.2 }}>
+                    {averageAiScore} <span style={{ fontSize: 13, fontWeight: 400, color: "#64748B" }}>/100</span>
+                  </div>
+                </div>
+              </Space>
+            </Card>
+          </Col>
+        </Row>
+
+        {/* Filter Bar Card & Main Data Table */}
+        <Card
+          style={{
+            borderRadius: appTheme.radius.lg,
+            border: "1px solid #E2E8F0",
+            boxShadow: appTheme.shadow.card,
+          }}
+          bodyStyle={{ padding: 24 }}
+        >
+          <div style={{ marginBottom: 20 }}>
+            <Row gutter={[12, 12]} align="middle">
+              <Col xs={24} md={6}>
                 <Input
-                  size="large"
-                  placeholder="Tìm kiếm theo kỹ năng, tên, email, vị trí..."
-                  prefix={<SearchOutlined />}
-                  style={{ width: "100%" }}
+                  placeholder="Tìm theo kỹ năng, tên, email..."
+                  prefix={<SearchOutlined style={{ color: "#94A3B8" }} />}
+                  style={{ borderRadius: 8, height: 40 }}
                   value={searchText}
-                  onChange={(event) => setSearchText(event.target.value)}
+                  onChange={(e) => setSearchText(e.target.value)}
                   allowClear
                 />
               </Col>
               <Col xs={12} md={4}>
                 <Select
-                  placeholder="Trạng thái mời"
-                  style={{ width: "100%" }}
-                  allowClear
+                  placeholder="Trạng thái"
+                  style={{ width: "100%", height: 40 }}
                   value={filterStatus}
                   onChange={setFilterStatus}
-                  size="large"
+                  allowClear
                   options={[
-                    { label: "Sẵn sàng mời", value: "ready" },
-                    { label: "Đang trong quy trình khác", value: "locked" },
+                    { value: "ready", label: "Sẵn sàng" },
+                    { value: "locked", label: "Đã khóa" },
                   ]}
                 />
               </Col>
               <Col xs={12} md={4}>
                 <Select
                   placeholder="Điểm AI tối thiểu"
-                  style={{ width: "100%" }}
-                  allowClear
+                  style={{ width: "100%", height: 40 }}
                   value={filterMinScore}
                   onChange={setFilterMinScore}
-                  size="large"
+                  allowClear
                   options={[
-                    { label: "Xuất sắc (≥ 80)", value: 80 },
-                    { label: "Khá tốt (≥ 60)", value: 60 },
-                    { label: "Đạt yêu cầu (≥ 50)", value: 50 },
+                    { value: 50, label: ">= 50 điểm" },
+                    { value: 70, label: ">= 70 điểm" },
+                    { value: 85, label: ">= 85 điểm" },
                   ]}
                 />
               </Col>
               <Col xs={12} md={4}>
                 <Select
-                  placeholder="Ngành nghề / Lĩnh vực"
-                  style={{ width: "100%" }}
-                  allowClear
+                  placeholder="Lĩnh vực"
+                  style={{ width: "100%", height: 40 }}
                   value={filterCategory}
                   onChange={setFilterCategory}
-                  size="large"
-                  options={categories.map(c => ({ label: c.name, value: c.id }))}
+                  allowClear
+                  options={categories.map((c) => ({ label: c.name, value: c.id }))}
                 />
               </Col>
               <Col xs={12} md={4}>
                 <Select
-                  placeholder="Cấp bậc ứng tuyển"
-                  style={{ width: "100%" }}
-                  allowClear
+                  placeholder="Cấp bậc"
+                  style={{ width: "100%", height: 40 }}
                   value={filterLevel}
                   onChange={setFilterLevel}
-                  size="large"
-                  options={jobLevels.map(l => ({ label: l, value: l }))}
-                />
-              </Col>
-            </Row>
-
-            <Row gutter={[16, 16]} style={{ marginTop: 12 }}>
-              <Col xs={24} md={8}>
-                <Select
-                  placeholder="Lọc ứng viên khớp Vị trí tuyển dụng mở"
-                  style={{ width: "100%" }}
                   allowClear
-                  value={filterPosition}
-                  onChange={setFilterPosition}
-                  size="large"
-                  showSearch
-                  optionFilterProp="label"
-                  options={jobPositions.map(p => ({ label: p.name, value: p.id }))}
+                  options={jobLevels.map((l) => ({ label: l, value: l }))}
                 />
               </Col>
+              {hasActiveFilter && (
+                <Col xs={12} md={2}>
+                  <Button
+                    icon={<RedoOutlined />}
+                    onClick={handleResetFilters}
+                    style={{ borderRadius: 8, height: 40 }}
+                  >
+                    Xóa lọc
+                  </Button>
+                </Col>
+              )}
             </Row>
           </div>
 
           <Table
             columns={columns}
             dataSource={filteredCandidates}
-            rowKey="talentPoolCandidateId"
+            rowKey={(record) => record.talentPoolCandidateId || record.candidateId}
             loading={loading}
-            pagination={{ pageSize: 10 }}
-            scroll={{ x: 1650 }}
+            pagination={{
+              pageSize: 10,
+              showSizeChanger: true,
+              showTotal: (total) => `Tổng cộng ${total} ứng viên`,
+            }}
+            bordered={false}
+            size="middle"
+            style={{ borderRadius: appTheme.radius.md }}
           />
         </Card>
       </Space>

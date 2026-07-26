@@ -139,6 +139,24 @@ const normalizeHrDashboardStats = (data: Partial<HrDashboardStats>): HrDashboard
   };
 };
 
+export interface RecruiterPerformanceItem {
+  recruiterId: string;
+  accountId: string;
+  fullName: string;
+  email: string;
+  phone: string;
+  branches: string;
+  totalJobs: number;
+  publishedJobs: number;
+  pendingJobs: number;
+  rejectedJobs: number;
+  closedJobs: number;
+  totalApplications: number;
+  totalInterviews: number;
+  hiredCount: number;
+  avgMatchScore: number;
+}
+
 export const dashboardService = {
   async getHrDashboardStats(params?: HrDashboardStatsParams): Promise<HrDashboardStats> {
     const requestParams: Record<string, string> = {};
@@ -156,6 +174,14 @@ export const dashboardService = {
     });
 
     return normalizeHrDashboardStats(response.data);
+  },
+
+  async getRecruiterPerformance(): Promise<RecruiterPerformanceItem[]> {
+    const response = await axiosClient.get("/Dashboard/recruiter-performance");
+    if (response.data?.isSuccess && Array.isArray(response.data.data)) {
+      return response.data.data;
+    }
+    return Array.isArray(response.data) ? response.data : [];
   },
 };
 

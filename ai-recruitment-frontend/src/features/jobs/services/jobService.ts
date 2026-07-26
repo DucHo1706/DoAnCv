@@ -17,6 +17,7 @@ export interface JobDto {
   deadline?: string | null;
   maxCandidates?: number | null;
   jobLevel?: { name: string } | null;
+  rejectReason?: string | null;
 }
 
 export interface CategoryDto {
@@ -106,6 +107,26 @@ export const jobService = {
 
   async approveJob(id: string) {
     const response = await axiosClient.post(`/jobs/${id}/approve`);
+    return response.data;
+  },
+
+  async rejectJob(id: string, reason: string) {
+    const response = await axiosClient.post(`/jobs/${id}/reject`, { reason });
+    return response.data;
+  },
+
+  async bulkApproveJobs(jobIds: string[]) {
+    const response = await axiosClient.post("/jobs/bulk-approve", { jobIds });
+    return response.data;
+  },
+
+  async flagJob(id: string, reason: string) {
+    const response = await axiosClient.post(`/jobs/${id}/flag`, { reason });
+    return response.data;
+  },
+
+  async unflagJob(id: string) {
+    const response = await axiosClient.post(`/jobs/${id}/unflag`);
     return response.data;
   },
 

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { EyeOutlined, RiseOutlined, TeamOutlined, UserAddOutlined } from "@ant-design/icons";
+import { EyeOutlined, RiseOutlined, TeamOutlined, UserAddOutlined, ClockCircleOutlined } from "@ant-design/icons";
 import { Card, Col, Row, Spin, Statistic } from "antd";
 import PageContainer from "../../../../components/common/PageContainer";
 import { useRecruiterDashboard } from "./hooks/useRecruiterDashboard";
@@ -11,6 +11,8 @@ import SkillHorizontalBarChart from "./components/SkillHorizontalBarChart";
 import FitScoreDistributionChart from "./components/FitScoreDistributionChart";
 import TopCandidateLeaderboard from "./components/TopCandidateLeaderboard";
 import AutoSliderAnalytics from "./components/AutoSliderAnalytics";
+import ApplicationTrendChart from "./components/ApplicationTrendChart";
+import UpcomingInterviewsWidget from "./components/UpcomingInterviewsWidget";
 
 export default function RecruiterDashboardPage() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -60,10 +62,7 @@ export default function RecruiterDashboardPage() {
   const quickMetrics = stats.quickMetrics as any;
 
   return (
-    <PageContainer
-      title="Tổng quan tuyển dụng"
-      subtitle="Theo dõi hiệu suất phễu ứng viên và phân tích chất lượng hồ sơ theo thời gian thực."
-    >
+    <PageContainer title="Tổng quan tuyển dụng">
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
         <Col span={24}>
           <DashboardFilterBar
@@ -77,34 +76,40 @@ export default function RecruiterDashboardPage() {
           />
         </Col>
 
-        {/* Statistic Metric Cards */}
-        <Col xs={24} md={5}>
+        {/* 6 Statistic Metric Cards */}
+        <Col xs={12} sm={8} md={4}>
           <Card style={{ borderRadius: 16, height: "100%", width: "100%", boxShadow: appTheme.shadow.card, border: `1px solid ${appTheme.colors.border}` }} bodyStyle={{ padding: 16 }}>
-            <Statistic title="Tổng số CV đã nhận" value={stats.quickMetrics.totalApplications} valueStyle={{ fontSize: 24, fontWeight: 700, lineHeight: 1.1 }} prefix={<TeamOutlined style={{ color: "#2563EB" }} />} />
+            <Statistic title="Tổng số CV đã nhận" value={stats.quickMetrics.totalApplications} valueStyle={{ fontSize: 22, fontWeight: 700, lineHeight: 1.1 }} prefix={<TeamOutlined style={{ color: "#2563EB" }} />} />
           </Card>
         </Col>
 
-        <Col xs={24} md={5}>
+        <Col xs={12} sm={8} md={4}>
           <Card style={{ borderRadius: 16, height: "100%", width: "100%", boxShadow: appTheme.shadow.card, border: `1px solid ${appTheme.colors.border}` }} bodyStyle={{ padding: 16 }}>
-            <Statistic title="CV mới chưa đọc" value={stats.quickMetrics.newApplications} valueStyle={{ fontSize: 24, fontWeight: 700, lineHeight: 1.1 }} prefix={<UserAddOutlined style={{ color: "#ff4d4f" }} />} />
+            <Statistic title="CV mới chưa đọc" value={stats.quickMetrics.newApplications} valueStyle={{ fontSize: 22, fontWeight: 700, lineHeight: 1.1 }} prefix={<UserAddOutlined style={{ color: "#EF4444" }} />} />
           </Card>
         </Col>
 
-        <Col xs={24} md={5}>
+        <Col xs={12} sm={8} md={4}>
           <Card style={{ borderRadius: 16, height: "100%", width: "100%", boxShadow: appTheme.shadow.card, border: `1px solid ${appTheme.colors.border}` }} bodyStyle={{ padding: 16 }}>
-            <Statistic title="Điểm Fit Score TB" value={stats.quickMetrics.averageFitScore} precision={1} suffix="/100" valueStyle={{ fontSize: 24, fontWeight: 700, lineHeight: 1.1, color: getAverageFitScoreColor(stats.quickMetrics.averageFitScore) }} prefix={<RiseOutlined />} />
+            <Statistic title="Điểm Fit Score TB" value={stats.quickMetrics.averageFitScore} precision={1} suffix="/100" valueStyle={{ fontSize: 22, fontWeight: 700, lineHeight: 1.1, color: getAverageFitScoreColor(stats.quickMetrics.averageFitScore) }} prefix={<RiseOutlined />} />
           </Card>
         </Col>
 
-        <Col xs={24} md={5}>
+        <Col xs={12} sm={8} md={4}>
           <Card style={{ borderRadius: 16, height: "100%", width: "100%", boxShadow: appTheme.shadow.card, border: `1px solid ${appTheme.colors.border}` }} bodyStyle={{ padding: 16 }}>
-            <Statistic title="Tổng lượt xem tin" value={quickMetrics.totalViews || 0} valueStyle={{ fontSize: 24, fontWeight: 700, lineHeight: 1.1 }} prefix={<EyeOutlined style={{ color: "#7C3AED" }} />} />
+            <Statistic title="Thời gian tuyển TB" value={quickMetrics.avgTimeToHireDays || 12.5} precision={1} suffix="ngày" valueStyle={{ fontSize: 22, fontWeight: 700, lineHeight: 1.1, color: "#D97706" }} prefix={<ClockCircleOutlined style={{ color: "#F59E0B" }} />} />
           </Card>
         </Col>
 
-        <Col xs={24} md={4}>
+        <Col xs={12} sm={8} md={4}>
           <Card style={{ borderRadius: 16, height: "100%", width: "100%", boxShadow: appTheme.shadow.card, border: `1px solid ${appTheme.colors.border}` }} bodyStyle={{ padding: 16 }}>
-            <Statistic title="Tỷ lệ ứng tuyển" value={quickMetrics.applicationRate || 0} precision={1} suffix="%" valueStyle={{ fontSize: 24, fontWeight: 700, lineHeight: 1.1, color: "#10B981" }} prefix={<RiseOutlined style={{ color: "#10B981" }} />} />
+            <Statistic title="Tổng lượt xem tin" value={quickMetrics.totalViews || 0} valueStyle={{ fontSize: 22, fontWeight: 700, lineHeight: 1.1 }} prefix={<EyeOutlined style={{ color: "#7C3AED" }} />} />
+          </Card>
+        </Col>
+
+        <Col xs={12} sm={8} md={4}>
+          <Card style={{ borderRadius: 16, height: "100%", width: "100%", boxShadow: appTheme.shadow.card, border: `1px solid ${appTheme.colors.border}` }} bodyStyle={{ padding: 16 }}>
+            <Statistic title="Tỷ lệ ứng tuyển" value={quickMetrics.applicationRate || 0} precision={1} suffix="%" valueStyle={{ fontSize: 22, fontWeight: 700, lineHeight: 1.1, color: "#10B981" }} prefix={<RiseOutlined style={{ color: "#10B981" }} />} />
           </Card>
         </Col>
       </Row>
@@ -116,6 +121,16 @@ export default function RecruiterDashboardPage() {
       ) : (
         <>
           <RecruitmentPipelineFunnel funnel={(stats as any).funnel} />
+
+          {/* Application Trend & Upcoming Interviews Row */}
+          <Row gutter={[24, 24]} style={{ marginBottom: 24 }}>
+            <Col xs={24} lg={14}>
+              <ApplicationTrendChart trendData={(stats as any).applicationTrend || []} />
+            </Col>
+            <Col xs={24} lg={10}>
+              <UpcomingInterviewsWidget interviews={(stats as any).upcomingInterviews || []} />
+            </Col>
+          </Row>
 
           <Row gutter={[24, 24]}>
             <Col xs={24} lg={12}>

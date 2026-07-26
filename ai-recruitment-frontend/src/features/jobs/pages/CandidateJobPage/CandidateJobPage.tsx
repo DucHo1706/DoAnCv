@@ -15,6 +15,7 @@ import {
   InputNumber,
   Spin,
   message,
+  Alert,
 } from "antd";
 import {
   SearchOutlined,
@@ -23,6 +24,9 @@ import {
   ClockCircleOutlined,
   StarOutlined,
   StarFilled,
+  ThunderboltOutlined,
+  CheckCircleOutlined,
+  DollarOutlined
 } from "@ant-design/icons";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import axiosClient from "../../../../services/axiosClient";
@@ -40,11 +44,15 @@ const glassCardStyle = {
   borderRadius: "16px",
 };
 
+const escapeRegExp = (string: string) => {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+};
+
 export default function CandidateJobPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
-  // Khởi tạo giá trị mặc định từ URL (Nếu có truyền từ trang chủ sang)
+  // Khởi tạo giá trị mặc định từ URL
   const [keyword, setKeyword] = useState(searchParams.get("keyword") || "");
   const [location, setLocation] = useState(searchParams.get("location") || "all");
   const [jobs, setJobs] = useState<any[]>([]);
@@ -56,6 +64,8 @@ export default function CandidateJobPage() {
   const isLoggedIn = !!localStorage.getItem("token");
   const isCandidate = JSON.parse(localStorage.getItem("user") || "{}").role === "Candidate";
   const [savedJobIds, setSavedJobIds] = useState<Set<string>>(new Set());
+  const [candidateSkills, setCandidateSkills] = useState<string[]>([]);
+  const [sortBy, setSortBy] = useState<string>(isLoggedIn && isCandidate ? "aiMatch" : "newest");
 
   // State cho Bộ lọc nâng cao
   const [categoryId, setCategoryId] = useState("all");
@@ -65,6 +75,7 @@ export default function CandidateJobPage() {
   const [salaryRange, setSalaryRange] = useState("all");
   const [categories, setCategories] = useState<any[]>([]);
   const [jobLevels, setJobLevels] = useState<any[]>([]);
+  const [branches, setBranches] = useState<any[]>([]);
 
   const handleSalaryRangeChange = (val: string) => {
     setSalaryRange(val);
@@ -95,14 +106,16 @@ export default function CandidateJobPage() {
     }
   };
 
-  // Fetch Metadata lúc mới mở trang
+  // Fetch Dynamic Metadata (Categories, Job Levels, Branches) lúc khởi tạo
   useEffect(() => {
     const fetchMetadata = async () => {
       try {
         const catRes = await axiosClient.get("/Metadata/categories");
         const levelRes = await axiosClient.get("/Metadata/job-levels");
+        const branchRes = await axiosClient.get("/Metadata/branches");
         setCategories(catRes.data?.$values || catRes.data || []);
         setJobLevels(levelRes.data?.$values || levelRes.data || []);
+        setBranches(branchRes.data?.$values || branchRes.data || []);
       } catch (error) {
         console.error("Lỗi lấy metadata:", error);
       }
@@ -110,25 +123,33 @@ export default function CandidateJobPage() {
     fetchMetadata();
   }, []);
 
+  // Cá nhân hóa: Tải hồ sơ CV của Ứng viên để tính điểm AI Match
   useEffect(() => {
-    const fetchSavedJobIds = async () => {
+    const fetchCandidateContext = async () => {
       try {
         if (isLoggedIn && isCandidate) {
-          const response = await axiosClient.get("/jobs/saved");
-          if (Array.isArray(response.data)) {
-            setSavedJobIds(new Set(response.data.map((j: any) => j.id)));
+          const savedRes = await axiosClient.get("/jobs/saved");
+          if (Array.isArray(savedRes.data)) {
+            setSavedJobIds(new Set(savedRes.data.map((j: any) => j.id)));
+          }
+
+          const profileRes = await axiosClient.get("/profile");
+          if (profileRes.data?.skills) {
+            try {
+              const parsed = typeof profileRes.data.skills === "string"
+                ? JSON.parse(profileRes.data.skills)
+                : profileRes.data.skills;
+              const skillList = Array.isArray(parsed) ? parsed : (parsed?.$values || []);
+              setCandidateSkills(skillList);
+            } catch {}
           }
         }
       } catch (error) {
-        console.error("Lỗi khi lấy danh sách việc làm đã lưu:", error);
+        console.error("Lỗi khi tải dữ liệu cá nhân hóa ứng viên:", error);
       }
     };
-    fetchSavedJobIds();
+    fetchCandidateContext();
   }, [isLoggedIn, isCandidate]);
-
-
-
-
 
   const fetchJobs = async () => {
     setLoading(true);
@@ -142,7 +163,7 @@ export default function CandidateJobPage() {
           SalaryMin: salaryMin,
           SalaryMax: salaryMax,
           PageIndex: pageIndex,
-          PageSize: 10,
+          PageSize: 12,
         },
       });
       const items = res.data.items?.$values || res.data.items || [];
@@ -160,13 +181,12 @@ export default function CandidateJobPage() {
     fetchJobs();
   }, [pageIndex]);
 
-  // Tự động gọi Tìm kiếm khi người dùng đổi các bộ lọc chính
+  // Tự động tìm kiếm khi người dùng chọn lọc
   useEffect(() => {
     handleSearch();
   }, [categoryId, jobLevelId, location, salaryMin, salaryMax]);
 
   const handleSearch = () => {
-    // Cập nhật lại thanh URL để người dùng có thể copy link chia sẻ
     const params = new URLSearchParams(searchParams);
     if (keyword) params.set("keyword", keyword);
     else params.delete("keyword");
@@ -175,7 +195,7 @@ export default function CandidateJobPage() {
     navigate(`/jobs?${params.toString()}`, { replace: true });
 
     if (pageIndex === 1) fetchJobs();
-    else setPageIndex(1); // Set state = 1 sẽ tự động trigger useEffect
+    else setPageIndex(1);
   };
 
   const handleClearFilter = () => {
@@ -188,8 +208,75 @@ export default function CandidateJobPage() {
     setSalaryRange("all");
     setPageIndex(1);
     navigate("/jobs", { replace: true });
-    setTimeout(() => fetchJobs(), 50); // Fetch lại ngay sau khi reset
+    setTimeout(() => fetchJobs(), 50);
   };
+
+  const handleToggleSaveJob = async (jobId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!isLoggedIn) {
+      message.warning("Vui lòng đăng nhập để lưu việc làm!");
+      navigate("/login");
+      return;
+    }
+    try {
+      if (savedJobIds.has(jobId)) {
+        await axiosClient.delete(`/jobs/${jobId}/unsave`);
+        const next = new Set(savedJobIds);
+        next.delete(jobId);
+        setSavedJobIds(next);
+        message.success("Đã bỏ lưu việc làm!");
+      } else {
+        await axiosClient.post(`/jobs/${jobId}/save`);
+        const next = new Set(savedJobIds);
+        next.add(jobId);
+        setSavedJobIds(next);
+        message.success("Đã lưu việc làm vào danh sách yêu thích!");
+      }
+    } catch (err) {
+      message.error("Thao tác thất bại, vui lòng thử lại!");
+    }
+  };
+
+  // Thuật toán tính toán AI Match score giữa CV ứng viên và Công việc
+  const calculateJobMatch = (job: any) => {
+    if (!candidateSkills || candidateSkills.length === 0) return { score: 0, matched: [] };
+    const validSkills = candidateSkills.filter(s => s && s.trim().length > 1);
+    if (validSkills.length === 0) return { score: 0, matched: [] };
+
+    const title = job.title || job.position || "";
+    const desc = job.description || job.requirements || "";
+    const fullText = `${title} ${desc}`;
+
+    const matched = validSkills.filter(sk => {
+      try {
+        const regex = new RegExp(`\\b${escapeRegExp(sk.trim())}\\b`, 'i');
+        return regex.test(fullText);
+      } catch {
+        return false;
+      }
+    });
+
+    const isTechJob = ["developer", "engineer", "lập trình", "software", "react", "frontend", "backend", "fullstack", "devops", "cloud", "data", "python", "java", "c#", ".net", "design", "figma", "ui/ux", "it", "hệ thống", "tester", "qa", "web"].some(k => title.toLowerCase().includes(k));
+
+    let score = 0;
+    if (matched.length > 0) {
+      score = Math.min(98, Math.round((matched.length / validSkills.length) * 50) + 48);
+    } else if (isTechJob) {
+      score = 55;
+    }
+
+    return { score, matched };
+  };
+
+  // Sắp xếp danh sách việc làm
+  const processedJobs = [...jobs].sort((a, b) => {
+    if (sortBy === "aiMatch") {
+      const matchA = calculateJobMatch(a).score;
+      const matchB = calculateJobMatch(b).score;
+      return matchB - matchA;
+    }
+    return 0; // Giữ nguyên thứ tự từ API (Mới cập nhật)
+  });
 
   return (
     <div style={{ background: appTheme.colors.background, minHeight: "100vh", paddingBottom: 60 }}>
@@ -197,14 +284,17 @@ export default function CandidateJobPage() {
       <div
         style={{
           background: "#F8FAFC",
-          padding: "48px 20px 24px",
+          padding: "40px 20px 24px",
           borderBottom: "1px solid #E2E8F0",
         }}
       >
         <div style={{ maxWidth: "1300px", margin: "0 auto" }}>
-          <Title level={2} style={{ color: "#0F172A", marginBottom: 20, fontFamily: appTheme.font.family, fontWeight: 800, fontSize: 28, letterSpacing: "-0.02em" }}>
-            Tìm kiếm cơ hội nghề nghiệp tiếp theo
+          <Title level={2} style={{ color: "#0F172A", marginBottom: 8, fontWeight: 800, fontSize: 28, letterSpacing: "-0.02em" }}>
+            Tìm kiếm cơ hội nghề nghiệp phù hợp
           </Title>
+          <Text type="secondary" style={{ fontSize: 14, display: "block", marginBottom: 20 }}>
+            Hệ thống tự động kết nối và cá nhân hóa gợi ý việc làm chuẩn xác dựa trên CV của bạn.
+          </Text>
 
           <div
             style={{
@@ -212,36 +302,44 @@ export default function CandidateJobPage() {
               padding: "10px 14px",
               borderRadius: 16,
               display: "flex",
-              gap: 8,
+              gap: 10,
               boxShadow: "0 8px 30px rgba(15, 23, 42, 0.04)",
               border: "1px solid #E2E8F0",
+              alignItems: "center",
+              flexWrap: "wrap"
             }}
           >
             <Input
               size="large"
-              placeholder="Nhập tên vị trí, kỹ năng, công ty..."
+              placeholder="Nhập tên công việc, vị trí, kỹ năng (ví dụ: React, C#, Bắc Ninh)..."
               prefix={<SearchOutlined style={{ color: "#64748B", fontSize: 20 }} />}
               bordered={false}
-              style={{ flex: 2, fontSize: 16, fontFamily: appTheme.font.family }}
+              style={{ flex: "2 1 240px", fontSize: 15, minWidth: 0 }}
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
               onPressEnter={handleSearch}
             />
-            <Divider type="vertical" style={{ height: "30px", margin: "auto 0" }} />
             <Select
               size="large"
               showSearch
               placeholder="Tất cả địa điểm"
               bordered={false}
-              style={{ flex: 1, fontSize: 15, fontFamily: appTheme.font.family }}
+              style={{ flex: "1 1 180px", fontSize: 15, borderLeft: "1px solid #F1F5F9", minWidth: 0 }}
               suffixIcon={<EnvironmentOutlined style={{ color: "#64748B" }} />}
               value={location}
               onChange={(val) => setLocation(val)}
+              filterOption={(input, option) =>
+                (option?.children as unknown as string)
+                  .toLowerCase()
+                  .includes(input.toLowerCase())
+              }
             >
               <Option value="all">Tất cả địa điểm</Option>
-              <Option value="hn">Hà Nội</Option>
-              <Option value="hcm">Hồ Chí Minh</Option>
-              <Option value="dn">Đà Nẵng</Option>
+              {branches.map((b) => (
+                <Option key={b.id} value={b.name}>
+                  {b.name}
+                </Option>
+              ))}
             </Select>
             <Button
               type="primary"
@@ -249,13 +347,12 @@ export default function CandidateJobPage() {
               onClick={handleSearch}
               style={{
                 borderRadius: 12,
-                padding: "0 40px",
-                fontSize: 16,
+                padding: "0 28px",
+                fontSize: 15,
                 height: 48,
-                background: appTheme.colors.primary,
-                borderColor: appTheme.colors.primary,
+                background: "#2563EB",
                 fontWeight: 600,
-                fontFamily: appTheme.font.family,
+                flexShrink: 0
               }}
             >
               Tìm kiếm
@@ -265,12 +362,12 @@ export default function CandidateJobPage() {
       </div>
 
       {/* 2. KHU VỰC NỘI DUNG CHÍNH */}
-      <div style={{ maxWidth: "1300px", margin: "32px auto 0", padding: "0 20px" }}>
+      <div style={{ maxWidth: "1300px", margin: "28px auto 0", padding: "0 20px" }}>
         <Row gutter={24}>
-          {/* Cột trái: Bộ lọc (Sidebar Filters) - REFACTOR: Chuyển dọc thay vì ngang như TopCV */}
-          <Col xs={24} lg={6} xl={5}>
+          {/* Cột trái: Bộ lọc Sidebar */}
+          <Col xs={24} lg={6} xl={6}>
             <Card
-              title="Lọc nâng cao"
+              title={<span style={{ fontWeight: 700, fontSize: 16 }}>Lọc nâng cao</span>}
               style={{ ...glassCardStyle, position: "sticky", top: 100 }}
               bodyStyle={{
                 padding: "16px 20px",
@@ -296,28 +393,37 @@ export default function CandidateJobPage() {
               }
             >
               <Space direction="vertical" size="middle" style={{ width: "100%" }}>
-                {/* 1. Lọc theo Địa điểm */}
+                {/* 1. Lọc theo Địa điểm (Động từ DB) */}
                 <div>
-                  <Text strong style={{ display: "block", marginBottom: 12, fontSize: 16 }}>
+                  <Text strong style={{ display: "block", marginBottom: 10, fontSize: 15 }}>
                     Địa điểm làm việc
                   </Text>
-                  <Radio.Group
+                  <Select
+                    size="large"
                     value={location}
-                    onChange={(e) => setLocation(e.target.value)}
-                    style={{ display: "flex", flexDirection: "column", gap: 12 }}
+                    onChange={setLocation}
+                    style={{ width: "100%" }}
+                    showSearch
+                    filterOption={(input, option) =>
+                      (option?.children as unknown as string)
+                        .toLowerCase()
+                        .includes(input.toLowerCase())
+                    }
                   >
-                    <Radio value="all" style={{ fontSize: 15 }}>Tất cả địa điểm</Radio>
-                    <Radio value="hn" style={{ fontSize: 15 }}>Hà Nội</Radio>
-                    <Radio value="hcm" style={{ fontSize: 15 }}>Hồ Chí Minh</Radio>
-                    <Radio value="dn" style={{ fontSize: 15 }}>Đà Nẵng</Radio>
-                  </Radio.Group>
+                    <Option value="all">Tất cả địa điểm</Option>
+                    {branches.map((b) => (
+                      <Option key={b.id} value={b.name}>
+                        {b.name}
+                      </Option>
+                    ))}
+                  </Select>
                 </div>
 
                 <Divider style={{ margin: 0 }} />
 
                 {/* 2. Lọc theo Lĩnh vực công việc */}
                 <div>
-                  <Text strong style={{ display: "block", marginBottom: 12, fontSize: 16 }}>
+                  <Text strong style={{ display: "block", marginBottom: 10, fontSize: 15 }}>
                     Lĩnh vực công việc
                   </Text>
                   <Select
@@ -345,7 +451,7 @@ export default function CandidateJobPage() {
 
                 {/* 3. Lọc theo Cấp bậc */}
                 <div>
-                  <Text strong style={{ display: "block", marginBottom: 12, fontSize: 16 }}>
+                  <Text strong style={{ display: "block", marginBottom: 10, fontSize: 15 }}>
                     Cấp bậc tuyển dụng
                   </Text>
                   <Select
@@ -373,28 +479,28 @@ export default function CandidateJobPage() {
 
                 {/* 4. Lọc theo Mức lương */}
                 <div>
-                  <Text strong style={{ display: "block", marginBottom: 12, fontSize: 16 }}>
+                  <Text strong style={{ display: "block", marginBottom: 10, fontSize: 15 }}>
                     Khoảng lương tuyển dụng
                   </Text>
                   <Radio.Group
                     value={salaryRange}
                     onChange={(e) => handleSalaryRangeChange(e.target.value)}
-                    style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 16 }}
+                    style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 14 }}
                   >
-                    <Radio value="all" style={{ fontSize: 15 }}>Tất cả mức lương</Radio>
-                    <Radio value="under10" style={{ fontSize: 15 }}>Dưới 10 triệu</Radio>
-                    <Radio value="10to15" style={{ fontSize: 15 }}>10 - 15 triệu</Radio>
-                    <Radio value="15to20" style={{ fontSize: 15 }}>15 - 20 triệu</Radio>
-                    <Radio value="20to25" style={{ fontSize: 15 }}>20 - 25 triệu</Radio>
-                    <Radio value="25to30" style={{ fontSize: 15 }}>25 - 30 triệu</Radio>
-                    <Radio value="30to50" style={{ fontSize: 15 }}>30 - 50 triệu</Radio>
-                    <Radio value="over50" style={{ fontSize: 15 }}>Trên 50 triệu</Radio>
+                    <Radio value="all" style={{ fontSize: 14 }}>Tất cả mức lương</Radio>
+                    <Radio value="under10" style={{ fontSize: 14 }}>Dưới 10 triệu</Radio>
+                    <Radio value="10to15" style={{ fontSize: 14 }}>10 - 15 triệu</Radio>
+                    <Radio value="15to20" style={{ fontSize: 14 }}>15 - 20 triệu</Radio>
+                    <Radio value="20to25" style={{ fontSize: 14 }}>20 - 25 triệu</Radio>
+                    <Radio value="25to30" style={{ fontSize: 14 }}>25 - 30 triệu</Radio>
+                    <Radio value="30to50" style={{ fontSize: 14 }}>30 - 50 triệu</Radio>
+                    <Radio value="over50" style={{ fontSize: 14 }}>Trên 50 triệu</Radio>
                   </Radio.Group>
 
-                  <Text type="secondary" style={{ display: "block", marginBottom: 8, fontSize: 14 }}>
+                  <Text type="secondary" style={{ display: "block", marginBottom: 6, fontSize: 13 }}>
                     Nhập khoảng lương tự chọn (triệu):
                   </Text>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                     <InputNumber
                       size="large"
                       placeholder="Từ"
@@ -425,259 +531,214 @@ export default function CandidateJobPage() {
           </Col>
 
           {/* Cột phải: Danh sách việc làm */}
-          <Col xs={24} lg={18} xl={19}>
+          <Col xs={24} lg={18} xl={18}>
+            {/* Thanh Tiêu đề & Sắp xếp cá nhân hóa */}
             <div
               style={{
-                background: appTheme.colors.surface,
-                padding: "16px 24px",
+                background: "#FFFFFF",
+                padding: "16px 20px",
                 borderRadius: 16,
-                marginBottom: 24,
+                marginBottom: 20,
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
-                boxShadow: appTheme.shadow.card,
-                border: `1px solid ${appTheme.colors.border}`,
+                border: "1px solid #E2E8F0",
+                boxShadow: "0 2px 8px rgba(15, 23, 42, 0.03)",
+                flexWrap: "wrap",
+                gap: 12
               }}
             >
-              <Title level={4} style={{ margin: 0, fontSize: 18, fontFamily: appTheme.font.family, fontWeight: 600 }}>
-                Tìm thấy <span style={{ color: appTheme.colors.primary }}>{totalCount}</span> việc làm phù hợp
+              <Title level={4} style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#0F172A", whiteSpace: "nowrap" }}>
+                Tìm thấy <span style={{ color: "#2563EB" }}>{totalCount}</span> việc làm phù hợp
               </Title>
 
-              <Space size="large" wrap>
-                <Space>
-                  <Text type="secondary" style={{ fontSize: 14, fontFamily: appTheme.font.family }}>
-                    Tìm kiếm theo:
-                  </Text>
-                  <Select defaultValue="all" style={{ width: 160 }} size="large">
-                    <Option value="all">Tất cả</Option>
-                    <Option value="jobName">Tên việc làm</Option>
-                    <Option value="companyName">Tên công ty</Option>
-                  </Select>
-                </Space>
-                <Space>
-                  <Text type="secondary" style={{ fontSize: 14, fontFamily: appTheme.font.family }}>
-                    Sắp xếp theo:
-                  </Text>
-                  <Select defaultValue="new" style={{ width: 180 }} size="large">
-                    <Option value="new">Mới cập nhật</Option>
-                    <Option value="salary">Lương cao đến thấp</Option>
-                  </Select>
-                </Space>
-              </Space>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", flex: 1, justifyContent: "flex-end" }}>
+                <Text type="secondary" style={{ fontSize: 14, whiteSpace: "nowrap" }}>Sắp xếp theo:</Text>
+                <Select
+                  value={sortBy}
+                  onChange={setSortBy}
+                  style={{ minWidth: 200, maxWidth: 260 }}
+                  size="middle"
+                >
+                  {isLoggedIn && isCandidate && candidateSkills.length > 0 && (
+                    <Option value="aiMatch">
+                      <Space size={4}>
+                        <ThunderboltOutlined style={{ color: "#2563EB" }} />
+                        <span>Phù hợp nhất với CV (AI)</span>
+                      </Space>
+                    </Option>
+                  )}
+                  <Option value="newest">
+                    <Space size={4}>
+                      <ClockCircleOutlined />
+                      <span>Mới cập nhật</span>
+                    </Space>
+                  </Option>
+                </Select>
+              </div>
             </div>
 
+            {/* Thông báo Fallback khi không tìm thấy công việc */}
             {isFallback && (
-              <div
-                style={{
-                  background: "#FEF3C7",
-                  border: "1px solid #F59E0B",
-                  borderRadius: "12px",
-                  padding: "16px 24px",
-                  marginBottom: "24px",
-                  color: "#D97706",
-                  fontWeight: 600,
-                  fontSize: "15px",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 12
-                }}
-              >
-                <ExclamationCircleOutlined style={{ fontSize: 20 }} />
-                <span>
-                  Chúng tôi không tìm thấy kết quả phù hợp cho từ khóa của bạn. Dưới đây là danh sách việc làm nổi bật đang tuyển dụng gấp:
-                </span>
-              </div>
+              <Alert
+                message="Không tìm thấy việc làm khớp chính xác 100% với từ khóa bộ lọc"
+                description="Dưới đây là các cơ hội việc làm nổi bật và thu hút nhiều ứng viên nhất đang tuyển dụng gấp."
+                type="info"
+                showIcon
+                style={{ marginBottom: 20, borderRadius: 12 }}
+              />
             )}
 
-            {/* Map danh sách công việc */}
-            <Spin spinning={loading} tip="Đang tải danh sách việc làm...">
-              <Space direction="vertical" size="middle" style={{ width: "100%" }}>
-                {jobs.map((job) => (
-                <Card
-                  key={job.id}
-                  hoverable
-                  style={{
-                    borderRadius: 16,
-                    overflow: "hidden",
-                    border: `1px solid ${appTheme.colors.border}`,
-                    boxShadow: appTheme.shadow.card,
-                    marginBottom: 16,
-                  }}
-                  bodyStyle={{ padding: 24 }}
-                >
-                  <Row gutter={24} wrap={false} align="middle">
-                    <Col flex="100px">
-                      <img
-                        src={job.logo}
-                        alt="company"
-                        style={{
-                          width: 100,
-                          height: 100,
-                          objectFit: "contain",
-                          borderRadius: 12,
-                          border: `1px solid ${appTheme.colors.border}`,
-                          padding: 8,
-                          background: "#fff",
-                        }}
-                      />
-                    </Col>
-                    <Col flex="auto" style={{ minWidth: 0 }}>
-                      <div
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "flex-start",
-                          gap: 16,
-                        }}
-                      >
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <Title
-                            level={3}
-                            style={{
-                              margin: 0,
-                              color: appTheme.colors.textPrimary,
-                              cursor: "pointer",
-                              fontSize: 18,
-                              lineHeight: 1.4,
-                              fontFamily: appTheme.font.family,
-                              fontWeight: 600,
-                              whiteSpace: "nowrap",
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                            }}
-                            onClick={() => navigate(`/jobs/${job.id}`)}
-                          >
-                            {job.title}
-                          </Title>
-                          <Text
-                            style={{
-                              color: appTheme.colors.textSecondary,
-                              fontSize: 14,
-                              marginTop: 6,
-                              display: "block",
-                              fontFamily: appTheme.font.family,
-                              whiteSpace: "nowrap",
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                            }}
-                          >
-                            {job.company}
-                          </Text>
+            {/* Danh sách Công việc */}
+            {loading ? (
+              <div style={{ textAlign: "center", padding: "60px 0" }}>
+                <Spin size="large" tip="Đang tải danh sách việc làm..." />
+              </div>
+            ) : processedJobs.length === 0 ? (
+              <Card style={{ borderRadius: 16, textAlign: "center", padding: "40px 20px", border: "1px solid #E2E8F0" }}>
+                <Text type="secondary" style={{ fontSize: 15 }}>
+                  Không tìm thấy việc làm nào phù hợp. Hãy thử thay đổi từ khóa hoặc bấm "Xóa lọc".
+                </Text>
+              </Card>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                {processedJobs.map((job) => {
+                  const isSaved = savedJobIds.has(job.id || job.jobID);
+                  const matchResult = calculateJobMatch(job);
+
+                  return (
+                    <Card
+                      key={job.id || job.jobID}
+                      hoverable
+                      onClick={() => navigate(`/jobs/${job.id || job.jobID}`)}
+                      style={{
+                        borderRadius: 16,
+                        border: "1px solid #E2E8F0",
+                        boxShadow: "0 2px 10px rgba(15, 23, 42, 0.03)",
+                        transition: "all 0.2s ease",
+                        background: "#FFFFFF"
+                      }}
+                      bodyStyle={{ padding: "20px 24px" }}
+                    >
+                      <div style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
+                        {/* Container Logo Công ty bên trái */}
+                        <div
+                          style={{
+                            width: 54,
+                            height: 54,
+                            borderRadius: 12,
+                            background: "#EFF6FF",
+                            border: "1px solid #DBEAFE",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            flexShrink: 0
+                          }}
+                        >
+                          <img
+                            src="https://cdn-icons-png.flaticon.com/512/3061/3061341.png"
+                            alt="Logo"
+                            style={{ width: 32, height: 32 }}
+                          />
                         </div>
-                        <div style={{ textAlign: "right", flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8 }}>
-                          <Text strong style={{ color: appTheme.colors.success, fontSize: 16, display: "block", fontFamily: appTheme.font.family }}>
-                            {job.salary}
-                          </Text>
-                          {isLoggedIn && isCandidate && (
-                            <Button
-                              type="text"
-                              shape="circle"
-                              icon={
-                                savedJobIds.has(job.id) ? (
-                                  <StarFilled style={{ color: "#F59E0B", fontSize: 20 }} />
-                                ) : (
-                                  <StarOutlined style={{ color: "#94A3B8", fontSize: 20 }} />
-                                )
-                              }
-                              onClick={async (e) => {
-                                e.stopPropagation();
-                                try {
-                                  if (savedJobIds.has(job.id)) {
-                                    await axiosClient.delete(`/jobs/${job.id}/unsave`);
-                                    setSavedJobIds((prev) => {
-                                      const next = new Set(prev);
-                                      next.delete(job.id);
-                                      return next;
-                                    });
-                                    message.success("Đã bỏ lưu công việc!");
-                                  } else {
-                                    await axiosClient.post(`/jobs/${job.id}/save`);
-                                    setSavedJobIds((prev) => {
-                                      const next = new Set(prev);
-                                      next.add(job.id);
-                                      return next;
-                                    });
-                                    message.success("Đã lưu công việc thành công!");
-                                  }
-                                } catch (err) {
-                                  message.error("Lỗi khi thực hiện thao tác.");
+
+                        {/* Nội dung thông tin công việc */}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, marginBottom: 4 }}>
+                            <div>
+                              <Title level={4} style={{ margin: 0, fontSize: 18, fontWeight: 700, color: "#0F172A", display: "inline-block", marginRight: 8 }}>
+                                {job.title || job.position}
+                              </Title>
+
+                              {/* Badge Cá nhân hóa AI Match Score */}
+                              {isLoggedIn && isCandidate && matchResult.score >= 50 && (
+                                <Tag color="purple" style={{ borderRadius: 6, fontWeight: 700, padding: "2px 8px", fontSize: 12, display: "inline-flex", alignItems: "center", gap: 4 }}>
+                                  <ThunderboltOutlined /> AI Match: {matchResult.score}%
+                                </Tag>
+                              )}
+                            </div>
+
+                            {/* Mức lương & Nút Ngôi sao ở góc phải trên */}
+                            <div style={{ textAlign: "right", flexShrink: 0 }}>
+                              <Text strong style={{ fontSize: 16, color: "#10B981", display: "block", marginBottom: 4 }}>
+                                {job.salary || "Thỏa thuận"}
+                              </Text>
+                              <Button
+                                type="text"
+                                size="small"
+                                icon={
+                                  isSaved ? (
+                                    <StarFilled style={{ fontSize: 20, color: "#F59E0B" }} />
+                                  ) : (
+                                    <StarOutlined style={{ fontSize: 20, color: "#94A3B8" }} />
+                                  )
                                 }
-                              }}
-                            />
+                                onClick={(e) => handleToggleSaveJob(job.id || job.jobID, e)}
+                                style={{ padding: 0 }}
+                              />
+                            </div>
+                          </div>
+
+                          <Text style={{ fontSize: 14, color: "#64748B", display: "block", marginBottom: 10 }}>
+                            {job.company || "Công Ty AI Recruitment"}
+                          </Text>
+
+                          <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap", fontSize: 13, color: "#64748B", marginBottom: 10 }}>
+                            <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                              <EnvironmentOutlined style={{ color: "#94A3B8" }} /> {job.location || "TP. Hồ Chí Minh"}
+                            </span>
+                            <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                              <ClockCircleOutlined style={{ color: "#94A3B8" }} /> {job.updatedAt ? new Date(job.updatedAt).toLocaleDateString("vi-VN") : "Mới đăng"}
+                            </span>
+                            {job.type && (
+                              <Tag color="blue" style={{ borderRadius: 6, margin: 0, fontWeight: 500 }}>
+                                {job.type}
+                              </Tag>
+                            )}
+                          </div>
+
+                          {job.description && (
+                            <Paragraph
+                              ellipsis={{ rows: 2 }}
+                              style={{ color: "#475569", fontSize: 13, margin: "6px 0 0", lineHeight: 1.6 }}
+                            >
+                              {job.description}
+                            </Paragraph>
+                          )}
+
+                          {/* Kỹ năng trùng khớp cá nhân hóa */}
+                          {matchResult.matched.length > 0 && (
+                            <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginTop: 10 }}>
+                              <span style={{ fontSize: 12, color: "#059669", fontWeight: 600 }}>
+                                ✓ Trùng khớp kỹ năng CV của bạn:
+                              </span>
+                              {matchResult.matched.map((sk: string, sIdx: number) => (
+                                <Tag key={sIdx} color="emerald" style={{ fontSize: 11, padding: "0 6px", borderRadius: 4, margin: 0, backgroundColor: "#ECFDF5", color: "#059669", borderColor: "#A7F3D0", fontWeight: 600 }}>
+                                  {sk}
+                                </Tag>
+                              ))}
+                            </div>
                           )}
                         </div>
                       </div>
+                    </Card>
+                  );
+                })}
 
-                      <Space size="large" style={{ marginTop: 16, color: appTheme.colors.textSecondary, fontSize: 13, fontFamily: appTheme.font.family }}>
-                        <span>
-                          <EnvironmentOutlined style={{ marginRight: 6 }} />
-                          {job.location}
-                        </span>
-                        <span>
-                          <ClockCircleOutlined style={{ marginRight: 6 }} />
-                          {job.updatedAt}
-                        </span>
-                        <Tag
-                          color="blue"
-                          style={{ fontSize: 15, padding: "4px 10px", borderRadius: 6 }}
-                        >
-                          {job.type}
-                        </Tag>
-                      </Space>
-
-                      {/* Phân cách và hiển thị Mô tả + Kỹ năng để tăng chiều cao */}
-                      <div
-                        style={{ marginTop: 20, paddingTop: 16, borderTop: `1px dashed ${appTheme.colors.border}` }}
-                      >
-                        <Paragraph
-                          ellipsis={{ rows: 2, expandable: false }}
-                          style={{
-                            fontSize: 14,
-                            color: appTheme.colors.textSecondary,
-                            display: "block",
-                            marginBottom: 12,
-                            lineHeight: 1.6,
-                            fontFamily: appTheme.font.family,
-                          }}
-                        >
-                          {job.description || "Chưa có mô tả chi tiết."}
-                        </Paragraph>
-                        <Space wrap size={[0, 8]}>
-                          {job.skills?.map((skill: string) => (
-                            <Tag
-                              key={skill}
-                              style={{
-                                fontSize: 12,
-                                padding: "3px 10px",
-                                background: "#F1F5F9",
-                                border: "none",
-                                color: "#475569",
-                                borderRadius: 6,
-                                fontFamily: appTheme.font.family,
-                              }}
-                            >
-                              {skill}
-                            </Tag>
-                          ))}
-                        </Space>
-                      </div>
-                    </Col>
-                  </Row>
-                </Card>
-                ))}
-              </Space>
-            </Spin>
-
-            {/* Phân trang */}
-            <div style={{ textAlign: "center", marginTop: 40 }}>
-              <Pagination
-                current={pageIndex}
-                total={totalCount}
-                pageSize={10}
-                showSizeChanger={false}
-                onChange={(page) => setPageIndex(page)}
-              />
-            </div>
+                {/* Phân trang */}
+                {totalCount > 10 && (
+                  <div style={{ textAlign: "center", marginTop: 24 }}>
+                    <Pagination
+                      current={pageIndex}
+                      pageSize={10}
+                      total={totalCount}
+                      onChange={(page) => setPageIndex(page)}
+                      showSizeChanger={false}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
           </Col>
         </Row>
       </div>

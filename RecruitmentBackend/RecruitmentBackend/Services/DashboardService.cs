@@ -431,7 +431,7 @@ namespace RecruitmentBackend.Services
 
             var totalJobs = hrJobIds.Count;
             var totalApplications = dashboardApplications.Count;
-            var newApplications = dashboardApplications.Count(item => item.Application.Status == "Applied");
+            var newApplications = dashboardApplications.Count(item => MapApplicationStage(item.Application.Status) == "applied");
 
             var evaluatedApplications = dashboardApplications
                 .Where(item => item.AiEvaluation != null)
@@ -452,13 +452,80 @@ namespace RecruitmentBackend.Services
 
             double applicationRate = totalViews > 0 ? Math.Round((double)totalApplications / totalViews * 100, 1) : 0;
 
+            // Calculate Average Time-to-Hire (days from application to interview schedule)
+            double avgTimeToHireDays = 0;
+            var interviewAppIds = dashboardApplications
+                .Select(item => item.Application.ApplicationID)
+                .ToList();
+
+            var interviewSchedulesForHr = await _context.InterviewSchedules
+                .Where(s => interviewAppIds.Contains(s.ApplicationID))
+                .Select(s => new { s.ApplicationID, s.InterviewDate })
+                .ToListAsync();
+
+            if (interviewSchedulesForHr.Count > 0)
+            {
+                var daysList = new List<double>();
+                foreach (var s in interviewSchedulesForHr)
+                {
+                    var appItem = dashboardApplications.FirstOrDefault(a => a.Application.ApplicationID == s.ApplicationID);
+                    if (appItem != null)
+                    {
+                        var diff = (s.InterviewDate - appItem.Application.AppliedAt).TotalDays;
+                        if (diff >= 0) daysList.Add(diff);
+                    }
+                }
+                if (daysList.Count > 0)
+                {
+                    avgTimeToHireDays = Math.Round(daysList.Average(), 1);
+                }
+            }
+
+            // Calculate Application Growth Trend (last 14 days)
+            var applicationTrend = new List<object>();
+            var today = DateTime.Today;
+            for (int i = 13; i >= 0; i--)
+            {
+                var targetDate = today.AddDays(-i);
+                int count = dashboardApplications.Count(item => item.Application.AppliedAt.Date == targetDate);
+                applicationTrend.Add(new
+                {
+                    date = targetDate.ToString("dd/MM"),
+                    count
+                });
+            }
+
+            // Fetch Upcoming Interviews (next 5 schedules)
+            var upcomingInterviews = await (from schedule in _context.InterviewSchedules
+                                            join app in _context.Applications on schedule.ApplicationID equals app.ApplicationID
+                                            where hrJobIds.Contains(app.JobID) && schedule.InterviewDate >= DateTime.Now.AddHours(-12)
+                                            join cv in _context.CandidateCVs on app.CVID equals cv.CVID
+                                            join cand in _context.Candidates on cv.CandidateID equals cand.CandidateID into candGroup
+                                            from cand in candGroup.DefaultIfEmpty()
+                                            join job in _context.JobPostings on app.JobID equals job.JobID
+                                            join pos in _context.Positions on job.PositionID equals pos.PositionID into posGroup
+                                            from pos in posGroup.DefaultIfEmpty()
+                                            orderby schedule.InterviewDate ascending
+                                            select new
+                                            {
+                                                scheduleId = schedule.ScheduleID,
+                                                candidateName = cand != null && !string.IsNullOrWhiteSpace(cand.FullName) ? cand.FullName : (cv.ExtractedEmail ?? "Ứng viên"),
+                                                jobTitle = pos != null ? pos.PositionName : "Vị trí tuyển dụng",
+                                                interviewDate = schedule.InterviewDate,
+                                                format = schedule.Format,
+                                                locationOrLink = schedule.LocationOrLink,
+                                                notes = schedule.Notes
+                                            })
+                                            .Take(5)
+                                            .ToListAsync();
+
             var funnel = new
             {
-                applied = dashboardApplications.Count(item => item.Application.Status == "Applied"),
-                reviewing = dashboardApplications.Count(item => item.Application.Status == "Reviewing"),
-                interview = dashboardApplications.Count(item => item.Application.Status == "Interview"),
-                offer = dashboardApplications.Count(item => item.Application.Status == "Offer"),
-                rejected = dashboardApplications.Count(item => item.Application.Status == "Rejected")
+                applied = dashboardApplications.Count(item => MapApplicationStage(item.Application.Status) == "applied"),
+                reviewing = dashboardApplications.Count(item => MapApplicationStage(item.Application.Status) == "reviewing"),
+                interview = dashboardApplications.Count(item => MapApplicationStage(item.Application.Status) == "interview"),
+                offer = dashboardApplications.Count(item => MapApplicationStage(item.Application.Status) == "offer"),
+                rejected = dashboardApplications.Count(item => MapApplicationStage(item.Application.Status) == "rejected")
             };
 
             var quickMetrics = new
@@ -468,7 +535,8 @@ namespace RecruitmentBackend.Services
                 newApplications,
                 averageFitScore,
                 totalViews,
-                applicationRate
+                applicationRate,
+                avgTimeToHireDays
             };
 
             var skillCloudData = BuildSkillCloudData(dashboardApplications);
@@ -483,11 +551,11 @@ namespace RecruitmentBackend.Services
                 isSuccess = true,
                 message = "Lấy thống kê HR Dashboard thành công.",
                 selectedJobId = jobId,
-                jobOptions = hrJobs,
                 quickMetrics,
                 funnel,
-
-                totalJobs,
+                applicationTrend,
+                upcomingInterviews,
+                jobOptions = hrJobs,
                 totalApplications,
                 newApplications,
                 averageFitScore,
@@ -1204,6 +1272,126 @@ namespace RecruitmentBackend.Services
                     data = new List<object>()
                 };
             }
+        }
+
+        public async Task<object> GetRecruiterPerformanceStatsAsync()
+        {
+            try
+            {
+                var recruiters = await _context.Recruiters
+                    .Include(r => r.Account)
+                    .Include(r => r.RecruiterBranches)
+                    .ToListAsync();
+
+                var allBranches = await _context.Branches.ToDictionaryAsync(b => b.BranchID, b => b.BranchName);
+
+                var recruiterIds = recruiters.Select(r => r.RecruiterID).ToList();
+
+                var jobs = await _context.JobPostings
+                    .Where(j => recruiterIds.Contains(j.RecruiterID))
+                    .Select(j => new
+                    {
+                        j.JobID,
+                        j.RecruiterID,
+                        j.Status,
+                        j.CreatedAt
+                    })
+                    .ToListAsync();
+
+                var jobIds = jobs.Select(j => j.JobID).ToList();
+
+                var apps = await _context.Applications
+                    .Where(a => jobIds.Contains(a.JobID))
+                    .Select(a => new
+                    {
+                        a.ApplicationID,
+                        a.JobID,
+                        a.Status,
+                        FitScore = a.AIEvaluation != null ? (decimal?)a.AIEvaluation.FitScore : null,
+                        HasInterview = a.InterviewSchedule != null
+                    })
+                    .ToListAsync();
+
+                var jobMap = jobs.ToLookup(j => j.RecruiterID);
+
+                var list = recruiters.Select(r =>
+                {
+                    var rJobs = jobMap[r.RecruiterID].ToList();
+                    var rJobIds = new HashSet<string>(rJobs.Select(j => j.JobID));
+                    var rApps = apps.Where(a => rJobIds.Contains(a.JobID)).ToList();
+
+                    int totalJobs = rJobs.Count;
+                    int publishedJobs = rJobs.Count(j => j.Status == "Published");
+                    int pendingJobs = rJobs.Count(j => j.Status == "Pending");
+                    int rejectedJobs = rJobs.Count(j => j.Status == "Rejected");
+                    int closedJobs = rJobs.Count(j => j.Status == "Closed" || j.Status == "Locked");
+                    int totalApplications = rApps.Count;
+                    int totalInterviews = rApps.Count(a => a.HasInterview);
+                    int hiredCount = rApps.Count(a => a.Status == "Hired" || a.Status == "Passed" || a.Status == "Approved");
+
+                    var scores = rApps.Where(a => a.FitScore.HasValue).Select(a => (double)a.FitScore!.Value).ToList();
+                    double avgMatchScore = scores.Count > 0 ? Math.Round(scores.Average(), 1) : 0;
+
+                    var branchNames = r.RecruiterBranches != null
+                        ? r.RecruiterBranches.Select(rb => allBranches.TryGetValue(rb.BranchID, out var bName) ? bName : null).Where(b => !string.IsNullOrEmpty(b)).ToList()
+                        : new List<string?>();
+
+                    return new
+                    {
+                        recruiterId = r.RecruiterID,
+                        accountId = r.AccountID,
+                        fullName = string.IsNullOrWhiteSpace(r.FullName) ? (r.Account?.Email ?? "HR Mặc định") : r.FullName,
+                        email = r.Account?.Email ?? "N/A",
+                        phone = string.IsNullOrWhiteSpace(r.Phone) ? "Chưa cập nhật" : r.Phone,
+                        branches = branchNames.Count > 0 ? string.Join(", ", branchNames) : "Toàn hệ thống",
+                        totalJobs,
+                        publishedJobs,
+                        pendingJobs,
+                        rejectedJobs,
+                        closedJobs,
+                        totalApplications,
+                        totalInterviews,
+                        hiredCount,
+                        avgMatchScore
+                    };
+                }).OrderByDescending(r => r.totalJobs).ThenByDescending(r => r.totalApplications).ToList();
+
+                return new
+                {
+                    isSuccess = true,
+                    data = list
+                };
+            }
+            catch (Exception ex)
+            {
+                return new
+                {
+                    isSuccess = false,
+                    message = "Lỗi khi lấy thông tin hiệu suất Recruiter: " + ex.Message,
+                    data = new List<object>()
+                };
+            }
+        }
+
+        private static string MapApplicationStage(string? status)
+        {
+            if (string.IsNullOrWhiteSpace(status)) return "applied";
+
+            string s = status.Trim().ToLowerInvariant();
+
+            if (s.Contains("interview") || s.Contains("phỏng vấn") || s.Contains("schedule"))
+                return "interview";
+
+            if (s.Contains("offer") || s.Contains("hire") || s.Contains("nhận việc") || s.Contains("trúng tuyển") || s.Contains("accept") || s.Contains("pass"))
+                return "offer";
+
+            if (s.Contains("reject") || s.Contains("từ chối") || s.Contains("fail") || s.Contains("decline"))
+                return "rejected";
+
+            if (s.Contains("review") || s.Contains("xem xét") || s.Contains("duyệt") || s.Contains("shortlist") || s.Contains("evaluated") || s.Contains("read"))
+                return "reviewing";
+
+            return "applied";
         }
     }
 }

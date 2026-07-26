@@ -92,9 +92,6 @@ def generate_content_with_retry(prompt: str, is_json: bool = True, models: list 
 
     models_to_try = models if models is not None else [
         "gemini-2.0-flash",
-        "gemini-2.0-flash-lite",
-        "gemini-flash-latest",
-        "gemini-pro-latest"
     ]
     config = types.GenerateContentConfig(
         response_mime_type="application/json" if is_json else "text/plain"

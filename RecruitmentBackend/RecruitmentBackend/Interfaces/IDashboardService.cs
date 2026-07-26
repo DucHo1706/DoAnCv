@@ -6,6 +6,8 @@ namespace RecruitmentBackend.Interfaces
 
         Task<object> GetHrDashboardStatsAsync(string accountId, string? jobId, string? timeRange);
 
+        Task<object> GetRecruiterPerformanceStatsAsync();
+
         Task<object> GetSimulatorCandidatesAsync();
     }
 }

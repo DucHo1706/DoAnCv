@@ -47,3 +47,88 @@ img {
 .hover-bg-slate:hover {
   background-color: #F1F5F9 !important;
 }
+
+/* Global Mobile Layout & Font Protection */
+html, body {
+  overflow-x: hidden !important;
+  max-width: 100vw !important;
+}
+
+h1, h2, h3, h4, h5, h6, p, span, a, button, div {
+  overflow-wrap: break-word;
+}
+
+/* Protect header title & nav links from vertical letter splitting */
+.ant-layout-header span, 
+.ant-layout-header a, 
+.ant-layout-header button {
+  white-space: nowrap;
+}
+
+/* ============================================================
+   Design System Motion & Surface Utilities (AGENTS.md Section 6)
+   Timing: 150ms (fast) / 250ms (base), easing cubic-bezier(0.16,1,0.3,1)
+   ============================================================ */
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Entry-stagger for card grids: add className="entry-anim" + style={{ "--i": index }} */
+.entry-anim {
+  animation: fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(var(--i, 0) * 70ms);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .entry-anim {
+    animation: none;
+  }
+}
+
+/* Standard elevated-card hover: lift + shadow deepen, tactile :active press */
+.hover-card {
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.hover-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.10);
+  border-color: rgba(37, 99, 235, 0.25) !important;
+}
+.hover-card:active {
+  transform: translateY(-1px) scale(0.99);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hover-card,
+  .hover-card:hover,
+  .hover-card:active {
+    transform: none;
+    transition: none;
+  }
+}
+
+/* Glassmorphic surface (AGENTS.md Section 2 - Surface Containers) */
+.glass-surface {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+}
+
+/* Global Search / Command Palette (Ctrl+K) */
+.global-search-modal .ant-modal-content {
+  padding: 0;
+  border-radius: 16px;
+  overflow: hidden;
+}
+

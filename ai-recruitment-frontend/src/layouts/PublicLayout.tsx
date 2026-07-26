@@ -1,4 +1,4 @@
-import { Button, Layout, Typography, Space, Row, Col, Divider, Badge, Popover, List, message, notification as antdNotification, Avatar } from "antd";
+import { Button, Layout, Typography, Space, Row, Col, Divider, Badge, Popover, List, message, notification as antdNotification, Avatar, Drawer } from "antd";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { authService } from "../services/authService";
 import CandidateChatbot from "../components/common/CandidateChatbot";
@@ -13,10 +13,13 @@ import {
   ProfileOutlined,
   UploadOutlined,
   FileSearchOutlined,
-  UserOutlined
+  UserOutlined,
+  MenuOutlined,
+  LogoutOutlined,
+  HomeOutlined,
+  AppstoreOutlined
 } from "@ant-design/icons";
 import { useEffect, useState } from "react";
-import * as signalR from "@microsoft/signalr";
 import axiosClient from "../services/axiosClient";
 
 const { Header, Content, Footer } = Layout;
@@ -62,6 +65,9 @@ function PublicLayout() {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [popoverOpen, setPopoverOpen] = useState(false);
   const [bellRinging, setBellRinging] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const isFullWidthPage = location.pathname === "/";
 
   const accountId = user?.accountId || user?.AccountId;
 
@@ -83,22 +89,28 @@ function PublicLayout() {
     }
   }, [accountId]);
 
-  // 2. Set up SignalR connection
+  // 2. Set up SignalR connection (lazy-loaded to keep it out of the main bundle)
   useEffect(() => {
     if (!accountId) return;
 
-    const apiUrl = import.meta.env.VITE_API_URL || "https://recruitinsightai.com/api";
-    const hubUrl = apiUrl.replace("/api", "/hubs/notifications");
-
-    const connection = new signalR.HubConnectionBuilder()
-      .withUrl(hubUrl, {
-        accessTokenFactory: () => localStorage.getItem("token") || ""
-      })
-      .withAutomaticReconnect()
-      .configureLogging(signalR.LogLevel.Warning)
-      .build();
+    let connection: import("@microsoft/signalr").HubConnection | undefined;
+    let cancelled = false;
 
     const startConnection = async () => {
+      const signalR = await import("@microsoft/signalr");
+      if (cancelled) return;
+
+      const apiUrl = import.meta.env.VITE_API_URL || "https://recruitinsightai.com/api";
+      const hubUrl = apiUrl.replace("/api", "/hubs/notifications");
+
+      connection = new signalR.HubConnectionBuilder()
+        .withUrl(hubUrl, {
+          accessTokenFactory: () => localStorage.getItem("token") || ""
+        })
+        .withAutomaticReconnect()
+        .configureLogging(signalR.LogLevel.Warning)
+        .build();
+
       try {
         await connection.start();
         console.log("Đã kết nối SignalR NotificationHub (Public).");
@@ -142,7 +154,8 @@ function PublicLayout() {
     startConnection();
 
     return () => {
-      connection.stop();
+      cancelled = true;
+      connection?.stop();
     };
   }, [accountId]);
 
@@ -304,12 +317,45 @@ function PublicLayout() {
   );
 
   // Danh sách các trang cần hiển thị Full-width (không bị giới hạn 1200px ở Layout ngoài cùng)
-  const isFullWidthPage = location.pathname === "/" || location.pathname.startsWith("/jobs") || location.pathname.startsWith("/candidate");
-
   const customStyles = `
+    @media (max-width: 768px) {
+      .desktop-only-flex {
+        display: none !important;
+      }
+      .mobile-only-btn {
+        display: inline-flex !important;
+      }
+      .header-container-responsive {
+        padding: 0 12px !important;
+      }
+      .user-name-responsive {
+        display: none !important;
+      }
+      .sub-nav-bar-responsive {
+        top: 64px !important;
+        height: 46px !important;
+        line-height: 46px !important;
+      }
+      .ant-layout-header {
+        height: 64px !important;
+        line-height: 64px !important;
+      }
+    }
+    @media (min-width: 769px) {
+      .desktop-only-flex {
+        display: flex !important;
+      }
+      .mobile-only-btn {
+        display: none !important;
+      }
+      .user-name-responsive {
+        display: inline-block !important;
+      }
+    }
     .header-nav-link {
       color: #475569 !important;
-      font-weight: 500;
+      font-weight: 600;
+      white-space: nowrap !important;
       transition: all 0.2s ease-in-out;
     }
     .header-nav-link:hover {
@@ -318,6 +364,7 @@ function PublicLayout() {
     .logo-link {
       color: #2563EB !important;
       font-weight: 800;
+      white-space: nowrap !important;
       transition: opacity 0.2s;
     }
     .logo-link:hover {
@@ -327,6 +374,7 @@ function PublicLayout() {
       background-color: #2563EB !important;
       border-color: #2563EB !important;
       transition: all 0.2s ease-in-out !important;
+      white-space: nowrap !important;
     }
     .btn-primary-custom:hover {
       background-color: #1D4ED8 !important;
@@ -367,6 +415,7 @@ function PublicLayout() {
         }}
       >
         <div
+          className="header-container-responsive"
           style={{
             maxWidth: "1300px",
             margin: "0 auto",
@@ -377,17 +426,17 @@ function PublicLayout() {
             height: "100%",
           }}
         >
-          {/* Nhóm trái: Logo + Navigation (Tạo CV & Việc Làm) */}
-          <Space size={32}>
+          {/* Nhóm trái: Logo + Navigation */}
+          <div style={{ display: "flex", alignItems: "center", gap: "24px" }}>
             <Title level={3} style={{ margin: 0, display: "flex", alignItems: "center" }}>
               <Link to="/" className="logo-link" style={{ display: "flex", alignItems: "center", gap: 10 }}>
                 <AiCoreIcon size={28} />
-                <span style={{ fontSize: "20px", fontWeight: 800, color: "#0F172A", letterSpacing: "-0.03em" }}>
+                <span style={{ fontSize: "clamp(16px, 4vw, 20px)", fontWeight: 800, color: "#0F172A", letterSpacing: "-0.03em", whiteSpace: "nowrap" }}>
                   AI Tuyển Dụng
                 </span>
               </Link>
             </Title>
-            <Space size={4}>
+            <div className="desktop-only-flex" style={{ alignItems: "center", gap: 4 }}>
               <Link
                 to="/jobs"
                 className="header-nav-link"
@@ -395,9 +444,11 @@ function PublicLayout() {
                   display: "inline-block",
                   height: "80px",
                   lineHeight: "80px",
-                  padding: "0 16px",
-                  fontWeight: 600,
-                  fontSize: "16px",
+                  padding: "0 14px",
+                  fontWeight: location.pathname === "/jobs" ? 700 : 600,
+                  fontSize: "14px",
+                  color: location.pathname === "/jobs" ? "#2563EB" : "#475569",
+                  borderBottom: location.pathname === "/jobs" ? "3px solid #2563EB" : "3px solid transparent"
                 }}
               >
                 Tìm việc làm
@@ -409,18 +460,82 @@ function PublicLayout() {
                   display: "inline-block",
                   height: "80px",
                   lineHeight: "80px",
-                  padding: "0 16px",
-                  fontWeight: 600,
-                  fontSize: "16px",
+                  padding: "0 14px",
+                  fontWeight: location.pathname === "/about" ? 700 : 600,
+                  fontSize: "14px",
+                  color: location.pathname === "/about" ? "#2563EB" : "#475569",
+                  borderBottom: location.pathname === "/about" ? "3px solid #2563EB" : "3px solid transparent"
                 }}
               >
                 Giới thiệu
               </Link>
-            </Space>
-          </Space>
+
+              {user && user.role === "Candidate" && (
+                <>
+                  <Link
+                    to="/candidate/dashboard"
+                    className="header-nav-link"
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      height: "80px",
+                      lineHeight: "80px",
+                      padding: "0 14px",
+                      fontWeight: location.pathname === "/candidate/dashboard" ? 700 : 600,
+                      fontSize: "14px",
+                      color: location.pathname === "/candidate/dashboard" ? "#2563EB" : "#475569",
+                      borderBottom: location.pathname === "/candidate/dashboard" ? "3px solid #2563EB" : "3px solid transparent"
+                    }}
+                  >
+                    <DashboardOutlined style={{ color: "#2563EB" }} />
+                    Báo cáo năng lực
+                  </Link>
+                  <Link
+                    to="/candidate/saved-jobs"
+                    className="header-nav-link"
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      height: "80px",
+                      lineHeight: "80px",
+                      padding: "0 14px",
+                      fontWeight: location.pathname === "/candidate/saved-jobs" ? 700 : 600,
+                      fontSize: "14px",
+                      color: location.pathname === "/candidate/saved-jobs" ? "#2563EB" : "#475569",
+                      borderBottom: location.pathname === "/candidate/saved-jobs" ? "3px solid #2563EB" : "3px solid transparent"
+                    }}
+                  >
+                    <StarOutlined style={{ color: "#F59E0B" }} />
+                    Việc làm đã lưu
+                  </Link>
+                  <Link
+                    to="/profile"
+                    className="header-nav-link"
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      height: "80px",
+                      lineHeight: "80px",
+                      padding: "0 14px",
+                      fontWeight: location.pathname === "/profile" ? 700 : 600,
+                      fontSize: "14px",
+                      color: location.pathname === "/profile" ? "#2563EB" : "#475569",
+                      borderBottom: location.pathname === "/profile" ? "3px solid #2563EB" : "3px solid transparent"
+                    }}
+                  >
+                    <ProfileOutlined style={{ color: "#3B82F6" }} />
+                    Hồ sơ cá nhân
+                  </Link>
+                </>
+              )}
+            </div>
+          </div>
 
           {/* Nhóm phải: User Actions */}
-          <Space size="middle" style={{ alignItems: "center" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
             {user && user.role === "Candidate" ? (
               <>
                 {/* Real-time Notification Bell */}
@@ -443,16 +558,16 @@ function PublicLayout() {
                         justifyContent: "center",
                         transition: "all 0.2s ease",
                         transform: bellRinging ? "scale(1.15) rotate(15deg)" : "scale(1)",
-                        marginRight: 16
+                        marginRight: 4
                       }}
                     />
                   </Badge>
                 </Popover>
 
                 <Link to="/profile" style={{ display: "flex", alignItems: "center" }}>
-                  <Space size={12} style={{ marginRight: 8, cursor: "pointer" }}>
+                  <Space size={8} style={{ marginRight: 4, cursor: "pointer" }}>
                     <Avatar icon={<UserOutlined />} style={{ backgroundColor: "#2563EB" }} />
-                    <Text strong style={{ color: "#475569", fontSize: "14px" }}>
+                    <Text strong className="user-name-responsive" style={{ color: "#475569", fontSize: "14px", whiteSpace: "nowrap" }}>
                       {user.fullName || user.FullName || "Ứng viên"}
                     </Text>
                   </Space>
@@ -463,81 +578,112 @@ function PublicLayout() {
                   danger
                   ghost
                   onClick={handleLogout}
-                  style={{ borderRadius: "8px", fontWeight: 500 }}
+                  className="desktop-only-flex"
+                  style={{ borderRadius: "8px", fontWeight: 500, whiteSpace: "nowrap" }}
                 >
                   Đăng xuất
                 </Button>
               </>
             ) : (
-              <Link to="/login">
+              <Link to="/login" className="desktop-only-flex">
                 <Button
                   type="primary"
                   size="large"
                   className="btn-primary-custom"
-                  style={{ borderRadius: "8px", fontWeight: 600 }}
+                  style={{ borderRadius: "8px", fontWeight: 600, whiteSpace: "nowrap" }}
                 >
                   Đăng nhập / Đăng ký
                 </Button>
               </Link>
             )}
-          </Space>
-        </div>
-      </Header>
 
-      {/* Sub-Header Horizontal Navigation for Candidate Workspace */}
-      {user && user.role === "Candidate" && isWorkspace && (
-        <div
-          style={{
-            background: "#FFFFFF",
-            borderBottom: "1px solid #E2E8F0",
-            height: "54px",
-            lineHeight: "54px",
-            position: "sticky",
-            top: "80px",
-            zIndex: 999,
-            boxShadow: "0 1px 2px 0 rgba(0, 0, 0, 0.03)"
-          }}
-        >
-          <div
-            style={{
-              maxWidth: "1300px",
-              margin: "0 auto",
-              padding: "0 20px",
-              display: "flex",
-              gap: "28px",
-              height: "100%",
-              overflowX: "auto"
-            }}
-            className="custom-scrollbar"
-          >
-            {subNavItems.map((item) => {
-              const isActive = location.pathname === item.path;
-              return (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "8px",
-                    color: isActive ? "#2563EB" : "#64748B",
-                    fontWeight: isActive ? 600 : 500,
-                    fontSize: "14px",
-                    borderBottom: isActive ? "3px solid #2563EB" : "3px solid transparent",
-                    height: "100%",
-                    padding: "0 4px",
-                    transition: "all 0.2s"
-                  }}
-                  className="sub-nav-link"
-                >
-                  {item.icon}
-                  <span>{item.label}</span>
-                </Link>
-              );
-            })}
+            {/* Mobile Hamburger Button */}
+            <Button
+              className="mobile-only-btn"
+              type="text"
+              icon={<MenuOutlined style={{ fontSize: 22, color: "#0F172A" }} />}
+              onClick={() => setMobileMenuOpen(true)}
+              style={{
+                display: "none",
+                alignItems: "center",
+                justifyContent: "center",
+                width: 40,
+                height: 40,
+                borderRadius: 8,
+              }}
+            />
           </div>
         </div>
-      )}
+
+        {/* Mobile Slide-out Drawer Menu */}
+        <Drawer
+          title={
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <AiCoreIcon size={24} />
+              <span style={{ fontWeight: 800, color: "#0F172A" }}>AI Recruitment</span>
+            </div>
+          }
+          placement="right"
+          onClose={() => setMobileMenuOpen(false)}
+          open={mobileMenuOpen}
+          width={280}
+        >
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <Link
+              to="/"
+              onClick={() => setMobileMenuOpen(false)}
+              style={{ fontSize: 16, fontWeight: 700, color: "#0F172A", padding: "10px 0", borderBottom: "1px solid #F1F5F9", display: "flex", alignItems: "center", gap: 10 }}
+            >
+              <HomeOutlined style={{ color: "#2563EB" }} /> Trang chủ
+            </Link>
+            <Link
+              to="/jobs"
+              onClick={() => setMobileMenuOpen(false)}
+              style={{ fontSize: 16, fontWeight: 700, color: "#0F172A", padding: "10px 0", borderBottom: "1px solid #F1F5F9", display: "flex", alignItems: "center", gap: 10 }}
+            >
+              <AppstoreOutlined style={{ color: "#2563EB" }} /> Tìm việc làm
+            </Link>
+            <Link
+              to="/about"
+              onClick={() => setMobileMenuOpen(false)}
+              style={{ fontSize: 16, fontWeight: 700, color: "#0F172A", padding: "10px 0", borderBottom: "1px solid #F1F5F9", display: "flex", alignItems: "center", gap: 10 }}
+            >
+              <GlobalOutlined style={{ color: "#2563EB" }} /> Giới thiệu
+            </Link>
+
+            {user ? (
+              <>
+                <Link
+                  to="/profile"
+                  onClick={() => setMobileMenuOpen(false)}
+                  style={{ fontSize: 16, fontWeight: 700, color: "#0F172A", padding: "10px 0", borderBottom: "1px solid #F1F5F9", display: "flex", alignItems: "center", gap: 10 }}
+                >
+                  <UserOutlined style={{ color: "#2563EB" }} /> Hồ sơ cá nhân ({user.fullName || user.FullName || "Ứng viên"})
+                </Link>
+                <div
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    handleLogout();
+                  }}
+                  style={{ fontSize: 16, fontWeight: 700, color: "#EF4444", padding: "10px 0", cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}
+                >
+                  <LogoutOutlined /> Đăng xuất
+                </div>
+              </>
+            ) : (
+              <Link
+                to="/login"
+                onClick={() => setMobileMenuOpen(false)}
+                style={{ marginTop: 10 }}
+              >
+                <Button type="primary" block size="large" style={{ borderRadius: 8, fontWeight: 700 }}>
+                  Đăng nhập / Đăng ký
+                </Button>
+              </Link>
+            )}
+          </div>
+        </Drawer>
+      </Header>
 
       <Content
         style={{

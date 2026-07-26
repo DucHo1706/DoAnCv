@@ -157,6 +157,7 @@ namespace RecruitmentBackend.Services
                               startDate = j.StartDate,
                               maxCandidates = j.MaxCandidates,
                               status = j.Status,
+                              rejectReason = j.RejectReason,
                               isApproved = j.Status == "Published",
                               position = p != null ? new { id = p.PositionID, name = p.PositionName } : null,
                               branch = b != null ? new { id = b.BranchID, name = b.BranchName } : null,
@@ -188,6 +189,7 @@ namespace RecruitmentBackend.Services
                                      startDate = j.StartDate,
                                      maxCandidates = j.MaxCandidates,
                                      status = j.Status,
+                                     rejectReason = j.RejectReason,
                                      description = j.JobDescription,
                                      requirements = j.JobRequirement,
                                      position = p != null ? new { id = p.PositionID, name = p.PositionName, categoryId = p.CategoryID } : null,
@@ -252,6 +254,7 @@ namespace RecruitmentBackend.Services
                             startDate = j.StartDate,
                             maxCandidates = j.MaxCandidates,
                             status = j.Status,
+                            rejectReason = j.RejectReason,
                             isApproved = j.Status == "Published",
                             position = p != null ? new { name = p.PositionName } : null,
                             branch = b != null ? new { name = b.BranchName } : null,
@@ -291,6 +294,7 @@ namespace RecruitmentBackend.Services
                     jobInfo.startDate,
                     jobInfo.maxCandidates,
                     jobInfo.status,
+                    jobInfo.rejectReason,
                     jobInfo.isApproved,
                     jobInfo.position,
                     jobInfo.branch,
@@ -343,6 +347,86 @@ namespace RecruitmentBackend.Services
             }
 
             return true;
+        }
+
+        public async Task<bool> RejectJobAsync(string jobId, string reason)
+        {
+            var job = await _context.JobPostings.FindAsync(jobId);
+            if (job == null || job.Status != "Pending") return false;
+
+            job.Status = "Rejected";
+            job.RejectReason = reason ?? "";
+            await _context.SaveChangesAsync();
+
+            // Trigger notification to Recruiter kèm lý do cụ thể
+            try
+            {
+                var recruiter = await _context.Recruiters.FindAsync(job.RecruiterID);
+                if (recruiter != null)
+                {
+                    string positionName = "Chưa cập nhật";
+                    var position = await _context.Positions.FindAsync(job.PositionID);
+                    if (position != null) positionName = position.PositionName;
+
+                    await _notificationService.CreateNotificationAsync(
+                        recruiter.AccountID,
+                        "Tin tuyển dụng bị từ chối",
+                        $"Tin tuyển dụng {positionName} của bạn đã bị từ chối. Lý do: {job.RejectReason}",
+                        "/recruiter/jobs"
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Lỗi gửi thông báo từ chối tin tuyển dụng cho HR: " + ex.Message);
+            }
+
+            return true;
+        }
+
+        public async Task<bool> FlagJobAsync(string jobId, string reason)
+        {
+            var job = await _context.JobPostings.FindAsync(jobId);
+            if (job == null) return false;
+
+            job.Status = "Flagged";
+            job.RejectReason = reason ?? "Cần kiểm duyệt nội dung";
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> UnflagJobAsync(string jobId)
+        {
+            var job = await _context.JobPostings.FindAsync(jobId);
+            if (job == null || job.Status != "Flagged") return false;
+
+            job.Status = "Published";
+            job.RejectReason = "";
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<(int successCount, int failCount)> BulkApproveJobsAsync(List<string> jobIds)
+        {
+            int successCount = 0;
+            int failCount = 0;
+
+            foreach (var jobId in jobIds)
+            {
+                try
+                {
+                    var ok = await ApproveJobAndSyncAiAsync(jobId);
+                    if (ok) successCount++;
+                    else failCount++;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError($"Lỗi khi duyệt hàng loạt tin {jobId}: " + ex.Message);
+                    failCount++;
+                }
+            }
+
+            return (successCount, failCount);
         }
 
         public async Task<IEnumerable<object>> GetAllJobsAsync()
@@ -401,10 +485,17 @@ namespace RecruitmentBackend.Services
             // 2. Áp dụng các Bộ Lọc (Filter)
             if (!string.IsNullOrWhiteSpace(request.Keyword))
             {
-                var kw = request.Keyword.ToLower();
+                var rawKw = request.Keyword.ToLower().Trim();
+                var kw = rawKw.Replace("địa điểm", "").Replace("tại", "").Replace("ở", "").Trim();
+                if (string.IsNullOrWhiteSpace(kw)) kw = rawKw;
+
                 query = query.Where(x => 
                     (x.p != null && x.p.PositionName.ToLower().Contains(kw)) ||
-                    (x.b != null && x.b.BranchName.ToLower().Contains(kw)));
+                    (x.b != null && x.b.BranchName.ToLower().Contains(kw)) ||
+                    (x.j.JobDescription != null && x.j.JobDescription.ToLower().Contains(kw)) ||
+                    (x.j.JobRequirement != null && x.j.JobRequirement.ToLower().Contains(kw)) ||
+                    (x.j.JDExtractedSkills != null && x.j.JDExtractedSkills.ToLower().Contains(kw)) ||
+                    (x.p != null && x.p.PositionName.ToLower().Contains(rawKw)));
             }
 
             if (!string.IsNullOrWhiteSpace(request.Location))

@@ -637,8 +637,20 @@ namespace RecruitmentBackend.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
+                    b.Property<string>("Bio")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("CompanyBranch")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Department")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("FullName")
                         .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("LinkedInUrl")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Phone")
@@ -664,6 +676,57 @@ namespace RecruitmentBackend.Migrations
                     b.HasKey("RecruiterID", "BranchID");
 
                     b.ToTable("RecruiterBranches");
+                });
+
+            modelBuilder.Entity("RecruitmentBackend.Models.Role", b =>
+                {
+                    b.Property<string>("RoleID")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PermissionsRaw")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("RoleID");
+
+                    b.ToTable("Roles");
+
+                    b.HasData(
+                        new
+                        {
+                            RoleID = "1",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Description = "Quản trị viên toàn quyền hệ thống tuyển dụng & AI",
+                            Name = "Admin",
+                            PermissionsRaw = "manage_users,approve_jobs,publish_close_jobs,manage_roles,view_audit_logs,manage_branches,view_reports,train_ai_models"
+                        },
+                        new
+                        {
+                            RoleID = "2",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Description = "Nhà tuyển dụng (Trưởng phòng / Chuyên viên HR)",
+                            Name = "Recruiter",
+                            PermissionsRaw = "create_jobs,publish_close_jobs,view_candidates,view_ai_scores,send_interview_emails,manage_talent_pool"
+                        },
+                        new
+                        {
+                            RoleID = "3",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Description = "Ứng viên tìm việc & nộp hồ sơ CV",
+                            Name = "Candidate",
+                            PermissionsRaw = "apply_jobs,view_jobs,manage_profile,use_chatbot"
+                        });
                 });
 
             modelBuilder.Entity("RecruitmentBackend.Models.SavedJob", b =>

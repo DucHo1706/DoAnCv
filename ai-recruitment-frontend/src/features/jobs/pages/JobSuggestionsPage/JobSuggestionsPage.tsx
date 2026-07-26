@@ -121,8 +121,8 @@ function JobSuggestionsPage() {
       >
         <Row gutter={[24, 16]} align="middle">
           <Col xs={24} md={18}>
-            <Title level={4} style={{ margin: 0, color: "#1E3A8A" }}>
-              ⚡ Trình Đối Sánh Năng Lực AI
+            <Title level={4} style={{ margin: 0, color: "#1E3A8A", display: "flex", alignItems: "center", gap: 8 }}>
+              <ThunderboltOutlined style={{ color: "#2563EB" }} /> Trình Đối Sánh Năng Lực AI
             </Title>
             <Paragraph style={{ margin: "6px 0 16px", color: "#1E40AF", fontSize: 13.5 }}>
               AI phân tích độ khớp giữa học vấn **{profile?.major || "chưa cập nhật"}** cùng các kỹ năng trong CV với các tin tuyển dụng để tìm ra cơ hội phù hợp nhất cho bạn.

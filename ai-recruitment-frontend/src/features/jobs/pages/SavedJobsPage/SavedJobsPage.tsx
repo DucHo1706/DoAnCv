@@ -3,6 +3,7 @@ import { StarFilled, EnvironmentOutlined, DollarOutlined, ClockCircleOutlined, E
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axiosClient from "../../../../services/axiosClient";
+import PageContainer from "../../../../components/common/PageContainer";
 
 const { Title, Paragraph, Text } = Typography;
 
@@ -151,24 +152,17 @@ function SavedJobsPage() {
   }
 
   return (
-    <div style={{ padding: "12px 0" }}>
-      <div style={{ marginBottom: 24, display: "flex", alignItems: "center", gap: 12 }}>
-        <StarFilled style={{ fontSize: 22, color: "#F59E0B" }} />
-        <div>
-          <Title level={3} style={{ margin: 0, color: "#0F172A" }}>Việc làm đã lưu</Title>
-          <Paragraph type="secondary" style={{ fontSize: 14, margin: 0, marginTop: 4 }}>
-            Danh sách các công việc bạn đã lưu để xem xét hoặc ứng tuyển sau này.
-          </Paragraph>
-        </div>
-      </div>
-
+    <PageContainer
+      title="Việc làm đã lưu"
+      subtitle="Danh sách các công việc bạn đã lưu để xem xét hoặc ứng tuyển sau này."
+    >
       {savedJobs.length === 0 ? (
-        <Card style={{ borderRadius: 12, border: "1px solid #E2E8F0" }}>
+        <Card style={{ borderRadius: 16, border: "1px solid #E2E8F0" }}>
           <Empty
             description="Bạn chưa lưu tin tuyển dụng nào."
             image={Empty.PRESENTED_IMAGE_SIMPLE}
           >
-            <Button type="primary" onClick={() => navigate("/jobs")} style={{ background: "#2563EB", borderColor: "#2563EB" }}>
+            <Button type="primary" onClick={() => navigate("/jobs")} style={{ background: "#2563EB", borderColor: "#2563EB", borderRadius: 8, fontWeight: 600 }}>
               Khám phá việc làm ngay
             </Button>
           </Empty>
@@ -179,7 +173,7 @@ function SavedJobsPage() {
           style={{
             border: "1px solid #E2E8F0",
             borderRadius: 16,
-            boxShadow: "0 1px 3px rgba(0,0,0,0.02)"
+            boxShadow: "0 2px 8px rgba(15, 23, 42, 0.03)"
           }}
           bodyStyle={{ padding: 0 }}
         >
@@ -192,7 +186,7 @@ function SavedJobsPage() {
           />
         </Card>
       )}
-    </div>
+    </PageContainer>
   );
 }
 

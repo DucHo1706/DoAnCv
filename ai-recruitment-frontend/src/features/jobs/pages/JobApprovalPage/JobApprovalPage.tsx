@@ -3,7 +3,7 @@ import {
   StatusRunningIcon,
   StatusClosedIcon,
 } from "../../../../components/common/AppIcons";
-import { AppstoreOutlined, CalendarOutlined, CheckCircleOutlined, CheckOutlined, DollarOutlined, EyeOutlined, FileTextOutlined, FireOutlined, LockOutlined, SearchOutlined, StopOutlined, UnlockOutlined, UnorderedListOutlined, UserOutlined } from "@ant-design/icons";
+import { AppstoreOutlined, CalendarOutlined, CheckCircleOutlined, CheckOutlined, CloseOutlined, DollarOutlined, EyeOutlined, FileTextOutlined, FireOutlined, LockOutlined, SearchOutlined, StopOutlined, UnlockOutlined, UnorderedListOutlined, UserOutlined, DownloadOutlined, FlagOutlined, ClockCircleFilled, CheckCircleFilled, CloseCircleFilled, LockFilled } from "@ant-design/icons";
 import {
   Button,
   Card,
@@ -21,6 +21,8 @@ import {
   Input,
   Select,
   Segmented,
+  Tooltip,
+  Badge,
 } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import PageContainer from "../../../../components/common/PageContainer";
@@ -28,6 +30,7 @@ import AppPagination from "../../../../components/common/AppPagination";
 import { jobService, categoryService } from "../../services/jobService";
 import type { JobDto, JobReviewResponse } from "../../services/jobService";
 import { EnvironmentOutlined } from "@ant-design/icons";
+import { exportToCsv } from "../../../../utils/exportUtils";
 
 const { Paragraph, Text, Title } = Typography;
 
@@ -74,6 +77,15 @@ function JobApprovalPage() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [jobDetail, setJobDetail] = useState<JobReviewResponse | null>(null);
 
+  // Reject modal state
+  const [rejectTarget, setRejectTarget] = useState<PendingJobTableItem | null>(null);
+  const [rejectReasonText, setRejectReasonText] = useState("");
+  const [rejecting, setRejecting] = useState(false);
+
+  // Bulk approve state
+  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+  const [bulkApproving, setBulkApproving] = useState(false);
+
   const fetchAdminJobs = async () => {
     try {
       setLoading(true);
@@ -101,6 +113,39 @@ function JobApprovalPage() {
     fetchCategories();
   }, []);
 
+  // Multi-filter states
+  const [selectedRecruiterEmail, setSelectedRecruiterEmail] = useState<string>("all");
+  const [selectedBranchName, setSelectedBranchName] = useState<string>("all");
+
+  // Extract unique recruiters & branches from jobs
+  const uniqueRecruiters = useMemo(() => {
+    const map = new Map<string, string>();
+    jobs.forEach((j) => {
+      if (j.recruiter?.name) {
+        map.set(j.recruiter.email || j.recruiter.name, j.recruiter.name);
+      }
+    });
+    return Array.from(map.entries()).map(([email, name]) => ({ email, name }));
+  }, [jobs]);
+
+  const uniqueBranches = useMemo(() => {
+    const set = new Set<string>();
+    jobs.forEach((j) => {
+      if (j.branch?.name) set.add(j.branch.name);
+    });
+    return Array.from(set);
+  }, [jobs]);
+
+  // Set default status to Pending if pending jobs exist
+  useEffect(() => {
+    if (jobs.length > 0) {
+      const hasPending = jobs.some((j) => j.status === "Pending");
+      if (hasPending && selectedStatus === "all") {
+        setSelectedStatus("Pending");
+      }
+    }
+  }, [jobs]);
+
   const filteredJobs = useMemo(() => {
     return jobs.filter((job) => {
       const searchKey = searchText.trim().toLowerCase();
@@ -119,9 +164,18 @@ function JobApprovalPage() {
         selectedStatus === "all" ||
         job.status === selectedStatus;
 
-      return matchesSearch && matchesCategory && matchesStatus;
+      const matchesRecruiter =
+        selectedRecruiterEmail === "all" ||
+        job.recruiter?.email === selectedRecruiterEmail ||
+        job.recruiter?.name === selectedRecruiterEmail;
+
+      const matchesBranch =
+        selectedBranchName === "all" ||
+        job.branch?.name === selectedBranchName;
+
+      return matchesSearch && matchesCategory && matchesStatus && matchesRecruiter && matchesBranch;
     });
-  }, [jobs, searchText, selectedCategoryId, selectedStatus]);
+  }, [jobs, searchText, selectedCategoryId, selectedStatus, selectedRecruiterEmail, selectedBranchName]);
 
   const tableData: PendingJobTableItem[] = useMemo(() => {
     return filteredJobs.map((job) => ({
@@ -146,7 +200,13 @@ function JobApprovalPage() {
   // Reset grid page on filter change
   useEffect(() => {
     setGridPage(1);
-  }, [searchText, selectedCategoryId, selectedStatus]);
+  }, [searchText, selectedCategoryId, selectedStatus, selectedRecruiterEmail, selectedBranchName]);
+
+  // Bỏ chọn những dòng không còn hiển thị sau khi filter/reload thay đổi
+  useEffect(() => {
+    const validIds = new Set(tableData.filter((j) => j.raw.status === "Pending").map((j) => j.id));
+    setSelectedRowKeys((prev) => prev.filter((key) => validIds.has(String(key))));
+  }, [tableData]);
 
   const handleViewJob = async (record: PendingJobTableItem) => {
     try {
@@ -203,10 +263,140 @@ function JobApprovalPage() {
     }
   };
 
-  // Metrics count
+  const handleOpenReject = (record: PendingJobTableItem) => {
+    setRejectTarget(record);
+    setRejectReasonText("");
+  };
+
+  const handleConfirmReject = async () => {
+    if (!rejectTarget) return;
+    if (!rejectReasonText.trim()) {
+      message.warning("Vui lòng nhập lý do từ chối tin tuyển dụng.");
+      return;
+    }
+
+    setRejecting(true);
+    try {
+      const response = await jobService.rejectJob(rejectTarget.id, rejectReasonText.trim());
+      message.success(response?.message || "Đã từ chối tin tuyển dụng");
+      setRejectTarget(null);
+      setRejectReasonText("");
+      fetchAdminJobs();
+      if (jobDetail?.jobInfo.id === rejectTarget.id) {
+        setDetailOpen(false);
+        setJobDetail(null);
+      }
+    } catch (error: any) {
+      const errorMessage =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Từ chối tin tuyển dụng thất bại";
+      message.error(errorMessage);
+    } finally {
+      setRejecting(false);
+    }
+  };
+
+  const handleBulkApprove = async () => {
+    if (selectedRowKeys.length === 0 || bulkApproving) return;
+    setBulkApproving(true);
+    try {
+      const ids = selectedRowKeys.map((k) => String(k));
+      const response = await jobService.bulkApproveJobs(ids);
+      message.success(response?.message || `Đã duyệt ${ids.length} tin tuyển dụng`);
+      setSelectedRowKeys([]);
+      fetchAdminJobs();
+    } catch (error: any) {
+      const errorMessage =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Duyệt hàng loạt thất bại";
+      message.error(errorMessage);
+    } finally {
+      setBulkApproving(false);
+    }
+  };
+
+  // Moderation flag modal state
+  const [flagTarget, setFlagTarget] = useState<PendingJobTableItem | null>(null);
+  const [flagReasonText, setFlagReasonText] = useState("");
+  const [flagging, setFlagging] = useState(false);
+
+  const handleOpenFlag = (record: PendingJobTableItem) => {
+    setFlagTarget(record);
+    setFlagReasonText("");
+  };
+
+  const handleConfirmFlag = async () => {
+    if (!flagTarget) return;
+    if (!flagReasonText.trim()) {
+      message.warning("Vui lòng nhập lý do cảnh báo kiểm duyệt.");
+      return;
+    }
+    setFlagging(true);
+    try {
+      const res = await jobService.flagJob(flagTarget.id, flagReasonText.trim());
+      message.success(res?.message || "Đã gắn cờ kiểm duyệt tin tuyển dụng");
+      setFlagTarget(null);
+      fetchAdminJobs();
+    } catch (err: any) {
+      message.error(err?.response?.data?.message || err?.message || "Lỗi khi gắn cờ vi phạm");
+    } finally {
+      setFlagging(false);
+    }
+  };
+
+  const handleUnflag = async (record: PendingJobTableItem) => {
+    try {
+      const res = await jobService.unflagJob(record.id);
+      message.success(res?.message || "Đã gỡ cờ vi phạm tin tuyển dụng");
+      fetchAdminJobs();
+    } catch (err: any) {
+      message.error(err?.response?.data?.message || err?.message || "Lỗi khi gỡ cờ vi phạm");
+    }
+  };
+
+  const handleExportJobsCsv = () => {
+    const headers = [
+      "ID Tin",
+      "Vị trí tuyển dụng",
+      "Chi nhánh",
+      "Mức lương",
+      "Chuyên viên HR",
+      "Email HR",
+      "Trạng thái",
+      "Ngày tạo",
+      "Hạn nộp",
+    ];
+
+    const rows = filteredJobs.map((j) => [
+      j.id,
+      j.position?.name || "Chưa cập nhật",
+      j.branch?.name || "Chưa cập nhật",
+      j.salaryRange || "Chưa cập nhật",
+      j.recruiter?.name || "HR",
+      j.recruiter?.email || "N/A",
+      j.status === "Published"
+        ? "Đang chạy"
+        : j.status === "Pending"
+        ? "Chờ duyệt"
+        : j.status === "Rejected"
+        ? "Từ chối"
+        : j.status === "Flagged"
+        ? "Vi phạm / Cảnh báo"
+        : "Đã đóng",
+      formatDate(j.createdAt),
+      formatDate(j.deadline),
+    ]);
+
+    exportToCsv("Danh_Sach_Tin_Tuyen_Dung", headers, rows);
+    message.success("Đã xuất danh sách tin tuyển dụng ra Excel (CSV) thành công!");
+  };
+
   const totalJobsCount = jobs.length;
   const pendingJobsCount = jobs.filter((j) => j.status === "Pending").length;
   const publishedJobsCount = jobs.filter((j) => j.status === "Published").length;
+  const rejectedJobsCount = jobs.filter((j) => j.status === "Rejected").length;
   const closedJobsCount = jobs.filter((j) => j.status === "Closed" || j.status === "Locked").length;
 
   const columns = [
@@ -292,6 +482,15 @@ function JobApprovalPage() {
             </Tag>
           );
         }
+        if (st === "Rejected") {
+          return (
+            <Tooltip title={record.raw.rejectReason || "Không có lý do cụ thể"}>
+              <Tag color="error" style={{ borderRadius: 6, fontWeight: 700, padding: "3px 10px", cursor: "help" }}>
+                Đã từ chối
+              </Tag>
+            </Tooltip>
+          );
+        }
         return (
           <Tag color="warning" style={{ borderRadius: 6, fontWeight: 800, padding: "3px 10px", backgroundColor: "#FFF7ED", borderColor: "#FFEDD5", color: "#C2410C" }}>
             Chờ duyệt
@@ -302,7 +501,7 @@ function JobApprovalPage() {
     {
       title: "Thao tác",
       key: "actions",
-      width: 180,
+      width: 280,
       fixed: "right" as const,
       render: (_: unknown, record: PendingJobTableItem) => (
         <Space size="small">
@@ -310,17 +509,28 @@ function JobApprovalPage() {
             Xem
           </Button>
           {record.raw.status === "Pending" && (
-            <Button
-              type="primary"
-              icon={<CheckOutlined />}
-              loading={approvingId === record.id}
-              disabled={approvingId !== null}
-              onClick={() => handleApproveJob(record)}
-              style={{ background: "#F97316", borderColor: "#F97316", fontWeight: 700 }}
-              size="middle"
-            >
-              Duyệt
-            </Button>
+            <>
+              <Button
+                type="primary"
+                icon={<CheckOutlined />}
+                loading={approvingId === record.id}
+                disabled={approvingId !== null}
+                onClick={() => handleApproveJob(record)}
+                style={{ background: "#F97316", borderColor: "#F97316", fontWeight: 700 }}
+                size="middle"
+              >
+                Duyệt
+              </Button>
+              <Button
+                danger
+                icon={<CloseOutlined />}
+                disabled={approvingId !== null}
+                onClick={() => handleOpenReject(record)}
+                size="middle"
+              >
+                Từ chối
+              </Button>
+            </>
           )}
           {(record.raw.status === "Published" || record.raw.status === "Closed") && (
             <Popconfirm
@@ -445,89 +655,176 @@ function JobApprovalPage() {
 
       {/* Filter & View Switcher Bar */}
       <Card style={{ marginBottom: 20, borderRadius: 16, border: "1px solid rgba(226, 232, 240, 0.8)" }} bodyStyle={{ padding: "18px 24px" }}>
-        <Row gutter={[16, 16]} align="middle" justify="space-between">
-          <Col xs={24} lg={16}>
-            <Row gutter={[12, 12]}>
-              <Col xs={24} sm={10}>
-                <Input
-                  placeholder="Tìm theo vị trí, HR đăng, chi nhánh..."
-                  prefix={<SearchOutlined style={{ color: "#94A3B8" }} />}
-                  value={searchText}
-                  onChange={(e) => setSearchText(e.target.value)}
-                  allowClear
-                  style={{ borderRadius: 8 }}
-                />
-              </Col>
-              <Col xs={24} sm={7}>
-                <Select
-                  style={{ width: "100%" }}
-                  placeholder="Lĩnh vực"
-                  value={selectedCategoryId}
-                  onChange={(value) => setSelectedCategoryId(value)}
-                  options={[
-                    { value: "all", label: "Tất cả lĩnh vực" },
-                    ...categories.map((c) => ({ value: c.id, label: c.name })),
-                  ]}
-                  dropdownStyle={{ borderRadius: 8 }}
-                />
-              </Col>
-              <Col xs={24} sm={7}>
-                <Select
-                  style={{ width: "100%" }}
-                  placeholder="Trạng thái"
-                  value={selectedStatus}
-                  onChange={(value) => setSelectedStatus(value)}
-                  options={[
-                    { value: "all", label: "Tất cả trạng thái (DB)" },
-                    {
-                      value: "Pending",
-                      label: (
-                        <Space size={6}>
-                          <StatusPendingIcon size={14} />
-                          <span>Chờ duyệt</span>
-                        </Space>
-                      ),
-                    },
-                    {
-                      value: "Published",
-                      label: (
-                        <Space size={6}>
-                          <StatusRunningIcon size={14} />
-                          <span>Đang chạy</span>
-                        </Space>
-                      ),
-                    },
-                    {
-                      value: "Closed",
-                      label: (
-                        <Space size={6}>
-                          <StatusClosedIcon size={14} />
-                          <span>Đã đóng</span>
-                        </Space>
-                      ),
-                    },
-                  ]}
-                  dropdownStyle={{ borderRadius: 8 }}
-                />
-              </Col>
-            </Row>
+        {/* Hàng 1: Status Queue Segmented Control */}
+        <div style={{ marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+          <Space size={8} align="center">
+            <Text strong style={{ fontSize: 13, color: "#64748B" }}>Hàng chờ duyệt:</Text>
+            <Segmented
+              value={selectedStatus}
+              onChange={(value) => setSelectedStatus(value as string)}
+              options={[
+                { label: `Tất cả (${totalJobsCount})`, value: "all" },
+                {
+                  label: (
+                    <Space size={6}>
+                      <ClockCircleFilled style={{ color: "#F97316" }} />
+                      <span style={{ fontWeight: 700, color: selectedStatus === "Pending" ? "#EA580C" : undefined }}>Chờ duyệt</span>
+                      {pendingJobsCount > 0 && (
+                        <Badge
+                          count={pendingJobsCount}
+                          overflowCount={99}
+                          style={{ backgroundColor: "#F97316", boxShadow: "none", fontWeight: 700 }}
+                        />
+                      )}
+                    </Space>
+                  ),
+                  value: "Pending",
+                },
+                {
+                  label: (
+                    <Space size={6}>
+                      <CheckCircleFilled style={{ color: "#10B981" }} />
+                      <span>Đang chạy ({publishedJobsCount})</span>
+                    </Space>
+                  ),
+                  value: "Published",
+                },
+                {
+                  label: (
+                    <Space size={6}>
+                      <CloseCircleFilled style={{ color: "#EF4444" }} />
+                      <span>Bị từ chối ({rejectedJobsCount})</span>
+                    </Space>
+                  ),
+                  value: "Rejected",
+                },
+                {
+                  label: (
+                    <Space size={6}>
+                      <LockFilled style={{ color: "#64748B" }} />
+                      <span>Đã đóng ({closedJobsCount})</span>
+                    </Space>
+                  ),
+                  value: "Closed",
+                },
+              ]}
+              style={{ fontWeight: 600 }}
+            />
+          </Space>
+
+          <Space size={12}>
+            <Button icon={<DownloadOutlined />} onClick={handleExportJobsCsv}>
+              Xuất Excel
+            </Button>
+            <Text type="secondary" style={{ fontSize: 13, fontWeight: 500 }}>Chế độ xem:</Text>
+            <Segmented
+              value={viewMode}
+              onChange={(value) => setViewMode(value as "table" | "grid")}
+              options={[
+                { label: "Bảng (Table)", value: "table", icon: <UnorderedListOutlined /> },
+                { label: "Thẻ (Grid)", value: "grid", icon: <AppstoreOutlined /> },
+              ]}
+            />
+          </Space>
+        </div>
+
+        <Divider style={{ margin: "12px 0 16px" }} />
+
+        {/* Hàng 2: Multi-filter inputs */}
+        <Row gutter={[12, 12]} align="middle">
+          <Col xs={24} sm={12} md={7} lg={7}>
+            <Input
+              placeholder="Tìm theo vị trí, HR đăng, email..."
+              prefix={<SearchOutlined style={{ color: "#94A3B8" }} />}
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              allowClear
+              style={{ borderRadius: 8 }}
+            />
           </Col>
 
-          <Col xs={24} lg={8} style={{ textAlign: "right" }}>
-            <Space size={12}>
-              <Text type="secondary" style={{ fontSize: 13, fontWeight: 500 }}>Chế độ xem:</Text>
-              <Segmented
-                value={viewMode}
-                onChange={(value) => setViewMode(value as "table" | "grid")}
-                options={[
-                  { label: "Bảng (Table)", value: "table", icon: <UnorderedListOutlined /> },
-                  { label: "Thẻ (Grid)", value: "grid", icon: <AppstoreOutlined /> },
-                ]}
-              />
-            </Space>
+          <Col xs={24} sm={12} md={6} lg={6}>
+            <Select
+              style={{ width: "100%" }}
+              placeholder="Lọc theo Chuyên viên HR"
+              value={selectedRecruiterEmail}
+              onChange={(value) => setSelectedRecruiterEmail(value)}
+              options={[
+                { value: "all", label: "Tất cả HR" },
+                ...uniqueRecruiters.map((r) => ({
+                  value: r.email,
+                  label: `${r.name} (${r.email})`,
+                })),
+              ]}
+              dropdownStyle={{ borderRadius: 8 }}
+            />
+          </Col>
+
+          <Col xs={24} sm={12} md={5} lg={5}>
+            <Select
+              style={{ width: "100%" }}
+              placeholder="Chi nhánh"
+              value={selectedBranchName}
+              onChange={(value) => setSelectedBranchName(value)}
+              options={[
+                { value: "all", label: "Tất cả chi nhánh" },
+                ...uniqueBranches.map((b) => ({ value: b, label: b })),
+              ]}
+              dropdownStyle={{ borderRadius: 8 }}
+            />
+          </Col>
+
+          <Col xs={24} sm={12} md={6} lg={6}>
+            <Select
+              style={{ width: "100%" }}
+              placeholder="Lĩnh vực ngành nghề"
+              value={selectedCategoryId}
+              onChange={(value) => setSelectedCategoryId(value)}
+              options={[
+                { value: "all", label: "Tất cả lĩnh vực" },
+                ...categories.map((c) => ({ value: c.id, label: c.name })),
+              ]}
+              dropdownStyle={{ borderRadius: 8 }}
+            />
           </Col>
         </Row>
       </Card>
+
+      {/* Bulk Action Bar - chỉ hiện khi có dòng được chọn */}
+      {selectedRowKeys.length > 0 && (
+        <Card
+          style={{
+            marginBottom: 16,
+            borderRadius: 12,
+            border: "1px solid #BFDBFE",
+            background: "#EFF6FF",
+          }}
+          bodyStyle={{ padding: "12px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}
+        >
+          <Text strong style={{ color: "#1D4ED8" }}>
+            Đã chọn {selectedRowKeys.length} tin tuyển dụng chờ duyệt
+          </Text>
+          <Space>
+            <Button onClick={() => setSelectedRowKeys([])}>Bỏ chọn</Button>
+            <Popconfirm
+              title={`Duyệt ${selectedRowKeys.length} tin tuyển dụng đã chọn?`}
+              description="Các tin này sẽ được hiển thị công khai ngay lập tức."
+              onConfirm={handleBulkApprove}
+              okText="Duyệt tất cả"
+              cancelText="Hủy"
+            >
+              <Button
+                type="primary"
+                icon={<CheckOutlined />}
+                loading={bulkApproving}
+                style={{ background: "#F97316", borderColor: "#F97316", fontWeight: 700 }}
+              >
+                Duyệt {selectedRowKeys.length} tin đã chọn
+              </Button>
+            </Popconfirm>
+          </Space>
+        </Card>
+      )}
 
       {/* Main Content Render: Table View or Bento Grid View */}
       {viewMode === "table" ? (
@@ -539,6 +836,13 @@ function JobApprovalPage() {
             loading={loading}
             scroll={{ x: 1100 }}
             pagination={{ pageSize: 8, showSizeChanger: true, pageSizeOptions: ["8", "16", "32"] }}
+            rowSelection={{
+              selectedRowKeys,
+              onChange: (keys) => setSelectedRowKeys(keys),
+              getCheckboxProps: (record: PendingJobTableItem) => ({
+                disabled: record.raw.status !== "Pending",
+              }),
+            }}
           />
         </Card>
       ) : (
@@ -577,6 +881,10 @@ function JobApprovalPage() {
                             <Tag color="success" style={{ borderRadius: 6, fontWeight: 700 }}>Đang chạy</Tag>
                           ) : item.raw.status === "Closed" ? (
                             <Tag color="default" style={{ borderRadius: 6 }}>Đã đóng</Tag>
+                          ) : item.raw.status === "Rejected" ? (
+                            <Tooltip title={item.raw.rejectReason || "Không có lý do cụ thể"}>
+                              <Tag color="error" style={{ borderRadius: 6, fontWeight: 700, cursor: "help" }}>Đã từ chối</Tag>
+                            </Tooltip>
                           ) : (
                             <Tag color="warning" style={{ borderRadius: 6, fontWeight: 800, backgroundColor: "#FFF7ED", color: "#C2410C" }}>Chờ duyệt</Tag>
                           )}
@@ -613,16 +921,21 @@ function JobApprovalPage() {
                           Chi tiết
                         </Button>
                         {item.raw.status === "Pending" ? (
-                          <Button
-                            type="primary"
-                            icon={<CheckOutlined />}
-                            loading={approvingId === item.id}
-                            onClick={() => handleApproveJob(item)}
-                            style={{ background: "#F97316", borderColor: "#F97316", fontWeight: 700 }}
-                          >
-                            Duyệt ngay
-                          </Button>
-                        ) : (
+                          <Space size={8}>
+                            <Button
+                              type="primary"
+                              icon={<CheckOutlined />}
+                              loading={approvingId === item.id}
+                              onClick={() => handleApproveJob(item)}
+                              style={{ background: "#F97316", borderColor: "#F97316", fontWeight: 700 }}
+                            >
+                              Duyệt ngay
+                            </Button>
+                            <Button danger icon={<CloseOutlined />} onClick={() => handleOpenReject(item)}>
+                              Từ chối
+                            </Button>
+                          </Space>
+                        ) : item.raw.status === "Rejected" ? null : (
                           <Popconfirm
                             title={item.raw.status === "Published" ? "Bạn có chắc muốn tạm ẩn tin này?" : "Mở hiển thị lại tin này?"}
                             onConfirm={() => handleToggleStatus(item.id)}
@@ -671,6 +984,27 @@ function JobApprovalPage() {
           jobDetail && jobDetail.jobInfo.status === "Pending"
             ? [
               <Button
+                key="reject"
+                danger
+                icon={<CloseOutlined />}
+                disabled={approvingId !== null}
+                onClick={() =>
+                  handleOpenReject({
+                    id: jobDetail.jobInfo.id,
+                    title: jobDetail.jobInfo.position?.name || "Chưa cập nhật",
+                    location: jobDetail.jobInfo.branch?.name || "Chưa cập nhật",
+                    salaryRange: jobDetail.jobInfo.salaryRange,
+                    createdAt: jobDetail.jobInfo.createdAt,
+                    deadline: jobDetail.jobInfo.deadline,
+                    recruiterName: jobDetail.jobInfo.recruiter?.name || "HR Mặc định",
+                    recruiterEmail: jobDetail.jobInfo.recruiter?.email || "hr@system.com",
+                    raw: jobDetail.jobInfo,
+                  })
+                }
+              >
+                Từ chối
+              </Button>,
+              <Button
                 key="approve"
                 type="primary"
                 icon={<CheckOutlined />}
@@ -707,11 +1041,20 @@ function JobApprovalPage() {
                 <Tag color="success">Đang chạy</Tag>
               ) : jobDetail.jobInfo.status === "Closed" ? (
                 <Tag color="default">Đã đóng</Tag>
+              ) : jobDetail.jobInfo.status === "Rejected" ? (
+                <Tag color="error" style={{ fontWeight: 700 }}>Đã từ chối</Tag>
               ) : (
                 <Tag color="warning" style={{ backgroundColor: "#FFF7ED", borderColor: "#FFEDD5", color: "#C2410C", fontWeight: 700 }}>Chờ duyệt</Tag>
               )}
               <Text type="secondary">Tạo lúc: {formatDate(jobDetail.jobInfo.createdAt)}</Text>
             </Space>
+
+            {jobDetail.jobInfo.status === "Rejected" && (
+              <div style={{ marginBottom: 16, padding: 12, borderRadius: 8, background: "#FEF2F2", border: "1px solid #FECACA" }}>
+                <Text strong style={{ color: "#EF4444" }}>Lý do từ chối: </Text>
+                <Text style={{ color: "#991B1B" }}>{jobDetail.jobInfo.rejectReason || "Không có lý do cụ thể"}</Text>
+              </div>
+            )}
 
             <Descriptions bordered column={2} size="middle">
               <Descriptions.Item label="Vị trí tuyển dụng" span={2}>
@@ -773,6 +1116,34 @@ function JobApprovalPage() {
             </div>
           </>
         )}
+      </Modal>
+
+      {/* Reject Reason Modal */}
+      <Modal
+        title="Từ chối tin tuyển dụng"
+        open={rejectTarget !== null}
+        onCancel={() => {
+          if (rejecting) return;
+          setRejectTarget(null);
+          setRejectReasonText("");
+        }}
+        onOk={handleConfirmReject}
+        okText="Xác nhận từ chối"
+        okButtonProps={{ danger: true, loading: rejecting }}
+        cancelText="Hủy"
+        width={520}
+      >
+        <Text type="secondary" style={{ display: "block", marginBottom: 12 }}>
+          Vui lòng nhập lý do từ chối tin <strong>{rejectTarget?.title}</strong>. Nhà tuyển dụng sẽ nhận được thông báo kèm lý do này.
+        </Text>
+        <Input.TextArea
+          rows={4}
+          placeholder="Ví dụ: Mô tả công việc chưa rõ ràng, thiếu thông tin mức lương..."
+          value={rejectReasonText}
+          onChange={(e) => setRejectReasonText(e.target.value)}
+          maxLength={500}
+          showCount
+        />
       </Modal>
     </PageContainer>
   );

@@ -306,7 +306,6 @@ export default function ApplicationManagementPage() {
     }
 
     try {
-      const { recruitmentService } = await import("../../services/recruitmentService");
       await recruitmentService.updateApplicationStatus(record.id, newStatus);
 
       setApplications((previousApplications) =>
@@ -915,32 +914,36 @@ export default function ApplicationManagementPage() {
 
                     <Divider style={{ margin: "16px 0" }} />
 
-                    <Row gutter={[8, 8]} style={{ textAlign: "center", marginBottom: 20 }}>
-                      <Col span={6}>
-                        <Card size="small" style={{ borderRadius: 8, background: "#F8FAFC" }} bodyStyle={{ padding: "8px 4px" }}>
-                          <Text type="secondary" style={{ fontSize: 11, display: "block" }}>Tổng CV</Text>
-                          <Text strong style={{ fontSize: 16, color: "#0F172A" }}>{stats.total}</Text>
-                        </Card>
-                      </Col>
-                      <Col span={6}>
-                        <Card size="small" style={{ borderRadius: 8, background: "#EFF6FF" }} bodyStyle={{ padding: "8px 4px" }}>
-                          <Text type="secondary" style={{ fontSize: 11, display: "block" }}>Mới nộp</Text>
-                          <Text strong style={{ fontSize: 16, color: "#2563EB" }}>{stats.newApps}</Text>
-                        </Card>
-                      </Col>
-                      <Col span={6}>
-                        <Card size="small" style={{ borderRadius: 8, background: "#FAF5FF" }} bodyStyle={{ padding: "8px 4px" }}>
-                          <Text type="secondary" style={{ fontSize: 11, display: "block" }}>Phỏng vấn</Text>
-                          <Text strong style={{ fontSize: 16, color: "#7C3AED" }}>{stats.interviewing}</Text>
-                        </Card>
-                      </Col>
-                      <Col span={6}>
-                        <Card size="small" style={{ borderRadius: 8, background: "#ECFDF5" }} bodyStyle={{ padding: "8px 4px" }}>
-                          <Text type="secondary" style={{ fontSize: 11, display: "block" }}>Đã tuyển</Text>
-                          <Text strong style={{ fontSize: 16, color: "#10B981" }}>{stats.hired}</Text>
-                        </Card>
-                      </Col>
-                    </Row>
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "repeat(4, 1fr)",
+                        gap: 8,
+                        background: "#F8FAFC",
+                        borderRadius: 12,
+                        padding: "12px 6px",
+                        border: "1px solid #E2E8F0",
+                        textAlign: "center",
+                        marginBottom: 20,
+                      }}
+                    >
+                      <div>
+                        <Text type="secondary" style={{ fontSize: 11, display: "block" }}>Tổng CV</Text>
+                        <Text strong style={{ fontSize: 16, color: "#0F172A" }}>{stats.total}</Text>
+                      </div>
+                      <div>
+                        <Text type="secondary" style={{ fontSize: 11, display: "block" }}>Mới nộp</Text>
+                        <Text strong style={{ fontSize: 16, color: "#2563EB" }}>{stats.newApps}</Text>
+                      </div>
+                      <div>
+                        <Text type="secondary" style={{ fontSize: 11, display: "block" }}>Phỏng vấn</Text>
+                        <Text strong style={{ fontSize: 16, color: "#7C3AED" }}>{stats.interviewing}</Text>
+                      </div>
+                      <div>
+                        <Text type="secondary" style={{ fontSize: 11, display: "block" }}>Đã tuyển</Text>
+                        <Text strong style={{ fontSize: 16, color: "#10B981" }}>{stats.hired}</Text>
+                      </div>
+                    </div>
 
                     <Button
                       type="primary"
@@ -991,11 +994,6 @@ export default function ApplicationManagementPage() {
   return (
     <PageContainer
       title={selectedJobId ? "Quản lý Ứng viên" : "Quản lý Hồ sơ Ứng tuyển"}
-      subtitle={
-        selectedJobId
-          ? `Chiến dịch tuyển dụng vị trí ${jobs.find((j) => j.id === selectedJobId)?.position?.name || ""}`
-          : "Chọn chiến dịch tuyển dụng để quản lý hồ sơ ứng viên."
-      }
     >
       {selectedJobId === null ? (
         renderJobCampaigns()

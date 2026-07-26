@@ -15,6 +15,10 @@ namespace RecruitmentBackend.Models
 
         public string FullName { get; set; }
         public string Phone { get; set; }
+        public string? Department { get; set; }
+        public string? CompanyBranch { get; set; }
+        public string? Bio { get; set; }
+        public string? LinkedInUrl { get; set; }
 
         public virtual ICollection<RecruiterBranch> RecruiterBranches { get; set; }
     }

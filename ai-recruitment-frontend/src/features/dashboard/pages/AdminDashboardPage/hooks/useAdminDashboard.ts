@@ -192,9 +192,48 @@ export function getStatusTagColor(status: string): string {
   return "default";
 }
 
+export interface TrendInfo {
+  percent: number | null;
+  direction: "up" | "down" | "flat";
+}
+
+function calculateTrend(current: number, previous: number): TrendInfo {
+  if (previous <= 0) {
+    if (current <= 0) return { percent: null, direction: "flat" };
+    return { percent: 100, direction: "up" };
+  }
+  const percent = Math.round(((current - previous) / previous) * 1000) / 10;
+  if (percent === 0) return { percent: 0, direction: "flat" };
+  return { percent: Math.abs(percent), direction: percent > 0 ? "up" : "down" };
+}
+
+/**
+ * Tính khoảng ngày "kỳ trước" liền kề, cùng độ dài với khoảng đang chọn.
+ * Nếu không chọn khoảng thời gian, mặc định so sánh 30 ngày gần nhất với 30 ngày trước đó.
+ */
+function getPreviousPeriod(selectedDateRange: [Dayjs, Dayjs] | null): { fromDate: string; toDate: string } {
+  if (selectedDateRange !== null) {
+    const [from, to] = selectedDateRange;
+    const durationDays = to.diff(from, "day") + 1;
+    const previousTo = from.subtract(1, "day");
+    const previousFrom = previousTo.subtract(durationDays - 1, "day");
+    return {
+      fromDate: previousFrom.format("YYYY-MM-DD"),
+      toDate: previousTo.format("YYYY-MM-DD"),
+    };
+  }
+
+  const today = dayjs();
+  return {
+    fromDate: today.subtract(59, "day").format("YYYY-MM-DD"),
+    toDate: today.subtract(30, "day").format("YYYY-MM-DD"),
+  };
+}
+
 export function useAdminDashboard() {
   const [loading, setLoading] = useState<boolean>(true);
   const [stats, setStats] = useState<AdminDashboardStats>(emptyAdminDashboardStats);
+  const [previousStats, setPreviousStats] = useState<AdminDashboardStats | null>(null);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | undefined>(undefined);
   const [selectedDateRange, setSelectedDateRange] = useState<[Dayjs, Dayjs] | null>(null);
 
@@ -215,13 +254,27 @@ export function useAdminDashboard() {
         params.toDate = selectedDateRange[1].format("YYYY-MM-DD");
       }
 
-      const response = await axiosClient.get("/Dashboard/admin-stats", { params });
+      const previousPeriod = getPreviousPeriod(selectedDateRange);
+      const previousParams: { categoryId?: string; fromDate: string; toDate: string } = {
+        ...previousPeriod,
+      };
+      if (stringIsEmpty(selectedCategoryId) === false) {
+        previousParams.categoryId = selectedCategoryId;
+      }
+
+      const [response, previousResponse] = await Promise.all([
+        axiosClient.get("/Dashboard/admin-stats", { params }),
+        axiosClient.get("/Dashboard/admin-stats", { params: previousParams }).catch(() => null),
+      ]);
+
       const normalizedStats = normalizeAdminDashboardStats(response);
       setStats(normalizedStats);
+      setPreviousStats(previousResponse ? normalizeAdminDashboardStats(previousResponse) : null);
     } catch (error) {
       console.error(error);
       message.error("Lỗi khi tải dữ liệu Admin Dashboard");
       setStats(emptyAdminDashboardStats);
+      setPreviousStats(null);
     } finally {
       setLoading(false);
     }
@@ -245,9 +298,19 @@ export function useAdminDashboard() {
       ? "Chưa có dữ liệu tốc độ xử lý"
       : `Avg: ${averageProcessingSeconds}s / CV`;
 
+  const trends = useMemo(() => {
+    if (previousStats === null) return null;
+    return {
+      totalUsers: calculateTrend(stats.quickMetrics.totalUsers, previousStats.quickMetrics.totalUsers),
+      activeJobs: calculateTrend(stats.quickMetrics.activeJobs, previousStats.quickMetrics.activeJobs),
+      analyzedCvs: calculateTrend(stats.quickMetrics.analyzedCvs, previousStats.quickMetrics.analyzedCvs),
+    };
+  }, [stats, previousStats]);
+
   return {
     loading,
     stats,
+    trends,
     selectedCategoryId,
     setSelectedCategoryId,
     selectedDateRange,

@@ -1,5 +1,6 @@
 import { Space, Typography } from "antd";
 import type { ReactNode } from "react";
+import { appTheme } from "../../constants/theme";
 
 const { Title, Paragraph } = Typography;
 
@@ -15,7 +16,9 @@ function PageContainer({ title, subtitle, extra, children }: PageContainerProps)
     <div>
       <div
         style={{
-          marginBottom: 24,
+          marginBottom: 28,
+          paddingBottom: 20,
+          borderBottom: `1px solid ${appTheme.colors.border}`,
           display: "flex",
           justifyContent: "space-between",
           alignItems: "flex-start",
@@ -24,11 +27,11 @@ function PageContainer({ title, subtitle, extra, children }: PageContainerProps)
         }}
       >
         <Space direction="vertical" size={4}>
-          <Title level={2} style={{ margin: 0 }}>
+          <Title level={2} style={{ margin: 0, color: appTheme.colors.textPrimary, fontWeight: 800 }}>
             {title}
           </Title>
           {subtitle ? (
-            <Paragraph type="secondary" style={{ margin: 0 }}>
+            <Paragraph type="secondary" style={{ margin: 0, fontSize: 14 }}>
               {subtitle}
             </Paragraph>
           ) : null}

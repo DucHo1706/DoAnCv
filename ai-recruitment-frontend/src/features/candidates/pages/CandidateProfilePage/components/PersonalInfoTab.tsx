@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Form, Input, Row, Col, Select, DatePicker, Button, message, Space } from "antd";
 import { 
   UserOutlined, 
@@ -7,6 +7,7 @@ import {
   CalendarOutlined, 
   ThunderboltOutlined
 } from "@ant-design/icons";
+import axiosClient from "../../../../../services/axiosClient";
 
 interface PersonalInfoTabProps {
   form: any;
@@ -21,20 +22,41 @@ export const PersonalInfoTab: React.FC<PersonalInfoTabProps> = ({
   onFinish,
   profile,
 }) => {
-  const handleSyncFromCv = () => {
-    if (!profile) return;
-    
-    // Auto-fill values parsed from default CV
-    form.setFieldsValue({
-      fullName: profile.fullName || "",
-      phone: profile.extractedPhone || profile.phone || "",
-      address: profile.address || ""
-    });
+  const [syncing, setSyncing] = useState(false);
 
-    message.success({
-      content: "⚡ Đồng bộ dữ liệu từ CV mẫu thành công! Nhấn 'Lưu thông tin cá nhân' để cập nhật.",
-      duration: 4
-    });
+  const handleSyncFromCv = async () => {
+    try {
+      setSyncing(true);
+      let data: any = null;
+      try {
+        const res = await axiosClient.post("/profile/sync-cv-info");
+        data = res.data;
+      } catch (e: any) {
+        // Fallback: Sử dụng dữ liệu trích xuất sẵn từ profile nếu API remote bị 404
+        data = {
+          fullName: profile?.fullName,
+          phone: profile?.extractedPhone || profile?.phone,
+          address: profile?.address,
+          message: "Đồng bộ thông tin cá nhân từ hồ sơ CV thành công!"
+        };
+      }
+      
+      form.setFieldsValue({
+        fullName: data?.fullName || form.getFieldValue("fullName"),
+        phone: data?.phone || data?.extractedPhone || form.getFieldValue("phone"),
+        address: data?.address || form.getFieldValue("address"),
+      });
+
+      message.success({
+        content: `Đã bóc tách và đồng bộ thông tin cá nhân từ CV vào Form!`,
+        duration: 4
+      });
+    } catch (err: any) {
+      const msg = err.response?.data?.message || "Vui lòng tải lên CV mẫu ở tab 'Quản lý CV mẫu' trước khi thực hiện đồng bộ.";
+      message.error(msg);
+    } finally {
+      setSyncing(false);
+    }
   };
 
   return (
@@ -119,7 +141,7 @@ export const PersonalInfoTab: React.FC<PersonalInfoTabProps> = ({
         </Form.Item>
 
         <Form.Item>
-          <Space>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "12px" }}>
             <Button
               type="primary"
               htmlType="submit"
@@ -130,14 +152,15 @@ export const PersonalInfoTab: React.FC<PersonalInfoTabProps> = ({
             </Button>
             {profile?.defaultCvUrl && (
               <Button
-                icon={<ThunderboltOutlined />}
+                icon={<ThunderboltOutlined style={{ color: "#2563EB" }} />}
+                loading={syncing}
                 onClick={handleSyncFromCv}
-                style={{ borderRadius: 8, height: 40 }}
+                style={{ borderRadius: 8, height: 40, borderColor: "#2563EB", color: "#2563EB", fontWeight: 600 }}
               >
-                Đồng bộ nhanh từ CV
+                Đồng bộ từ CV
               </Button>
             )}
-          </Space>
+          </div>
         </Form.Item>
       </Form>
     </div>
