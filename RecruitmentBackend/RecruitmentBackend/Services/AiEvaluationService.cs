@@ -290,7 +290,7 @@ namespace RecruitmentBackend.Services
                             candidate.AccountID,
                             "Phân tích AI hoàn tất",
                             $"AI đã hoàn tất chấm điểm hồ sơ vị trí {positionName} của bạn. Điểm tương hợp: {fitScore}%",
-                            "/candidate/application-status"
+                            "/my-applications"
                         );
                     }
                 }

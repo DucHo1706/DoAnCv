@@ -250,7 +250,7 @@ namespace RecruitmentBackend.Services
                             recruiter.AccountID,
                             "Đơn ứng tuyển mới",
                             $"Ứng viên {candidate.FullName} đã nộp hồ sơ cho công việc {positionName}",
-                            "/recruiter/applications"
+                            $"/recruiter/applications/{job.JobID}"
                         );
                     }
                 }
@@ -314,10 +314,15 @@ namespace RecruitmentBackend.Services
                     return (false, "Không tìm thấy thông tin Nhà tuyển dụng.", null);
                 }
 
+                var branchIds = await _context.RecruiterBranches
+                    .Where(rb => rb.RecruiterID == recruiter.RecruiterID)
+                    .Select(rb => rb.BranchID)
+                    .ToListAsync();
+
                 var rawApplications = await (
                     from app in _context.Applications
                     join job in _context.JobPostings on app.JobID equals job.JobID
-                    where job.RecruiterID == recruiter.RecruiterID
+                    where job.RecruiterID == recruiter.RecruiterID || string.IsNullOrEmpty(job.RecruiterID) || branchIds.Contains(job.BranchID)
                     join cv in _context.CandidateCVs on app.CVID equals cv.CVID
                     join cand in _context.Candidates on cv.CandidateID equals cand.CandidateID
                     join acc in _context.Accounts on cand.AccountID equals acc.AccountID
@@ -964,7 +969,7 @@ namespace RecruitmentBackend.Services
                         candidate.AccountID,
                         "Hồ sơ chưa phù hợp",
                         $"Đơn ứng tuyển vị trí {jobTitle} của bạn đã bị từ chối với lý do: {reasonType}",
-                        "/candidate/application-status"
+                        "/my-applications"
                     );
                 }
                 catch (Exception ex)

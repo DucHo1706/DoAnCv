@@ -357,6 +357,17 @@ namespace RecruitmentBackend.Services
                 };
             }
 
+            var rawHrJobIds = await _context.JobPostings
+                .Where(job => job.RecruiterID == recruiter.RecruiterID)
+                .Select(job => job.JobID)
+                .ToListAsync();
+
+            var unreadCounts = await _context.Applications
+                .Where(a => rawHrJobIds.Contains(a.JobID) && a.Status == "Applied")
+                .GroupBy(a => a.JobID)
+                .Select(g => new { JobID = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(g => g.JobID, g => g.Count);
+
             var hrJobs = await (from job in _context.JobPostings
                                 where job.RecruiterID == recruiter.RecruiterID
                                 join position in _context.Positions on job.PositionID equals position.PositionID into positionGroup
@@ -372,7 +383,8 @@ namespace RecruitmentBackend.Services
                                     createdAt = job.CreatedAt,
                                     deadline = job.Deadline,
                                     viewCount = job.ViewCount,
-                                    categoryName = category != null ? category.Name : "Lĩnh vực khác"
+                                    categoryName = category != null ? category.Name : "Lĩnh vực khác",
+                                    unreadCount = unreadCounts.ContainsKey(job.JobID) ? unreadCounts[job.JobID] : 0
                                 }).ToListAsync();
 
             var hrJobIds = hrJobs.Select(job => job.jobId).ToList();

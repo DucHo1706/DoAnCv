@@ -7,6 +7,7 @@ export interface JobOption {
   createdAt?: string;
   deadline?: string;
   categoryName?: string;
+  unreadCount?: number;
 }
 
 export interface QuickMetrics {
@@ -14,6 +15,22 @@ export interface QuickMetrics {
   totalApplications: number;
   newApplications: number;
   averageFitScore: number;
+  totalViews?: number;
+  applicationRate?: number;
+  avgTimeToHireDays?: number;
+}
+
+export interface FunnelData {
+  applied: number;
+  reviewing: number;
+  interview: number;
+  offer: number;
+  rejected: number;
+}
+
+export interface ApplicationTrendItem {
+  date: string;
+  count: number;
 }
 
 export interface SkillCloudItem {
@@ -62,6 +79,10 @@ export interface HrDashboardStats {
   newApplications: number;
   averageFitScore: number;
 
+  funnel?: FunnelData;
+  applicationTrend?: ApplicationTrendItem[];
+  upcomingInterviews?: any[];
+
   skillCloudData: SkillCloudItem[];
   fitScoreDistribution: FitScoreDistributionItem[];
   topCandidates: TopCandidateItem[];
@@ -82,6 +103,9 @@ const emptyQuickMetrics: QuickMetrics = {
   totalApplications: 0,
   newApplications: 0,
   averageFitScore: 0,
+  totalViews: 0,
+  applicationRate: 0,
+  avgTimeToHireDays: 0,
 };
 
 export const emptyHrDashboardStats: HrDashboardStats = {
@@ -97,6 +121,10 @@ export const emptyHrDashboardStats: HrDashboardStats = {
   newApplications: 0,
   averageFitScore: 0,
 
+  funnel: { applied: 0, reviewing: 0, interview: 0, offer: 0, rejected: 0 },
+  applicationTrend: [],
+  upcomingInterviews: [],
+
   skillCloudData: [],
   fitScoreDistribution: [],
   topCandidates: [],
@@ -107,35 +135,42 @@ export const emptyHrDashboardStats: HrDashboardStats = {
   universityData: [],
 };
 
-const normalizeHrDashboardStats = (data: Partial<HrDashboardStats>): HrDashboardStats => {
+const normalizeHrDashboardStats = (data: any): HrDashboardStats => {
   const quickMetrics: QuickMetrics = {
-    totalJobs: data.quickMetrics?.totalJobs ?? data.totalJobs ?? 0,
-    totalApplications: data.quickMetrics?.totalApplications ?? data.totalApplications ?? 0,
-    newApplications: data.quickMetrics?.newApplications ?? data.newApplications ?? 0,
-    averageFitScore: data.quickMetrics?.averageFitScore ?? data.averageFitScore ?? 0,
+    totalJobs: data?.quickMetrics?.totalJobs ?? data?.totalJobs ?? 0,
+    totalApplications: data?.quickMetrics?.totalApplications ?? data?.totalApplications ?? 0,
+    newApplications: data?.quickMetrics?.newApplications ?? data?.newApplications ?? 0,
+    averageFitScore: data?.quickMetrics?.averageFitScore ?? data?.averageFitScore ?? 0,
+    totalViews: data?.quickMetrics?.totalViews ?? data?.totalViews ?? 0,
+    applicationRate: data?.quickMetrics?.applicationRate ?? data?.applicationRate ?? 0,
+    avgTimeToHireDays: data?.quickMetrics?.avgTimeToHireDays ?? data?.avgTimeToHireDays ?? 0,
   };
 
   return {
-    isSuccess: data.isSuccess ?? true,
-    message: data.message ?? "",
-    selectedJobId: data.selectedJobId ?? null,
+    isSuccess: data?.isSuccess ?? true,
+    message: data?.message ?? "",
+    selectedJobId: data?.selectedJobId ?? null,
 
-    jobOptions: data.jobOptions ?? [],
+    jobOptions: data?.jobOptions ?? [],
     quickMetrics,
 
-    totalJobs: data.totalJobs ?? quickMetrics.totalJobs,
-    totalApplications: data.totalApplications ?? quickMetrics.totalApplications,
-    newApplications: data.newApplications ?? quickMetrics.newApplications,
-    averageFitScore: data.averageFitScore ?? quickMetrics.averageFitScore,
+    totalJobs: data?.totalJobs ?? quickMetrics.totalJobs,
+    totalApplications: data?.totalApplications ?? quickMetrics.totalApplications,
+    newApplications: data?.newApplications ?? quickMetrics.newApplications,
+    averageFitScore: data?.averageFitScore ?? quickMetrics.averageFitScore,
 
-    skillCloudData: data.skillCloudData ?? [],
-    fitScoreDistribution: data.fitScoreDistribution ?? [],
-    topCandidates: data.topCandidates ?? [],
+    funnel: data?.funnel ?? { applied: 0, reviewing: 0, interview: 0, offer: 0, rejected: 0 },
+    applicationTrend: data?.applicationTrend ?? [],
+    upcomingInterviews: data?.upcomingInterviews ?? [],
 
-    degreeData: data.degreeData ?? [],
-    expData: data.expData ?? data.experienceData ?? [],
-    experienceData: data.experienceData ?? data.expData ?? [],
-    universityData: data.universityData ?? [],
+    skillCloudData: data?.skillCloudData ?? [],
+    fitScoreDistribution: data?.fitScoreDistribution ?? [],
+    topCandidates: data?.topCandidates ?? [],
+
+    degreeData: data?.degreeData ?? [],
+    expData: data?.expData ?? data?.experienceData ?? [],
+    experienceData: data?.experienceData ?? data?.expData ?? [],
+    universityData: data?.universityData ?? [],
   };
 };
 

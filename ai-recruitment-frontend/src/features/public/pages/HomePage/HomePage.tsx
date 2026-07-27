@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useMemo } from "react";
-import { Button, Col, Row, Typography, Space, Input, Tag, Spin, Select, Divider, Collapse, Progress, Skeleton } from "antd";
+import { Button, Col, Row, Typography, Space, Input, Tag, Spin, Select, Divider, Collapse, Progress, Skeleton, message } from "antd";
 import {
   SearchOutlined,
   EnvironmentOutlined,
@@ -232,9 +232,37 @@ function HomePage() {
 
   // Rotating & Personalized Featured Jobs States
   const [selectedFilterCategory, setSelectedFilterCategory] = useState<string>("all");
-  const [isSmartRecommend, setIsSmartRecommend] = useState<boolean>(true);
+  const [isSmartRecommend, setIsSmartRecommend] = useState<boolean>(() => {
+    return !!localStorage.getItem("token");
+  });
   const [refreshSeed, setRefreshSeed] = useState<number>(0);
   const [userProfile, setUserProfile] = useState<any>(null);
+
+  const handleToggleSmartRecommend = () => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      message.info("Vui lòng đăng nhập để hệ thống AI gợi ý việc làm phù hợp với CV của bạn!");
+      navigate("/login");
+      return;
+    }
+
+    if (!isSmartRecommend) {
+      if (userProfile) {
+        const rawSkills = userProfile.cvExtractedSkills || userProfile.skills;
+        const hasSkills = rawSkills && (typeof rawSkills === "string" ? rawSkills.length > 5 : Array.isArray(rawSkills) ? rawSkills.length > 0 : true);
+        const hasInfo = userProfile.major || userProfile.desiredPosition || userProfile.position || hasSkills;
+        if (!hasInfo) {
+          message.warning("Bạn chưa tải lên CV hoặc cập nhật kỹ năng. Vui lòng cập nhật tại Trang cá nhân!");
+          navigate("/profile");
+          return;
+        }
+      }
+      setIsSmartRecommend(true);
+      message.success("Đã bật gợi ý việc làm phù hợp với CV của bạn!");
+    } else {
+      setIsSmartRecommend(false);
+    }
+  };
 
   const allJobsCombined = useMemo(() => {
     return recentJobs;
@@ -264,7 +292,7 @@ function HomePage() {
             title.includes("tester") ||
             title.includes("qa") ||
             title.includes("qc") ||
-            title.includes("kỹ sư điện") ||
+            title.includes("kỹ sư") ||
             title.includes("iot")
           );
         }
@@ -295,7 +323,7 @@ function HomePage() {
           );
         }
         if (selectedFilterCategory === "others") {
-          const isTech = title.includes("ai") || title.includes("developer") || title.includes("lập trình") || title.includes("python");
+          const isTech = title.includes("ai") || title.includes("developer") || title.includes("lập trình") || title.includes("python") || title.includes("kỹ sư");
           const isSalesMarketing = title.includes("sale") || title.includes("marketing");
           const isHrFinance = title.includes("nhân sự") || title.includes("hr") || title.includes("kế toán");
           return !isTech && !isSalesMarketing && !isHrFinance;
@@ -304,33 +332,32 @@ function HomePage() {
       });
     }
 
-    // 2. Apply dynamic multi-industry smart recommendation ranking & score calculation based on uploaded CV Profile
-    if (isSmartRecommend) {
-      // Extract candidate skills & major from userProfile if available
+    const hasToken = !!localStorage.getItem("token");
+
+    // 2. Apply AI smart recommendation ranking & score calculation
+    if (isSmartRecommend && hasToken && userProfile) {
       let candidateKeywords: string[] = [];
-      if (userProfile) {
-        if (userProfile.major) {
-          candidateKeywords.push(...String(userProfile.major).toLowerCase().split(/\s+/));
-        }
-        if (userProfile.desiredPosition) {
-          candidateKeywords.push(...String(userProfile.desiredPosition).toLowerCase().split(/\s+/));
-        }
-        if (userProfile.position) {
-          candidateKeywords.push(...String(userProfile.position).toLowerCase().split(/\s+/));
-        }
-        const rawSkills = userProfile.cvExtractedSkills || userProfile.skills;
-        if (rawSkills) {
-          try {
-            const skillsVal = typeof rawSkills === "string" ? JSON.parse(rawSkills) : rawSkills;
-            const parsed = Array.isArray(skillsVal) ? skillsVal : (Array.isArray(skillsVal?.$values) ? skillsVal.$values : []);
-            parsed.forEach((s: any) => {
-              if (s) {
-                candidateKeywords.push(String(s).toLowerCase());
-                candidateKeywords.push(...String(s).toLowerCase().split(/\s+/));
-              }
-            });
-          } catch { }
-        }
+      if (userProfile.major) {
+        candidateKeywords.push(...String(userProfile.major).toLowerCase().split(/\s+/));
+      }
+      if (userProfile.desiredPosition) {
+        candidateKeywords.push(...String(userProfile.desiredPosition).toLowerCase().split(/\s+/));
+      }
+      if (userProfile.position) {
+        candidateKeywords.push(...String(userProfile.position).toLowerCase().split(/\s+/));
+      }
+      const rawSkills = userProfile.cvExtractedSkills || userProfile.skills;
+      if (rawSkills) {
+        try {
+          const skillsVal = typeof rawSkills === "string" ? JSON.parse(rawSkills) : rawSkills;
+          const parsed = Array.isArray(skillsVal) ? skillsVal : (Array.isArray(skillsVal?.$values) ? skillsVal.$values : []);
+          parsed.forEach((s: any) => {
+            if (s) {
+              candidateKeywords.push(String(s).toLowerCase());
+              candidateKeywords.push(...String(s).toLowerCase().split(/\s+/));
+            }
+          });
+        } catch { }
       }
 
       // Clean up short/stopwords
@@ -341,7 +368,9 @@ function HomePage() {
       list = list.map((job, idx) => {
         const title = (job.position?.name || "").toLowerCase();
         const branchName = (job.branch?.name || "").toLowerCase();
-        const fullJobText = `${title} ${branchName}`;
+        const description = (job.description || "").toLowerCase();
+        const requirements = (job.requirements || "").toLowerCase();
+        const fullJobText = `${title} ${branchName} ${description} ${requirements}`;
 
         let matchedCount = 0;
         if (candidateKeywords.length > 0) {
@@ -349,24 +378,20 @@ function HomePage() {
         }
 
         let isCvMatched = false;
-        let baseScore = 0;
+        let baseScore = 70;
 
-        if (candidateKeywords.length > 0) {
-          if (matchedCount > 0) {
-            isCvMatched = true;
-            baseScore = Math.min(88 + matchedCount * 3, 98);
-          } else {
-            isCvMatched = false;
-            baseScore = 75 - (idx * 2);
-          }
+        if (candidateKeywords.length > 0 && matchedCount > 0) {
+          isCvMatched = true;
+          baseScore = Math.min(85 + matchedCount * 3, 98);
         } else {
-          // Public visitor mode (not logged in or no CV uploaded yet)
-          const isTechOrHot = title.includes("developer") || title.includes("lập trình") || title.includes("kỹ sư") || title.includes("ai") || title.includes("senior");
-          isCvMatched = isTechOrHot;
-          baseScore = isTechOrHot ? (95 - (idx * 2)) : (82 - (idx * 2));
+          isCvMatched = false;
+          baseScore = Math.max(65, 78 - (idx % 10));
         }
 
-        return { ...job, aiMatchScore: baseScore, isCvMatched };
+        // Clamp score strictly between 60 and 99
+        const finalScore = Math.max(60, Math.min(99, Math.round(baseScore)));
+
+        return { ...job, aiMatchScore: finalScore, isCvMatched };
       });
 
       // Sort matched jobs to the top!
@@ -376,6 +401,13 @@ function HomePage() {
         }
         return (b.aiMatchScore || 0) - (a.aiMatchScore || 0);
       });
+    } else {
+      // Unauthenticated or smart recommend off: clear isCvMatched
+      list = list.map((job) => ({
+        ...job,
+        isCvMatched: false,
+        aiMatchScore: 0,
+      }));
     }
 
     // 3. Shuffle / rotate logic using refreshSeed
@@ -386,7 +418,7 @@ function HomePage() {
     }
 
     return list.slice(0, 6);
-  }, [allJobsCombined, selectedFilterCategory, isSmartRecommend, refreshSeed]);
+  }, [allJobsCombined, selectedFilterCategory, isSmartRecommend, refreshSeed, userProfile]);
 
   useEffect(() => {
     const fetchJobs = async () => {
@@ -1286,7 +1318,7 @@ function HomePage() {
               {/* Personalization Switch */}
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <div
-                  onClick={() => setIsSmartRecommend(!isSmartRecommend)}
+                  onClick={handleToggleSmartRecommend}
                   style={{
                     display: "inline-flex",
                     alignItems: "center",

@@ -318,7 +318,7 @@ namespace RecruitmentBackend.Services
                                 candidate.AccountID,
                                 "Lịch phỏng vấn đã bị hủy",
                                 $"Lịch hẹn phỏng vấn cho vị trí {positionName} đã bị nhà tuyển dụng hủy.",
-                                "/candidate/application-status"
+                                "/my-applications"
                             );
                         }
                     }
