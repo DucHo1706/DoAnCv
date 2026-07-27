@@ -314,15 +314,10 @@ namespace RecruitmentBackend.Services
                     return (false, "Không tìm thấy thông tin Nhà tuyển dụng.", null);
                 }
 
-                var branchIds = await _context.RecruiterBranches
-                    .Where(rb => rb.RecruiterID == recruiter.RecruiterID)
-                    .Select(rb => rb.BranchID)
-                    .ToListAsync();
-
                 var rawApplications = await (
                     from app in _context.Applications
                     join job in _context.JobPostings on app.JobID equals job.JobID
-                    where branchIds.Contains(job.BranchID)
+                    where job.RecruiterID == recruiter.RecruiterID
                     join cv in _context.CandidateCVs on app.CVID equals cv.CVID
                     join cand in _context.Candidates on cv.CandidateID equals cand.CandidateID
                     join acc in _context.Accounts on cand.AccountID equals acc.AccountID

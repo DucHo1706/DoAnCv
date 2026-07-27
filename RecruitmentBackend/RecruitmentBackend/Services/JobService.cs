@@ -134,11 +134,6 @@ namespace RecruitmentBackend.Services
             var recruiter = await _context.Recruiters.FirstOrDefaultAsync(r => r.AccountID == accountId);
             if (recruiter == null) return new List<object>();
 
-            var branchIds = await _context.RecruiterBranches
-                .Where(rb => rb.RecruiterID == recruiter.RecruiterID)
-                .Select(rb => rb.BranchID)
-                .ToListAsync();
-
             return await (from j in _context.JobPostings
                           join p in _context.Positions on j.PositionID equals p.PositionID into pj
                           from p in pj.DefaultIfEmpty()
@@ -146,7 +141,7 @@ namespace RecruitmentBackend.Services
                           from c in cj.DefaultIfEmpty()
                           join b in _context.Branches on j.BranchID equals b.BranchID into bj
                           from b in bj.DefaultIfEmpty()
-                          where branchIds.Contains(j.BranchID)
+                          where j.RecruiterID == recruiter.RecruiterID
                           orderby j.CreatedAt descending
                           select new {
                               id = j.JobID,

@@ -443,21 +443,39 @@ export function useApplicationManagement() {
     });
   }, [applications, rankingCandidates]);
 
+  const [filterStatus, setFilterStatus] = useState<string | null>(null);
+
+  const handleResetFilters = () => {
+    setSearchQuery("");
+    setFilterClassification(null);
+    setFilterStatus(null);
+    setSearchSkill("");
+    setMinScore(null);
+  };
+
   const filteredApplications = useMemo(() => {
     const sourceApplications = selectedJobId == null ? applications : rankingApplications;
 
     return sourceApplications.filter((app) => {
-      const matchesSearch = searchQuery
-        ? selectedJobId != null ||
-          (app.candidateName || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-          (app.email || "").toLowerCase().includes(searchQuery.toLowerCase())
-        : true;
+      const query = searchQuery.trim().toLowerCase();
+      const matchesSearch = query === ""
+        ? true
+        : (app.candidateName || "").toLowerCase().includes(query) ||
+          (app.email || "").toLowerCase().includes(query) ||
+          (app.jobTitle || "").toLowerCase().includes(query) ||
+          (app.phone || "").toLowerCase().includes(query);
+
       const matchesClassification = filterClassification
         ? app.classification === filterClassification
         : true;
-      return matchesSearch && matchesClassification;
+
+      const matchesStatus = filterStatus
+        ? app.status === filterStatus
+        : true;
+
+      return matchesSearch && matchesClassification && matchesStatus;
     });
-  }, [applications, rankingApplications, selectedJobId, searchQuery, filterClassification]);
+  }, [applications, rankingApplications, selectedJobId, searchQuery, filterClassification, filterStatus]);
 
   useEffect(() => {
     const groupedData: Record<string, ApplicationDto[]> = {};
@@ -596,6 +614,9 @@ export function useApplicationManagement() {
     setSelectedCriterion,
     availableCriteria,
     handleSortTypeChange,
+    filterStatus,
+    setFilterStatus,
+    handleResetFilters,
     selectionMode,
     setSelectionMode,
     selectedApplicationIds,

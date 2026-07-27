@@ -17,6 +17,7 @@ import {
   CloseOutlined,
   TrophyOutlined,
   EyeOutlined,
+  RotateLeftOutlined,
 } from "@ant-design/icons";
 import {
   Button,
@@ -106,6 +107,9 @@ export default function ApplicationManagementPage() {
     setSearchQuery,
     filterClassification,
     setFilterClassification,
+    filterStatus,
+    setFilterStatus,
+    handleResetFilters,
     loading,
     isModalOpen,
     setIsModalOpen,
@@ -858,7 +862,20 @@ export default function ApplicationManagementPage() {
             allowClear
             prefix={<SearchOutlined style={{ color: "#BFBFBF" }} />}
           />
-          <Space>
+          <Space wrap>
+            {jobSearchQuery && (
+              <Button
+                icon={<RotateLeftOutlined />}
+                onClick={() => {
+                  setJobSearchQuery("");
+                  setJobSortKey("newest");
+                  setJobCurrentPage(1);
+                }}
+                style={{ borderRadius: 8 }}
+              >
+                Xóa lọc
+              </Button>
+            )}
             <span style={{ color: "#64748B", fontSize: 13 }}>Sắp xếp theo:</span>
             <Select
               style={{ width: 220 }}
@@ -1121,14 +1138,28 @@ export default function ApplicationManagementPage() {
 
           <Card style={{ overflow: "hidden" }}>
             <TableToolbar
-              searchPlaceholder="Tìm ứng viên theo tên, email..."
+              searchPlaceholder="Tìm theo tên, email, sđt, vị trí..."
               searchValue={searchQuery}
               onSearchChange={setSearchQuery}
               extra={
                 <Space wrap>
                   <Select
+                    placeholder="Lọc trạng thái"
+                    style={{ width: 160 }}
+                    allowClear
+                    value={filterStatus}
+                    onChange={setFilterStatus}
+                    options={[
+                      { label: "Mới nộp", value: "Applied" },
+                      { label: "Đang xem xét", value: "Reviewing" },
+                      { label: "Phỏng vấn", value: "Interview" },
+                      { label: "Nhận việc", value: "Offer" },
+                      { label: "Đã từ chối", value: "Rejected" },
+                    ]}
+                  />
+                  <Select
                     placeholder="Lọc phân loại AI"
-                    style={{ width: 170 }}
+                    style={{ width: 160 }}
                     allowClear
                     value={filterClassification}
                     onChange={setFilterClassification}
@@ -1138,9 +1169,18 @@ export default function ApplicationManagementPage() {
                       { label: "Chưa phù hợp", value: "Chưa phù hợp" },
                     ]}
                   />
+                  {(searchQuery || filterStatus || filterClassification) && (
+                    <Button
+                      icon={<RotateLeftOutlined />}
+                      onClick={handleResetFilters}
+                      style={{ borderRadius: 8 }}
+                    >
+                      Xóa lọc
+                    </Button>
+                  )}
                   <Select
                     aria-label="Xếp hạng theo"
-                    style={{ width: 180 }}
+                    style={{ width: 170 }}
                     value={selectedSortType}
                     disabled={selectedJobId == null}
                     onChange={handleSortTypeChange}
@@ -1157,7 +1197,7 @@ export default function ApplicationManagementPage() {
                     <Select
                       aria-label="Chọn tiêu chí xếp hạng"
                       placeholder="Chọn tiêu chí"
-                      style={{ width: 210 }}
+                      style={{ width: 200 }}
                       value={selectedCriterion}
                       onChange={(criterionName) => {
                         setSelectedCriterion(criterionName);
