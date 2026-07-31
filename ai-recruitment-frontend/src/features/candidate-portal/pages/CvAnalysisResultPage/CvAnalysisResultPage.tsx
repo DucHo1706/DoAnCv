@@ -401,7 +401,7 @@ export default function CvAnalysisResultPage() {
     if (key === "2") {
       setTipsLoading(true);
       try {
-        const res = await fetch("http://127.0.0.1:8000/analyze-cv-star", {
+        const res = await fetch(getAiApiUrl("/analyze-cv-star"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
@@ -426,7 +426,7 @@ export default function CvAnalysisResultPage() {
     } else if (key === "3") {
       setLangLoading(true);
       try {
-        const res = await fetch("http://127.0.0.1:8000/analyze-cv-language", {
+        const res = await fetch(getAiApiUrl("/analyze-cv-language"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
@@ -451,7 +451,7 @@ export default function CvAnalysisResultPage() {
     } else if (key === "4") {
       setInterviewLoading(true);
       try {
-        const res = await fetch("http://127.0.0.1:8000/analyze-cv-interview", {
+        const res = await fetch(getAiApiUrl("/analyze-cv-interview"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
