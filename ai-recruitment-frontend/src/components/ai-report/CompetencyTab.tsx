@@ -82,6 +82,9 @@ const CompetencyTab: React.FC<CompetencyTabProps> = (props) => {
   const strengths = scoreAnalysis?.strengths || [];
   const weaknesses = scoreAnalysis?.weaknesses || [];
 
+  const matchedCount = matchedSkills.length > 0 ? matchedSkills.length : strengths.length;
+  const missingCount = missingSkills.length > 0 ? missingSkills.length : weaknesses.length;
+
   return (
     <Space direction="vertical" size={20} style={{ width: "100%" }}>
       <Alert
@@ -97,7 +100,7 @@ const CompetencyTab: React.FC<CompetencyTabProps> = (props) => {
             size="small"
             title={
               <span style={{ color: "#0F172A", fontWeight: 700 }}>
-                <CheckCircleOutlined style={{ color: "#10B981", marginRight: 6 }} /> Năng lực tương thích tốt ({matchedSkills.length})
+                <CheckCircleOutlined style={{ color: "#10B981", marginRight: 6 }} /> Năng lực tương thích tốt ({matchedCount})
               </span>
             }
             style={{
@@ -159,7 +162,7 @@ const CompetencyTab: React.FC<CompetencyTabProps> = (props) => {
             size="small"
             title={
               <span style={{ color: "#0F172A", fontWeight: 700 }}>
-                <WarningOutlined style={{ color: "#F59E0B", marginRight: 6 }} /> Cần làm rõ / Cải thiện ({missingSkills.length})
+                <WarningOutlined style={{ color: "#F59E0B", marginRight: 6 }} /> Cần làm rõ / Cải thiện ({missingCount})
               </span>
             }
             style={{
