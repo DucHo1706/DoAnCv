@@ -4,6 +4,7 @@ from dtos.request_dtos import ChatMessageModel, GenerateEmailRequest, EvaluateAn
 from services import scoring_service, interview_service, email_service, doc_parser_service
 from utils.logger import logger
 from utils.rate_limiter import check_ip_rate_limit
+from utils.error_handler import get_user_friendly_error_message
 import json
 
 router = APIRouter()
@@ -39,8 +40,8 @@ async def chat_bot(
     except HTTPException as he:
         raise he
     except Exception as e:
-        logger.error(f"Loi tro ly ao chat: {e}")
-        return {"status": "error", "message": str(e)}
+        msg = get_user_friendly_error_message(e, "Trợ lý AI đang bận. Vui lòng thử lại sau giây lát.")
+        return {"status": "error", "message": msg}
 
 
 @router.post("/evaluate-answer")
@@ -56,8 +57,8 @@ async def evaluate_answer(request: EvaluateAnswerRequest, req: Request):
     except HTTPException as he:
         raise he
     except Exception as e:
-        logger.error(f"Loi evaluate-answer: {e}")
-        return {"status": "error", "message": str(e)}
+        msg = get_user_friendly_error_message(e, "Không thể đánh giá câu trả lời lúc này. Vui lòng thử lại sau.")
+        return {"status": "error", "message": msg}
 
 
 @router.post("/generate-email")

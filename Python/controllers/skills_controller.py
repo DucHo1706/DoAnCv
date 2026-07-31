@@ -3,6 +3,7 @@ from dtos.request_dtos import SkillUpdateRequest, AprioriTrainRequest, SkillReco
 import nlp_processor
 from utils.logger import logger
 from utils.rate_limiter import check_ip_rate_limit
+from utils.error_handler import get_user_friendly_error_message
 import os
 import json
 
@@ -17,8 +18,8 @@ async def refresh_config(req: Request):
     except HTTPException as he:
         raise he
     except Exception as e:
-        logger.error(f"Loi lam moi cau hinh: {e}")
-        return {"status": "error", "message": str(e)}
+        msg = get_user_friendly_error_message(e, "Không thể làm mới cấu hình kỹ năng lúc này.")
+        return {"status": "error", "message": msg}
 
 
 @router.post("/update-skills")
@@ -46,15 +47,15 @@ async def update_skills(request: SkillUpdateRequest, req: Request):
         
         return {
             "status": "success", 
-            "message": f"Da dong bo thanh cong. Them {added_count} ky nang moi. Tong so: {count}.",
+            "message": f"Đã đồng bộ thành công. Thêm {added_count} kỹ năng mới. Tổng số: {count}.",
             "total_skills": count,
             "added_count": added_count
         }
     except HTTPException as he:
         raise he
     except Exception as e:
-        logger.error(f"Loi khi cap nhat ky nang: {e}")
-        return {"status": "error", "message": str(e)}
+        msg = get_user_friendly_error_message(e, "Không thể cập nhật danh sách kỹ năng lúc này.")
+        return {"status": "error", "message": msg}
 
 
 @router.post("/train-apriori")
@@ -69,14 +70,14 @@ async def train_apriori(request: AprioriTrainRequest, req: Request):
         )
         return {
             "status": "success",
-            "message": f"Huan luyen Apriori thanh cong. Khai pha duoc {len(rules)} luat kết hợp.",
+            "message": f"Huấn luyện Apriori thành công. Khai phá được {len(rules)} luật kết hợp.",
             "rules_count": len(rules)
         }
     except HTTPException as he:
         raise he
     except Exception as e:
-        logger.error(f"Loi khi huan luyen Apriori: {e}")
-        return {"status": "error", "message": str(e)}
+        msg = get_user_friendly_error_message(e, "Không thể huấn luyện thuật toán Apriori lúc này.")
+        return {"status": "error", "message": msg}
 
 
 @router.post("/recommend-skills")
@@ -95,8 +96,8 @@ async def recommend_skills(request: SkillRecommendRequest, req: Request):
     except HTTPException as he:
         raise he
     except Exception as e:
-        logger.error(f"Loi khi goi y ky nang: {e}")
-        return {"status": "error", "message": str(e)}
+        msg = get_user_friendly_error_message(e, "Không thể gợi ý kỹ năng lúc này.")
+        return {"status": "error", "message": msg}
 
 
 @router.get("/association-rules")
@@ -110,8 +111,8 @@ async def get_association_rules():
             rules = json.load(f)
         return {"status": "success", "rules": rules}
     except Exception as e:
-        logger.error(f"Loi khi lay danh sach luat ket hop: {e}")
-        return {"status": "error", "message": str(e)}
+        msg = get_user_friendly_error_message(e, "Không thể lấy danh sách luật kết hợp lúc này.")
+        return {"status": "error", "message": msg}
 
 
 @router.post("/train-huim")
@@ -133,14 +134,14 @@ async def train_huim(request: HUIMTrainRequest, req: Request):
         )
         return {
             "status": "success",
-            "message": f"Huan luyen HUIM (Two-Phase) thanh cong. Khai pha duoc {len(results)} tap ky nang co loi ich cao.",
+            "message": f"Huấn luyện HUIM (Two-Phase) thành công. Khai phá được {len(results)} tập kỹ năng có lợi ích cao.",
             "results_count": len(results)
         }
     except HTTPException as he:
         raise he
     except Exception as e:
-        logger.error(f"Loi khi huan luyen HUIM: {e}")
-        return {"status": "error", "message": str(e)}
+        msg = get_user_friendly_error_message(e, "Không thể huấn luyện thuật toán HUIM lúc này.")
+        return {"status": "error", "message": msg}
 
 
 @router.post("/recommend-high-utility-skills")
@@ -159,8 +160,8 @@ async def recommend_high_utility_skills(request: SkillRecommendRequest, req: Req
     except HTTPException as he:
         raise he
     except Exception as e:
-        logger.error(f"Loi khi goi y ky nang HUIM: {e}")
-        return {"status": "error", "message": str(e)}
+        msg = get_user_friendly_error_message(e, "Không thể gợi ý tập kỹ năng lợi ích cao lúc này.")
+        return {"status": "error", "message": msg}
 
 
 @router.get("/high-utility-itemsets")
@@ -174,5 +175,5 @@ async def get_high_utility_itemsets():
             itemsets = json.load(f)
         return {"status": "success", "itemsets": itemsets}
     except Exception as e:
-        logger.error(f"Loi khi lay danh sach tap ky nang loi ich cao: {e}")
-        return {"status": "error", "message": str(e)}
+        msg = get_user_friendly_error_message(e, "Không thể lấy danh sách tập kỹ năng lợi ích cao.")
+        return {"status": "error", "message": msg}

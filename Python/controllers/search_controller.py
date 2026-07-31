@@ -5,6 +5,7 @@ import numpy as np
 from services.gemini_service import embed_content_with_retry
 from utils.logger import logger
 from utils.rate_limiter import check_ip_rate_limit
+from utils.error_handler import get_user_friendly_error_message
 
 router = APIRouter()
 
@@ -64,6 +65,6 @@ async def semantic_search(request: SemanticSearchRequest, req: Request):
     except HTTPException as he:
         raise he
     except Exception as e:
-        logger.error(f"Loi trong qua trinh tim kiem ngu nghia: {e}")
+        get_user_friendly_error_message(e, "Lỗi tìm kiếm ngữ nghĩa.")
         # Tra ve danh sach trong kem loi de backend handles
         return SemanticSearchResponse(results=[])

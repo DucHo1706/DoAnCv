@@ -3,6 +3,7 @@ from dtos.request_dtos import LazyAnalysisRequest
 from services import cv_analysis_service, interview_service, scoring_service
 from utils.logger import logger
 from utils.rate_limiter import check_ip_rate_limit
+from utils.error_handler import get_user_friendly_error_message
 import json
 import time
 
@@ -22,19 +23,19 @@ async def score_cv(
         except Exception:
             return {
                 "status": "error",
-                "message": "Danh sach tieu chi danh gia khong dung dinh dang JSON."
+                "message": "Danh sách tiêu chí đánh giá không đúng định dạng JSON."
             }
 
         if not isinstance(criteria_list, list):
             return {
                 "status": "error",
-                "message": "Danh sach tieu chi danh gia phai la mot mang JSON."
+                "message": "Danh sách tiêu chí đánh giá phải là một mảng JSON."
             }
 
         if len(criteria_list) == 0:
             return {
                 "status": "error",
-                "message": "Vui long truyen it nhat 1 tieu chi danh gia."
+                "message": "Vui lòng truyền ít nhất 1 tiêu chí đánh giá."
             }
 
         total_weight = 0
@@ -42,14 +43,14 @@ async def score_cv(
             if "name" not in criterion or "weight" not in criterion:
                 return {
                     "status": "error",
-                    "message": "Moi tieu chi phai co name va weight."
+                    "message": "Mỗi tiêu chí phải có name và weight."
                 }
 
             criterion_name = str(criterion["name"]).strip()
             if criterion_name == "":
                 return {
                     "status": "error",
-                    "message": "Ten tieu chi khong duoc de trong."
+                    "message": "Tên tiêu chí không được để trống."
                 }
 
             try:
@@ -57,13 +58,13 @@ async def score_cv(
             except Exception:
                 return {
                     "status": "error",
-                    "message": "Trong so tieu chi phai la so nguyen."
+                    "message": "Trọng số tiêu chí phải là số nguyên."
                 }
 
             if criterion_weight <= 0 or criterion_weight > 100:
                 return {
                     "status": "error",
-                    "message": "Trong so moi tieu chi phai tu 1 den 100."
+                    "message": "Trọng số mỗi tiêu chí phải từ 1 đến 100."
                 }
 
             total_weight += criterion_weight
@@ -71,7 +72,7 @@ async def score_cv(
         if total_weight != 100:
             return {
                 "status": "error",
-                "message": f"Tong trong so tieu chi phai bang 100%. Hien tai dang la {total_weight}%."
+                "message": f"Tổng trọng số tiêu chí phải bằng 100%. Hiện tại đang là {total_weight}%."
             }
 
         file_bytes = await file.read()
@@ -87,8 +88,8 @@ async def score_cv(
     except HTTPException as he:
         raise he
     except Exception as e:
-        logger.error(f"Loi score-cv: {e}")
-        return {"status": "error", "message": str(e)}
+        msg = get_user_friendly_error_message(e, "Không thể chấm điểm CV lúc này. Vui lòng thử lại sau.")
+        return {"status": "error", "message": msg}
 
 
 @router.post("/analyze-cv-preview")
@@ -115,8 +116,8 @@ async def analyze_cv_preview(
     except HTTPException as he:
         raise he
     except Exception as e:
-        logger.error(f"Loi analyze-cv-preview: {e}")
-        return {"status": "error", "message": str(e)}
+        msg = get_user_friendly_error_message(e, "Không thể phân tích hồ sơ lúc này. Vui lòng thử lại sau.")
+        return {"status": "error", "message": msg}
 
 
 @router.post("/analyze-cv-star")
@@ -131,14 +132,13 @@ def analyze_cv_star(request_data: LazyAnalysisRequest, req: Request):
             jd_skills=request_data.jd_skills
         )
         elapsed = time.time() - start
-        logger.info(f"Phan tich STAR hoan thanh trong {elapsed:.1f}s")
+        logger.info(f"Phân tích STAR hoàn thành trong {elapsed:.1f}s")
         return {"status": "success", "data": res}
     except HTTPException as he:
         raise he
     except Exception as e:
-        elapsed = time.time() - start
-        logger.error(f"Loi phan tich STAR sau {elapsed:.1f}s: {e}")
-        return {"status": "error", "message": str(e)}
+        msg = get_user_friendly_error_message(e, "Không thể tạo gợi ý STAR lúc này. Vui lòng thử lại sau.")
+        return {"status": "error", "message": msg}
 
 
 @router.post("/analyze-cv-language")
@@ -151,14 +151,13 @@ def analyze_cv_language(request_data: LazyAnalysisRequest, req: Request):
             jd_text=request_data.jd_text
         )
         elapsed = time.time() - start
-        logger.info(f"Phan tich ngon ngu hoan thanh trong {elapsed:.1f}s")
+        logger.info(f"Phân tích ngôn ngữ hoàn thành trong {elapsed:.1f}s")
         return {"status": "success", "data": res}
     except HTTPException as he:
         raise he
     except Exception as e:
-        elapsed = time.time() - start
-        logger.error(f"Loi phan tich ngon ngu sau {elapsed:.1f}s: {e}")
-        return {"status": "error", "message": str(e)}
+        msg = get_user_friendly_error_message(e, "Không thể kiểm tra ngôn từ lúc này. Vui lòng thử lại sau.")
+        return {"status": "error", "message": msg}
 
 
 @router.post("/analyze-cv-interview")
@@ -173,11 +172,10 @@ def analyze_cv_interview(request_data: LazyAnalysisRequest, req: Request):
             company_name=request_data.company_name
         )
         elapsed = time.time() - start
-        logger.info(f"Phan tich cau hoi phong van hoan thanh trong {elapsed:.1f}s")
+        logger.info(f"Phân tích câu hỏi phỏng vấn hoàn thành trong {elapsed:.1f}s")
         return {"status": "success", "data": res}
     except HTTPException as he:
         raise he
     except Exception as e:
-        elapsed = time.time() - start
-        logger.error(f"Loi phan tich cau hoi phong van sau {elapsed:.1f}s: {e}")
-        return {"status": "error", "message": str(e)}
+        msg = get_user_friendly_error_message(e, "Không thể tạo gợi ý phỏng vấn lúc này. Vui lòng thử lại sau.")
+        return {"status": "error", "message": msg}
