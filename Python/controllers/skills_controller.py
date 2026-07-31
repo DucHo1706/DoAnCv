@@ -1,25 +1,30 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Request, HTTPException
 from dtos.request_dtos import SkillUpdateRequest, AprioriTrainRequest, SkillRecommendRequest, HUIMTrainRequest
 import nlp_processor
 from utils.logger import logger
+from utils.rate_limiter import check_ip_rate_limit
 import os
 import json
 
 router = APIRouter()
 
 @router.post("/refresh-config")
-async def refresh_config():
+async def refresh_config(req: Request):
     try:
+        check_ip_rate_limit(req, cooldown_seconds=2.0, max_requests_per_minute=20)
         count = nlp_processor.reload_knowledge_base()
         return {"status": "success", "total_skills": count}
+    except HTTPException as he:
+        raise he
     except Exception as e:
         logger.error(f"Loi lam moi cau hinh: {e}")
         return {"status": "error", "message": str(e)}
 
 
 @router.post("/update-skills")
-async def update_skills(request: SkillUpdateRequest):
+async def update_skills(request: SkillUpdateRequest, req: Request):
     try:
+        check_ip_rate_limit(req, cooldown_seconds=2.0, max_requests_per_minute=30)
         existing_skills = set()
         if os.path.exists("skills.json"):
             try:
@@ -45,14 +50,17 @@ async def update_skills(request: SkillUpdateRequest):
             "total_skills": count,
             "added_count": added_count
         }
+    except HTTPException as he:
+        raise he
     except Exception as e:
         logger.error(f"Loi khi cap nhat ky nang: {e}")
         return {"status": "error", "message": str(e)}
 
 
 @router.post("/train-apriori")
-async def train_apriori(request: AprioriTrainRequest):
+async def train_apriori(request: AprioriTrainRequest, req: Request):
     try:
+        check_ip_rate_limit(req, cooldown_seconds=3.0, max_requests_per_minute=10)
         from services import apriori_service
         rules = apriori_service.train_and_save_rules(
             transactions_list=request.transactions,
@@ -64,14 +72,17 @@ async def train_apriori(request: AprioriTrainRequest):
             "message": f"Huan luyen Apriori thanh cong. Khai pha duoc {len(rules)} luat kết hợp.",
             "rules_count": len(rules)
         }
+    except HTTPException as he:
+        raise he
     except Exception as e:
         logger.error(f"Loi khi huan luyen Apriori: {e}")
         return {"status": "error", "message": str(e)}
 
 
 @router.post("/recommend-skills")
-async def recommend_skills(request: SkillRecommendRequest):
+async def recommend_skills(request: SkillRecommendRequest, req: Request):
     try:
+        check_ip_rate_limit(req, cooldown_seconds=1.0, max_requests_per_minute=40)
         from services import apriori_service
         recommended = apriori_service.get_recommended_skills(
             current_skills=request.current_skills,
@@ -81,6 +92,8 @@ async def recommend_skills(request: SkillRecommendRequest):
             "status": "success",
             "recommended_skills": recommended
         }
+    except HTTPException as he:
+        raise he
     except Exception as e:
         logger.error(f"Loi khi goi y ky nang: {e}")
         return {"status": "error", "message": str(e)}
@@ -102,8 +115,9 @@ async def get_association_rules():
 
 
 @router.post("/train-huim")
-async def train_huim(request: HUIMTrainRequest):
+async def train_huim(request: HUIMTrainRequest, req: Request):
     try:
+        check_ip_rate_limit(req, cooldown_seconds=3.0, max_requests_per_minute=10)
         from services import huim_service
         tx_list = []
         for tx in request.transactions:
@@ -122,14 +136,17 @@ async def train_huim(request: HUIMTrainRequest):
             "message": f"Huan luyen HUIM (Two-Phase) thanh cong. Khai pha duoc {len(results)} tap ky nang co loi ich cao.",
             "results_count": len(results)
         }
+    except HTTPException as he:
+        raise he
     except Exception as e:
         logger.error(f"Loi khi huan luyen HUIM: {e}")
         return {"status": "error", "message": str(e)}
 
 
 @router.post("/recommend-high-utility-skills")
-async def recommend_high_utility_skills(request: SkillRecommendRequest):
+async def recommend_high_utility_skills(request: SkillRecommendRequest, req: Request):
     try:
+        check_ip_rate_limit(req, cooldown_seconds=1.0, max_requests_per_minute=40)
         from services import huim_service
         recommended = huim_service.get_recommended_huim_skills(
             current_skills=request.current_skills,
@@ -139,6 +156,8 @@ async def recommend_high_utility_skills(request: SkillRecommendRequest):
             "status": "success",
             "recommended_skills": recommended
         }
+    except HTTPException as he:
+        raise he
     except Exception as e:
         logger.error(f"Loi khi goi y ky nang HUIM: {e}")
         return {"status": "error", "message": str(e)}

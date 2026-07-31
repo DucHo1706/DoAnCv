@@ -5,6 +5,7 @@ using RecruitmentBackend.DTOs.Requests;
 using RecruitmentBackend.Interfaces;
 using RecruitmentBackend.Models;
 using System;
+using System.Collections.Concurrent;
 using System.Threading.Tasks;
 
 namespace RecruitmentBackend.Controllers
@@ -17,6 +18,9 @@ namespace RecruitmentBackend.Controllers
         private readonly AppDbContext _context;
         private readonly IEmailSenderService _emailSenderService;
         private readonly IAuditLogService _auditLogService;
+
+        // Theo dõi tần suất gửi OTP khôi phục mật khẩu (Email -> (Count, LastSent))
+        private static readonly ConcurrentDictionary<string, (int Count, DateTime LastSent)> _otpRequestTracker = new();
 
         public AuthController(IAuthService authService, AppDbContext context, IEmailSenderService emailSenderService, IAuditLogService auditLogService)
         {
@@ -55,13 +59,44 @@ namespace RecruitmentBackend.Controllers
         {
             if (request == null || string.IsNullOrEmpty(request.Email))
             {
-                return BadRequest("Email không được để trống.");
+                return BadRequest(new { message = "Email không được để trống." });
+            }
+
+            var emailKey = request.Email.Trim().ToLower();
+            var now = DateTime.Now;
+
+            // KIỂM TRA TẦN SUẤT GỬI OTP (COOLDOWN 60s & GIỚI HẠN 3 LẦN / 10 PHÚT)
+            if (_otpRequestTracker.TryGetValue(emailKey, out var trackingInfo))
+            {
+                var timeSinceLastSent = (now - trackingInfo.LastSent).TotalSeconds;
+                if (timeSinceLastSent < 60)
+                {
+                    int remaining = (int)Math.Ceiling(60 - timeSinceLastSent);
+                    return BadRequest(new { message = $"Vui lòng đợi {remaining} giây trước khi yêu cầu mã OTP mới." });
+                }
+
+                if ((now - trackingInfo.LastSent).TotalMinutes < 10)
+                {
+                    if (trackingInfo.Count >= 3)
+                    {
+                        return BadRequest(new { message = "Bạn đã vượt quá giới hạn 3 lần yêu cầu gửi OTP trong 10 phút. Vui lòng thử lại sau." });
+                    }
+                    _otpRequestTracker[emailKey] = (trackingInfo.Count + 1, now);
+                }
+                else
+                {
+                    _otpRequestTracker[emailKey] = (1, now);
+                }
+            }
+            else
+            {
+                _otpRequestTracker[emailKey] = (1, now);
             }
 
             var account = await _context.Accounts.FirstOrDefaultAsync(a => a.Email == request.Email);
             if (account == null)
             {
-                return NotFound("Không tìm thấy tài khoản với email này trong hệ thống.");
+                return NotFound(new { message = "Không tìm thấy tài khoản với email này trong hệ thống." });
             }
 
             var otp = new Random().Next(100000, 999999).ToString();
@@ -126,6 +161,10 @@ namespace RecruitmentBackend.Controllers
 
             _context.Accounts.Update(account);
             await _context.SaveChangesAsync();
+
+            // XÓA THEO DÕI OTP KHI ĐỔI MẬT KHẨU THÀNH CÔNG
+            var emailKey = request.Email.Trim().ToLower();
+            _otpRequestTracker.TryRemove(emailKey, out _);
 
             return Ok(new { message = "Khôi phục mật khẩu thành công! Bạn có thể sử dụng mật khẩu mới để đăng nhập." });
         }

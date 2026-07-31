@@ -1,5 +1,7 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
 from contextlib import asynccontextmanager
 import uvicorn
 import urllib3
@@ -29,6 +31,39 @@ app = FastAPI(
     version="1.0",
     lifespan=lifespan
 )
+
+# 1. Cấu hình Giới hạn Kích thước Payload HTTP Request (Tối đa 10MB)
+MAX_PAYLOAD_SIZE = 10 * 1024 * 1024  # 10 MB
+
+@app.middleware("http")
+async def limit_request_body_size(request: Request, call_next):
+    content_length = request.headers.get("content-length")
+    if content_length:
+        try:
+            if int(content_length) > MAX_PAYLOAD_SIZE:
+                return JSONResponse(
+                    status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                    content={
+                        "status": "error",
+                        "message": "Dữ liệu hoặc tập tin gửi lên vượt quá kích thước cho phép (Tối đa 10MB)."
+                    }
+                )
+        except ValueError:
+            pass
+    return await call_next(request)
+
+# 2. Xử lý lỗi sai định dạng Payload / Lỗi Validation Pydantic
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    logger.warning(f"Payload sai dinh dang tu IP {request.client.host if request.client else 'unknown'}: {exc}")
+    return JSONResponse(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        content={
+            "status": "error",
+            "message": "Dữ liệu gửi lên sai định dạng hoặc chứa trường thông tin không hợp lệ.",
+            "details": exc.errors()
+        }
+    )
 
 # Cau hinh CORS cho phep Frontend goi truc tiep
 app.add_middleware(

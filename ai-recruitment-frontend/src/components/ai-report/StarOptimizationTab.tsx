@@ -198,7 +198,27 @@ const renderFormattedStarText = (text: string | null) => {
 };
 
 const StarOptimizationTab: React.FC<StarOptimizationTabProps> = ({ optimizationTips }) => {
-  const tipGroups = optimizationTips.reduce(
+  const normalizedTips = (optimizationTips || []).map((t: any, idx: number) => {
+    const group = t.group || "Kinh nghiệm & Dự án";
+    const title = t.title || (t.reason ? `Đề xuất tối ưu #${idx + 1}` : "Tối ưu mô tả kinh nghiệm theo chuẩn STAR");
+    const detail = t.detail || t.reason || "Bổ sung số liệu lượng hóa và sử dụng động từ hành động mạnh để gây ấn tượng với nhà tuyển dụng.";
+    const priority = t.priority || (idx === 0 ? "high" : "medium");
+    const star_guidance = t.star_guidance || "Nêu rõ bối cảnh (Situation), nhiệm vụ (Task), hành động (Action) và kết quả định lượng (Result).";
+    const example_before = t.example_before || t.original_text || null;
+    const example_after = t.example_after || t.improved_text || null;
+
+    return {
+      group,
+      title,
+      detail,
+      priority,
+      star_guidance,
+      example_before,
+      example_after,
+    } as OptimizationTip;
+  });
+
+  const tipGroups = normalizedTips.reduce(
     (acc: Record<string, OptimizationTip[]>, tip: OptimizationTip) => {
       if (tip && tip.group) {
         if (!acc[tip.group]) acc[tip.group] = [];

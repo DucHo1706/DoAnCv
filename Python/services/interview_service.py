@@ -9,14 +9,22 @@ def get_fallback_star_tips(cv_skills: list = None, jd_skills: list = None) -> li
     missing_skill = jd_skills[0] if jd_skills and len(jd_skills) > 0 else "tối ưu quy trình"
     return [
         {
-            "original_text": f"Phụ trách tham gia và đóng góp trong các dự án công nghệ liên quan đến {top_skill}.",
-            "improved_text": f"Chủ trì phát triển và tối ưu hệ thống sử dụng {top_skill}, hỗ trợ xử lý 1,000+ yêu cầu/ngày và nâng cao 25% hiệu suất vận hành.",
-            "reason": "Bổ sung số liệu định lượng (25% hiệu suất, 1,000+ requests) và sử dụng động từ hành động mạnh theo chuẩn STAR."
+            "group": "Kinh nghiệm",
+            "title": f"Lượng hóa thành tựu dự án {top_skill}",
+            "detail": "Bổ sung số liệu định lượng (25% hiệu suất, 1,000+ requests) và sử dụng động từ hành động mạnh theo chuẩn STAR.",
+            "priority": "high",
+            "star_guidance": "Nêu rõ bối cảnh dự án (S), nhiệm vụ (T), hành động cụ thể (A) và kết quả đo lường (R).",
+            "example_before": f"Phụ trách tham gia và đóng góp trong các dự án công nghệ liên quan đến {top_skill}.",
+            "example_after": f"Chủ trì phát triển và tối ưu hệ thống sử dụng {top_skill}, hỗ trợ xử lý 1,000+ yêu cầu/ngày và nâng cao 25% hiệu suất vận hành."
         },
         {
-            "original_text": f"Phối hợp với các thành viên trong đội ngũ để tìm hiểu về {missing_skill}.",
-            "improved_text": f"Chủ động nghiên cứu và áp dụng quy trình chuẩn về {missing_skill}, giúp rút ngắn 30% thời gian triển khai mốc dự án.",
-            "reason": "Cụ thể hóa thành tựu và thể hiện tinh thần chủ động nâng cao năng lực chuyên môn."
+            "group": "Dự án",
+            "title": f"Tối ưu mô tả quy trình {missing_skill}",
+            "detail": "Cụ thể hóa thành tựu và thể hiện tinh thần chủ động nâng cao năng lực chuyên môn.",
+            "priority": "medium",
+            "star_guidance": "Nhấn mạnh vai trò chủ trì và kết quả định lượng về thời gian triển khai.",
+            "example_before": f"Phối hợp với các thành viên trong đội ngũ để tìm hiểu về {missing_skill}.",
+            "example_after": f"Chủ động nghiên cứu và áp dụng quy trình chuẩn về {missing_skill}, giúp rút ngắn 30% thời gian triển khai mốc dự án."
         }
     ]
 

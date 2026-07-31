@@ -1,14 +1,16 @@
-from fastapi import APIRouter, UploadFile, File, Form
+from fastapi import APIRouter, UploadFile, File, Form, Request, HTTPException
 from typing import Optional
 from dtos.request_dtos import ChatMessageModel, GenerateEmailRequest, EvaluateAnswerRequest
 from services import scoring_service, interview_service, email_service, doc_parser_service
 from utils.logger import logger
+from utils.rate_limiter import check_ip_rate_limit
 import json
 
 router = APIRouter()
 
 @router.post("/chat")
 async def chat_bot(
+    req: Request,
     prompt: str = Form(...),
     history: str = Form("[]"),
     job_description: str = Form(""),
@@ -16,6 +18,7 @@ async def chat_bot(
     file: Optional[UploadFile] = File(None)
 ):
     try:
+        check_ip_rate_limit(req, cooldown_seconds=2.0, max_requests_per_minute=30)
         try:
             history_list = json.loads(history)
             history_objs = [ChatMessageModel(**msg) for msg in history_list]
@@ -33,28 +36,34 @@ async def chat_bot(
             prompt, history_objs, job_description, file_text, system_knowledge
         )
         return {"status": "success", "reply": reply, "extracted_text": file_text}
+    except HTTPException as he:
+        raise he
     except Exception as e:
         logger.error(f"Loi tro ly ao chat: {e}")
         return {"status": "error", "message": str(e)}
 
 
 @router.post("/evaluate-answer")
-async def evaluate_answer(request: EvaluateAnswerRequest):
+async def evaluate_answer(request: EvaluateAnswerRequest, req: Request):
     try:
+        check_ip_rate_limit(req, cooldown_seconds=2.0, max_requests_per_minute=30)
         res = interview_service.evaluate_interview_answer(
             question=request.question,
             answer=request.answer,
             job_title=request.job_title
         )
         return res
+    except HTTPException as he:
+        raise he
     except Exception as e:
         logger.error(f"Loi evaluate-answer: {e}")
         return {"status": "error", "message": str(e)}
 
 
 @router.post("/generate-email")
-async def generate_email(request: GenerateEmailRequest):
+async def generate_email(request: GenerateEmailRequest, req: Request):
     try:
+        check_ip_rate_limit(req, cooldown_seconds=2.0, max_requests_per_minute=20)
         email_type = request.email_type.strip().lower()
 
         if email_type not in ["invite", "reject"]:
@@ -102,6 +111,8 @@ async def generate_email(request: GenerateEmailRequest):
             "body": result["body"]
         }
 
+    except HTTPException as he:
+        raise he
     except Exception as exception:
         logger.error(f"Loi phat sinh khi generate email: {exception}")
         return {

@@ -30,14 +30,18 @@ Thumbs.db
 # Upload folder (optional)
 Uploads/
 
-# Visual Studio Code
+# Visual Studio Code & Dependencies
 node_modules/
-.env
 dist/
 build/
-google-credentials.json
-appsettings.json
-appsettings.Development.json
+
+# Environment & Sensitive Credentials (Never commit to Git)
+.env
+**/.env
+**/.env.*
+**/appsettings.Development.json
+**/appsettings.Local.json
+**/google-credentials.json
 
 # Thesis / Report documents & temporary files
 BaoCao_CoSoLyLuan_Prompts*.docx

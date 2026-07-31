@@ -1,9 +1,10 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Request, HTTPException
 from pydantic import BaseModel
 from typing import List
 import numpy as np
 from services.gemini_service import embed_content_with_retry
 from utils.logger import logger
+from utils.rate_limiter import check_ip_rate_limit
 
 router = APIRouter()
 
@@ -31,8 +32,9 @@ def cosine_similarity(v1, v2):
     return float(dot_product / (norm_v1 * norm_v2))
 
 @router.post("/semantic-search", response_model=SemanticSearchResponse)
-async def semantic_search(request: SemanticSearchRequest):
+async def semantic_search(request: SemanticSearchRequest, req: Request):
     try:
+        check_ip_rate_limit(req, cooldown_seconds=1.0, max_requests_per_minute=40)
         if not request.query.strip() or not request.jobs:
             return SemanticSearchResponse(results=[])
             
@@ -59,6 +61,8 @@ async def semantic_search(request: SemanticSearchRequest):
         results.sort(key=lambda x: x.score, reverse=True)
         
         return SemanticSearchResponse(results=results)
+    except HTTPException as he:
+        raise he
     except Exception as e:
         logger.error(f"Loi trong qua trinh tim kiem ngu nghia: {e}")
         # Tra ve danh sach trong kem loi de backend handles

@@ -76,15 +76,17 @@ const CompetencyTab: React.FC<CompetencyTabProps> = (props) => {
     );
   }
 
-  const matchedSkills = scoreAnalysis.matched_skills || [];
-  const missingSkills = scoreAnalysis.missing_skills || [];
-  const redFlags = scoreAnalysis.red_flags || [];
+  const matchedSkills = scoreAnalysis?.matched_skills || [];
+  const missingSkills = scoreAnalysis?.missing_skills || [];
+  const redFlags = scoreAnalysis?.red_flags || [];
+  const strengths = scoreAnalysis?.strengths || [];
+  const weaknesses = scoreAnalysis?.weaknesses || [];
 
   return (
     <Space direction="vertical" size={20} style={{ width: "100%" }}>
       <Alert
         message="Tóm tắt nhận xét chuyên sâu từ AI"
-        description={scoreAnalysis.summary || "Hệ thống đã phân tích CV so với JD."}
+        description={scoreAnalysis?.summary || "Hệ thống đã phân tích CV so với JD."}
         type="info"
         showIcon
       />
@@ -134,6 +136,14 @@ const CompetencyTab: React.FC<CompetencyTabProps> = (props) => {
                   >
                     {s}
                   </Tag>
+                ))}
+              </div>
+            ) : strengths.length > 0 ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                {strengths.map((strItem: string, idx: number) => (
+                  <Text key={idx} style={{ color: "#334155", fontSize: 13.5 }}>
+                    • {strItem}
+                  </Text>
                 ))}
               </div>
             ) : (
@@ -190,6 +200,14 @@ const CompetencyTab: React.FC<CompetencyTabProps> = (props) => {
                   </Tag>
                 ))}
               </div>
+            ) : weaknesses.length > 0 ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                {weaknesses.map((wItem: string, idx: number) => (
+                  <Text key={idx} style={{ color: "#334155", fontSize: 13.5 }}>
+                    • {wItem}
+                  </Text>
+                ))}
+              </div>
             ) : (
               <Text type="secondary" style={{ fontStyle: "italic", color: "#10B981" }}>
                 CV đã đáp ứng đủ kỹ năng cốt lõi 🎉
@@ -216,31 +234,44 @@ const CompetencyTab: React.FC<CompetencyTabProps> = (props) => {
             <CloseCircleOutlined style={{ marginRight: 6 }} /> Điểm cảnh báo cần lưu ý (Red Flags)
           </Text>
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {redFlags.map((flag: any, idx: number) => (
-              <Card
-                key={idx}
-                size="small"
-                style={{
-                  borderRadius: 12,
-                  background: "#FFFFFF",
-                  border: "1px solid #E2E8F0",
-                  borderLeft: "4px solid #EF4444",
-                }}
-                bodyStyle={{ padding: "16px" }}
-              >
-                <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
-                  <CloseCircleOutlined style={{ color: "#EF4444", fontSize: "16px", marginTop: "3px" }} />
-                  <div>
-                    <Text strong style={{ color: "#0F172A", fontSize: "15px", display: "block", marginBottom: 4 }}>
-                      {flag.title || "Cảnh báo"}
-                    </Text>
-                    <Text type="secondary" style={{ color: "#64748B", fontSize: "14px" }}>
-                      {flag.description}
-                    </Text>
+            {redFlags.map((flag: any, idx: number) => {
+              const titleText =
+                typeof flag === "string"
+                  ? "Cảnh báo cần trao đổi thêm"
+                  : flag.title || flag.flag || flag.name || "Cảnh báo";
+              const descText =
+                typeof flag === "string"
+                  ? flag
+                  : flag.description || flag.detail || flag.reason || flag.comment || "";
+
+              return (
+                <Card
+                  key={idx}
+                  size="small"
+                  style={{
+                    borderRadius: 12,
+                    background: "#FFFFFF",
+                    border: "1px solid #E2E8F0",
+                    borderLeft: "4px solid #EF4444",
+                  }}
+                  bodyStyle={{ padding: "16px" }}
+                >
+                  <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                    <CloseCircleOutlined style={{ color: "#EF4444", fontSize: "16px", marginTop: "3px" }} />
+                    <div>
+                      <Text strong style={{ color: "#0F172A", fontSize: "15px", display: "block", marginBottom: 4 }}>
+                        {titleText}
+                      </Text>
+                      {descText && (
+                        <Text type="secondary" style={{ color: "#64748B", fontSize: "14px" }}>
+                          {descText}
+                        </Text>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </Card>
-            ))}
+                </Card>
+              );
+            })}
           </div>
         </div>
       )}
