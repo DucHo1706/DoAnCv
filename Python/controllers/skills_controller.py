@@ -61,7 +61,7 @@ async def update_skills(request: SkillUpdateRequest, req: Request):
 @router.post("/train-apriori")
 async def train_apriori(request: AprioriTrainRequest, req: Request):
     try:
-        check_ip_rate_limit(req, cooldown_seconds=3.0, max_requests_per_minute=10)
+        check_ip_rate_limit(req, cooldown_seconds=0.5, max_requests_per_minute=30)
         from services import apriori_service
         rules = apriori_service.train_and_save_rules(
             transactions_list=request.transactions,
@@ -83,7 +83,7 @@ async def train_apriori(request: AprioriTrainRequest, req: Request):
 @router.post("/recommend-skills")
 async def recommend_skills(request: SkillRecommendRequest, req: Request):
     try:
-        check_ip_rate_limit(req, cooldown_seconds=1.0, max_requests_per_minute=40)
+        check_ip_rate_limit(req, cooldown_seconds=0.5, max_requests_per_minute=40)
         from services import apriori_service
         recommended = apriori_service.get_recommended_skills(
             current_skills=request.current_skills,
@@ -118,7 +118,7 @@ async def get_association_rules():
 @router.post("/train-huim")
 async def train_huim(request: HUIMTrainRequest, req: Request):
     try:
-        check_ip_rate_limit(req, cooldown_seconds=3.0, max_requests_per_minute=10)
+        check_ip_rate_limit(req, cooldown_seconds=0.5, max_requests_per_minute=30)
         from services import huim_service
         tx_list = []
         for tx in request.transactions:
