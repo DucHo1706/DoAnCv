@@ -93,8 +93,7 @@ def generate_content_with_retry(prompt: str, is_json: bool = True, models: list 
     models_to_try = models if models is not None else [
         "gemini-2.0-flash",
         "gemini-1.5-flash",
-        "gemini-1.5-flash-8b",
-        "gemini-2.0-flash-lite-preview-02-05",
+        "gemini-2.0-flash-lite",
     ]
     config = types.GenerateContentConfig(
         response_mime_type="application/json" if is_json else "text/plain"
@@ -108,6 +107,7 @@ def generate_content_with_retry(prompt: str, is_json: bool = True, models: list 
         shuffled_clients = list(enumerate(clients))
         random.shuffle(shuffled_clients)
         
+        is_model_not_found = False
         for client_idx, active_client in shuffled_clients:
             try:
                 response = active_client.models.generate_content(
@@ -126,8 +126,15 @@ def generate_content_with_retry(prompt: str, is_json: bool = True, models: list 
                 last_error = e
                 err_str = str(e).lower()
                 logger.warning(f"Loi goi model {model_name} voi Key #{client_idx+1}: {e}")
+                if "404" in err_str or "not_found" in err_str or "not found" in err_str:
+                    logger.warning(f"Model {model_name} khong ton tai (404 NOT_FOUND). Bo qua model nay.")
+                    is_model_not_found = True
+                    break
                 if "429" in err_str or "resource_exhausted" in err_str:
                     time.sleep(0.5) # Sleep briefly on rate limit before trying next key/model
+
+        if is_model_not_found:
+            continue
                 
         logger.warning(f"Model {model_name} khong kha dung tren cac Keys hien co. Dang thu model tiep theo...")
         
