@@ -97,10 +97,35 @@ def extract_text_from_file(file_bytes: bytes, filename: str, content_type: str) 
                 except Exception as ocr_err:
                     print(f"⚠️ Lỗi OCR PDF: {ocr_err}")
 
-        # 2. FILE ẢNH (PNG, JPEG)
-        elif content_type in ["image/png", "image/jpeg", "image/jpg"] or filename.lower().endswith((".png", ".jpg", ".jpeg")):
-            image = Image.open(io.BytesIO(file_bytes))
-            text = pytesseract.image_to_string(image, lang='vie+eng')
+        # 2. FILE ẢNH (PNG, JPEG, Screenshot)
+        elif content_type in ["image/png", "image/jpeg", "image/jpg", "image/webp"] or filename.lower().endswith((".png", ".jpg", ".jpeg", ".webp")):
+            try:
+                image = Image.open(io.BytesIO(file_bytes))
+                text = pytesseract.image_to_string(image, lang='vie+eng')
+            except Exception as tesseract_err:
+                print(f"⚠️ PyTesseract gặp lỗi khi đọc ảnh: {tesseract_err}")
+                text = ""
+
+            # Nếu PyTesseract bị thiếu/lỗi hoặc không trích xuất đủ văn bản, sử dụng Gemini Vision OCR
+            if not text.strip() or len(text.strip()) < 30:
+                print("⚠️ [OCR FALLBACK] Trích xuất bằng PyTesseract ít chữ/thất bại, chuyển sang Gemini Vision Multimodal...")
+                try:
+                    from services import gemini_service
+                    prompt = (
+                        "Bạn là hệ thống trích xuất OCR CV chuyên nghiệp. Hãy đọc và trích xuất toàn bộ văn bản "
+                        "(kỹ năng, kinh nghiệm làm việc, học vấn, chứng chỉ, thông tin liên hệ, mục tiêu nghề nghiệp) "
+                        "từ bức ảnh CV này thành dạng văn bản thuần túy tiếng Việt, giữ nguyên đầy đủ nội dung."
+                    )
+                    vision_text = gemini_service.generate_vision_content_with_retry(
+                        image_bytes=file_bytes,
+                        mime_type=content_type,
+                        prompt=prompt
+                    )
+                    if vision_text.strip():
+                        print("✅ [OCR FALLBACK] Gemini Vision đã bóc tách văn bản thành công từ ảnh CV!")
+                        text = vision_text
+                except Exception as vision_err:
+                    print(f"⚠️ Gemini Vision OCR gặp lỗi: {vision_err}")
 
         # 3. FILE WORD .docx
         elif filename.lower().endswith(".docx"):

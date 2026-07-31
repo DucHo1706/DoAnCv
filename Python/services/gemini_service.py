@@ -170,3 +170,41 @@ def embed_content_with_retry(texts: list) -> list:
             logger.warning(f"Loi goi Embedding voi Key #{client_idx+1}: {e}")
             
     raise last_error or Exception("Khong the ket noi den Google Gemini Embedding API sau khi xoay vong cac keys.")
+
+
+def generate_vision_content_with_retry(image_bytes: bytes, mime_type: str, prompt: str) -> str:
+    """
+    Sử dụng Gemini Multimodal Vision để đọc và bóc tách văn bản từ tệp ảnh CV (PNG/JPG/Screenshot)
+    khi Tesseract OCR cục bộ bị thiếu hoặc không đọc được.
+    """
+    if not clients:
+        return ""
+
+    models_to_try = [
+        "gemini-2.0-flash",
+        "gemini-1.5-flash"
+    ]
+
+    import random
+    shuffled_clients = list(enumerate(clients))
+    random.shuffle(shuffled_clients)
+
+    # Đảm bảo mime_type hợp lệ cho Gemini Part
+    valid_mime = mime_type if mime_type in ["image/png", "image/jpeg", "image/webp"] else "image/jpeg"
+    image_part = types.Part.from_bytes(data=image_bytes, mime_type=valid_mime)
+
+    for model_name in models_to_try:
+        for client_idx, active_client in shuffled_clients:
+            try:
+                response = active_client.models.generate_content(
+                    model=model_name,
+                    contents=[image_part, prompt]
+                )
+                if response and response.text:
+                    logger.info(f"✅ Gemini Vision OCR thanh cong voi model {model_name} (Key #{client_idx+1})")
+                    return response.text.strip()
+            except Exception as e:
+                logger.warning(f"Loi Gemini Vision voi model {model_name} (Key #{client_idx+1}): {e}")
+
+    return ""
+
