@@ -77,14 +77,14 @@ namespace RecruitmentBackend.Services
 
                 if (isSuccess == false)
                 {
-                    return (false, "Lỗi từ dịch vụ Python khi chạy thuật toán Apriori.", null);
+                    return (false, "Không thể kết nối hoặc lỗi từ dịch vụ Python AI (ai-service:8000). Vui lòng kiểm tra máy chủ Python AI đã được khởi chạy trên cổng 8000.", null);
                 }
 
                 return (true, $"Khai phá thành công với {transactions.Count} tập dữ liệu CV.", null);
             }
             catch (Exception ex)
             {
-                return (false, "Lỗi hệ thống: " + ex.Message, null);
+                return (false, "Lỗi hệ thống khi huấn luyện Apriori: " + ex.Message, null);
             }
         }
 

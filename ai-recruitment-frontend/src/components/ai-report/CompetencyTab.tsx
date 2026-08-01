@@ -213,7 +213,7 @@ const CompetencyTab: React.FC<CompetencyTabProps> = (props) => {
               </div>
             ) : (
               <Text type="secondary" style={{ fontStyle: "italic", color: "#10B981" }}>
-                CV đã đáp ứng đủ kỹ năng cốt lõi 🎉
+                CV đã đáp ứng đủ kỹ năng cốt lõi 
               </Text>
             )}
           </Card>

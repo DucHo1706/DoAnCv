@@ -59,7 +59,7 @@ def extract_text_from_file(file_bytes: bytes, filename: str, content_type: str) 
                     if page.extract_text():
                         text += page.extract_text() + "\n"
             except Exception as pypdf_err:
-                print(f"⚠️ PyPDF2 gặp lỗi khi đọc PDF ({pypdf_err}). Chuyển sang pdfplumber...")
+                print(f" PyPDF2 gặp lỗi khi đọc PDF ({pypdf_err}). Chuyển sang pdfplumber...")
 
             # === Bước 2: Kiểm tra chất lượng tiếng Việt hoặc cứu hộ nếu PyPDF2 thất bại ===
             if not text.strip() or _is_vietnamese_garbled(text):
@@ -74,17 +74,17 @@ def extract_text_from_file(file_bytes: bytes, filename: str, content_type: str) 
 
                     if fallback_text.strip():
                         if not _is_vietnamese_garbled(fallback_text):
-                            print("✅ [QUALITY CHECK] pdfplumber trích xuất tiếng Việt thành công!")
+                            print("[QUALITY CHECK] pdfplumber trích xuất tiếng Việt thành công!")
                             text = fallback_text
                         else:
-                            print("⚠️ [QUALITY CHECK] pdfplumber trích xuất có chữ nhưng sai dấu, giữ lại làm dự phòng.")
+                            print("[QUALITY CHECK] pdfplumber trích xuất có chữ nhưng sai dấu, giữ lại làm dự phòng.")
                             text = fallback_text
                 except Exception as plumber_err:
-                    print(f"⚠️ pdfplumber gặp lỗi: {plumber_err}")
+                    print(f" pdfplumber gặp lỗi: {plumber_err}")
 
             # === Bước 3: Fallback OCR nếu không có text nào ===
             if not text.strip():
-                print("⚠️ Không trích xuất được text từ PDF (file scan/ảnh/lỗi định dạng), chuyển sang OCR...")
+                print(" Không trích xuất được text từ PDF (file scan/ảnh/lỗi định dạng), chuyển sang OCR...")
                 try:
                     from pdf2image import convert_from_bytes
                     images = convert_from_bytes(file_bytes, dpi=300)
@@ -95,7 +95,7 @@ def extract_text_from_file(file_bytes: bytes, filename: str, content_type: str) 
                             ocr_texts.append(ocr_text)
                     text = "\n".join(ocr_texts)
                 except Exception as ocr_err:
-                    print(f"⚠️ Lỗi OCR PDF: {ocr_err}")
+                    print(f"Lỗi OCR PDF: {ocr_err}")
 
         # 2. FILE ẢNH (PNG, JPEG, Screenshot)
         elif content_type in ["image/png", "image/jpeg", "image/jpg", "image/webp"] or filename.lower().endswith((".png", ".jpg", ".jpeg", ".webp")):
@@ -103,12 +103,12 @@ def extract_text_from_file(file_bytes: bytes, filename: str, content_type: str) 
                 image = Image.open(io.BytesIO(file_bytes))
                 text = pytesseract.image_to_string(image, lang='vie+eng')
             except Exception as tesseract_err:
-                print(f"⚠️ PyTesseract gặp lỗi khi đọc ảnh: {tesseract_err}")
+                print(f" PyTesseract gặp lỗi khi đọc ảnh: {tesseract_err}")
                 text = ""
 
             # Nếu PyTesseract bị thiếu/lỗi hoặc không trích xuất đủ văn bản, sử dụng Gemini Vision OCR
             if not text.strip() or len(text.strip()) < 30:
-                print("⚠️ [OCR FALLBACK] Trích xuất bằng PyTesseract ít chữ/thất bại, chuyển sang Gemini Vision Multimodal...")
+                print(" [OCR FALLBACK] Trích xuất bằng PyTesseract ít chữ/thất bại, chuyển sang Gemini Vision Multimodal...")
                 try:
                     from services import gemini_service
                     prompt = (
@@ -122,10 +122,10 @@ def extract_text_from_file(file_bytes: bytes, filename: str, content_type: str) 
                         prompt=prompt
                     )
                     if vision_text.strip():
-                        print("✅ [OCR FALLBACK] Gemini Vision đã bóc tách văn bản thành công từ ảnh CV!")
+                        print(" [OCR FALLBACK] Gemini Vision đã bóc tách văn bản thành công từ ảnh CV!")
                         text = vision_text
                 except Exception as vision_err:
-                    print(f"⚠️ Gemini Vision OCR gặp lỗi: {vision_err}")
+                    print(f" Gemini Vision OCR gặp lỗi: {vision_err}")
 
         # 3. FILE WORD .docx
         elif filename.lower().endswith(".docx"):

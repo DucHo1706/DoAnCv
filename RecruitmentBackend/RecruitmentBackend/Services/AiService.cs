@@ -83,101 +83,152 @@ namespace RecruitmentBackend.Services
 
         public async Task<bool> SyncSkillsToAiAsync(List<string> skills)
         {
-            var payload = new { skills = skills };
-            var jsonContent = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
+            try
+            {
+                var payload = new { skills = skills };
+                var jsonContent = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
 
-            var response = await _httpClient.PostAsync("update-skills", jsonContent);
+                var response = await _httpClient.PostAsync("update-skills", jsonContent);
 
-            return response.IsSuccessStatusCode;
+                return response.IsSuccessStatusCode;
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         public async Task<bool> TrainAprioriAsync(List<List<string>> transactions)
         {
-            var payload = new 
-            { 
-                transactions = transactions,
-                min_support = 0.05,
-                min_confidence = 0.3
-            };
-            var jsonContent = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
+            try
+            {
+                var payload = new 
+                { 
+                    transactions = transactions,
+                    min_support = 0.05,
+                    min_confidence = 0.3
+                };
+                var jsonContent = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
 
-            var response = await _httpClient.PostAsync("train-apriori", jsonContent);
-            return response.IsSuccessStatusCode;
+                var response = await _httpClient.PostAsync("train-apriori", jsonContent);
+                return response.IsSuccessStatusCode;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[AiService] TrainApriori error: {ex.Message}");
+                return false;
+            }
         }
 
         public async Task<List<string>> RecommendSkillsAsync(List<string> currentSkills, int topN = 5)
         {
-            var payload = new 
-            { 
-                current_skills = currentSkills,
-                top_n = topN
-            };
-            var jsonContent = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
+            try
+            {
+                var payload = new 
+                { 
+                    current_skills = currentSkills,
+                    top_n = topN
+                };
+                var jsonContent = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
 
-            var response = await _httpClient.PostAsync("recommend-skills", jsonContent);
-            if (response.IsSuccessStatusCode == false)
+                var response = await _httpClient.PostAsync("recommend-skills", jsonContent);
+                if (response.IsSuccessStatusCode == false)
+                {
+                    return new List<string>();
+                }
+
+                var jsonResponse = await response.Content.ReadAsStringAsync();
+                using var doc = JsonDocument.Parse(jsonResponse);
+                var root = doc.RootElement;
+                if (root.TryGetProperty("recommended_skills", out var recommendedProp) && recommendedProp.ValueKind == JsonValueKind.Array)
+                {
+                    var result = new List<string>();
+                    foreach (var item in recommendedProp.EnumerateArray())
+                    {
+                        result.Add(item.GetString());
+                    }
+                    return result;
+                }
+
+                return new List<string>();
+            }
+            catch
             {
                 return new List<string>();
             }
-
-            var jsonResponse = await response.Content.ReadAsStringAsync();
-            using var doc = JsonDocument.Parse(jsonResponse);
-            var root = doc.RootElement;
-            if (root.TryGetProperty("recommended_skills", out var recommendedProp) && recommendedProp.ValueKind == JsonValueKind.Array)
-            {
-                var result = new List<string>();
-                foreach (var item in recommendedProp.EnumerateArray())
-                {
-                    result.Add(item.GetString());
-                }
-                return result;
-            }
-
-            return new List<string>();
         }
 
         public async Task<string> GetAssociationRulesJsonAsync()
         {
-            var response = await _httpClient.GetAsync("association-rules");
-            if (response.IsSuccessStatusCode == false)
+            try
+            {
+                var response = await _httpClient.GetAsync("association-rules");
+                if (response.IsSuccessStatusCode == false)
+                {
+                    return "{\"rules\":[]}";
+                }
+
+                return await response.Content.ReadAsStringAsync();
+            }
+            catch
             {
                 return "{\"rules\":[]}";
             }
-
-            return await response.Content.ReadAsStringAsync();
         }
 
         public async Task<bool> TrainHuimAsync(object payload)
         {
-            var jsonContent = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
-            var response = await _httpClient.PostAsync("train-huim", jsonContent);
-            return response.IsSuccessStatusCode;
+            try
+            {
+                var jsonContent = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
+                var response = await _httpClient.PostAsync("train-huim", jsonContent);
+                return response.IsSuccessStatusCode;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[AiService] TrainHuim error: {ex.Message}");
+                return false;
+            }
         }
 
         public async Task<string> RecommendHighUtilitySkillsAsync(List<string> currentSkills, int topN = 5)
         {
-            var payload = new
+            try
             {
-                current_skills = currentSkills,
-                top_n = topN
-            };
-            var jsonContent = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
-            var response = await _httpClient.PostAsync("recommend-high-utility-skills", jsonContent);
-            if (response.IsSuccessStatusCode == false)
+                var payload = new
+                {
+                    current_skills = currentSkills,
+                    top_n = topN
+                };
+                var jsonContent = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
+                var response = await _httpClient.PostAsync("recommend-high-utility-skills", jsonContent);
+                if (response.IsSuccessStatusCode == false)
+                {
+                    return "{\"recommended_skills\":[]}";
+                }
+                return await response.Content.ReadAsStringAsync();
+            }
+            catch
             {
                 return "{\"recommended_skills\":[]}";
             }
-            return await response.Content.ReadAsStringAsync();
         }
 
         public async Task<string> GetHighUtilityItemsetsJsonAsync()
         {
-            var response = await _httpClient.GetAsync("high-utility-itemsets");
-            if (response.IsSuccessStatusCode == false)
+            try
+            {
+                var response = await _httpClient.GetAsync("high-utility-itemsets");
+                if (response.IsSuccessStatusCode == false)
+                {
+                    return "{\"itemsets\":[]}";
+                }
+                return await response.Content.ReadAsStringAsync();
+            }
+            catch
             {
                 return "{\"itemsets\":[]}";
             }
-            return await response.Content.ReadAsStringAsync();
         }
 
         public async Task<List<SemanticSearchResultItemDto>> SearchSemanticAsync(string query, List<DTOs.Requests.SemanticSearchJobItemDto> jobs)
