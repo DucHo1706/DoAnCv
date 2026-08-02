@@ -406,55 +406,63 @@ namespace RecruitmentBackend.Services
                 };
             }
 
-            var applicationQuery = from application in _context.Applications
+            var applicationQuery = from application in _context.Applications.AsNoTracking()
                                    where hrJobIds.Contains(application.JobID)
-                                   join cv in _context.CandidateCVs on application.CVID equals cv.CVID
-                                   join candidate in _context.Candidates on cv.CandidateID equals candidate.CandidateID
-                                   join account in _context.Accounts on candidate.AccountID equals account.AccountID into accountGroup
+                                   join cv in _context.CandidateCVs.AsNoTracking() on application.CVID equals cv.CVID
+                                   join candidate in _context.Candidates.AsNoTracking() on cv.CandidateID equals candidate.CandidateID
+                                   join account in _context.Accounts.AsNoTracking() on candidate.AccountID equals account.AccountID into accountGroup
                                    from account in accountGroup.DefaultIfEmpty()
-                                   join job in _context.JobPostings on application.JobID equals job.JobID
-                                   join position in _context.Positions on job.PositionID equals position.PositionID into positionGroup
+                                   join job in _context.JobPostings.AsNoTracking() on application.JobID equals job.JobID
+                                   join position in _context.Positions.AsNoTracking() on job.PositionID equals position.PositionID into positionGroup
                                    from position in positionGroup.DefaultIfEmpty()
-                                   join ai in _context.AIEvaluations on application.ApplicationID equals ai.ApplicationID into aiGroup
+                                   join ai in _context.AIEvaluations.AsNoTracking() on application.ApplicationID equals ai.ApplicationID into aiGroup
                                    from ai in aiGroup.DefaultIfEmpty()
                                    select new DashboardApplicationItem
                                    {
-                                       Application = application,
-                                       CandidateCv = cv,
-                                       Candidate = candidate,
-                                       Account = account,
-                                       Job = job,
-                                       Position = position,
-                                       AiEvaluation = ai
+                                       ApplicationId = application.ApplicationID,
+                                       JobId = application.JobID,
+                                       Status = application.Status,
+                                       AppliedAt = application.AppliedAt,
+                                       CandidateId = candidate.CandidateID,
+                                       CandidateName = candidate.FullName,
+                                       Email = account != null ? account.Email : null,
+                                       CvExtractedSkills = cv.CVExtractedSkills,
+                                       Degree = cv.Degree,
+                                       University = cv.University,
+                                       YearsOfExperience = cv.YearsOfExperience,
+                                       PositionName = position != null ? position.PositionName : null,
+                                       FitScore = ai != null ? ai.FitScore : null,
+                                       MatchedSkills = ai != null ? ai.MatchedSkills : null,
+                                       Classification = ai != null ? ai.Classification : null
                                    };
 
             if (string.IsNullOrWhiteSpace(jobId) == false)
             {
-                applicationQuery = applicationQuery.Where(item => item.Application.JobID == jobId);
+                applicationQuery = applicationQuery.Where(item => item.JobId == jobId);
             }
 
             DateTime? minAppliedAt = GetMinAppliedAtByTimeRange(timeRange);
 
             if (minAppliedAt.HasValue == true)
             {
-                applicationQuery = applicationQuery.Where(item => item.Application.AppliedAt >= minAppliedAt.Value);
+                applicationQuery = applicationQuery.Where(item => item.AppliedAt >= minAppliedAt.Value);
             }
 
             var dashboardApplications = await applicationQuery.ToListAsync();
 
             var totalJobs = hrJobIds.Count;
             var totalApplications = dashboardApplications.Count;
-            var newApplications = dashboardApplications.Count(item => MapApplicationStage(item.Application.Status) == "applied");
+            var newApplications = dashboardApplications.Count(item => MapApplicationStage(item.Status) == "applied");
 
             var evaluatedApplications = dashboardApplications
-                .Where(item => item.AiEvaluation != null)
+                .Where(item => item.FitScore.HasValue)
                 .ToList();
 
             decimal averageFitScore = 0;
 
             if (evaluatedApplications.Count > 0)
             {
-                averageFitScore = Math.Round(evaluatedApplications.Average(item => item.AiEvaluation!.FitScore), 1);
+                averageFitScore = Math.Round(evaluatedApplications.Average(item => item.FitScore!.Value), 1);
             }
 
             var totalViews = hrJobs.Sum(job => job.viewCount);
@@ -468,7 +476,7 @@ namespace RecruitmentBackend.Services
             // Calculate Average Time-to-Hire (days from application to interview schedule)
             double avgTimeToHireDays = 0;
             var interviewAppIds = dashboardApplications
-                .Select(item => item.Application.ApplicationID)
+                .Select(item => item.ApplicationId)
                 .ToList();
 
             var interviewSchedulesForHr = await _context.InterviewSchedules
@@ -481,10 +489,10 @@ namespace RecruitmentBackend.Services
                 var daysList = new List<double>();
                 foreach (var s in interviewSchedulesForHr)
                 {
-                    var appItem = dashboardApplications.FirstOrDefault(a => a.Application.ApplicationID == s.ApplicationID);
+                    var appItem = dashboardApplications.FirstOrDefault(a => a.ApplicationId == s.ApplicationID);
                     if (appItem != null)
                     {
-                        var diff = (s.InterviewDate - appItem.Application.AppliedAt).TotalDays;
+                        var diff = (s.InterviewDate - appItem.AppliedAt).TotalDays;
                         if (diff >= 0) daysList.Add(diff);
                     }
                 }
@@ -500,7 +508,7 @@ namespace RecruitmentBackend.Services
             for (int i = 13; i >= 0; i--)
             {
                 var targetDate = today.AddDays(-i);
-                int count = dashboardApplications.Count(item => item.Application.AppliedAt.Date == targetDate);
+                int count = dashboardApplications.Count(item => item.AppliedAt.Date == targetDate);
                 applicationTrend.Add(new
                 {
                     date = targetDate.ToString("dd/MM"),
@@ -534,11 +542,11 @@ namespace RecruitmentBackend.Services
 
             var funnel = new
             {
-                applied = dashboardApplications.Count(item => MapApplicationStage(item.Application.Status) == "applied"),
-                reviewing = dashboardApplications.Count(item => MapApplicationStage(item.Application.Status) == "reviewing"),
-                interview = dashboardApplications.Count(item => MapApplicationStage(item.Application.Status) == "interview"),
-                offer = dashboardApplications.Count(item => MapApplicationStage(item.Application.Status) == "offer"),
-                rejected = dashboardApplications.Count(item => MapApplicationStage(item.Application.Status) == "rejected")
+                applied = dashboardApplications.Count(item => MapApplicationStage(item.Status) == "applied"),
+                reviewing = dashboardApplications.Count(item => MapApplicationStage(item.Status) == "reviewing"),
+                interview = dashboardApplications.Count(item => MapApplicationStage(item.Status) == "interview"),
+                offer = dashboardApplications.Count(item => MapApplicationStage(item.Status) == "offer"),
+                rejected = dashboardApplications.Count(item => MapApplicationStage(item.Status) == "rejected")
             };
 
             var quickMetrics = new
@@ -586,13 +594,21 @@ namespace RecruitmentBackend.Services
 
         private sealed class DashboardApplicationItem
         {
-            public Application Application { get; set; } = new Application();
-            public CandidateCV CandidateCv { get; set; } = new CandidateCV();
-            public Candidate Candidate { get; set; } = new Candidate();
-            public Account? Account { get; set; }
-            public JobPosting Job { get; set; } = new JobPosting();
-            public Position? Position { get; set; }
-            public AIEvaluation? AiEvaluation { get; set; }
+            public string ApplicationId { get; set; } = "";
+            public string JobId { get; set; } = "";
+            public string Status { get; set; } = "";
+            public DateTime AppliedAt { get; set; }
+            public string CandidateId { get; set; } = "";
+            public string CandidateName { get; set; } = "";
+            public string? Email { get; set; }
+            public string? CvExtractedSkills { get; set; }
+            public string? Degree { get; set; }
+            public string? University { get; set; }
+            public double? YearsOfExperience { get; set; }
+            public string? PositionName { get; set; }
+            public decimal? FitScore { get; set; }
+            public string? MatchedSkills { get; set; }
+            public string? Classification { get; set; }
         }
 
         private sealed class AdminDashboardJobItem
@@ -965,12 +981,8 @@ namespace RecruitmentBackend.Services
                 string? matchedSkillsJson = null;
                 string? cvSkillsJson = null;
 
-                if (item.AiEvaluation != null)
-                {
-                    matchedSkillsJson = item.AiEvaluation.MatchedSkills;
-                }
-
-                cvSkillsJson = item.CandidateCv.CVExtractedSkills;
+                matchedSkillsJson = item.MatchedSkills;
+                cvSkillsJson = item.CvExtractedSkills;
 
                 var matchedSkills = ParseStringListFromJson(matchedSkillsJson);
                 var cvSkills = ParseStringListFromJson(cvSkillsJson);
@@ -1003,8 +1015,8 @@ namespace RecruitmentBackend.Services
         private static List<object> BuildFitScoreDistribution(IEnumerable<DashboardApplicationItem> evaluatedApplications)
         {
             var scoreList = evaluatedApplications
-                .Where(item => item.AiEvaluation != null)
-                .Select(item => item.AiEvaluation!.FitScore)
+                .Where(item => item.FitScore.HasValue)
+                .Select(item => item.FitScore!.Value)
                 .ToList();
 
             var distribution = new List<object>
@@ -1021,14 +1033,14 @@ namespace RecruitmentBackend.Services
         private static List<object> BuildTopCandidates(IEnumerable<DashboardApplicationItem> evaluatedApplications)
         {
             return evaluatedApplications
-                .Where(item => item.AiEvaluation != null)
-                .OrderByDescending(item => item.AiEvaluation!.FitScore)
+                .Where(item => item.FitScore.HasValue)
+                .OrderByDescending(item => item.FitScore!.Value)
                 .Take(5)
                 .Select(item =>
                 {
                     string featuredSkill = "Chưa bóc tách";
 
-                    var matchedSkills = ParseStringListFromJson(item.AiEvaluation!.MatchedSkills);
+                    var matchedSkills = ParseStringListFromJson(item.MatchedSkills);
 
                     if (matchedSkills.Count > 0)
                     {
@@ -1036,7 +1048,7 @@ namespace RecruitmentBackend.Services
                     }
                     else
                     {
-                        var cvSkills = ParseStringListFromJson(item.CandidateCv.CVExtractedSkills);
+                        var cvSkills = ParseStringListFromJson(item.CvExtractedSkills);
 
                         if (cvSkills.Count > 0)
                         {
@@ -1046,43 +1058,43 @@ namespace RecruitmentBackend.Services
 
                     string email = "Chưa cập nhật";
 
-                    if (item.Account != null && string.IsNullOrWhiteSpace(item.Account.Email) == false)
+                    if (string.IsNullOrWhiteSpace(item.Email) == false)
                     {
-                        email = item.Account.Email;
+                        email = item.Email!;
                     }
 
                     string candidateName = "Ứng viên chưa cập nhật tên";
 
-                    if (string.IsNullOrWhiteSpace(item.Candidate.FullName) == false)
+                    if (string.IsNullOrWhiteSpace(item.CandidateName) == false)
                     {
-                        candidateName = item.Candidate.FullName;
+                        candidateName = item.CandidateName;
                     }
 
                     string jobTitle = "Chưa cập nhật";
 
-                    if (item.Position != null && string.IsNullOrWhiteSpace(item.Position.PositionName) == false)
+                    if (string.IsNullOrWhiteSpace(item.PositionName) == false)
                     {
-                        jobTitle = item.Position.PositionName;
+                        jobTitle = item.PositionName;
                     }
 
                     string classification = "Chưa phân loại";
 
-                    if (string.IsNullOrWhiteSpace(item.AiEvaluation.Classification) == false)
+                    if (string.IsNullOrWhiteSpace(item.Classification) == false)
                     {
-                        classification = item.AiEvaluation.Classification;
+                        classification = item.Classification;
                     }
 
                     return new
                     {
-                        applicationId = item.Application.ApplicationID,
-                        candidateId = item.Candidate.CandidateID,
+                        applicationId = item.ApplicationId,
+                        candidateId = item.CandidateId,
                         candidateName,
                         email,
-                        jobId = item.Application.JobID,
+                        jobId = item.JobId,
                         jobTitle,
                         featuredSkill,
-                        fitScore = item.AiEvaluation.FitScore,
-                        aiScore = item.AiEvaluation.FitScore,
+                        fitScore = item.FitScore!.Value,
+                        aiScore = item.FitScore!.Value,
                         classification
                     };
                 })
@@ -1093,8 +1105,8 @@ namespace RecruitmentBackend.Services
         private static List<object> BuildDegreeData(IEnumerable<DashboardApplicationItem> dashboardApplications)
         {
             return dashboardApplications
-                .Where(item => string.IsNullOrWhiteSpace(item.CandidateCv.Degree) == false)
-                .GroupBy(item => item.CandidateCv.Degree)
+                .Where(item => string.IsNullOrWhiteSpace(item.Degree) == false)
+                .GroupBy(item => item.Degree)
                 .Select(group => new
                 {
                     type = group.Key,
@@ -1108,8 +1120,8 @@ namespace RecruitmentBackend.Services
         private static List<object> BuildUniversityData(IEnumerable<DashboardApplicationItem> dashboardApplications)
         {
             return dashboardApplications
-                .Where(item => string.IsNullOrWhiteSpace(item.CandidateCv.University) == false)
-                .GroupBy(item => item.CandidateCv.University)
+                .Where(item => string.IsNullOrWhiteSpace(item.University) == false)
+                .GroupBy(item => item.University)
                 .Select(group => new
                 {
                     type = group.Key,
@@ -1123,16 +1135,16 @@ namespace RecruitmentBackend.Services
 
         private static List<object> BuildExperienceData(IEnumerable<DashboardApplicationItem> dashboardApplications)
         {
-            var cvList = dashboardApplications
-                .Select(item => item.CandidateCv)
+            var experienceList = dashboardApplications
+                .Select(item => item.YearsOfExperience)
                 .ToList();
 
             var experienceData = new List<object>
             {
-                new { range = "Dưới 1 năm", count = cvList.Count(cv => (cv.YearsOfExperience ?? 0) < 1) },
-                new { range = "1-3 năm", count = cvList.Count(cv => (cv.YearsOfExperience ?? 0) >= 1 && (cv.YearsOfExperience ?? 0) <= 3) },
-                new { range = "3-5 năm", count = cvList.Count(cv => (cv.YearsOfExperience ?? 0) > 3 && (cv.YearsOfExperience ?? 0) <= 5) },
-                new { range = "Trên 5 năm", count = cvList.Count(cv => (cv.YearsOfExperience ?? 0) > 5) }
+                new { range = "Dưới 1 năm", count = experienceList.Count(years => (years ?? 0) < 1) },
+                new { range = "1-3 năm", count = experienceList.Count(years => (years ?? 0) >= 1 && (years ?? 0) <= 3) },
+                new { range = "3-5 năm", count = experienceList.Count(years => (years ?? 0) > 3 && (years ?? 0) <= 5) },
+                new { range = "Trên 5 năm", count = experienceList.Count(years => (years ?? 0) > 5) }
             };
 
             return experienceData;
