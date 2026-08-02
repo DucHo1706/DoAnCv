@@ -1191,22 +1191,21 @@ namespace RecruitmentBackend.Services
         {
             try
             {
-                var query = from evaluation in _context.AIEvaluations
-                            join application in _context.Applications on evaluation.ApplicationID equals application.ApplicationID
-                            join cv in _context.CandidateCVs on application.CVID equals cv.CVID
-                            join candidate in _context.Candidates on cv.CandidateID equals candidate.CandidateID
-                            join job in _context.JobPostings on application.JobID equals job.JobID
-                            join position in _context.Positions on job.PositionID equals position.PositionID into positionGroup
+                var query = from evaluation in _context.AIEvaluations.AsNoTracking()
+                            join application in _context.Applications.AsNoTracking() on evaluation.ApplicationID equals application.ApplicationID
+                            join cv in _context.CandidateCVs.AsNoTracking() on application.CVID equals cv.CVID
+                            join candidate in _context.Candidates.AsNoTracking() on cv.CandidateID equals candidate.CandidateID
+                            join job in _context.JobPostings.AsNoTracking() on application.JobID equals job.JobID
+                            join position in _context.Positions.AsNoTracking() on job.PositionID equals position.PositionID into positionGroup
                             from position in positionGroup.DefaultIfEmpty()
-                            join category in _context.Categories on job.CategoryID equals category.CategoryID into categoryGroup
+                            join category in _context.Categories.AsNoTracking() on job.CategoryID equals category.CategoryID into categoryGroup
                             from category in categoryGroup.DefaultIfEmpty()
                             select new
                             {
-                                evaluation,
-                                application,
-                                cv,
-                                candidate,
-                                job,
+                                fitScore = evaluation.FitScore,
+                                matchedSkills = evaluation.MatchedSkills,
+                                missingSkills = evaluation.MissingSkills,
+                                candidateName = candidate.FullName,
                                 positionName = position != null ? position.PositionName : "Vị trí chưa xác định",
                                 categoryId = category != null ? category.CategoryID : "other",
                                 categoryName = category != null ? category.Name : "Khác"
@@ -1228,16 +1227,16 @@ namespace RecruitmentBackend.Services
                     .GroupBy(item => item.categoryId)
                     .Select(g => {
                         // Lấy ứng viên có điểm cao nhất trong nhóm này
-                        var topEvaluated = g.OrderByDescending(x => x.evaluation.FitScore).First();
+                        var topEvaluated = g.OrderByDescending(x => x.fitScore).First();
                         
-                        var matchedSkills = ParseStringListFromJson(topEvaluated.evaluation.MatchedSkills);
-                        var missingSkills = ParseStringListFromJson(topEvaluated.evaluation.MissingSkills);
+                        var matchedSkills = ParseStringListFromJson(topEvaluated.matchedSkills);
+                        var missingSkills = ParseStringListFromJson(topEvaluated.missingSkills);
 
                         // Lấy chữ cái đầu làm avatar
                         string avatar = "UV";
-                        if (!string.IsNullOrWhiteSpace(topEvaluated.candidate.FullName))
+                        if (!string.IsNullOrWhiteSpace(topEvaluated.candidateName))
                         {
-                            var words = topEvaluated.candidate.FullName.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                            var words = topEvaluated.candidateName.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
                             if (words.Length >= 2)
                             {
                                 avatar = (words[words.Length - 2][0].ToString() + words[words.Length - 1][0].ToString()).ToUpper();
@@ -1259,9 +1258,9 @@ namespace RecruitmentBackend.Services
                             categoryName = topEvaluated.categoryName,
                             candidate = new
                             {
-                                name = topEvaluated.candidate.FullName ?? "Ứng viên chưa cập nhật tên",
+                                name = topEvaluated.candidateName ?? "Ứng viên chưa cập nhật tên",
                                 role = topEvaluated.positionName.ToUpper(),
-                                score = (int)Math.Round(topEvaluated.evaluation.FitScore),
+                                score = (int)Math.Round(topEvaluated.fitScore),
                                 avatar,
                                 skills = matchedSkills.Count > 0 ? matchedSkills.Take(3).ToList() : new List<string> { "Kỹ năng mềm", "Tin học văn phòng" },
                                 warnings
