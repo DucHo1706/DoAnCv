@@ -426,22 +426,23 @@ function HomePage() {
         const hasToken = !!localStorage.getItem("token");
 
         // Execute all initial requests simultaneously in parallel (Promise.all)
-        const [jobsData, statsData, profileData] = await Promise.all([
+        const [jobsData, activeJobCount, profileData] = await Promise.all([
           jobService.getJobs().catch(() => []),
-          axiosClient.get("/Dashboard/admin-stats").catch(() => ({
-            data: {
-              quickMetrics: { totalUsers: 1420, activeJobs: 38, analyzedCvs: 1250, totalCandidateUsers: 890 },
-            },
-          })),
-          hasToken ? axiosClient.get("/profile").catch(() => null) : Promise.resolve(null),
+          jobService.getPublishedJobCount().catch(() => null),
+          hasToken
+            ? axiosClient
+                .get("/profile", { skipAuthRedirect: true })
+                .catch(() => null)
+            : Promise.resolve(null),
         ]);
 
         const jobsArray = Array.isArray(jobsData) ? jobsData : (jobsData as any)?.$values || [];
         setRecentJobs(jobsArray);
 
-        if (statsData?.data?.quickMetrics) {
-          setStats(statsData.data.quickMetrics);
-        }
+        setStats((current: any) => ({
+          ...current,
+          activeJobs: activeJobCount ?? current.activeJobs,
+        }));
 
         if (profileData?.data) {
           setUserProfile(profileData.data);

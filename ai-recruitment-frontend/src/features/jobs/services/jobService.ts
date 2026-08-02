@@ -78,6 +78,19 @@ export const jobService = {
     return response.data.items ?? response.data.$values ?? [];
   },
 
+  async getPublishedJobCount() {
+    const response = await axiosClient.get<{
+      totalCount?: number;
+      items?: JobDto[];
+      $values?: JobDto[];
+    }>("/jobs/published", { params: { pageIndex: 1, pageSize: 1 } });
+
+    return response.data.totalCount
+      ?? response.data.items?.length
+      ?? response.data.$values?.length
+      ?? 0;
+  },
+
   async getMyJobs() {
     const response = await axiosClient.get<JobDto[]>("/jobs/my-jobs");
     return response.data;

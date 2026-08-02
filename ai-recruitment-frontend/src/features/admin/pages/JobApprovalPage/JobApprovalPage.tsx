@@ -147,12 +147,12 @@ function JobApprovalPage() {
     return Array.from(set);
   }, [jobs]);
 
-  // Set default status to Pending if pending jobs exist
+  // Mặc định mở tab chờ duyệt khi có tin mới.
   useEffect(() => {
     if (jobs.length > 0) {
       const hasPending = jobs.some((j) => j.status === "Pending");
       if (hasPending && selectedStatus === "all") {
-        setSelectedStatus("Pending");
+        setSelectedStatus("pending");
       }
     }
   }, [jobs]);
@@ -173,7 +173,10 @@ function JobApprovalPage() {
 
       const matchesStatus =
         selectedStatus === "all" ||
-        job.status === selectedStatus;
+        (selectedStatus === "pending" && job.status === "Pending") ||
+        (selectedStatus === "active" && job.status === "Published") ||
+        (selectedStatus === "closed" &&
+          (job.status === "Closed" || job.status === "Locked"));
 
       const matchesRecruiter =
         selectedRecruiterEmail === "all" ||

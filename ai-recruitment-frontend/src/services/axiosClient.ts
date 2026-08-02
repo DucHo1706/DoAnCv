@@ -1,5 +1,11 @@
 import axios from "axios";
 
+declare module "axios" {
+  export interface AxiosRequestConfig {
+    skipAuthRedirect?: boolean;
+  }
+}
+
 const getBaseApiUrl = () => {
   if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
   return "/api";
@@ -36,6 +42,12 @@ axiosClient.interceptors.response.use(
       // Clear stored authentication data
       localStorage.removeItem("token");
       localStorage.removeItem("user");
+
+      // Một số trang công khai chỉ thử tải thêm dữ liệu cá nhân nếu có token.
+      // Token cũ không được phép ép khách rời khỏi trang công khai.
+      if (error?.config?.skipAuthRedirect === true) {
+        return Promise.reject(error);
+      }
 
       // Redirect to login page with original redirect path
       const currentPath = window.location.pathname;
