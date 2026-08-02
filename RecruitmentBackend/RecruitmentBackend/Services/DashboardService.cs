@@ -171,10 +171,15 @@ namespace RecruitmentBackend.Services
                                          from ai in aiGroup.DefaultIfEmpty()
                                          select new AdminDashboardApplicationItem
                                          {
-                                             Application = application,
-                                             CandidateCv = cv,
-                                             Job = job,
-                                             AiEvaluation = ai,
+                                             ApplicationStatus = application.Status,
+                                             AppliedAt = application.AppliedAt,
+                                             CvId = cv.CVID,
+                                             CvFilePath = cv.FilePath,
+                                             HasRawText = !string.IsNullOrEmpty(cv.RawText),
+                                             HasExtractedSkills = !string.IsNullOrEmpty(cv.CVExtractedSkills),
+                                             AiEvaluationId = ai != null ? ai.EvaluationID : null,
+                                             AiFitScore = ai != null ? ai.FitScore : null,
+                                             AiEvaluatedAt = ai != null ? ai.EvaluatedAt : null,
                                              CategoryId = string.IsNullOrWhiteSpace(job.CategoryID) == false
                                                  ? job.CategoryID
                                                  : position != null
@@ -196,7 +201,7 @@ namespace RecruitmentBackend.Services
             */
             var filteredApplications = allApplications
                 .Where(item => IsCategoryMatched(item.CategoryId, selectedCategoryId) == true)
-                .Where(item => IsDateInRange(item.Application.AppliedAt, fromDateValue, toDateExclusive) == true)
+                .Where(item => IsDateInRange(item.AppliedAt, fromDateValue, toDateExclusive) == true)
                 .ToList();
 
             /*
@@ -206,7 +211,7 @@ namespace RecruitmentBackend.Services
             */
             var snapshotApplications = allApplications
                 .Where(item => IsCategoryMatched(item.CategoryId, selectedCategoryId) == true)
-                .Where(item => item.Application.AppliedAt < snapshotDateExclusive)
+                .Where(item => item.AppliedAt < snapshotDateExclusive)
                 .ToList();
 
             /*
@@ -220,8 +225,8 @@ namespace RecruitmentBackend.Services
             */
             var analyzedApplications = snapshotApplications
                 .Where(item =>
-                    item.AiEvaluation != null &&
-                    item.AiEvaluation.EvaluatedAt < snapshotDateExclusive)
+                    item.AiEvaluatedAt.HasValue &&
+                    item.AiEvaluatedAt.Value < snapshotDateExclusive)
                 .ToList();
 
             int analyzedCvs = analyzedApplications.Count;
@@ -239,8 +244,8 @@ namespace RecruitmentBackend.Services
             var performanceApplications = allApplications
                 .Where(item => IsCategoryMatched(item.CategoryId, selectedCategoryId) == true)
                 .Where(item =>
-                    item.AiEvaluation != null &&
-                    IsDateInRange(item.AiEvaluation.EvaluatedAt, fromDateValue, toDateExclusive) == true)
+                    item.AiEvaluatedAt.HasValue &&
+                    IsDateInRange(item.AiEvaluatedAt.Value, fromDateValue, toDateExclusive) == true)
                 .ToList();
 
             if (fromDateValue.HasValue == false && toDateExclusive.HasValue == false)
@@ -252,7 +257,7 @@ namespace RecruitmentBackend.Services
             string aiServerStatus = BuildAiServerStatus(averageProcessingSeconds);
 
             // TÍNH TOÁN CÁC CHỈ SỐ BỔ SUNG CHO DOANH NGHIỆP
-            int highMatchCount = analyzedApplications.Count(item => item.AiEvaluation != null && item.AiEvaluation.FitScore >= 75);
+            int highMatchCount = analyzedApplications.Count(item => item.AiFitScore >= 75);
             double highMatchRate = analyzedCvs > 0 ? Math.Round((double)highMatchCount / analyzedCvs * 100, 1) : 0;
 
             // Tối ưu hóa tính toán Time-to-hire và Chi nhánh hiệu quả trực tiếp trên Database
@@ -623,10 +628,15 @@ namespace RecruitmentBackend.Services
 
         private sealed class AdminDashboardApplicationItem
         {
-            public Application Application { get; set; } = new Application();
-            public CandidateCV CandidateCv { get; set; } = new CandidateCV();
-            public JobPosting Job { get; set; } = new JobPosting();
-            public AIEvaluation? AiEvaluation { get; set; }
+            public string ApplicationStatus { get; set; } = "";
+            public DateTime AppliedAt { get; set; }
+            public string CvId { get; set; } = "";
+            public string CvFilePath { get; set; } = "";
+            public bool HasRawText { get; set; }
+            public bool HasExtractedSkills { get; set; }
+            public string? AiEvaluationId { get; set; }
+            public decimal? AiFitScore { get; set; }
+            public DateTime? AiEvaluatedAt { get; set; }
             public string? CategoryId { get; set; }
             public string CategoryName { get; set; } = "Chưa phân loại";
         }
@@ -682,13 +692,13 @@ namespace RecruitmentBackend.Services
 
             foreach (var item in analyzedApplications)
             {
-                if (item.AiEvaluation == null)
+                if (string.IsNullOrWhiteSpace(item.AiEvaluationId))
                 {
                     continue;
                 }
 
                 // AI OCR & NLP processing speed per CV averages 1.5 - 2.4 seconds
-                int seed = Math.Abs((item.AiEvaluation.EvaluationID ?? "").GetHashCode());
+                int seed = Math.Abs(item.AiEvaluationId.GetHashCode());
                 decimal realisticSeconds = 1.5m + (seed % 10) * 0.09m;
 
                 processingSecondsList.Add(realisticSeconds);
@@ -760,7 +770,7 @@ namespace RecruitmentBackend.Services
 
             while (currentDate <= endDate)
             {
-                int cvSubmissions = filteredApplications.Count(item => item.Application.AppliedAt.Date == currentDate.Date);
+                int cvSubmissions = filteredApplications.Count(item => item.AppliedAt.Date == currentDate.Date);
                 int newJobs = filteredJobs.Count(job => job.CreatedAt.Date == currentDate.Date);
 
                 result.Add(new
@@ -802,16 +812,15 @@ namespace RecruitmentBackend.Services
         {
             int uploadedCvs = filteredApplications.Count;
 
-            int aiParsedSuccess = filteredApplications.Count(item => item.AiEvaluation != null);
+            int aiParsedSuccess = filteredApplications.Count(item => item.AiFitScore.HasValue);
 
             int qualifiedCvs = filteredApplications.Count(item =>
-                item.AiEvaluation != null &&
-                item.AiEvaluation.FitScore > 50);
+                item.AiFitScore > 50);
 
             int hrInteracted = filteredApplications.Count(item =>
-                string.IsNullOrWhiteSpace(item.Application.Status) == false &&
-                item.Application.Status != "Applied" &&
-                item.Application.Status != "Processing");
+                string.IsNullOrWhiteSpace(item.ApplicationStatus) == false &&
+                item.ApplicationStatus != "Applied" &&
+                item.ApplicationStatus != "Processing");
 
             var result = new List<object>
     {
@@ -858,12 +867,12 @@ namespace RecruitmentBackend.Services
         private static List<object> BuildOcrErrorRate(List<AdminDashboardApplicationItem> filteredApplications)
         {
             var distinctCvItems = filteredApplications
-                .GroupBy(item => item.CandidateCv.CVID)
+                .GroupBy(item => item.CvId)
                 .Select(group => group.First())
                 .ToList();
 
             var result = distinctCvItems
-                .GroupBy(item => GetCvFileType(item.CandidateCv.FilePath))
+                .GroupBy(item => GetCvFileType(item.CvFilePath))
                 .Select(group =>
                 {
                     int total = group.Count();
@@ -895,17 +904,17 @@ namespace RecruitmentBackend.Services
 
         private static bool IsCvExtractionFailed(AdminDashboardApplicationItem item)
         {
-            if (string.IsNullOrWhiteSpace(item.CandidateCv.RawText) == true)
+            if (item.HasRawText == false)
             {
                 return true;
             }
 
-            if (string.IsNullOrWhiteSpace(item.CandidateCv.CVExtractedSkills) == true)
+            if (item.HasExtractedSkills == false)
             {
                 return true;
             }
 
-            if (item.AiEvaluation == null)
+            if (item.AiFitScore.HasValue == false)
             {
                 return true;
             }
