@@ -64,12 +64,21 @@ namespace RecruitmentBackend.Controllers
         // API lấy danh sách Đơn ứng tuyển dành cho HR
         [HttpGet("hr/applications")]
         [Authorize(Roles = "Recruiter")]
-        public async Task<IActionResult> GetHrApplications()
+        public async Task<IActionResult> GetHrApplications([FromQuery] bool includeAiDetails = true)
         {
-            var result = await _recruitmentService.GetHrApplicationsAsync(User);
+            var result = await _recruitmentService.GetHrApplicationsAsync(User, includeAiDetails);
 
             if (!result.IsSuccess) return Unauthorized(new { message = result.Message });
             
+            return Ok(result.Data);
+        }
+
+        [HttpGet("hr/applications/{applicationId}")]
+        [Authorize(Roles = "Recruiter")]
+        public async Task<IActionResult> GetHrApplicationDetail(string applicationId)
+        {
+            var result = await _recruitmentService.GetHrApplicationsAsync(User, true, applicationId);
+            if (!result.IsSuccess) return Unauthorized(new { message = result.Message });
             return Ok(result.Data);
         }
         //API cập nhật trạng thái ứng tuyển

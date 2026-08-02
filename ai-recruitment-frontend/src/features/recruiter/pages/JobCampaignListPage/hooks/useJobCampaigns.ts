@@ -23,7 +23,7 @@ export function useJobCampaigns() {
       setLoading(true);
       setError(null);
       const [appData, jobData] = await Promise.all([
-        recruitmentService.getHrApplications(),
+        recruitmentService.getHrApplications(false),
         jobService.getMyJobs(),
       ]);
       setApplications(Array.isArray(appData) ? appData : (appData as any)?.$values || []);

@@ -8,7 +8,10 @@ namespace RecruitmentBackend.Interfaces
     public interface IApplicationService
     {
         Task<(bool IsSuccess, string Message, object Data)> ApplyJobAsync(ApplyJobRequest request, ClaimsPrincipal user);
-        Task<(bool IsSuccess, string Message, object Data)> GetHrApplicationsAsync(ClaimsPrincipal user);
+        Task<(bool IsSuccess, string Message, object Data)> GetHrApplicationsAsync(
+            ClaimsPrincipal user,
+            bool includeAiDetails = true,
+            string? applicationId = null);
         Task<(bool IsSuccess, string Message, object Data)> GetMyApplicationsAsync(ClaimsPrincipal user);
         Task<(bool IsSuccess, string Message, object Data)> UpdateApplicationStatusAsync(
             string applicationId,

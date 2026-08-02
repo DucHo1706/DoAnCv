@@ -94,7 +94,7 @@ export function useCampaignApplications() {
       setLoading(true);
       setFetchError(null);
       const [appData, jobData] = await Promise.all([
-        recruitmentService.getHrApplications(),
+        recruitmentService.getHrApplications(false),
         jobService.getMyJobs(),
       ]);
       setApplications(Array.isArray(appData) ? appData : (appData as any)?.$values || []);
@@ -136,7 +136,7 @@ export function useCampaignApplications() {
         connection.on("ReceiveResult", () => {
           if (!isSubscribed) return;
           recruitmentService
-            .getHrApplications()
+            .getHrApplications(false)
             .then((updatedApps: any) => {
               if (isSubscribed) {
                 setApplications(Array.isArray(updatedApps) ? updatedApps : (updatedApps as any)?.$values || []);
@@ -465,9 +465,17 @@ export function useCampaignApplications() {
     navigate(`/recruiter/ranking/compare?jobId=${encodedJobId}&applicationIds=${encodedAppIds}`);
   };
 
-  const handleViewDetail = (record: ApplicationDto) => {
+  const handleViewDetail = async (record: ApplicationDto) => {
     setSelectedApp(record);
     setIsModalOpen(true);
+    try {
+      const detail = await recruitmentService.getHrApplicationDetail(record.id);
+      if (detail) {
+        setSelectedApp(detail);
+      }
+    } catch {
+      message.error("Không thể tải chi tiết báo cáo AI. Vui lòng thử lại.");
+    }
   };
 
   return {

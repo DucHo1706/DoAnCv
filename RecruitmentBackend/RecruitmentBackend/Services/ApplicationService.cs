@@ -302,7 +302,10 @@ namespace RecruitmentBackend.Services
             }
         }
 
-        public async Task<(bool IsSuccess, string Message, object Data)> GetHrApplicationsAsync(ClaimsPrincipal user)
+        public async Task<(bool IsSuccess, string Message, object Data)> GetHrApplicationsAsync(
+            ClaimsPrincipal user,
+            bool includeAiDetails = true,
+            string? applicationId = null)
         {
             try
             {
@@ -324,7 +327,8 @@ namespace RecruitmentBackend.Services
                 var rawApplications = await (
                     from app in _context.Applications.AsNoTracking()
                     join job in _context.JobPostings.AsNoTracking() on app.JobID equals job.JobID
-                    where job.RecruiterID == recruiter.RecruiterID || string.IsNullOrEmpty(job.RecruiterID) || branchIds.Contains(job.BranchID)
+                    where (job.RecruiterID == recruiter.RecruiterID || string.IsNullOrEmpty(job.RecruiterID) || branchIds.Contains(job.BranchID))
+                        && (applicationId == null || app.ApplicationID == applicationId)
                     join cv in _context.CandidateCVs.AsNoTracking() on app.CVID equals cv.CVID
                     join cand in _context.Candidates.AsNoTracking() on cv.CandidateID equals cand.CandidateID
                     join acc in _context.Accounts.AsNoTracking() on cand.AccountID equals acc.AccountID
@@ -349,11 +353,11 @@ namespace RecruitmentBackend.Services
                         phone = cand.Phone,
                         cvUrl = cv.FilePath,
                         aiScore = ai != null ? ai.FitScore : 0,
-                        aiReason = ai != null ? ai.Reason : "Chưa có đánh giá",
-                        matchedSkills = ai != null ? ai.MatchedSkills : "[]",
-                        missingSkills = ai != null ? ai.MissingSkills : "[]",
+                        aiReason = includeAiDetails && ai != null ? ai.Reason : null,
+                        matchedSkills = includeAiDetails && ai != null ? ai.MatchedSkills : null,
+                        missingSkills = includeAiDetails && ai != null ? ai.MissingSkills : null,
                         classification = ai != null ? ai.Classification : null,
-                        criteriaResultsJson = ai != null ? ai.CriteriaResultsJson : null
+                        criteriaResultsJson = includeAiDetails && ai != null ? ai.CriteriaResultsJson : null
                     }
                 ).ToListAsync();
 
