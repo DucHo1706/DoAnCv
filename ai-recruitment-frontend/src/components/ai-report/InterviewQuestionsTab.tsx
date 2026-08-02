@@ -60,7 +60,7 @@ const InterviewQuestionsTab: React.FC<InterviewQuestionsTabProps> = ({ interview
             fontWeight: 700,
           }}
         >
-          Gợi ý tài liệu & lộ trình ôn luyện phỏng vấn từ AI
+          Lộ trình ôn tập từ AI
         </Title>
         <Text type="secondary" style={{ fontSize: 14 }}>
           AI dựa trên CV và JD của vị trí tuyển dụng để tổng hợp các chủ đề ôn tập cốt lõi cùng các đường dẫn tài liệu tự học hữu ích trên internet.
@@ -72,7 +72,7 @@ const InterviewQuestionsTab: React.FC<InterviewQuestionsTabProps> = ({ interview
           size="small"
           title={
             <span style={{ color: "#2563EB", fontWeight: 700, fontSize: 14.5 }}>
-              <ReadOutlined style={{ marginRight: 6 }} /> Danh sách {interviewQuestions.length} định hướng & chủ đề phỏng vấn
+              <ReadOutlined style={{ marginRight: 6 }} /> Danh sách {interviewQuestions.length} chủ đề cần ôn tập
             </span>
           }
           style={{
@@ -96,7 +96,7 @@ const InterviewQuestionsTab: React.FC<InterviewQuestionsTabProps> = ({ interview
               >
                 <div style={{ marginBottom: 12 }}>
                   <Text strong style={{ fontSize: 15, color: "#0F172A", display: "block" }}>
-                    📌 Định hướng {index + 1}: {item.question}
+                    📌 Chủ đề {index + 1}: {item.question}
                   </Text>
                 </div>
 
@@ -106,7 +106,7 @@ const InterviewQuestionsTab: React.FC<InterviewQuestionsTabProps> = ({ interview
                 </div>
                 
                 <div style={{ marginBottom: 12 }}>
-                  <Text strong style={{ color: "#475569", fontSize: 13 }}>💡 Gợi ý chuẩn bị phỏng vấn: </Text>
+                  <Text strong style={{ color: "#475569", fontSize: 13 }}>💡 Cách hệ thống hóa kinh nghiệm: </Text>
                   <Paragraph style={{ color: "#64748B", margin: "4px 0 0", fontSize: 14 }}>{item.star_guide}</Paragraph>
                 </div>
 
@@ -124,7 +124,7 @@ const InterviewQuestionsTab: React.FC<InterviewQuestionsTabProps> = ({ interview
         </Card>
       ) : (
         <Alert
-          message="AI chưa sinh gợi ý ôn tập phỏng vấn cho hồ sơ này."
+          message="AI chưa tạo lộ trình ôn tập cho hồ sơ này."
           type="warning"
           showIcon
           style={{ borderRadius: 12 }}

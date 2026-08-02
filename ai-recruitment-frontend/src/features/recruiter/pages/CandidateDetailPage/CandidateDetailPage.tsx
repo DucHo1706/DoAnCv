@@ -22,7 +22,6 @@ import AiDetailedTabs from "../../../../components/ai-report/AiDetailedTabs";
 import CompetencyTab from "../../../../components/ai-report/CompetencyTab";
 import StarOptimizationTab from "../../../../components/ai-report/StarOptimizationTab";
 import LanguageReviewTab from "../../../../components/ai-report/LanguageReviewTab";
-import InterviewQuestionsTab from "../../../../components/ai-report/InterviewQuestionsTab";
 import { appTheme } from "../../../../constants/theme";
 import AiCoreIcon from "../../../../components/common/AiCoreIcon";
 import { useCandidateDetail } from "./hooks/useCandidateDetail";
@@ -385,6 +384,7 @@ export default function CandidateDetailPage() {
               >
                 <AiDetailedTabs
                   parsedAnalysis={parsed}
+                  showLearningPath={false}
                 />
               </Card>
 
@@ -430,12 +430,6 @@ export default function CandidateDetailPage() {
                   <LanguageReviewTab languageReview={parsed.language_review || {}} />
                 </div>
 
-                <div style={{ marginTop: "34px", pageBreakBefore: "always" }}>
-                  <h2 style={{ fontSize: "16px", color: "#1E3A8A", borderBottom: "1px solid #E2E8F0", paddingBottom: "6px", fontWeight: 700 }}>
-                    4. GỢI Ý PHỎNG VẤN
-                  </h2>
-                  <InterviewQuestionsTab interviewQuestions={parsed.mock_interview || []} />
-                </div>
               </div>
             </>
           )}

@@ -644,6 +644,12 @@ export default function CvAnalysisResultPage() {
             Không đủ dữ liệu OCR
           </Tag>
         );
+      case "AI tạm thời không khả dụng":
+        return (
+          <Tag color="warning" style={{ fontWeight: 700, borderRadius: 6, fontSize: 14, padding: "4px 14px" }}>
+            AI tạm thời không khả dụng
+          </Tag>
+        );
       case "Phù hợp":
         return (
           <Tag
@@ -802,9 +808,7 @@ export default function CvAnalysisResultPage() {
 
                   <Text type="secondary">Chuyên ngành</Text>
                   <Text strong style={{ color: "#0f172a" }}>
-                    {analysisData?.candidate_info?.extracted_skills
-                      ? "CN Kỹ thuật / Công nghệ"
-                      : isInitialLoading ? "Đang trích xuất..." : "Chưa xác định"}
+                    {isInitialLoading ? "Đang trích xuất..." : "Chưa xác định"}
                   </Text>
 
                   <Text type="secondary">Vị trí ứng tuyển</Text>

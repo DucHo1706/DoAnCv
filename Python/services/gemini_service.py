@@ -37,12 +37,12 @@ else:
 
 DEFAULT_MODELS = [
     value.strip()
-    for value in os.getenv("GEMINI_MODELS", "gemini-2.5-flash,gemini-2.0-flash").split(",")
+    for value in os.getenv("GEMINI_MODELS", "gemini-3.6-flash,gemini-3.5-flash-lite,gemini-3.1-flash-lite").split(",")
     if value.strip()
 ]
 VISION_MODELS = [
     value.strip()
-    for value in os.getenv("GEMINI_VISION_MODELS", "gemini-2.5-flash,gemini-2.0-flash").split(",")
+    for value in os.getenv("GEMINI_VISION_MODELS", "gemini-3.6-flash,gemini-3.5-flash-lite,gemini-3.1-flash-lite").split(",")
     if value.strip()
 ]
 KEY_COOLDOWN_SECONDS = max(10, int(os.getenv("GEMINI_KEY_COOLDOWN_SECONDS", "60")))

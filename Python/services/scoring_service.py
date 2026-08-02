@@ -322,34 +322,27 @@ def analyze_cv_deep(cv_text: str, jd_text: str, cv_skills: list, jd_skills: list
 
     except Exception as ex:
         logger.error(f"Loi analyze_cv_deep, kich hoat che do du phong Local AI Rule Engine: {ex}")
-        matched = [s for s in cv_skills if s in jd_skills]
-        missing = [s for s in jd_skills if s not in cv_skills]
-        has_comparable_evidence = bool(cv_skills and jd_skills)
-        calc_score = round((len(matched) / len(jd_skills)) * 100) if has_comparable_evidence else 0
-        classification = classify_cv(calc_score) if has_comparable_evidence else "Không đủ dữ liệu"
-
         return {
-            "status": "success",
-            "message": "Đã hoàn tất phân tích bằng thuật toán đối sánh tiêu chuẩn kỹ năng.",
+            "status": "degraded",
+            "message": "Dịch vụ AI tạm thời không khả dụng. Kết quả không được chấm bằng dữ liệu dự phòng.",
             "score_analysis": {
-                "total_score": calc_score,
-                "classification": classification,
-                "summary": (
-                    f"Kết quả dự phòng chỉ dựa trên kỹ năng trích xuất được: khớp {len(matched)}/{len(jd_skills)} kỹ năng."
-                    if has_comparable_evidence
-                    else "Không đủ nội dung CV để tính điểm phù hợp đáng tin cậy."
-                ),
-                "strengths": [f"Kỹ năng có bằng chứng trong CV: {', '.join(matched[:4])}"] if matched else [],
-                "weaknesses": [f"Chưa tìm thấy bằng chứng cho các kỹ năng: {', '.join(missing[:4])}"] if missing else [],
+                "total_score": 0,
+                "classification": "AI tạm thời không khả dụng",
+                "summary": "Gemini chưa thể hoàn tất phân tích hồ sơ ở thời điểm này. Vui lòng thử lại sau; hệ thống không sử dụng kết quả kỹ năng dự phòng để kết luận mức độ phù hợp.",
+                "strengths": [],
+                "weaknesses": [],
                 "red_flags": [],
-                "matched_skills": matched,
-                "missing_skills": missing
+                "matched_skills": [],
+                "missing_skills": [],
+                "whitebox_score": 0,
+                "blackbox_score": 0,
+                "analysis_status": "ai_unavailable"
             },
-            "optimization_tips": interview_service.get_fallback_star_tips(matched, missing),
+            "optimization_tips": [],
             "language_review": build_insufficient_language_review(
-                "Dịch vụ AI chưa thể đánh giá ngôn từ. Không suy diễn từ dữ liệu CV chưa đầy đủ."
+                "Dịch vụ AI tạm thời không khả dụng nên chưa thể đánh giá ngôn từ."
             ),
-            "mock_interview": interview_service.get_fallback_mock_interview(matched, missing)
+            "mock_interview": []
         }
 
 def generate_cv_language_review(cv_text: str, jd_text: str) -> dict:

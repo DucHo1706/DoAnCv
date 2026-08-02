@@ -12,6 +12,7 @@ interface AiDetailedTabsProps {
   langLoading?: boolean;
   interviewLoading?: boolean;
   isInitialLoading?: boolean;
+  showLearningPath?: boolean;
 }
 
 type SkeletonVariant = "star" | "language" | "interview";
@@ -53,6 +54,7 @@ const AiDetailedTabs: React.FC<AiDetailedTabsProps> = ({
   langLoading = false,
   interviewLoading = false,
   isInitialLoading = false,
+  showLearningPath = true,
 }) => {
   const score = parsedAnalysis?.score_analysis || {};
   const criteriaResults = parsedAnalysis?.criteria_results || [];
@@ -105,7 +107,7 @@ const AiDetailedTabs: React.FC<AiDetailedTabsProps> = ({
     },
     {
       key: "4",
-      label: "Gợi ý phỏng vấn",
+      label: "Lộ trình ôn tập",
       children: (
         <div className="custom-scrollbar" style={scrollContainerStyle}>
           {interviewLoading || isInitialLoading ? (
@@ -116,7 +118,7 @@ const AiDetailedTabs: React.FC<AiDetailedTabsProps> = ({
         </div>
       ),
     },
-  ];
+  ].filter((item) => showLearningPath || item.key !== "4");
 
   return <Tabs defaultActiveKey="1" items={tabItems} size="large" onChange={onChange} />;
 };

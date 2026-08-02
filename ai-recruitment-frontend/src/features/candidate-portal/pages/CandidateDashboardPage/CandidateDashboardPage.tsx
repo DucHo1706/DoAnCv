@@ -531,7 +531,7 @@ function CandidateDashboardPage() {
             title={
               <Space>
                 <CalendarOutlined style={{ color: "#10B981", fontSize: 18 }} />
-                <span style={{ fontWeight: 700, fontSize: 16, color: "#0F172A" }}>Gợi ý phỏng vấn</span>
+                <span style={{ fontWeight: 700, fontSize: 16, color: "#0F172A" }}>Lộ trình ôn tập</span>
               </Space>
             }
             bordered={false}
