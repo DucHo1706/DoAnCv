@@ -441,7 +441,7 @@ namespace RecruitmentBackend.Services
                         aiReason = application.aiReason,
                         matchedSkills = matchedSkillsList,
                         missingSkills = missingSkillsList,
-                        classification = application.classification,
+                        classification = NormalizeClassification(application.classification),
                         criteriaResults = criteriaResults
                     };
 
@@ -629,7 +629,7 @@ namespace RecruitmentBackend.Services
                         aiReason = application.aiReason,
                         matchedSkills = matchedSkillsList,
                         missingSkills = missingSkillsList,
-                        classification = classification,
+                        classification = NormalizeClassification(classification),
                         criteriaResults = criteriaResults,
                         interviewSchedule = schedule != null ? new {
                             interviewDate = schedule.InterviewDate,
@@ -1014,6 +1014,25 @@ namespace RecruitmentBackend.Services
             {
                 return (false, "Lỗi khi từ chối hồ sơ: " + ex.Message, null);
             }
+        }
+
+        private static string NormalizeClassification(string? classification)
+        {
+            if (string.IsNullOrWhiteSpace(classification))
+            {
+                return "Chưa phân loại";
+            }
+
+            return classification.Trim().ToLowerInvariant() switch
+            {
+                "phu hop" => "Phù hợp",
+                "phù hợp" => "Phù hợp",
+                "nen xem xet" => "Nên xem xét",
+                "nên xem xét" => "Nên xem xét",
+                "chua phu hop" => "Chưa phù hợp",
+                "chưa phù hợp" => "Chưa phù hợp",
+                _ => classification.Trim()
+            };
         }
 
         private static void AddSkillsFromJson(List<string> targetSkills, string sourceText)

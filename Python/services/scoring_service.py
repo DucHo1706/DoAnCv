@@ -156,8 +156,8 @@ def normalize_scoring_result(ai_result, criteria_list):
     }
 
 def classify_cv(total_score):
-    if total_score >= 80: return "Phu hop"
-    if total_score >= 60: return "Nen xem xet"
+    if total_score >= 80: return "Phù hợp"
+    if total_score >= 60: return "Nên xem xét"
     return "Chưa phù hợp"
 
 def build_default_scoring_result(criteria_list, cv_skills=None, jd_skills=None):
