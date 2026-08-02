@@ -169,7 +169,7 @@ export default function TalentPoolPage() {
               if (record.latestCvUrl) {
                 const url = record.latestCvUrl.startsWith("http")
                   ? record.latestCvUrl
-                  : `https://recruitinsightai.com${record.latestCvUrl.startsWith("/") ? "" : "/"}${record.latestCvUrl}`;
+                  : `${window.location.origin}${record.latestCvUrl.startsWith("/") ? "" : "/"}${record.latestCvUrl}`;
                 window.open(url, "_blank");
               }
             }}

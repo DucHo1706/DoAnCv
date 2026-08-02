@@ -27,6 +27,7 @@ import {
   DownloadOutlined,
 } from "@ant-design/icons";
 import { useApplicationStatus } from "./hooks/useApplicationStatus";
+import { getApplicationStatusLabel as translateApplicationStatus } from "../../../../utils/statusLabels";
 import PageContainer from "../../../../components/common/PageContainer";
 import AiDetailedTabs from "../../../../components/ai-report/AiDetailedTabs";
 import CompetencyTab from "../../../../components/ai-report/CompetencyTab";
@@ -219,17 +220,21 @@ export default function ApplicationStatusPage() {
       case "applied":
         return { text: "Đã gửi hồ sơ (Chờ duyệt)", color: "#2563EB", bg: "rgba(37, 99, 235, 0.06)", border: "1px solid rgba(37, 99, 235, 0.12)" };
       case "reviewed":
+      case "reviewing":
         return { text: "HR đang xem xét", color: "#8B5CF6", bg: "rgba(139, 92, 246, 0.06)", border: "1px solid rgba(139, 92, 246, 0.12)" };
       case "shortlisted":
         return { text: "Hồ sơ đạt yêu cầu", color: "#06B6D4", bg: "rgba(6, 182, 212, 0.06)", border: "1px solid rgba(6, 182, 212, 0.12)" };
       case "interviewing":
+      case "interview":
         return { text: "Được chọn phỏng vấn", color: "#F59E0B", bg: "rgba(245, 158, 11, 0.06)", border: "1px solid rgba(245, 158, 11, 0.12)" };
       case "accepted":
+      case "offer":
+      case "hired":
         return { text: "Đã nhận việc 🎉", color: "#10B981", bg: "rgba(16, 185, 129, 0.06)", border: "1px solid rgba(16, 185, 129, 0.12)" };
       case "rejected":
         return { text: "Chưa phù hợp", color: "#EF4444", bg: "rgba(239, 68, 68, 0.06)", border: "1px solid rgba(239, 68, 68, 0.12)" };
       default:
-        return { text: status || "Đã gửi hồ sơ", color: "#2563EB", bg: "rgba(37, 99, 235, 0.06)", border: "1px solid rgba(37, 99, 235, 0.12)" };
+        return { text: translateApplicationStatus(status), color: "#2563EB", bg: "rgba(37, 99, 235, 0.06)", border: "1px solid rgba(37, 99, 235, 0.12)" };
     }
   };
 

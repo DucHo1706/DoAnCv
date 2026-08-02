@@ -128,7 +128,7 @@ export default function MainLayout() {
           const signalR = await import("@microsoft/signalr");
           if (cancelled) return;
 
-          const apiUrl = import.meta.env.VITE_API_URL || "https://recruitinsightai.com/api";
+          const apiUrl = import.meta.env.VITE_API_URL || "/api";
           const hubUrl = apiUrl.replace("/api", "/hubs/notifications");
 
           connection = new signalR.HubConnectionBuilder()

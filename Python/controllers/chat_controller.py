@@ -76,20 +76,20 @@ async def generate_email(request: GenerateEmailRequest, req: Request):
         if request.candidate_name.strip() == "":
             return {
                 "status": "error",
-                "message": "Ten ung vien khong duoc de trong."
+                "message": "Tên ứng viên không được để trống."
             }
 
         if request.job_title.strip() == "":
             return {
                 "status": "error",
-                "message": "Ten vi tri ung tuyen khong duoc de trong."
+                "message": "Tên vị trí ứng tuyển không được để trống."
             }
 
         if email_type == "reject":
             if request.reject_reason is None or request.reject_reason.strip() == "":
                 return {
                     "status": "error",
-                    "message": "Vui long truyen ly do tu choi khi email_type la reject."
+                    "message": "Vui lòng nhập lý do từ chối."
                 }
 
         result = email_service.generate_candidate_email(

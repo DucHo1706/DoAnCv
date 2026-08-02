@@ -18,6 +18,7 @@ namespace RecruitmentBackend.Controllers
         }
 
         [HttpGet("admin-stats")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetAdminDashboardStats(
             [FromQuery] string? categoryId,
             [FromQuery] DateTime? fromDate,
@@ -28,7 +29,7 @@ namespace RecruitmentBackend.Controllers
         }
 
         [HttpGet("hr-stats")]
-        [Authorize]
+        [Authorize(Roles = "Recruiter")]
         public async Task<IActionResult> GetHrDashboardStats([FromQuery] string? jobId, [FromQuery] string? timeRange)
         {
             var accountId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -55,6 +56,7 @@ namespace RecruitmentBackend.Controllers
         }
 
         [HttpGet("simulator-candidates")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetSimulatorCandidates()
         {
             var result = await _dashboardService.GetSimulatorCandidatesAsync();

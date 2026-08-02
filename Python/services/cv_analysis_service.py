@@ -71,7 +71,7 @@ def score_resume_sync(
             clean_cache_if_large()
 
     if not cv_text:
-        raise ValueError("Khong the trich xuat text tu file CV nay. Vui long chon file khac.")
+        raise ValueError("Không thể trích xuất nội dung từ CV này. Vui lòng chọn tệp khác.")
 
     # 3. Kiem dinh tinh hop le cua CV
     if cv_hash in TEXT_CACHE and "validation" in TEXT_CACHE[cv_hash]:
@@ -85,7 +85,7 @@ def score_resume_sync(
         clean_cache_if_large()
 
     if not is_resume:
-        raise ValueError(f"Tai lieu tai len khong phai la CV hop le. Chi tiet: {reason}")
+        raise ValueError(f"Tài liệu tải lên không phải CV hợp lệ. Chi tiết: {reason}")
 
     # Trich xuat ky nang bang NLP
     extracted_info = nlp_processor.extract_information(cv_text)
@@ -160,7 +160,7 @@ def score_resume_sync(
     full_analysis_data = {
         "score_analysis": {
             "total_score": scoring_result.get("total_score", 0),
-            "classification": scoring_result.get("classification", "Chua phan loai"),
+            "classification": scoring_result.get("classification", "Chưa phân loại"),
             "summary": scoring_result.get("summary", "Da hoan thanh phan tich CV."),
             "strengths": strengths,
             "weaknesses": weaknesses,
@@ -226,7 +226,7 @@ def preview_resume_sync(
             clean_cache_if_large()
 
     if not cv_text or cv_text.strip() == "":
-        raise ValueError("Khong the trich xuat text tu CV. Vui long kiem tra lai dinh dang file.")
+        raise ValueError("Không thể trích xuất nội dung từ CV. Vui lòng kiểm tra lại định dạng tệp.")
 
     # Kiem dinh tinh hop le
     if cv_hash in TEXT_CACHE and "validation" in TEXT_CACHE[cv_hash]:
@@ -240,7 +240,7 @@ def preview_resume_sync(
         clean_cache_if_large()
 
     if not is_resume:
-        raise ValueError(f"Tai lieu tai len khong phai CV hop le. Chi tiet: {reason}")
+        raise ValueError(f"Tài liệu tải lên không phải CV hợp lệ. Chi tiết: {reason}")
 
     # Trich xuat ky nang
     cv_info = nlp_processor.extract_information(cv_text)

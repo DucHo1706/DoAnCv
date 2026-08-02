@@ -59,7 +59,9 @@ def fetch_skills_from_db_on_startup():
                                 sync_skills_to_db(local_skills)
                         except Exception as e:
                             print(f"[DB STARTUP ERROR] Khong the seed du lieu: {e}")
+            return True
         else:
             print(f"[DB STARTUP WARNING] Khong the lay ky nang tu SQL Server. Status code: {response.status_code}")
     except Exception as e:
         print(f"[DB STARTUP WARNING] Loi ket noi toi C# backend tai startup: {e}")
+    return False

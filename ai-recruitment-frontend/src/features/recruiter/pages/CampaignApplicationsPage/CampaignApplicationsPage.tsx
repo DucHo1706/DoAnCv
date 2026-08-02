@@ -295,7 +295,7 @@ export default function CampaignApplicationsPage() {
               { value: "Applied", label: "Mới nộp" },
               { value: "Reviewing", label: "Đang xem xét" },
               { value: "Interview", label: "Phỏng vấn" },
-              { value: "Offer", label: "Nhận việc (Offer)" },
+              { value: "Offer", label: "Đề nghị nhận việc" },
               { value: "Rejected", label: "Đã từ chối" },
             ]}
           />

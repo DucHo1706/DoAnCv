@@ -1,59 +1,105 @@
-version: '3.8'
+name: recruitment
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
 
 services:
-  # 1. AI Service (FastAPI Python)
   ai-service:
     build:
       context: ./Python
       dockerfile: Dockerfile
-    container_name: recruitment_ai_service
-    ports:
-      - "8000:8000"
+    image: recruitment-ai:latest
     environment:
-      - CSHARP_API_URL=http://backend:8080/api
-      # Truyền API keys từ file .env ở máy host vào container
-      - GEMINI_API_KEY=${GEMINI_API_KEY}
-    restart: always
+      CSHARP_API_URL: http://backend:8080/api
+      GEMINI_API_KEY: ${GEMINI_API_KEY:?Missing GEMINI_API_KEY}
+      GEMINI_MODELS: ${GEMINI_MODELS:-gemini-2.5-flash,gemini-2.0-flash}
+      GEMINI_VISION_MODELS: ${GEMINI_VISION_MODELS:-gemini-2.5-flash,gemini-2.0-flash}
+      GEMINI_KEY_COOLDOWN_SECONDS: ${GEMINI_KEY_COOLDOWN_SECONDS:-60}
+    expose:
+      - "8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    mem_limit: ${AI_MEMORY_LIMIT:-2g}
+    cpus: ${AI_CPU_LIMIT:-1.5}
+    pids_limit: 256
+    logging: *default-logging
+    networks:
+      - internal
 
-  # 2. Backend Service (.NET 8.0 Core Web API)
   backend:
     build:
       context: ./RecruitmentBackend
       dockerfile: Dockerfile
-    container_name: recruitment_backend
-    ports:
-      - "5286:8080" # Cổng HTTP hỗ trợ truy cập trực tiếp từ máy host nếu cần
+    image: recruitment-backend:latest
     environment:
-      - ASPNETCORE_URLS=http://+:8080
-      - ASPNETCORE_ENVIRONMENT=Production
-      - PythonAiApiUrl=http://ai-service:8000
-      - ConnectionStrings__DefaultConnection=${DB_CONNECTION_STRING:-Server=db43261.public.databaseasp.net; Database=db43261; User Id=db43261; Password=3Hb?Cz-5_W4m; Encrypt=True; TrustServerCertificate=True; MultipleActiveResultSets=True;}
-      - Jwt__Key=${JWT_KEY:-ASMWrPAZ9dqo3oJE6qPtnNQgiFwfm5AVFVyKoTJO6NO}
-      - EmailSettings__Password=${EMAIL_PASSWORD:-dlvbuzxzgmxoryho}
-      - Cloudinary__CloudName=${CLOUDINARY_CLOUD_NAME:-drirvdrsi}
-      - Cloudinary__ApiKey=${CLOUDINARY_API_KEY:-847779829538996}
-      - Cloudinary__ApiSecret=${CLOUDINARY_API_SECRET:-AAIhMXWpWhqMwBXUeuZc4QRZnZk}
+      ASPNETCORE_URLS: http://+:8080
+      ASPNETCORE_ENVIRONMENT: Production
+      PythonAiApiUrl: http://ai-service:8000
+      ConnectionStrings__DefaultConnection: ${DB_CONNECTION_STRING:?Missing DB_CONNECTION_STRING}
+      Jwt__Key: ${JWT_KEY:?Missing JWT_KEY}
+      EmailSettings__Password: ${EMAIL_PASSWORD:?Missing EMAIL_PASSWORD}
+      EmailSettings__SenderEmail: ${EMAIL_ADDRESS:?Missing EMAIL_ADDRESS}
+      EmailSettings__Username: ${EMAIL_ADDRESS:?Missing EMAIL_ADDRESS}
+      Cloudinary__CloudName: ${CLOUDINARY_CLOUD_NAME:?Missing CLOUDINARY_CLOUD_NAME}
+      Cloudinary__ApiKey: ${CLOUDINARY_API_KEY:?Missing CLOUDINARY_API_KEY}
+      Cloudinary__ApiSecret: ${CLOUDINARY_API_SECRET:?Missing CLOUDINARY_API_SECRET}
+    expose:
+      - "8080"
     volumes:
-      - ./Uploads:/app/Uploads
+      - ${UPLOADS_PATH:-./Uploads}:/app/Uploads
     depends_on:
-      - ai-service
-    restart: always
+      ai-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://127.0.0.1:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    mem_limit: ${BACKEND_MEMORY_LIMIT:-1g}
+    cpus: ${BACKEND_CPU_LIMIT:-1.0}
+    pids_limit: 256
+    logging: *default-logging
+    networks:
+      - internal
 
-  # 3. Frontend Service (React + Nginx)
   frontend:
     build:
       context: ./ai-recruitment-frontend
       dockerfile: Dockerfile
-    container_name: recruitment_frontend
+    image: recruitment-frontend:latest
     ports:
       - "80:80"
       - "443:443"
     volumes:
       - /etc/letsencrypt:/etc/letsencrypt:ro
+      - /var/www/certbot:/var/www/certbot:ro
     depends_on:
-      - backend
-    restart: always
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--spider", "http://127.0.0.1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 15s
+    restart: unless-stopped
+    mem_limit: ${FRONTEND_MEMORY_LIMIT:-256m}
+    cpus: ${FRONTEND_CPU_LIMIT:-0.5}
+    pids_limit: 128
+    logging: *default-logging
+    networks:
+      - internal
 
-volumes:
-  # Cấu hình lưu trữ dữ liệu nếu cần
-  uploads_data:
+networks:
+  internal:
+    driver: bridge

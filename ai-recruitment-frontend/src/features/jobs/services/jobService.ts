@@ -71,8 +71,11 @@ export interface JobReviewResponse {
 
 export const jobService = {
   async getJobs() {
-    const response = await axiosClient.get<JobDto[]>("/jobs");
-    return response.data;
+    const response = await axiosClient.get<{ items?: JobDto[]; $values?: JobDto[] }>(
+      "/jobs/published",
+      { params: { pageIndex: 1, pageSize: 24 } },
+    );
+    return response.data.items ?? response.data.$values ?? [];
   },
 
   async getMyJobs() {

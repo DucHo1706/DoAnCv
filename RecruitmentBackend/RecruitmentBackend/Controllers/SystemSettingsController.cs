@@ -17,6 +17,7 @@ namespace RecruitmentBackend.Controllers
 
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize(Roles = "Admin")]
     public class SystemSettingsController : ControllerBase
     {
         private static readonly string SettingsFilePath = Path.Combine(Directory.GetCurrentDirectory(), "system_settings.json");

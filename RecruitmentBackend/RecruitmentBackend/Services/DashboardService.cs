@@ -55,6 +55,7 @@ namespace RecruitmentBackend.Services
             }
 
             var categoryOptions = await _context.Categories
+                .AsNoTracking()
                 .Where(category => category.IsActive == true)
                 .OrderBy(category => category.Name)
                 .Select(category => new
@@ -73,17 +74,17 @@ namespace RecruitmentBackend.Services
                 - Chọn tuần trước: lấy tổng user đã tồn tại tính đến cuối tuần trước.
             */
             var accountList = await _context.Accounts
+                .AsNoTracking()
                 .Where(account => account.CreatedAt < snapshotDateExclusive)
+                .Select(account => account.Role)
                 .ToListAsync();
 
             int totalUsers = accountList.Count;
 
-            int totalHrUsers = accountList.Count(account =>
-                account.Role == "Recruiter" ||
-                account.Role == "HR");
+            int totalHrUsers = accountList.Count(role =>
+                role == "Recruiter" || role == "HR");
 
-            int totalCandidateUsers = accountList.Count(account =>
-                account.Role == "Candidate");
+            int totalCandidateUsers = accountList.Count(role => role == "Candidate");
 
             /*
                 Lấy toàn bộ Job kèm lĩnh vực.
@@ -92,12 +93,12 @@ namespace RecruitmentBackend.Services
                 - Job mới trong khoảng thời gian.
                 - Tỷ trọng lĩnh vực.
             */
-            var allJobs = await (from job in _context.JobPostings
-                                 join position in _context.Positions on job.PositionID equals position.PositionID into positionGroup
+            var allJobs = await (from job in _context.JobPostings.AsNoTracking()
+                                 join position in _context.Positions.AsNoTracking() on job.PositionID equals position.PositionID into positionGroup
                                  from position in positionGroup.DefaultIfEmpty()
-                                 join jobCategory in _context.Categories on job.CategoryID equals jobCategory.CategoryID into jobCategoryGroup
+                                 join jobCategory in _context.Categories.AsNoTracking() on job.CategoryID equals jobCategory.CategoryID into jobCategoryGroup
                                  from jobCategory in jobCategoryGroup.DefaultIfEmpty()
-                                 join positionCategory in _context.Categories on position.CategoryID equals positionCategory.CategoryID into positionCategoryGroup
+                                 join positionCategory in _context.Categories.AsNoTracking() on position.CategoryID equals positionCategory.CategoryID into positionCategoryGroup
                                  from positionCategory in positionCategoryGroup.DefaultIfEmpty()
                                  select new AdminDashboardJobItem
                                  {
@@ -157,16 +158,16 @@ namespace RecruitmentBackend.Services
                 Lấy toàn bộ Application kèm CV, Job, Category, AI Evaluation.
                 Không filter ngày ở query chính để còn dùng cho snapshot và range.
             */
-            var allApplications = await (from application in _context.Applications
-                                         join cv in _context.CandidateCVs on application.CVID equals cv.CVID
-                                         join job in _context.JobPostings on application.JobID equals job.JobID
-                                         join position in _context.Positions on job.PositionID equals position.PositionID into positionGroup
+            var allApplications = await (from application in _context.Applications.AsNoTracking()
+                                         join cv in _context.CandidateCVs.AsNoTracking() on application.CVID equals cv.CVID
+                                         join job in _context.JobPostings.AsNoTracking() on application.JobID equals job.JobID
+                                         join position in _context.Positions.AsNoTracking() on job.PositionID equals position.PositionID into positionGroup
                                          from position in positionGroup.DefaultIfEmpty()
-                                         join jobCategory in _context.Categories on job.CategoryID equals jobCategory.CategoryID into jobCategoryGroup
+                                         join jobCategory in _context.Categories.AsNoTracking() on job.CategoryID equals jobCategory.CategoryID into jobCategoryGroup
                                          from jobCategory in jobCategoryGroup.DefaultIfEmpty()
-                                         join positionCategory in _context.Categories on position.CategoryID equals positionCategory.CategoryID into positionCategoryGroup
+                                         join positionCategory in _context.Categories.AsNoTracking() on position.CategoryID equals positionCategory.CategoryID into positionCategoryGroup
                                          from positionCategory in positionCategoryGroup.DefaultIfEmpty()
-                                         join ai in _context.AIEvaluations on application.ApplicationID equals ai.ApplicationID into aiGroup
+                                         join ai in _context.AIEvaluations.AsNoTracking() on application.ApplicationID equals ai.ApplicationID into aiGroup
                                          from ai in aiGroup.DefaultIfEmpty()
                                          select new AdminDashboardApplicationItem
                                          {

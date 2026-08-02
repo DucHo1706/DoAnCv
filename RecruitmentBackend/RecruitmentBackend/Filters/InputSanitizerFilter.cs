@@ -68,7 +68,9 @@ namespace RecruitmentBackend.Filters
                 PropertyInfo[] properties = type.GetProperties(BindingFlags.Public | BindingFlags.Instance);
                 foreach (var prop in properties)
                 {
-                    if (!prop.CanRead || !prop.CanWrite) continue;
+                    // Indexed properties require parameters in GetValue and are
+                    // not DTO fields that should be sanitized.
+                    if (!prop.CanRead || !prop.CanWrite || prop.GetIndexParameters().Length != 0) continue;
 
                     if (prop.PropertyType == typeof(string))
                     {

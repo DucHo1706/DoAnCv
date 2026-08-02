@@ -27,6 +27,7 @@ namespace RecruitmentBackend.Controllers
 
         // 1. Lấy danh sách toàn bộ Job
         [HttpGet]
+        [Authorize(Roles = "Recruiter,Admin")]
         public async Task<IActionResult> GetJobs()
         {
             var jobs = await _jobService.GetAllJobsAsync();
@@ -65,6 +66,7 @@ namespace RecruitmentBackend.Controllers
 
         // 3. Lấy chi tiết Job cho Modal "Xem chi tiết" của HR
         [HttpGet("{id}/review")]
+        [Authorize(Roles = "Recruiter,Admin")]
         public async Task<IActionResult> GetJobReview(string id)
         {
             var reviewResult = await _jobService.ReviewJobAsync(id);

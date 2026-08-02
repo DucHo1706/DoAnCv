@@ -69,7 +69,7 @@ export function AiReportDrawer({
           icon={<FilePdfOutlined />}
           href={
             application?.cvUrl
-              ? application.cvUrl.replace(/https?:\/\/localhost:(7006|5286)/gi, "https://recruitinsightai.com")
+              ? application.cvUrl.replace(/https?:\/\/localhost:(7006|5286)/gi, window.location.origin)
               : "#"
           }
           target="_blank"

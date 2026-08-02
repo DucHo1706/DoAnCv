@@ -297,7 +297,7 @@ namespace RecruitmentBackend.Services
                 }
 
                 _context.InterviewSchedules.Remove(schedule);
-                application.Status = "Reviewed";
+                application.Status = ApplicationStatuses.Reviewing;
 
                 await _context.SaveChangesAsync();
 

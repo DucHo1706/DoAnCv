@@ -56,8 +56,8 @@ def generate_cv_star_tips(cv_text: str, jd_text: str, cv_skills: list = None, jd
     """
     Tao cac goi y toi uu hoa CV theo chuan STAR
     """
-    cv_skills_text = ", ".join(cv_skills) if cv_skills else "Chua trich xuat duoc"
-    jd_skills_text = ", ".join(jd_skills) if jd_skills else "Chua trich xuat duoc"
+    cv_skills_text = ", ".join(cv_skills) if cv_skills else "Chưa trích xuất được"
+    jd_skills_text = ", ".join(jd_skills) if jd_skills else "Chưa trích xuất được"
 
     prompt = get_star_optimization_prompt(jd_text, jd_skills_text, cv_text, cv_skills_text)
     try:
@@ -96,14 +96,26 @@ def evaluate_interview_answer(question: str, answer: str, job_title: str) -> dic
         return {
             "status": "success",
             "score": int(result.get("score", 50)),
-            "strengths": result.get("strengths", "Chua ro diem manh."),
-            "weaknesses": result.get("weaknesses", "Chua ro diem yeu."),
-            "suggestions": result.get("suggestions", "Can cu the hoa so lieu."),
-            "improved_answer": result.get("improved_answer", "Khong co goi y cau tra loi mau.")
+            "strengths": result.get("strengths", "Chưa xác định rõ điểm mạnh."),
+            "weaknesses": result.get("weaknesses", "Chưa xác định rõ điểm cần cải thiện."),
+            "suggestions": result.get("suggestions", "Cần cụ thể hóa bằng số liệu."),
+            "improved_answer": result.get("improved_answer", "Chưa có gợi ý câu trả lời mẫu.")
         }
     except Exception as e:
         logger.error(f"Loi evaluate_interview_answer: {e}")
+        # Keep the interview flow usable when every Gemini key is temporarily
+        # rate-limited. The response is explicitly marked as a fallback.
+        normalized_answer = (answer or "").strip()
+        word_count = len(normalized_answer.split())
+        has_result = any(token in normalized_answer.lower() for token in ["%", "kết quả", "ket qua", "tăng", "tang", "giảm", "giam"])
+        score = min(75, max(35, 35 + min(word_count, 30) + (10 if has_result else 0)))
         return {
-            "status": "error",
-            "message": f"Loi ket noi AI khi cham diem phong van: {str(e)}"
+            "status": "success",
+            "is_fallback": True,
+            "score": score,
+            "strengths": "Câu trả lời đã nêu được nội dung chính và có thể tiếp tục phát triển theo cấu trúc STAR.",
+            "weaknesses": "Hệ thống AI đang tạm bận nên chưa thể đánh giá sâu theo ngữ cảnh vị trí.",
+            "suggestions": "Hãy bổ sung rõ Tình huống, Nhiệm vụ, Hành động và Kết quả có số liệu đo lường.",
+            "improved_answer": normalized_answer,
+            "message": "Đang dùng đánh giá dự phòng; bạn có thể thử lại để nhận phân tích AI đầy đủ."
         }

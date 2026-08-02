@@ -4,6 +4,8 @@ import os
 import time
 import requests
 import json
+import random
+import threading
 from dotenv import load_dotenv
 from utils.logger import logger
 
@@ -32,6 +34,35 @@ if not api_keys:
 else:
     clients = [genai.Client(api_key=key) for key in api_keys]
     client = clients[0] if clients else None
+
+DEFAULT_MODELS = [
+    value.strip()
+    for value in os.getenv("GEMINI_MODELS", "gemini-2.5-flash,gemini-2.0-flash").split(",")
+    if value.strip()
+]
+VISION_MODELS = [
+    value.strip()
+    for value in os.getenv("GEMINI_VISION_MODELS", "gemini-2.5-flash,gemini-2.0-flash").split(",")
+    if value.strip()
+]
+KEY_COOLDOWN_SECONDS = max(10, int(os.getenv("GEMINI_KEY_COOLDOWN_SECONDS", "60")))
+_key_cooldowns = {}
+_unavailable_models = set()
+_state_lock = threading.Lock()
+
+
+def _available_clients():
+    now = time.monotonic()
+    with _state_lock:
+        available = [item for item in enumerate(clients) if _key_cooldowns.get(item[0], 0) <= now]
+    # If every key is cooling down, fail quickly instead of multiplying slow
+    # upstream calls for each concurrent CV analysis request.
+    return available
+
+
+def _cool_down_key(client_idx: int):
+    with _state_lock:
+        _key_cooldowns[client_idx] = time.monotonic() + KEY_COOLDOWN_SECONDS
 
 def clean_json_text(text: str) -> str:
     """
@@ -90,22 +121,18 @@ def generate_content_with_retry(prompt: str, is_json: bool = True, models: list 
     if not clients:
         raise Exception("Khong cau hinh API keys truc tiep.")
 
-    models_to_try = models if models is not None else [
-        "gemini-2.5-flash",
-        "gemini-2.0-flash",
-        "gemini-1.5-flash",
-        "gemini-1.5-pro",
-    ]
+    models_to_try = models if models is not None else DEFAULT_MODELS
     config = types.GenerateContentConfig(
         response_mime_type="application/json" if is_json else "text/plain"
     )
 
     last_error = None
-    import random
-    
     for model_name in models_to_try:
+        with _state_lock:
+            if model_name in _unavailable_models:
+                continue
         # Xáo trộn danh sách clients kèm index gốc để chia đều tải ngẫu nhiên cho mỗi model
-        shuffled_clients = list(enumerate(clients))
+        shuffled_clients = _available_clients()
         random.shuffle(shuffled_clients)
         
         is_model_not_found = False
@@ -130,10 +157,12 @@ def generate_content_with_retry(prompt: str, is_json: bool = True, models: list 
                 if "404" in err_str or "not_found" in err_str or "not found" in err_str:
                     logger.warning(f"Model {model_name} khong ton tai (404 NOT_FOUND). Bo qua model nay.")
                     is_model_not_found = True
+                    with _state_lock:
+                        _unavailable_models.add(model_name)
                     break
                 if "429" in err_str or "resource_exhausted" in err_str or "quota" in err_str:
                     logger.warning(f"Model {model_name} Key #{client_idx+1} dat Quota/Rate Limit (429). Dang thu sang Key/Model khac...")
-                    time.sleep(0.5) # Sleep briefly on rate limit before trying next key/model
+                    _cool_down_key(client_idx)
 
         if is_model_not_found:
             continue
@@ -153,10 +182,8 @@ def embed_content_with_retry(texts: list) -> list:
         raise Exception("Khong cau hinh API keys.")
         
     last_error = None
-    import random
-    
     # Xáo trộn danh sách clients để chia đều tải ngẫu nhiên
-    shuffled_clients = list(enumerate(clients))
+    shuffled_clients = _available_clients()
     random.shuffle(shuffled_clients)
     
     for client_idx, active_client in shuffled_clients:
@@ -177,6 +204,9 @@ def embed_content_with_retry(texts: list) -> list:
         except Exception as e:
             last_error = e
             logger.warning(f"Loi goi Embedding voi Key #{client_idx+1}: {e}")
+            err_str = str(e).lower()
+            if "429" in err_str or "resource_exhausted" in err_str or "quota" in err_str:
+                _cool_down_key(client_idx)
             
     raise last_error or Exception("Khong the ket noi den Google Gemini Embedding API sau khi xoay vong cac keys.")
 
@@ -189,13 +219,9 @@ def generate_vision_content_with_retry(image_bytes: bytes, mime_type: str, promp
     if not clients:
         return ""
 
-    models_to_try = [
-        "gemini-2.0-flash",
-        "gemini-1.5-flash"
-    ]
+    models_to_try = VISION_MODELS
 
-    import random
-    shuffled_clients = list(enumerate(clients))
+    shuffled_clients = _available_clients()
     random.shuffle(shuffled_clients)
 
     # Đảm bảo mime_type hợp lệ cho Gemini Part
@@ -214,6 +240,13 @@ def generate_vision_content_with_retry(image_bytes: bytes, mime_type: str, promp
                     return response.text.strip()
             except Exception as e:
                 logger.warning(f"Loi Gemini Vision voi model {model_name} (Key #{client_idx+1}): {e}")
+                err_str = str(e).lower()
+                if "404" in err_str or "not_found" in err_str or "not found" in err_str:
+                    with _state_lock:
+                        _unavailable_models.add(model_name)
+                    break
+                if "429" in err_str or "resource_exhausted" in err_str or "quota" in err_str:
+                    _cool_down_key(client_idx)
 
     return ""
 

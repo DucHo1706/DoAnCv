@@ -37,6 +37,7 @@ import {
 import { useMemo } from "react";
 import PageContainer from "../../../../components/common/PageContainer";
 import { useTalentPoolDetail } from "./hooks/useTalentPoolDetail";
+import { getApplicationStatusLabel } from "../../../../utils/statusLabels";
 
 const { Text, Title, Paragraph } = Typography;
 
@@ -484,7 +485,7 @@ export default function TalentPoolDetailPage() {
                 disabled={!candidate.latestCvUrl}
                 onClick={() => {
                   if (candidate.latestCvUrl) {
-                    const url = candidate.latestCvUrl.replace(/https?:\/\/localhost:(7006|5286)/gi, "https://recruitinsightai.com");
+                    const url = candidate.latestCvUrl.replace(/https?:\/\/localhost:(7006|5286)/gi, window.location.origin);
                     window.open(url, "_blank");
                   }
                 }}
@@ -551,11 +552,7 @@ export default function TalentPoolDetailPage() {
                               )}
                               {interaction.statusSnapshot && (
                                 <Tag style={{ fontSize: 10, margin: 0, padding: "0 4px", borderRadius: 4 }}>
-                                  {interaction.statusSnapshot === "Applied" ? "Mới nộp" :
-                                    interaction.statusSnapshot === "Reviewing" ? "Đang xem xét" :
-                                      interaction.statusSnapshot === "Interview" ? "Phỏng vấn" :
-                                        interaction.statusSnapshot === "Offer" ? "Nhận việc (Offer)" :
-                                          interaction.statusSnapshot === "Rejected" ? "Đã từ chối" : interaction.statusSnapshot}
+                                  {getApplicationStatusLabel(interaction.statusSnapshot)}
                                 </Tag>
                               )}
                             </div>

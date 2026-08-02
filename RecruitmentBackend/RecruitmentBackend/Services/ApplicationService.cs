@@ -307,7 +307,7 @@ namespace RecruitmentBackend.Services
             {
                 string accountId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
-                var recruiter = await _context.Recruiters.FirstOrDefaultAsync(r => r.AccountID == accountId);
+                var recruiter = await _context.Recruiters.AsNoTracking().FirstOrDefaultAsync(r => r.AccountID == accountId);
 
                 if (recruiter == null)
                 {
@@ -315,20 +315,21 @@ namespace RecruitmentBackend.Services
                 }
 
                 var branchIds = await _context.RecruiterBranches
+                    .AsNoTracking()
                     .Where(rb => rb.RecruiterID == recruiter.RecruiterID)
                     .Select(rb => rb.BranchID)
                     .ToListAsync();
 
                 var rawApplications = await (
-                    from app in _context.Applications
-                    join job in _context.JobPostings on app.JobID equals job.JobID
+                    from app in _context.Applications.AsNoTracking()
+                    join job in _context.JobPostings.AsNoTracking() on app.JobID equals job.JobID
                     where job.RecruiterID == recruiter.RecruiterID || string.IsNullOrEmpty(job.RecruiterID) || branchIds.Contains(job.BranchID)
-                    join cv in _context.CandidateCVs on app.CVID equals cv.CVID
-                    join cand in _context.Candidates on cv.CandidateID equals cand.CandidateID
-                    join acc in _context.Accounts on cand.AccountID equals acc.AccountID
-                    join ai in _context.AIEvaluations on app.ApplicationID equals ai.ApplicationID into aiGrp
+                    join cv in _context.CandidateCVs.AsNoTracking() on app.CVID equals cv.CVID
+                    join cand in _context.Candidates.AsNoTracking() on cv.CandidateID equals cand.CandidateID
+                    join acc in _context.Accounts.AsNoTracking() on cand.AccountID equals acc.AccountID
+                    join ai in _context.AIEvaluations.AsNoTracking() on app.ApplicationID equals ai.ApplicationID into aiGrp
                     from ai in aiGrp.DefaultIfEmpty()
-                    join pos in _context.Positions on job.PositionID equals pos.PositionID into posGrp
+                    join pos in _context.Positions.AsNoTracking() on job.PositionID equals pos.PositionID into posGrp
                     from pos in posGrp.DefaultIfEmpty()
                     orderby ai != null ? ai.FitScore : 0m descending
                     select new

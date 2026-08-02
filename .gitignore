@@ -39,6 +39,8 @@ build/
 .env
 **/.env
 **/.env.*
+!.env.example
+!**/.env.example
 **/appsettings.Development.json
 **/appsettings.Local.json
 **/google-credentials.json
@@ -65,4 +67,4 @@ Python/generate_visual_guide.py
 
 
 # Temporary test PDF files
-test*.pdf
+test*.pdf

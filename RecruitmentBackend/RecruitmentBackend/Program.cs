@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using System.Text;
 
@@ -50,6 +51,16 @@ builder.Services.AddCors(options =>
 
 // Đăng ký SignalR
 builder.Services.AddSignalR();
+builder.Services.AddHealthChecks();
+
+// Nginx terminates TLS and forwards the original client IP/scheme.
+// The backend port is only exposed on the private Docker network.
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+});
 
 // Đăng ký Controllers kết hợp bộ lọc tự động Làm sạch dữ liệu (Input Sanitizer & ModelState Validation)
 builder.Services.AddControllers(options =>
@@ -181,6 +192,8 @@ builder.Services.AddAuthentication(options =>
 
 var app = builder.Build();
 
+app.UseForwardedHeaders();
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -192,11 +205,8 @@ app.UseCors("AllowReactApp");
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
-if (!app.Environment.IsDevelopment())
-{
-    app.UseHttpsRedirection();
-}
 app.MapControllers();
+app.MapHealthChecks("/health");
 
 // Map SignalR Hub
 app.MapHub<RecruitmentBackend.Hubs.AIEvaluationHub>("/hubs/ai-evaluation");

@@ -39,61 +39,72 @@ namespace RecruitmentBackend.Services
                 }
 
                 var talentPoolCandidates = await _context.TalentPoolCandidates
+                    .AsNoTracking()
                     .Where(poolItem => poolItem.IsActive == true)
                     .OrderByDescending(poolItem => poolItem.LastUpdatedAt)
                     .ToListAsync();
+
+                var candidateIds = talentPoolCandidates.Select(item => item.CandidateID).Distinct().ToList();
+                var latestCvIds = talentPoolCandidates
+                    .Where(item => string.IsNullOrWhiteSpace(item.LatestCVID) == false)
+                    .Select(item => item.LatestCVID)
+                    .Distinct()
+                    .ToList();
+
+                var latestCvById = await _context.CandidateCVs
+                    .AsNoTracking()
+                    .Where(cv => latestCvIds.Contains(cv.CVID))
+                    .Select(cv => new { cv.CVID, cv.FilePath, cv.CVExtractedSkills })
+                    .ToDictionaryAsync(cv => cv.CVID);
+
+                var candidatesWithActiveApplications = (await (
+                    from application in _context.Applications.AsNoTracking()
+                    join cv in _context.CandidateCVs.AsNoTracking() on application.CVID equals cv.CVID
+                    join job in _context.JobPostings.AsNoTracking() on application.JobID equals job.JobID
+                    where candidateIds.Contains(cv.CandidateID)
+                          && ApplicationStatuses.ActiveStatuses.Contains(application.Status)
+                          && job.Status == "Published"
+                    select cv.CandidateID
+                ).Distinct().ToListAsync()).ToHashSet();
+
+                var evaluationRows = await (
+                    from evaluation in _context.AIEvaluations.AsNoTracking()
+                    join application in _context.Applications.AsNoTracking() on evaluation.ApplicationID equals application.ApplicationID
+                    join cv in _context.CandidateCVs.AsNoTracking() on application.CVID equals cv.CVID
+                    where candidateIds.Contains(cv.CandidateID)
+                    select new { cv.CandidateID, evaluation.EvaluatedAt, evaluation.MatchedSkills }
+                ).ToListAsync();
+
+                var latestMatchedSkillsByCandidate = evaluationRows
+                    .GroupBy(row => row.CandidateID)
+                    .ToDictionary(group => group.Key, group => group.OrderByDescending(row => row.EvaluatedAt).First().MatchedSkills);
 
                 var responseList = new List<TalentPoolCandidateResponse>();
 
                 foreach (var poolCandidate in talentPoolCandidates)
                 {
-                    bool isInviteLocked = false;
-                    string inviteLockReason = "";
+                    bool isInviteLocked = candidatesWithActiveApplications.Contains(poolCandidate.CandidateID);
+                    string inviteLockReason = isInviteLocked
+                        ? "Ứng viên đang tham gia quy trình tuyển dụng ở một vị trí khác."
+                        : "";
 
-                    /*
-                        Status Isolation:
-                        Nếu ứng viên đang có hồ sơ active ở bất kỳ job đang mở nào,
-                        thì khóa nút Mời ứng tuyển trong Talent Pool.
-                    */
-                    var activeApplication = await (
-                        from application in _context.Applications
-                        join cv in _context.CandidateCVs
-                            on application.CVID equals cv.CVID
-                        join job in _context.JobPostings
-                            on application.JobID equals job.JobID
-                        where cv.CandidateID == poolCandidate.CandidateID
-                              && ApplicationStatuses.ActiveStatuses.Contains(application.Status)
-                              && job.Status == "Published"
-                        select new
-                        {
-                            application.ApplicationID,
-                            application.Status,
-                            job.JobID
-                        }
-                    ).FirstOrDefaultAsync();
-
-                    if (activeApplication != null)
+                    var candidateSkills = ExtractSkillNames(poolCandidate.HighlightSkillsJson);
+                    latestCvById.TryGetValue(poolCandidate.LatestCVID ?? "", out var latestCv);
+                    if (latestCv != null)
                     {
-                        isInviteLocked = true;
-                        inviteLockReason = "Ứng viên đang tham gia quy trình tuyển dụng ở một vị trí khác.";
+                        AddSkills(candidateSkills, ExtractSkillNames(latestCv.CVExtractedSkills));
                     }
-
-                    var candidateSkills = await BuildCandidateSkillsAsync(poolCandidate);
+                    if (latestMatchedSkillsByCandidate.TryGetValue(poolCandidate.CandidateID, out var matchedSkills))
+                    {
+                        AddSkills(candidateSkills, ExtractSkillNames(matchedSkills));
+                    }
 
                     var responseItem = new TalentPoolCandidateResponse();
                     responseItem.TalentPoolCandidateId = poolCandidate.TalentPoolCandidateID;
                     responseItem.CandidateId = poolCandidate.CandidateID;
                     responseItem.LatestCvId = poolCandidate.LatestCVID;
 
-                    // Lookup CV file path
-                    if (!string.IsNullOrEmpty(poolCandidate.LatestCVID))
-                    {
-                        var cv = await _context.CandidateCVs
-                            .Where(c => c.CVID == poolCandidate.LatestCVID)
-                            .Select(c => c.FilePath)
-                            .FirstOrDefaultAsync();
-                        responseItem.LatestCvUrl = cv;
-                    }
+                    responseItem.LatestCvUrl = latestCv?.FilePath;
                     responseItem.FullName = poolCandidate.FullName;
                     responseItem.Email = poolCandidate.Email;
                     responseItem.Phone = poolCandidate.Phone;

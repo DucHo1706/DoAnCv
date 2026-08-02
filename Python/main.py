@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from contextlib import asynccontextmanager
+import asyncio
 import uvicorn
 import urllib3
 from dotenv import load_dotenv
@@ -20,11 +21,27 @@ from controllers.skills_controller import router as skills_router
 from controllers.search_controller import router as search_router
 from utils.logger import logger
 
+async def sync_skills_with_retry():
+    """Synchronize after startup without blocking the AI service health endpoint."""
+    for attempt in range(1, 7):
+        if attempt > 1:
+            await asyncio.sleep(10)
+
+        success = await asyncio.to_thread(fetch_skills_from_db_on_startup)
+        if success:
+            return
+
+        logger.warning("Skill synchronization attempt %s/6 failed; retrying.", attempt)
+
+    logger.error("Skill synchronization could not reach the backend after 6 attempts.")
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Thuc hien dong bo ky nang tu SQL Server khi khoi dong ung dung
-    fetch_skills_from_db_on_startup()
-    yield
+    sync_task = asyncio.create_task(sync_skills_with_retry())
+    try:
+        yield
+    finally:
+        sync_task.cancel()
 
 app = FastAPI(
     title="AI Recruitment System API",
@@ -83,6 +100,10 @@ app.include_router(search_router)
 @app.get("/")
 async def root():
     return {"message": "AI Recruitment Service is running perfectly!", "status": "ok"}
+
+@app.get("/health", include_in_schema=False)
+async def health():
+    return {"status": "healthy"}
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True, reload_excludes=["*.json"])

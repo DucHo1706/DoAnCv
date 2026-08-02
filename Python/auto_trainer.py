@@ -22,8 +22,7 @@ def auto_train_model():
     print("-" * 60)
     
     print("1. Đang gọi API sang C# để rút trích dữ liệu CV ẩn danh...")
-    # THAY ĐỔI PORT 7115 THÀNH PORT TRÊN VISUAL STUDIO CỦA BẠN NẾU CẦN
-    csharp_api_url = "https://localhost:7006/api/AiTrainingController/export-cv-data" 
+    csharp_api_url = os.getenv("CSHARP_API_URL", "http://localhost:5286/api").rstrip("/") + "/AiTraining/export-cv-data"
     
     try:
         response = requests.get(csharp_api_url, verify=False)

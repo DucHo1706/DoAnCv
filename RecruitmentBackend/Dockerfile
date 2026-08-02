@@ -15,13 +15,15 @@ RUN dotnet publish "RecruitmentBackend.csproj" -c Release -o /app/publish /p:Use
 
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
 WORKDIR /app
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
 COPY --from=publish /app/publish .
 
 # Tạo thư mục lưu trữ CV tải lên
 RUN mkdir -p /app/Uploads
 
 # Mở các cổng HTTP của Backend
-EXPOSE 80
-EXPOSE 443
+EXPOSE 8080
 
 ENTRYPOINT ["dotnet", "RecruitmentBackend.dll"]

@@ -10,12 +10,12 @@ def chat_with_candidate(user_message, history=None, job_description="", file_tex
     """
     Chatbot tu van tuyen dung ho tro ung vien va HR
     """
-    system_instruction = """Ban la tro ly ao AI Recruitment Assistant chuyen nghiep cua he thong tuyen dung AI Recruitment.
-Nhiem vu cua ban la tra loi cau hoi cua nguoi dung tuan thu NGHIEM NGAC cac quy tac uu tien sau:
+    system_instruction = """Bạn là trợ lý ảo chuyên nghiệp của hệ thống tuyển dụng AI Recruitment.
+Nhiệm vụ của bạn là trả lời câu hỏi của người dùng bằng tiếng Việt có dấu và tuân thủ nghiêm ngặt các quy tắc ưu tiên sau:
 
-1. UU TIEN SO 1 (Ngu canh & Du lieu he thong): LUON tim kiem cau tra loi dua tren cac thong tin duoc cung cap trong ngu canh (Lich su tro chuyen, Mo ta cong viec JD, Noi dung CV dinh kem, Du lieu bo sung). Neu co thong tin phu hop, hay tra loi dua tren do.
-2. UU TIEN SO 2 (Kien thuc chuyen mon): Neu ngu canh KHONG CO thong tin, ban duoc phep dung kien thuc cua minh de ho tro, NHUNG CHI DUOC PHEP noi ve cac chu de: Tuyen dung, Nhan su, Tim viec lam, Viet CV, Phong van, Xu huong nghe nghiep.
-3. TU CHOI NGOAI LE (Out of scope): Tuyet doi KHONG tra loi bat ky cau hoi nao ngoai cac chu de tren (vi du: khong viet code, khong giai toan, khong lam tho, khong noi chuyen chinh tri, giai tri...). Neu ngu dung hoi ngoai le, hay tra loi mac dinh: "Xin loi, toi la tro ly ao chuyen ve linh vuc Tuyen dung va Viec lam. Toi khong the ho tro ban van de nay."
+1. ƯU TIÊN NGỮ CẢNH: Luôn trả lời dựa trên lịch sử trò chuyện, mô tả công việc, nội dung CV đính kèm và dữ liệu hệ thống được cung cấp.
+2. KIẾN THỨC CHUYÊN MÔN: Nếu ngữ cảnh không có câu trả lời, chỉ hỗ trợ các chủ đề tuyển dụng, nhân sự, tìm việc, viết CV, phỏng vấn và xu hướng nghề nghiệp.
+3. TỪ CHỐI NGOẠI LỆ: Tuyệt đối không trả lời câu hỏi ngoài các chủ đề trên. Nếu người dùng hỏi ngoài phạm vi, hãy trả lời: "Xin lỗi, tôi là trợ lý ảo chuyên về tuyển dụng và việc làm. Tôi không thể hỗ trợ bạn về vấn đề này."
 """
     history_serializable = []
     if history:
@@ -51,14 +51,14 @@ Nhiem vu cua ban la tra loi cau hoi cua nguoi dung tuan thu NGHIEM NGAC cac quy 
         return generate_content_with_retry(prompt, is_json=False)
     except Exception as e:
         logger.error(f"Loi chatbot: {e}")
-        return f"Xin loi, he thong dang qua tai. Vui long thu lai sau. Chi tiet: {str(e)}"
+        return "Xin lỗi, hệ thống AI đang quá tải. Vui lòng thử lại sau."
 
 def calculate_resume_score(cv_text: str, jd_text: str, cv_skills: list, jd_skills: list, criteria_list: list) -> dict:
     """
     Cham diem CV dua tren ma so khop tieu chi
     """
-    cv_skills_text = ", ".join(cv_skills) if cv_skills else "Chua trich xuat duoc"
-    jd_skills_text = ", ".join(jd_skills) if jd_skills else "Chua trich xuat duoc"
+    cv_skills_text = ", ".join(cv_skills) if cv_skills else "Chưa trích xuất được"
+    jd_skills_text = ", ".join(jd_skills) if jd_skills else "Chưa trích xuất được"
 
     prompt = get_scoring_prompt(criteria_list, jd_text, jd_skills_text, cv_text, cv_skills_text)
     try:
@@ -84,7 +84,7 @@ def normalize_scoring_result(ai_result, criteria_list):
         criterion_weight = int(criterion["weight"])
 
         score = 0
-        comment = "AI chua danh gia tieu chi nay."
+        comment = "AI chưa đánh giá tiêu chí này."
 
         ai_criteria = ai_result.get("criteria_results", [])
         matched_ai_criterion = None
@@ -158,7 +158,7 @@ def normalize_scoring_result(ai_result, criteria_list):
 def classify_cv(total_score):
     if total_score >= 80: return "Phu hop"
     if total_score >= 60: return "Nen xem xet"
-    return "Chua phu hop"
+    return "Chưa phù hợp"
 
 def build_default_scoring_result(criteria_list, cv_skills=None, jd_skills=None):
     if cv_skills is None: cv_skills = []
@@ -228,8 +228,8 @@ def analyze_cv_deep(cv_text: str, jd_text: str, cv_skills: list, jd_skills: list
     """
     Phan tich chuyen sau CV so voi yeu cau JD
     """
-    cv_skills_text = ", ".join(cv_skills) if cv_skills else "Chua trich xuat duoc"
-    jd_skills_text = ", ".join(jd_skills) if jd_skills else "Chua trich xuat duoc"
+    cv_skills_text = ", ".join(cv_skills) if cv_skills else "Chưa trích xuất được"
+    jd_skills_text = ", ".join(jd_skills) if jd_skills else "Chưa trích xuất được"
 
     scikit_score = calculate_scikit_similarity(cv_text, jd_text)
     scikit_info = f"- Diem tuong dong TF-IDF Cosine Scikit-learn: {scikit_score:.1f}/100" if HAS_SKLEARN else ""
@@ -251,19 +251,19 @@ def analyze_cv_deep(cv_text: str, jd_text: str, cv_skills: list, jd_skills: list
         total_score = max(0, min(100, total_score))
 
         classification = score_analysis.get("classification", "")
-        if classification not in ["Phu hop", "Nen xem xet", "Chua phu hop"]:
+        if classification not in ["Phù hợp", "Nên xem xét", "Chưa phù hợp"]:
             if total_score >= 80:
-                classification = "Phu hop"
+                classification = "Phù hợp"
             elif total_score >= 60:
-                classification = "Nen xem xet"
+                classification = "Nên xem xét"
             else:
-                classification = "Chua phu hop"
+                classification = "Chưa phù hợp"
 
         score_analysis["total_score"] = total_score
         score_analysis["classification"] = classification
         score_analysis["whitebox_score"] = round(scikit_score, 1)
         score_analysis["blackbox_score"] = total_score
-        score_analysis.setdefault("summary", "AI da hoan thanh phan tich CV.")
+        score_analysis.setdefault("summary", "AI đã hoàn thành phân tích CV.")
         score_analysis.setdefault("strengths", [])
         score_analysis.setdefault("weaknesses", [])
         score_analysis.setdefault("red_flags", [])

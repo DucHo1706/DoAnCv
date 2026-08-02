@@ -290,7 +290,7 @@ function formatApplicationStatus(status: string): string {
     Applied: "Mới nộp",
     Reviewing: "Đang xem xét",
     Interview: "Phỏng vấn",
-    Offer: "Nhận việc (Offer)",
+    Offer: "Đề nghị nhận việc",
     Rejected: "Đã từ chối",
   };
 

@@ -132,7 +132,7 @@ function CandidateProfilePage() {
     const startSignalR = async () => {
       try {
         const signalR = await import("@microsoft/signalr");
-        const apiBase = import.meta.env.VITE_API_URL || "https://recruitinsightai.com/api";
+        const apiBase = import.meta.env.VITE_API_URL || "/api";
         const hubUrl = apiBase.replace(/\/api\/?$/, "") + "/hubs/ai-evaluation";
         connection = new signalR.HubConnectionBuilder()
           .withUrl(hubUrl)

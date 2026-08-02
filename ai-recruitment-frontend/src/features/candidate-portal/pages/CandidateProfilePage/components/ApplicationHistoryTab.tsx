@@ -16,6 +16,7 @@ import {
   EnvironmentOutlined
 } from "@ant-design/icons";
 import EmptyState from "../../../../../components/common/EmptyState";
+import { getApplicationStatusLabel as translateApplicationStatus } from "../../../../../utils/statusLabels";
 
 const { Text } = Typography;
 
@@ -43,17 +44,21 @@ export const ApplicationHistoryTab: React.FC<ApplicationHistoryTabProps> = ({
       case "applied":
         return { text: "Đã gửi hồ sơ (Chờ duyệt)", color: "blue" };
       case "reviewed":
+      case "reviewing":
         return { text: "HR đang xem xét", color: "purple" };
       case "shortlisted":
         return { text: "Hồ sơ đạt yêu cầu", color: "cyan" };
       case "interviewing":
+      case "interview":
         return { text: "Được chọn phỏng vấn", color: "orange" };
       case "accepted":
+      case "offer":
+      case "hired":
         return { text: "Đã nhận việc 🎉", color: "green" };
       case "rejected":
         return { text: "Chưa phù hợp", color: "red" };
       default:
-        return { text: status || "Đã gửi hồ sơ", color: "blue" };
+        return { text: translateApplicationStatus(status), color: "blue" };
     }
   };
 

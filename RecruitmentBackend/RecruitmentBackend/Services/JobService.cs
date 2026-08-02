@@ -222,10 +222,11 @@ namespace RecruitmentBackend.Services
             var job = await _context.JobPostings.FindAsync(jobId);
             if (job == null || job.Status == "Pending") return false;
 
+            var isDirectOwner = job.RecruiterID == recruiter.RecruiterID;
             var isAssignedToBranch = await _context.RecruiterBranches.AnyAsync(rb => 
                 rb.RecruiterID == recruiter.RecruiterID && rb.BranchID == job.BranchID);
 
-            if (!isAssignedToBranch) return false;
+            if (!isDirectOwner && !isAssignedToBranch) return false;
 
             job.Status = job.Status == "Published" ? "Closed" : "Published";
             await _context.SaveChangesAsync();

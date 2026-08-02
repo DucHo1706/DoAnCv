@@ -212,7 +212,7 @@ export default function RecruiterProfilePage() {
       case "Closed":
         return <Tag color="default">Đã đóng</Tag>;
       default:
-        return <Tag>{status}</Tag>;
+        return <Tag>Chưa xác định</Tag>;
     }
   };
 
