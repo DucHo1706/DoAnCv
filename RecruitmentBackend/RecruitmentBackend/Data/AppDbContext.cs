@@ -76,6 +76,19 @@ namespace RecruitmentBackend.Data
                 .HasIndex(j => j.Status);
             modelBuilder.Entity<JobPosting>()
                 .HasIndex(j => j.CreatedAt);
+            modelBuilder.Entity<JobPosting>()
+                .Property(j => j.RecruiterID)
+                .HasMaxLength(450);
+            modelBuilder.Entity<JobPosting>()
+                .Property(j => j.BranchID)
+                .HasMaxLength(450);
+            modelBuilder.Entity<JobPosting>()
+                .Property(j => j.PositionID)
+                .HasMaxLength(450);
+            modelBuilder.Entity<JobPosting>()
+                .HasIndex(j => j.RecruiterID);
+            modelBuilder.Entity<JobPosting>()
+                .HasIndex(j => j.BranchID);
 
             modelBuilder.Entity<Application>()
                 .HasIndex(a => a.AppliedAt);

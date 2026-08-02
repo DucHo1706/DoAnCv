@@ -226,6 +226,7 @@ app.UseStaticFiles(new StaticFileOptions
 using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    await context.Database.MigrateAsync();
     var passwordHasher = new Microsoft.AspNetCore.Identity.PasswordHasher<Account>();
     var accounts = await context.Accounts.ToListAsync();
     bool updatedAny = false;
