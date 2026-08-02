@@ -1,6 +1,6 @@
 import PyPDF2
 import pytesseract
-from PIL import Image
+from PIL import Image, ImageOps
 import io
 import re
 
@@ -100,14 +100,23 @@ def extract_text_from_file(file_bytes: bytes, filename: str, content_type: str) 
         # 2. FILE ẢNH (PNG, JPEG, Screenshot)
         elif content_type in ["image/png", "image/jpeg", "image/jpg", "image/webp"] or filename.lower().endswith((".png", ".jpg", ".jpeg", ".webp")):
             try:
-                image = Image.open(io.BytesIO(file_bytes))
-                text = pytesseract.image_to_string(image, lang='vie+eng')
+                image = ImageOps.exif_transpose(Image.open(io.BytesIO(file_bytes))).convert("RGB")
+                if image.width < 1800:
+                    scale = 1800 / max(image.width, 1)
+                    image = image.resize((1800, round(image.height * scale)))
+                ocr_image = ImageOps.autocontrast(ImageOps.grayscale(image))
+                text = pytesseract.image_to_string(
+                    ocr_image,
+                    lang='vie+eng',
+                    config='--oem 3 --psm 6'
+                )
             except Exception as tesseract_err:
                 print(f" PyTesseract gặp lỗi khi đọc ảnh: {tesseract_err}")
                 text = ""
 
             # Nếu PyTesseract bị thiếu/lỗi hoặc không trích xuất đủ văn bản, sử dụng Gemini Vision OCR
-            if not text.strip() or len(text.strip()) < 30:
+            extracted_word_count = len(text.split())
+            if not text.strip() or len(text.strip()) < 200 or extracted_word_count < 35:
                 print(" [OCR FALLBACK] Trích xuất bằng PyTesseract ít chữ/thất bại, chuyển sang Gemini Vision Multimodal...")
                 try:
                     from services import gemini_service

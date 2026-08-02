@@ -18,7 +18,7 @@ interface AiGenerationRisk {
 }
 
 interface LanguageReview {
-  overall_language_score: number;
+  overall_language_score: number | null;
   language_comment: string;
   good_action_verbs: string[];
   weak_phrases: WeakPhrase[];
@@ -27,6 +27,8 @@ interface LanguageReview {
   summary?: string;
   effective_language?: string[];
   areas_for_improvement?: string[];
+  insufficient_data?: boolean;
+  is_fallback?: boolean;
 }
 
 interface LanguageReviewTabProps {
@@ -74,7 +76,15 @@ const LanguageReviewTab: React.FC<LanguageReviewTabProps> = ({ languageReview })
         </Text>
       </div>
 
-      {hasData ? (
+      {lang.insufficient_data ? (
+        <Alert
+          message="Không đủ dữ liệu để đánh giá ngôn từ"
+          description={summaryText || "Vui lòng tải CV rõ nét hơn hoặc thử phân tích lại."}
+          type="warning"
+          showIcon
+          style={{ borderRadius: 12, border: "1px solid #FDE68A", background: "#FFFBEB" }}
+        />
+      ) : hasData ? (
         <>
           {summaryText && (
             <Alert

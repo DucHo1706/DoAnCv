@@ -137,13 +137,9 @@ def score_resume_sync(
         )
     except Exception as e:
         logger.error(f"Loi khi review ngon tu CV: {e}")
-        language_review = {
-            "overall_language_score": 85,
-            "language_comment": "Ngôn từ và văn phong trong CV trình bày chuyên nghiệp.",
-            "good_action_verbs": ["Phát triển", "Triển khai", "Xây dựng", "Tối ưu"],
-            "weak_phrases": [],
-            "ai_generation_risk": {"detected": False, "section": "", "score": 0, "comment": "Chưa phát hiện rủi ro tạo bởi AI."}
-        }
+        language_review = scoring_service.build_insufficient_language_review(
+            "Chưa thể hoàn tất đánh giá ngôn từ từ nội dung CV đã trích xuất."
+        )
 
     try:
         mock_interview = interview_service.generate_cv_mock_interview(

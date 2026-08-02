@@ -394,8 +394,9 @@ const StarOptimizationTab: React.FC<StarOptimizationTabProps> = ({ optimizationT
         ))
       ) : (
         <Alert
-          message="Tuyệt vời! CV của bạn đã viết rất chuyên nghiệp, không cần viết lại theo STAR."
-          type="success"
+          message="Chưa có đủ dữ liệu để đề xuất viết lại theo STAR."
+          description="Vui lòng tải CV rõ nét hơn hoặc thử phân tích lại khi dịch vụ AI sẵn sàng."
+          type="warning"
           showIcon
           style={{ borderRadius: 12 }}
         />

@@ -6,6 +6,24 @@ from prompts.language_prompts import get_language_review_prompt
 from utils.logger import logger
 import json
 
+
+def build_insufficient_language_review(message: str = "Không đủ dữ liệu CV để đánh giá ngôn từ và tính chân thực.") -> dict:
+    return {
+        "overall_language_score": None,
+        "language_comment": message,
+        "good_action_verbs": [],
+        "weak_phrases": [],
+        "uncertain_statements": [],
+        "ai_generation_risk": {
+            "detected": False,
+            "section": "",
+            "score": 0,
+            "comment": "Không đưa ra kết luận khi dữ liệu CV chưa đầy đủ."
+        },
+        "insufficient_data": True,
+        "is_fallback": True
+    }
+
 def chat_with_candidate(user_message, history=None, job_description="", file_text="", system_knowledge=""):
     """
     Chatbot tu van tuyen dung ho tro ung vien va HR
@@ -167,13 +185,15 @@ def build_default_scoring_result(criteria_list, cv_skills=None, jd_skills=None):
     matched = [s for s in cv_skills if s in jd_skills]
     missing = [s for s in jd_skills if s not in cv_skills]
     
+    evidence_ratio = len(matched) / len(jd_skills) if jd_skills else 0
+    has_comparable_evidence = bool(cv_skills and jd_skills)
     criteria_results = []
     total_score = 0
     for criterion in criteria_list:
         criterion_name = str(criterion.get("name", "Tiêu chuẩn chuyên môn")).strip()
         criterion_weight = int(criterion.get("weight", 20))
-        # Compute dynamic partial score based on keyword match
-        score = int(criterion_weight * 0.8) if matched else int(criterion_weight * 0.65)
+        # Chỉ chấm theo tỷ lệ kỹ năng có bằng chứng, không cấp điểm nền khi AI lỗi.
+        score = round(criterion_weight * evidence_ratio) if has_comparable_evidence else 0
         score = max(0, min(criterion_weight, score))
         total_score += score
         criteria_results.append({
@@ -181,29 +201,37 @@ def build_default_scoring_result(criteria_list, cv_skills=None, jd_skills=None):
             "weight": criterion_weight,
             "score": score,
             "max_score": criterion_weight,
-            "comment": f"Đã đánh giá bằng thuật toán đối sánh tiêu chuẩn kỹ năng. Đạt {score}/{criterion_weight} điểm."
+            "comment": (
+                f"Điểm dự phòng dựa trên {len(matched)}/{len(jd_skills)} kỹ năng đối sánh được."
+                if has_comparable_evidence
+                else "Không đủ dữ liệu trích xuất để chấm tiêu chí này."
+            )
         })
         
-    classification = classify_cv(total_score)
+    classification = classify_cv(total_score) if has_comparable_evidence else "Không đủ dữ liệu"
     return {
         "total_score": total_score,
         "classification": classification,
         "criteria_results": criteria_results,
-        "matched_skills": matched if matched else cv_skills[:5],
+        "matched_skills": matched,
         "missing_skills": missing,
-        "summary": f"Hồ sơ đã được phân tích bằng thuật toán đối sánh tiêu chuẩn NLP. Khớp {len(matched)}/{len(jd_skills) or 1} kỹ năng cốt lõi.",
+        "summary": (
+            f"Kết quả dự phòng chỉ dựa trên kỹ năng trích xuất được: khớp {len(matched)}/{len(jd_skills)} kỹ năng."
+            if has_comparable_evidence
+            else "Không đủ nội dung CV để tính điểm phù hợp đáng tin cậy. Vui lòng tải CV rõ nét hơn hoặc thử phân tích lại."
+        ),
         "extracted_info": {
-            "degree": "Đại học / Cử nhân",
-            "major": "Công nghệ thông tin / Chuyên ngành liên quan",
-            "university": "Đại học",
-            "years_of_experience": 1.5,
+            "degree": None,
+            "major": None,
+            "university": None,
+            "years_of_experience": 0,
             "certificates": []
         },
         "ExtractedInfo": {
-            "Degree": "Đại học / Cử nhân",
-            "Major": "Công nghệ thông tin / Chuyên ngành liên quan",
-            "University": "Đại học",
-            "YearsOfExperience": 1.5,
+            "Degree": None,
+            "Major": None,
+            "University": None,
+            "YearsOfExperience": 0,
             "Certificates": []
         }
     }
@@ -222,7 +250,19 @@ def is_document_a_resume(cv_text: str) -> tuple[bool, str]:
         return bool(data.get("is_resume", True)), data.get("reason", "")
     except Exception as e:
         logger.error(f"Loi is_document_a_resume: {e}")
-        return True, ""
+        normalized = cv_text.lower()
+        resume_signals = [
+            "kinh nghiệm", "kinh nghiem", "học vấn", "hoc van", "kỹ năng",
+            "ky nang", "mục tiêu nghề nghiệp", "muc tieu nghe nghiep",
+            "chứng chỉ", "chung chi", "thông tin liên hệ", "email"
+        ]
+        signal_count = sum(1 for signal in resume_signals if signal in normalized)
+        is_likely_resume = len(cv_text.split()) >= 25 and signal_count >= 2
+        return is_likely_resume, (
+            "Đã kiểm định dự phòng dựa trên cấu trúc CV."
+            if is_likely_resume
+            else "Nội dung trích xuất quá ít hoặc thiếu các mục cơ bản của CV."
+        )
 
 def analyze_cv_deep(cv_text: str, jd_text: str, cv_skills: list, jd_skills: list, job_title: str = "", company_name: str = ""):
     """
@@ -274,13 +314,9 @@ def analyze_cv_deep(cv_text: str, jd_text: str, cv_skills: list, jd_skills: list
             "status": "success",
             "score_analysis": score_analysis,
             "optimization_tips": interview_service.get_fallback_star_tips(cv_skills, jd_skills),
-            "language_review": {
-                "overall_language_score": 85,
-                "language_comment": "Ngôn từ và văn phong trong CV trình bày chuyên nghiệp.",
-                "good_action_verbs": ["Phát triển", "Triển khai", "Xây dựng", "Tối ưu"],
-                "weak_phrases": [],
-                "ai_generation_risk": {"detected": False, "section": "", "score": 0, "comment": "Chưa phát hiện rủi ro tạo bởi AI."}
-            },
+            "language_review": build_insufficient_language_review(
+                "Phân tích ngôn từ chuyên sâu chưa hoàn tất. Không sử dụng điểm hoặc nhận xét mẫu."
+            ),
             "mock_interview": interview_service.get_fallback_mock_interview(cv_skills, jd_skills)
         }
 
@@ -288,8 +324,9 @@ def analyze_cv_deep(cv_text: str, jd_text: str, cv_skills: list, jd_skills: list
         logger.error(f"Loi analyze_cv_deep, kich hoat che do du phong Local AI Rule Engine: {ex}")
         matched = [s for s in cv_skills if s in jd_skills]
         missing = [s for s in jd_skills if s not in cv_skills]
-        calc_score = round(min(88, max(68, (len(matched) / (len(jd_skills) or 1)) * 100))) if jd_skills else 78
-        classification = "Chủ lực" if calc_score >= 80 else ("Tiềm năng" if calc_score >= 70 else "Chưa phù hợp")
+        has_comparable_evidence = bool(cv_skills and jd_skills)
+        calc_score = round((len(matched) / len(jd_skills)) * 100) if has_comparable_evidence else 0
+        classification = classify_cv(calc_score) if has_comparable_evidence else "Không đủ dữ liệu"
 
         return {
             "status": "success",
@@ -297,26 +334,21 @@ def analyze_cv_deep(cv_text: str, jd_text: str, cv_skills: list, jd_skills: list
             "score_analysis": {
                 "total_score": calc_score,
                 "classification": classification,
-                "summary": f"Hồ sơ đã được phân tích bằng thuật toán đối sánh kỹ năng NLP. Đã khớp {len(matched)}/{len(jd_skills) or 1} kỹ năng cốt lõi của vị trí.",
-                "strengths": [f"Sở hữu các kỹ năng chuyên môn: {', '.join(matched[:4])}"] if matched else ["Có nền tảng chuyên môn phù hợp ngành nghề"],
-                "weaknesses": [f"Cần bổ sung các kỹ năng: {', '.join(missing[:4])}"] if missing else ["Nên cập nhật thêm các dự án thực tế mới nhất"],
-                "red_flags": ["Kỳ vọng mức lương và hình thức làm việc cần trao đổi chi tiết"],
+                "summary": (
+                    f"Kết quả dự phòng chỉ dựa trên kỹ năng trích xuất được: khớp {len(matched)}/{len(jd_skills)} kỹ năng."
+                    if has_comparable_evidence
+                    else "Không đủ nội dung CV để tính điểm phù hợp đáng tin cậy."
+                ),
+                "strengths": [f"Kỹ năng có bằng chứng trong CV: {', '.join(matched[:4])}"] if matched else [],
+                "weaknesses": [f"Chưa tìm thấy bằng chứng cho các kỹ năng: {', '.join(missing[:4])}"] if missing else [],
+                "red_flags": [],
                 "matched_skills": matched,
                 "missing_skills": missing
             },
             "optimization_tips": interview_service.get_fallback_star_tips(matched, missing),
-            "language_review": {
-                "overall_language_score": 85,
-                "language_comment": "Ngôn từ và văn phong trong CV trình bày chuyên nghiệp, bám sát yêu cầu tuyển dụng.",
-                "good_action_verbs": ["Phát triển", "Triển khai", "Xây dựng", "Tối ưu"],
-                "weak_phrases": [],
-                "ai_generation_risk": {
-                    "detected": False,
-                    "section": "",
-                    "score": 0,
-                    "comment": "Chưa phát hiện rủi ro tạo bởi AI."
-                }
-            },
+            "language_review": build_insufficient_language_review(
+                "Dịch vụ AI chưa thể đánh giá ngôn từ. Không suy diễn từ dữ liệu CV chưa đầy đủ."
+            ),
             "mock_interview": interview_service.get_fallback_mock_interview(matched, missing)
         }
 
@@ -331,10 +363,6 @@ def generate_cv_language_review(cv_text: str, jd_text: str) -> dict:
         return result
     except Exception as e:
         logger.error(f"Loi generate_cv_language_review: {e}")
-        return {
-            "overall_language_score": 70,
-            "language_comment": "Ngon ngu CV tam on.",
-            "good_action_verbs": [],
-            "weak_phrases": [],
-            "ai_generation_risk": {"detected": False, "section": "", "score": 0, "comment": ""}
-        }
+        return build_insufficient_language_review(
+            "Chưa thể hoàn tất đánh giá ngôn từ từ nội dung CV đã trích xuất."
+        )
