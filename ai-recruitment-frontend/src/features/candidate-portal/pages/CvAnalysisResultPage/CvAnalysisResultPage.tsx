@@ -605,6 +605,13 @@ export default function CvAnalysisResultPage() {
         ? "#f59e0b"
         : "#ef4444";
 
+  const whiteboxScore = typeof (score as any).whitebox_score === "number"
+    ? Math.max(0, Math.min(100, (score as any).whitebox_score))
+    : null;
+  const blackboxScore = typeof (score as any).blackbox_score === "number"
+    ? Math.max(0, Math.min(100, (score as any).blackbox_score))
+    : null;
+
   const getClassificationTag = (cls: string) => {
     if (isInitialLoading) {
       return (
@@ -906,35 +913,47 @@ export default function CvAnalysisResultPage() {
 
                 {!isInitialLoading && (
                   <div style={{ marginTop: 24, textAlign: "left", background: "#f8fafc", padding: 16, borderRadius: 12, border: "1px solid #e2e8f0" }}>
-                    <Text strong style={{ display: "block", fontSize: 13, color: "#0F172A", marginBottom: 12 }}>
-                      Mô hình Đánh giá Kết hợp (Whitebox & Blackbox)
+                    <Text strong style={{ display: "block", fontSize: 13, color: "#0F172A", marginBottom: 4 }}>
+                      Cách hệ thống đánh giá CV
                     </Text>
-                    
-                    {/* Whitebox Score Component */}
+                    <Text type="secondary" style={{ display: "block", fontSize: 11.5, lineHeight: 1.5, marginBottom: 14 }}>
+                      Điểm tổng thể được AI tổng hợp từ mức độ khớp nội dung và mức độ phù hợp theo ngữ cảnh.
+                    </Text>
+
                     <div style={{ marginBottom: 12 }}>
                       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
                         <Text type="secondary" style={{ fontSize: 12 }}>
-                          Whitebox (Kỹ năng & Kinh nghiệm đối sánh)
+                          Đối chiếu từ khóa, kỹ năng và kinh nghiệm
                         </Text>
                         <Text strong style={{ fontSize: 12, color: "#16a34a" }}>
-                          {Math.round((score.total_score ?? 0) * 0.45)}%
+                          {whiteboxScore === null ? "Chưa có dữ liệu" : `${Math.round(whiteboxScore)}%`}
                         </Text>
                       </div>
-                      <Progress percent={Math.round((score.total_score ?? 0) * 0.45)} size="small" strokeColor="#16a34a" showInfo={false} />
+                      {whiteboxScore !== null && <Progress percent={whiteboxScore} size="small" strokeColor="#16a34a" showInfo={false} />}
                     </div>
 
-                    {/* Blackbox Score Component */}
                     <div>
                       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
                         <Text type="secondary" style={{ fontSize: 12 }}>
-                          Blackbox (Độ tương hợp ngữ nghĩa sâu AI)
+                          Phân tích mức độ phù hợp theo ngữ cảnh
                         </Text>
                         <Text strong style={{ fontSize: 12, color: "#2563eb" }}>
-                          {Math.round((score.total_score ?? 0) * 0.55)}%
+                          {blackboxScore === null ? "Chưa có dữ liệu" : `${Math.round(blackboxScore)}%`}
                         </Text>
                       </div>
-                      <Progress percent={Math.round((score.total_score ?? 0) * 0.55)} size="small" strokeColor="#2563eb" showInfo={false} />
+                      {blackboxScore !== null && <Progress percent={blackboxScore} size="small" strokeColor="#2563eb" showInfo={false} />}
                     </div>
+
+                    <details style={{ marginTop: 14, borderTop: "1px solid #E2E8F0", paddingTop: 10 }}>
+                      <summary style={{ cursor: "pointer", color: "#2563EB", fontSize: 11.5, fontWeight: 650 }}>
+                        Giải thích phương pháp tính
+                      </summary>
+                      <div style={{ color: "#64748B", fontSize: 11.5, lineHeight: 1.55, marginTop: 8 }}>
+                        <div><strong>Đối chiếu có thể giải thích (Whitebox):</strong> dùng TF-IDF và độ tương đồng Cosine để đo mức độ trùng khớp từ khóa.</div>
+                        <div style={{ marginTop: 5 }}><strong>Phân tích ngữ cảnh (Blackbox):</strong> dùng Gemini để xem xét ý nghĩa của kỹ năng và kinh nghiệm trong toàn bộ CV.</div>
+                        <div style={{ marginTop: 5 }}>Hai chỉ số là tín hiệu tham khảo; điểm tổng thể không phải phép cộng trực tiếp của hai tỷ lệ.</div>
+                      </div>
+                    </details>
                   </div>
                 )}
               </Card>

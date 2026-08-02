@@ -171,14 +171,17 @@ const PdfExportUtils: React.FC<PdfExportUtilsProps> = ({
               <div><span className="pdf-label">Vị trí ứng tuyển</span><span className="pdf-value">{jobTitle || "Chưa xác định"}</span></div>
               <div><span className="pdf-label">Doanh nghiệp</span><span className="pdf-value">{companyName || "Chưa xác định"}</span></div>
               <div><span className="pdf-label">Tệp CV</span><span className="pdf-value">{meta?.fileName || "Chưa xác định"}</span></div>
-              <div><span className="pdf-label">Whitebox</span><span className="pdf-value">{score.whitebox_score ?? 0}%</span></div>
-              <div><span className="pdf-label">Blackbox</span><span className="pdf-value">{score.blackbox_score ?? 0}%</span></div>
+              <div><span className="pdf-label">Đối chiếu từ khóa và kỹ năng</span><span className="pdf-value">{score.whitebox_score ?? "Chưa có dữ liệu"}{score.whitebox_score != null ? "%" : ""}</span></div>
+              <div><span className="pdf-label">Phân tích phù hợp theo ngữ cảnh</span><span className="pdf-value">{score.blackbox_score ?? "Chưa có dữ liệu"}{score.blackbox_score != null ? "%" : ""}</span></div>
             </div>
           </header>
 
           <section className="pdf-section">
             <div className="pdf-section-head"><span className="pdf-index">01</span><h2>Tổng quan đánh giá</h2></div>
             <div className="pdf-summary">{score.summary || "Chưa có nhận xét tổng quan từ AI."}</div>
+            <div className="pdf-note pdf-keep" style={{ marginBottom: 16 }}>
+              <strong>Phương pháp:</strong> Hệ thống kết hợp đối chiếu từ khóa bằng TF-IDF/Cosine (Whitebox) với phân tích ngữ cảnh bằng Gemini (Blackbox). Hai chỉ số là tín hiệu tham khảo và không được cộng trực tiếp để tạo điểm tổng thể.
+            </div>
             <div className="pdf-grid-2">
               <div className="pdf-panel"><h3>Năng lực tương thích</h3>{strengths.length ? <ul className="pdf-list">{strengths.map((item, i) => <li key={i}>{String(item)}</li>)}</ul> : <Empty>Chưa tìm thấy bằng chứng tương thích rõ ràng.</Empty>}</div>
               <div className="pdf-panel"><h3>Nội dung cần làm rõ</h3>{weaknesses.length ? <ul className="pdf-list">{weaknesses.map((item, i) => <li key={i}>{String(item)}</li>)}</ul> : <Empty>Không có nội dung cần làm rõ được ghi nhận.</Empty>}</div>
