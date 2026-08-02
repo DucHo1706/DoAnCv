@@ -502,7 +502,9 @@ namespace RecruitmentBackend.Services
             if (!string.IsNullOrWhiteSpace(request.Location))
             {
                 var loc = request.Location.ToLower().Trim();
-                if (loc == "hcm" || loc == "tphcm" || loc == "tp.hcm" || loc == "hồ chí minh")
+                if (loc == "hcm" || loc == "tphcm" || loc == "tp.hcm" ||
+                    loc == "hồ chí minh" || loc == "tp. hồ chí minh" ||
+                    loc == "thành phố hồ chí minh")
                 {
                     query = query.Where(x => x.b != null && (x.b.BranchName.ToLower().Contains("hồ chí minh") || x.b.BranchName.ToLower().Contains("hcm")));
                 }
@@ -730,6 +732,7 @@ namespace RecruitmentBackend.Services
             // Refactor descriptions to fit search list display preview
             foreach (var job in processedJobs)
             {
+                job.Location = NormalizeLocationDisplay(job.Location);
                 if (job.Description.Length > 200)
                 {
                     job.Description = job.Description.Substring(0, 200) + "...";
@@ -749,6 +752,23 @@ namespace RecruitmentBackend.Services
                 PageSize = request.PageSize,
                 IsFallback = isFallbackUsed
             };
+        }
+
+        private static string NormalizeLocationDisplay(string? location)
+        {
+            if (string.IsNullOrWhiteSpace(location))
+            {
+                return "Chưa cập nhật";
+            }
+
+            var normalized = location.Trim().ToLowerInvariant();
+            if (normalized.Contains("hồ chí minh") ||
+                normalized == "hcm" || normalized == "tphcm" || normalized == "tp.hcm")
+            {
+                return "Hồ Chí Minh";
+            }
+
+            return location.Trim();
         }
 
         public async Task<object?> GetPublishedJobByIdAsync(string jobId)
