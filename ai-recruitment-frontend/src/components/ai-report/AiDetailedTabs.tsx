@@ -1,5 +1,5 @@
 import React from "react";
-import { Tabs, Spin } from "antd";
+import { Card, Col, Row, Skeleton, Tabs } from "antd";
 import CompetencyTab from "./CompetencyTab";
 import StarOptimizationTab from "./StarOptimizationTab";
 import LanguageReviewTab from "./LanguageReviewTab";
@@ -12,6 +12,38 @@ interface AiDetailedTabsProps {
   langLoading?: boolean;
   interviewLoading?: boolean;
   isInitialLoading?: boolean;
+}
+
+type SkeletonVariant = "star" | "language" | "interview";
+
+function AiTabSkeleton({ variant }: { variant: SkeletonVariant }) {
+  const cardCount = variant === "interview" ? 3 : 2;
+
+  return (
+    <div aria-live="polite" aria-label="AI đang phân tích dữ liệu">
+      <Skeleton active title={{ width: variant === "language" ? "42%" : "34%" }} paragraph={{ rows: 2 }} />
+      <div style={{ display: "grid", gap: 16, marginTop: 22 }}>
+        {Array.from({ length: cardCount }).map((_, index) => (
+          <Card
+            key={`${variant}-${index}`}
+            size="small"
+            style={{ border: "1px solid #E2E8F0", borderRadius: 14 }}
+            styles={{ body: { padding: 20 } }}
+          >
+            <Skeleton.Input active size="small" style={{ width: index === 0 ? 190 : 150, marginBottom: 18 }} />
+            {variant === "star" ? (
+              <Row gutter={[16, 16]}>
+                <Col xs={24} md={12}><Skeleton active title={false} paragraph={{ rows: 3 }} /></Col>
+                <Col xs={24} md={12}><Skeleton active title={false} paragraph={{ rows: 3 }} /></Col>
+              </Row>
+            ) : (
+              <Skeleton active title={false} paragraph={{ rows: variant === "interview" ? 2 : 3 }} />
+            )}
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 const AiDetailedTabs: React.FC<AiDetailedTabsProps> = ({
@@ -50,10 +82,8 @@ const AiDetailedTabs: React.FC<AiDetailedTabsProps> = ({
       label: "Tối ưu hóa (STAR)",
       children: (
         <div className="custom-scrollbar" style={scrollContainerStyle}>
-          {tipsLoading ? (
-            <div style={{ textAlign: "center", padding: "50px 0" }}>
-              <Spin tip="AI đang tối ưu hóa CV theo chuẩn STAR..." size="large" />
-            </div>
+          {tipsLoading || isInitialLoading ? (
+            <AiTabSkeleton variant="star" />
           ) : (
             <StarOptimizationTab optimizationTips={tips} />
           )}
@@ -65,10 +95,8 @@ const AiDetailedTabs: React.FC<AiDetailedTabsProps> = ({
       label: "Ngôn từ & Chân thực",
       children: (
         <div className="custom-scrollbar" style={scrollContainerStyle}>
-          {langLoading ? (
-            <div style={{ textAlign: "center", padding: "50px 0" }}>
-              <Spin tip="AI đang đánh giá chất lượng ngôn từ & phân tích tính chân thực..." size="large" />
-            </div>
+          {langLoading || isInitialLoading ? (
+            <AiTabSkeleton variant="language" />
           ) : (
             <LanguageReviewTab languageReview={lang} />
           )}
@@ -80,10 +108,8 @@ const AiDetailedTabs: React.FC<AiDetailedTabsProps> = ({
       label: "Gợi ý phỏng vấn",
       children: (
         <div className="custom-scrollbar" style={scrollContainerStyle}>
-          {interviewLoading ? (
-            <div style={{ textAlign: "center", padding: "50px 0" }}>
-              <Spin tip="AI đang soạn bộ câu hỏi phỏng vấn tối ưu cho bạn..." size="large" />
-            </div>
+          {interviewLoading || isInitialLoading ? (
+            <AiTabSkeleton variant="interview" />
           ) : (
             <InterviewQuestionsTab interviewQuestions={interviewQuestions} />
           )}
