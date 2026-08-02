@@ -1,9 +1,8 @@
 import React, { useEffect, useState, useRef } from "react";
 import { Typography, Button, Tag, Space, Row, Col, Card, Progress, message } from "antd";
-import { ArrowLeftOutlined, SendOutlined, RedoOutlined, AlertOutlined } from "@ant-design/icons";
+import { ArrowLeftOutlined, SendOutlined, AlertOutlined } from "@ant-design/icons";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import axiosClient from "../../../../services/axiosClient";
-import CvAiPreviewModal from "../../../../components/candidate/CvAiPreviewModal";
 import AiDetailedTabs from "../../../../components/ai-report/AiDetailedTabs";
 import PdfExportUtils from "./components/PdfExportUtils";
 import AiCoreIcon from "../../../../components/common/AiCoreIcon";
@@ -96,7 +95,6 @@ export default function CvAnalysisResultPage() {
   const [meta, setMeta] = useState<any>(null);
   const [submitting, setSubmitting] = useState(false);
   const [cvFile, setCvFile] = useState<File | null>(null);
-  const [isReanalyzeModalOpen, setIsReanalyzeModalOpen] = useState(false);
   const hasTriggeredRef = useRef(false);
 
   // Tải thông tin ứng viên từ localStorage đăng nhập an toàn
@@ -997,36 +995,10 @@ export default function CvAnalysisResultPage() {
             candidateName={candidateName}
             onUpdateAnalysisData={handleUpdateAnalysisData}
           />
-          <Button
-            size="large"
-            icon={<RedoOutlined />}
-            onClick={() => setIsReanalyzeModalOpen(true)}
-            style={{
-              background: "#FFFFFF",
-              border: "1px solid #D9D9D9",
-              color: "#434343",
-              borderRadius: 8,
-              height: 46,
-              paddingInline: 28,
-              fontWeight: 600,
-            }}
-          >
-            Phân tích lại
-          </Button>
         </div>
         )}
       </div>
 
-      {meta && (
-        <CvAiPreviewModal
-          open={isReanalyzeModalOpen}
-          onClose={() => setIsReanalyzeModalOpen(false)}
-          jobId={id || ""}
-          jobTitle={meta.jobTitle || ""}
-          jobDescription={meta.jobDescription || meta.analysisData?.jobDescription || ""}
-          companyName={meta.companyName || "AI Recruitment"}
-        />
-      )}
     </div>
   );
 }
