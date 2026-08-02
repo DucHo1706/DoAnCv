@@ -58,6 +58,7 @@ namespace RecruitmentBackend.Services
 
                 // 2. Lấy thông tin ứng viên
                 var candidate = await _context.Candidates
+                    .AsNoTracking()
                     .FirstOrDefaultAsync(candidateItem => candidateItem.AccountID == accountId);
 
                 if (candidate == null)
@@ -475,13 +476,13 @@ namespace RecruitmentBackend.Services
                 }
 
                 var rawApplications = await (
-                    from app in _context.Applications
-                    join cv in _context.CandidateCVs on app.CVID equals cv.CVID
+                    from app in _context.Applications.AsNoTracking()
+                    join cv in _context.CandidateCVs.AsNoTracking() on app.CVID equals cv.CVID
                     where cv.CandidateID == candidate.CandidateID
-                    join job in _context.JobPostings on app.JobID equals job.JobID
-                    join ai in _context.AIEvaluations on app.ApplicationID equals ai.ApplicationID into aiGrp
+                    join job in _context.JobPostings.AsNoTracking() on app.JobID equals job.JobID
+                    join ai in _context.AIEvaluations.AsNoTracking() on app.ApplicationID equals ai.ApplicationID into aiGrp
                     from ai in aiGrp.DefaultIfEmpty()
-                    join pos in _context.Positions on job.PositionID equals pos.PositionID into posGrp
+                    join pos in _context.Positions.AsNoTracking() on job.PositionID equals pos.PositionID into posGrp
                     from pos in posGrp.DefaultIfEmpty()
                     orderby app.AppliedAt descending
                     select new
@@ -503,6 +504,24 @@ namespace RecruitmentBackend.Services
                         criteriaResultsJson = ai != null ? ai.CriteriaResultsJson : null
                     }
                 ).ToListAsync();
+
+                var applicationIds = rawApplications.Select(item => item.id).ToList();
+                var schedulesByApplicationId = await _context.InterviewSchedules
+                    .AsNoTracking()
+                    .Where(schedule => applicationIds.Contains(schedule.ApplicationID))
+                    .ToDictionaryAsync(schedule => schedule.ApplicationID);
+
+                var rejectionRows = await _context.TalentPoolInteractions
+                    .AsNoTracking()
+                    .Where(interaction => interaction.ApplicationID != null
+                        && applicationIds.Contains(interaction.ApplicationID)
+                        && interaction.Type == "Rejected")
+                    .OrderByDescending(interaction => interaction.CreatedAt)
+                    .Select(interaction => new { ApplicationID = interaction.ApplicationID!, interaction.Content, interaction.CreatedAt })
+                    .ToListAsync();
+                var rejectionByApplicationId = rejectionRows
+                    .GroupBy(interaction => interaction.ApplicationID)
+                    .ToDictionary(group => group.Key, group => group.First().Content);
 
                 var applications = new List<object>();
 
@@ -590,13 +609,8 @@ namespace RecruitmentBackend.Services
                         classification = application.classification;
                     }
 
-                    // Query real-time details from DB
-                    var schedule = await _context.InterviewSchedules
-                        .FirstOrDefaultAsync(s => s.ApplicationID == application.id);
-
-                    var rejection = await _context.TalentPoolInteractions
-                        .Where(i => i.ApplicationID == application.id && i.Type == "Rejected")
-                        .FirstOrDefaultAsync();
+                    schedulesByApplicationId.TryGetValue(application.id, out var schedule);
+                    rejectionByApplicationId.TryGetValue(application.id, out var rejectionFeedback);
 
                     var applicationItem = new
                     {
@@ -625,7 +639,7 @@ namespace RecruitmentBackend.Services
                             passcode = schedule.Passcode,
                             notes = schedule.Notes
                         } : null,
-                        rejectionFeedback = rejection != null ? rejection.Content : null
+                        rejectionFeedback
                     };
 
                     applications.Add(applicationItem);
