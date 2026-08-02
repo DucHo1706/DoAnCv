@@ -14,6 +14,100 @@ from utils.logger import logger
 TEXT_CACHE: Dict[str, Any] = {}
 SCORE_CACHE: Dict[Tuple[str, str, str], Any] = {}
 
+OCR_INSUFFICIENT_MESSAGE = (
+    "OCR không trích xuất đủ nội dung từ ảnh CV để thực hiện đối sánh. "
+    "Điểm tương thích được đặt về 0%; vui lòng tải ảnh rõ hơn hoặc sử dụng tệp PDF/DOCX."
+)
+
+
+def _is_image_upload(filename: str, content_type: str) -> bool:
+    normalized_type = (content_type or "").lower()
+    normalized_name = (filename or "").lower()
+    return normalized_type in {"image/png", "image/jpeg", "image/jpg", "image/webp"} or normalized_name.endswith(
+        (".png", ".jpg", ".jpeg", ".webp")
+    )
+
+
+def _has_sufficient_ocr_text(text: str) -> bool:
+    normalized_text = (text or "").strip()
+    return len(normalized_text) >= 200 and len(normalized_text.split()) >= 35
+
+
+def _build_insufficient_preview_result(cv_text: str = "") -> Dict[str, Any]:
+    return {
+        "score_analysis": {
+            "total_score": 0,
+            "classification": "Không đủ dữ liệu",
+            "summary": OCR_INSUFFICIENT_MESSAGE,
+            "strengths": [],
+            "weaknesses": [],
+            "red_flags": [],
+            "matched_skills": [],
+            "missing_skills": [],
+            "whitebox_score": 0,
+            "blackbox_score": 0,
+            "analysis_status": "insufficient"
+        },
+        "criteria_results": [],
+        "optimization_tips": [],
+        "language_review": scoring_service.build_insufficient_language_review(OCR_INSUFFICIENT_MESSAGE),
+        "mock_interview": [],
+        "candidate_info": {
+            "email": "",
+            "phone": "",
+            "extracted_skills": []
+        },
+        "cv_text": cv_text or "",
+        "analysis_status": "insufficient",
+        "message": OCR_INSUFFICIENT_MESSAGE
+    }
+
+
+def _build_insufficient_score_response(criteria_list: List[Dict[str, Any]], cv_text: str = "") -> Dict[str, Any]:
+    criteria_results = [
+        {
+            "criterion_name": str(criterion.get("name", "Tiêu chí")),
+            "weight": int(criterion.get("weight", 0)),
+            "score": 0,
+            "max_score": int(criterion.get("weight", 0)),
+            "comment": "Không đủ dữ liệu OCR để chấm tiêu chí này."
+        }
+        for criterion in criteria_list
+    ]
+    analysis = _build_insufficient_preview_result(cv_text)
+    matching_result = {
+        "total_score": 0,
+        "classification": "Không đủ dữ liệu",
+        "criteria_results": criteria_results,
+        "matched_skills": [],
+        "missing_skills": [],
+        "extracted_info": {
+            "degree": None,
+            "major": None,
+            "university": None,
+            "years_of_experience": 0,
+            "certificates": []
+        },
+        "whitebox_score": 0,
+        "blackbox_score": 0,
+        "analysis_status": "insufficient"
+    }
+    analysis["criteria_results"] = criteria_results
+    matching_result["summary"] = json.dumps(analysis, ensure_ascii=False)
+    return {
+        "status": "success",
+        "message": OCR_INSUFFICIENT_MESSAGE,
+        "candidate_info": {
+            "email": "",
+            "phone": "",
+            "extracted_skills": [],
+            "raw_text": cv_text or "",
+            "ExtractedSkills": [],
+            "RawText": cv_text or ""
+        },
+        "matching_result": matching_result
+    }
+
 def get_bytes_hash(data: bytes) -> str:
     """Tinh ma hash SHA-256 cua tap tin bytes"""
     return hashlib.sha256(data).hexdigest()
@@ -69,6 +163,13 @@ def score_resume_sync(
                 TEXT_CACHE[cv_hash] = {}
             TEXT_CACHE[cv_hash]["cv_text"] = cv_text
             clean_cache_if_large()
+
+    if _is_image_upload(filename, content_type) and not _has_sufficient_ocr_text(cv_text):
+        logger.warning("OCR ảnh CV không đủ dữ liệu; trả kết quả 0% thay vì suy diễn điểm.")
+        response_data = _build_insufficient_score_response(criteria_list, cv_text)
+        SCORE_CACHE[score_key] = response_data
+        clean_cache_if_large()
+        return response_data
 
     if not cv_text:
         raise ValueError("Không thể trích xuất nội dung từ CV này. Vui lòng chọn tệp khác.")
@@ -220,6 +321,10 @@ def preview_resume_sync(
                 TEXT_CACHE[cv_hash] = {}
             TEXT_CACHE[cv_hash]["cv_text"] = cv_text
             clean_cache_if_large()
+
+    if _is_image_upload(filename, content_type) and not _has_sufficient_ocr_text(cv_text):
+        logger.warning("OCR ảnh CV không đủ dữ liệu trong chế độ xem trước; hiển thị 0%.")
+        return _build_insufficient_preview_result(cv_text)
 
     if not cv_text or cv_text.strip() == "":
         raise ValueError("Không thể trích xuất nội dung từ CV. Vui lòng kiểm tra lại định dạng tệp.")

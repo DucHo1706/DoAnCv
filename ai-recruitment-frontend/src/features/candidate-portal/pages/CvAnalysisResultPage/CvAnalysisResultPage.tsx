@@ -627,6 +627,23 @@ export default function CvAnalysisResultPage() {
       );
     }
     switch (cls) {
+      case "Không đủ dữ liệu":
+        return (
+          <Tag
+            color="default"
+            style={{
+              fontWeight: 700,
+              borderRadius: 6,
+              fontSize: 14,
+              padding: "4px 14px",
+              background: "#f8fafc",
+              border: "1px solid #cbd5e1",
+              color: "#475569",
+            }}
+          >
+            Không đủ dữ liệu OCR
+          </Tag>
+        );
       case "Phù hợp":
         return (
           <Tag
