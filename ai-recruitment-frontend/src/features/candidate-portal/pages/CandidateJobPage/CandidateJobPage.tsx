@@ -86,6 +86,37 @@ const escapeRegExp = (string: string) => {
   return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 };
 
+const canonicalizeLocation = (name: string) => {
+  const normalized = (name || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
+
+  if (["hcm", "tphcm", "hochiminh", "thanhphohochiminh"].includes(normalized)) {
+    return { key: "ho-chi-minh", name: "Hồ Chí Minh" };
+  }
+  if (["hn", "hanoi", "thanhphohanoi"].includes(normalized)) {
+    return { key: "ha-noi", name: "Hà Nội" };
+  }
+  if (["dn", "danang", "thanhphodanang"].includes(normalized)) {
+    return { key: "da-nang", name: "Đà Nẵng" };
+  }
+
+  return { key: normalized || name, name };
+};
+
+const mergeLocationAliases = (items: any[]) => {
+  const uniqueLocations = new Map<string, { id: string; name: string }>();
+  items.forEach((branch) => {
+    const canonical = canonicalizeLocation(branch?.name || "");
+    if (canonical.name && !uniqueLocations.has(canonical.key)) {
+      uniqueLocations.set(canonical.key, { id: canonical.key, name: canonical.name });
+    }
+  });
+  return Array.from(uniqueLocations.values());
+};
+
 export default function CandidateJobPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -153,7 +184,8 @@ export default function CandidateJobPage() {
         const branchRes = await axiosClient.get("/Metadata/branches");
         setCategories(catRes.data?.$values || catRes.data || []);
         setJobLevels(levelRes.data?.$values || levelRes.data || []);
-        setBranches(branchRes.data?.$values || branchRes.data || []);
+        const branchItems = branchRes.data?.$values || branchRes.data || [];
+        setBranches(mergeLocationAliases(branchItems));
       } catch (error) {
         console.error("Lỗi lấy metadata:", error);
       }

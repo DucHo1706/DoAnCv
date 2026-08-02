@@ -546,6 +546,18 @@ namespace RecruitmentBackend.Services
 
             if (totalCount == 0)
             {
+                return new PagedResult<JobSummaryDto>
+                {
+                    Items = new List<JobSummaryDto>(),
+                    TotalCount = 0,
+                    PageIndex = request.PageIndex,
+                    PageSize = request.PageSize,
+                    IsFallback = false
+                };
+            }
+
+            if (totalCount < 0)
+            {
                 // Fallback: Lấy Top 6 tin tuyển dụng có GIÁ TRỊ LỢI ÍCH cao nhất (High-Utility: Lương * Lượt xem)
                 var fallbackQuery = from j in _context.JobPostings
                                     join p in _context.Positions on j.PositionID equals p.PositionID into pj
@@ -629,7 +641,9 @@ namespace RecruitmentBackend.Services
                         scoreMap[res.Id] = res.Score;
                     }
 
-                    // Assign scores and filter by minimum similarity threshold of 0.40
+                    // Tiêu đề khớp trực tiếp luôn được ưu tiên. Kết quả chỉ khớp gián tiếp
+                    // qua mô tả phải có semantic score cao để tránh trả việc không liên quan.
+                    var normalizedKeyword = request.Keyword.Trim();
                     foreach (var job in processedJobs)
                     {
                         if (scoreMap.TryGetValue(job.Id, out double score))
@@ -639,8 +653,12 @@ namespace RecruitmentBackend.Services
                     }
 
                     processedJobs = processedJobs
-                        .Where(job => job.AiScore >= 40)
-                        .OrderByDescending(job => job.AiScore)
+                        .Where(job =>
+                            job.Title.Contains(normalizedKeyword, StringComparison.CurrentCultureIgnoreCase) ||
+                            job.AiScore >= 65)
+                        .OrderByDescending(job =>
+                            job.Title.Contains(normalizedKeyword, StringComparison.CurrentCultureIgnoreCase))
+                        .ThenByDescending(job => job.AiScore)
                         .ThenByDescending(job => job.UpdatedAt)
                         .ToList();
 
@@ -680,11 +698,33 @@ namespace RecruitmentBackend.Services
                             .ToListAsync();
                     }
                 }
+                else
+                {
+                    // AI embedding có thể tạm thời hết quota hoặc không khả dụng.
+                    // Khi đó chỉ giữ kết quả khớp tiêu đề để không trả các job mà
+                    // từ khóa chỉ tình cờ xuất hiện trong một câu mô tả chung chung.
+                    var normalizedKeyword = request.Keyword.Trim();
+                    processedJobs = processedJobs
+                        .Where(job => job.Title.Contains(
+                            normalizedKeyword,
+                            StringComparison.CurrentCultureIgnoreCase))
+                        .OrderByDescending(job => job.UpdatedAt)
+                        .ToList();
+                }
             }
-            else
+
+            // Khi người dùng đang tìm kiếm, không thay kết quả rỗng bằng các job
+            // High-Utility không liên quan. UI cần nói rõ là không tìm thấy kết quả.
+            if (string.IsNullOrWhiteSpace(request.Keyword))
             {
                 // No keyword, sort by update date descending
                 processedJobs = processedJobs.OrderByDescending(j => j.UpdatedAt).ToList();
+            }
+
+            if (!string.IsNullOrWhiteSpace(request.Keyword) && isFallbackUsed)
+            {
+                processedJobs = new List<JobSummaryDto>();
+                isFallbackUsed = false;
             }
 
             // Refactor descriptions to fit search list display preview
