@@ -87,6 +87,7 @@ export default function CampaignApplicationsPage() {
     isModalOpen,
     setIsModalOpen,
     selectedApp,
+    detailLoading,
     viewMode,
     setViewMode,
     applicationStatusStages,
@@ -734,6 +735,7 @@ export default function CampaignApplicationsPage() {
       <AiReportDrawer
         open={isModalOpen}
         application={selectedApp}
+        loading={detailLoading}
         onClose={() => setIsModalOpen(false)}
         parseSkills={parseSkills}
       />

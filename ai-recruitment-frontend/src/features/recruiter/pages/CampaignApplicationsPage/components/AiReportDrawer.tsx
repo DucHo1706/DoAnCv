@@ -9,7 +9,7 @@ import {
   Typography,
   Space,
   Table,
-  Tooltip,
+  Skeleton,
 } from "antd";
 import { FilePdfOutlined } from "@ant-design/icons";
 import type { ApplicationDto } from "../../../services/recruitmentService";
@@ -21,6 +21,7 @@ const { Text, Title, Paragraph } = Typography;
 interface AiReportDrawerProps {
   open: boolean;
   application: ApplicationDto | null;
+  loading?: boolean;
   onClose: () => void;
   parseSkills: (val: any) => string[];
 }
@@ -28,6 +29,7 @@ interface AiReportDrawerProps {
 export function AiReportDrawer({
   open,
   application,
+  loading = false,
   onClose,
   parseSkills,
 }: AiReportDrawerProps) {
@@ -128,6 +130,17 @@ export function AiReportDrawer({
             </Col>
           </Row>
 
+          {loading ? (
+            <div aria-live="polite" aria-label="Đang tải báo cáo phân tích AI">
+              <Skeleton active title={{ width: "38%" }} paragraph={{ rows: 4 }} />
+              <Row gutter={[16, 16]} style={{ marginTop: 24 }}>
+                <Col xs={24} md={12}><Skeleton active paragraph={{ rows: 3 }} /></Col>
+                <Col xs={24} md={12}><Skeleton active paragraph={{ rows: 3 }} /></Col>
+              </Row>
+              <Skeleton active title={{ width: "32%" }} paragraph={{ rows: 4 }} style={{ marginTop: 24 }} />
+            </div>
+          ) : (
+          <div>
           {(() => {
             const parsed = getParsedAnalysis(application);
             const summaryText =
@@ -253,6 +266,8 @@ export function AiReportDrawer({
             ]}
             locale={{ emptyText: "Không có dữ liệu tiêu chí đánh giá" }}
           />
+          </div>
+          )}
         </div>
       )}
     </Drawer>

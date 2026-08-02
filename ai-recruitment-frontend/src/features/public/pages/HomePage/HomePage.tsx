@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useMemo } from "react";
-import { Button, Col, Row, Typography, Space, Input, Tag, Spin, Select, Divider, Collapse, Progress, Skeleton, message } from "antd";
+import { Button, Col, Row, Typography, Space, Input, Tag, Select, Divider, Collapse, Progress, Skeleton, message } from "antd";
 import {
   SearchOutlined,
   EnvironmentOutlined,
@@ -7,7 +7,6 @@ import {
   LineChartOutlined,
   SafetyOutlined,
   ArrowRightOutlined,
-  LoadingOutlined,
   ClusterOutlined,
   CodeOutlined,
   BarChartOutlined,
@@ -214,9 +213,9 @@ function HomePage() {
   const [simulatorCandidate, setSimulatorCandidate] = useState<any>(SIMULATOR_CANDIDATES.tech);
 
   const simulatorItems = [
-    { key: "tech", name: "CÔNG NGHỆ (TECH)", candidate: SIMULATOR_CANDIDATES.tech },
+    { key: "tech", name: "CÔNG NGHỆ", candidate: SIMULATOR_CANDIDATES.tech },
     { key: "marketing", name: "MARKETING", candidate: SIMULATOR_CANDIDATES.marketing },
-    { key: "corp", name: "NHÂN SỰ (HRBP)", candidate: SIMULATOR_CANDIDATES.corp }
+    { key: "corp", name: "NHÂN SỰ", candidate: SIMULATOR_CANDIDATES.corp }
   ];
 
   const getCategoryIcon = (categoryName: string) => {
@@ -462,14 +461,12 @@ function HomePage() {
   };
 
   const customStyles = `
-    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600&display=swap');
-
     .plus-jakarta-sans {
       font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
     }
 
     * {
-      font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     }
 
     .hero-gradient-bg {
@@ -602,7 +599,7 @@ function HomePage() {
       <style dangerouslySetInnerHTML={{ __html: customStyles }} />
 
       {/* 1. HERO SECTION & AI MATCH SIMULATOR PRO */}
-      <div className="hero-gradient-bg" style={{ padding: "90px 20px 80px", position: "relative", overflow: "hidden" }}>
+      <div className="hero-gradient-bg" style={{ padding: "64px 20px 72px", position: "relative", overflow: "hidden" }}>
         <div style={{ maxWidth: "1300px", margin: "0 auto" }}>
           <Row gutter={[48, 48]} align="middle">
             {/* Left Hero Content */}
@@ -611,7 +608,7 @@ function HomePage() {
                 <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
                   <span style={{ width: 32, height: 2, background: "#2563EB" }}></span>
                   <span style={{ color: "#2563EB", fontSize: 12, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.18em" }}>
-                    Nền tảng Tuyển dụng AI Enterprise
+                    Nền tảng tuyển dụng ứng dụng AI
                   </span>
                 </div>
                 <Title
@@ -626,8 +623,7 @@ function HomePage() {
                   }}
                   className="plus-jakarta-sans hero-title-responsive"
                 >
-                  Nghệ thuật tuyển dụng <br />
-                  <span style={{ color: "#2563EB" }}>Chính xác</span> từ AI.
+                  Tuyển đúng người, nhanh hơn <span style={{ color: "#2563EB" }}>với AI</span>
                 </Title>
                 <Paragraph
                   style={{
@@ -638,7 +634,7 @@ function HomePage() {
                     maxWidth: "500px",
                   }}
                 >
-                  Nền tảng tự động hóa bóc tách CV, đối sánh năng lực ứng viên và quản lý tuyển dụng doanh nghiệp.
+                  Phân tích CV, đối sánh năng lực và giúp HR ưu tiên những ứng viên phù hợp nhất.
                 </Paragraph>
 
                 {/* Search Bar */}
@@ -686,10 +682,8 @@ function HomePage() {
                       fontSize: "14px",
                       fontWeight: 800,
                       borderRadius: "10px",
-                      background: "#0F172A",
-                      borderColor: "#0F172A",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.05em",
+                      background: "#2563EB",
+                      borderColor: "#2563EB",
                     }}
                     onClick={handleSearch}
                   >
@@ -697,34 +691,6 @@ function HomePage() {
                   </Button>
                 </div>
 
-                {/* Hot Tag Hints */}
-                <div style={{ marginTop: 32, display: "flex", alignItems: "center", flexWrap: "wrap", gap: 16 }}>
-                  <Text style={{ fontSize: 11, fontWeight: 800, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.15em" }}>
-                    Từ khóa HOT:
-                  </Text>
-                  <Space wrap size={12}>
-                    {["ML Engineer", "Product Design", "DevOps Cloud", "HRBP Lead"].map((tag) => (
-                      <span
-                        key={tag}
-                        style={{
-                          fontSize: 13,
-                          fontWeight: 700,
-                          color: "#0F172A",
-                          cursor: "pointer",
-                          padding: "4px 10px",
-                          borderRadius: "6px",
-                          background: "#FFFFFF",
-                          border: "1px solid #E2E8F0",
-                          transition: "all 0.2s ease",
-                        }}
-                        className="action-btn"
-                        onClick={() => navigate(`/jobs?keyword=${encodeURIComponent(tag)}`)}
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </Space>
-                </div>
               </div>
             </Col>
 
@@ -736,7 +702,7 @@ function HomePage() {
                   backdropFilter: "blur(24px)",
                   WebkitBackdropFilter: "blur(24px)",
                   border: "1px solid rgba(226, 232, 240, 0.9)",
-                  borderRadius: "24px",
+                  borderRadius: "16px",
                   boxShadow: "0 25px 50px -12px rgba(15, 23, 42, 0.08)",
                   width: "100%",
                   maxWidth: "500px",
@@ -749,7 +715,7 @@ function HomePage() {
                   <Space size={10}>
                     <ClusterOutlined style={{ color: "#2563EB", fontSize: 20 }} />
                     <span style={{ fontSize: 13, fontWeight: 800, color: "#0F172A", textTransform: "uppercase", letterSpacing: "0.08em" }} className="plus-jakarta-sans">
-                      AI MATCH SIMULATOR PRO
+                      Mô phỏng đối sánh AI
                     </span>
                   </Space>
                   <Tag
@@ -764,20 +730,22 @@ function HomePage() {
                       letterSpacing: "0.05em",
                     }}
                   >
-                    REAL-TIME DEMO
+                    Dữ liệu mô phỏng
                   </Tag>
                 </div>
 
                 {/* Requisition Category Tabs */}
                 <div style={{ marginBottom: 24 }}>
                   <span style={{ fontSize: 10, fontWeight: 800, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.1em", display: "block", marginBottom: 12 }}>
-                    CHỌN MẪU HỒ SƠ ỨNG VIÊN ĐỂ BÓC TÁCH:
+                    Chọn nhóm hồ sơ để phân tích
                   </span>
                   <div style={{ display: "flex", gap: 8 }}>
                     {simulatorItems.map((item) => {
                       const isActive = activeCategory === item.key;
                       return (
-                        <div
+                        <button
+                          type="button"
+                          aria-pressed={isActive}
                           key={item.key}
                           onClick={() => {
                             setActiveCategory(item.key);
@@ -794,17 +762,18 @@ function HomePage() {
                             padding: "10px 6px",
                             textAlign: "center",
                             cursor: "pointer",
-                            background: isActive ? "#F8FAFC" : "#FFFFFF",
+                            background: isActive ? "#EFF6FF" : "#FFFFFF",
                             transition: "all 0.2s ease",
+                            fontFamily: "inherit",
                           }}
                         >
                           <div style={{ color: isActive ? "#2563EB" : "#64748B", marginBottom: 4 }}>
                             {getCategoryIcon(item.name)}
                           </div>
                           <span style={{ fontSize: 10, fontWeight: 800, color: isActive ? "#2563EB" : "#0F172A", textTransform: "uppercase" }}>
-                            {item.key}
+                            {item.name}
                           </span>
-                        </div>
+                        </button>
                       );
                     })}
                   </div>
@@ -812,11 +781,9 @@ function HomePage() {
 
                 {/* Candidate Matching Details */}
                 {simulatorLoading ? (
-                  <div style={{ height: "220px", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", background: "#F8FAFC", borderRadius: 16, border: "1px solid #E2E8F0" }}>
-                    <Spin indicator={<LoadingOutlined style={{ fontSize: 32, color: "#2563EB" }} spin />} />
-                    <Text style={{ marginTop: 14, fontSize: 13, color: "#64748B", fontWeight: 600 }}>
-                      Thuật toán AI đang phân tích CV & đối sánh...
-                    </Text>
+                  <div style={{ height: "220px", padding: 24, background: "#F8FAFC", borderRadius: 16, border: "1px solid #E2E8F0" }} aria-live="polite">
+                    <Text strong style={{ display: "block", marginBottom: 18 }}>AI đang phân tích hồ sơ</Text>
+                    <Skeleton active title={{ width: "46%" }} paragraph={{ rows: 4 }} />
                   </div>
                 ) : (
                   <div

@@ -31,6 +31,7 @@ export function useCampaignApplications() {
   // Modal / Drawer states
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedApp, setSelectedApp] = useState<ApplicationDto | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
   const [viewMode, setViewMode] = useState<"table" | "kanban">("table");
 
   // Ranking & Selection states
@@ -468,6 +469,7 @@ export function useCampaignApplications() {
   const handleViewDetail = async (record: ApplicationDto) => {
     setSelectedApp(record);
     setIsModalOpen(true);
+    setDetailLoading(true);
     try {
       const detail = await recruitmentService.getHrApplicationDetail(record.id);
       if (detail) {
@@ -475,6 +477,8 @@ export function useCampaignApplications() {
       }
     } catch {
       message.error("Không thể tải chi tiết báo cáo AI. Vui lòng thử lại.");
+    } finally {
+      setDetailLoading(false);
     }
   };
 
@@ -495,6 +499,7 @@ export function useCampaignApplications() {
     isModalOpen,
     setIsModalOpen,
     selectedApp,
+    detailLoading,
     viewMode,
     setViewMode,
     applicationStatusStages,
