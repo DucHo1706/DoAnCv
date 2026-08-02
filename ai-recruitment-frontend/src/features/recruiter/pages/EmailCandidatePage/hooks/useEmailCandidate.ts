@@ -204,9 +204,9 @@ export function useEmailCandidate() {
 
     const fetchCandidate = async () => {
       try {
-        const data = await recruitmentService.getHrApplications();
-        const apps = Array.isArray(data) ? data : (data as any)?.$values || [];
-        const found = apps.find((app: any) => app.id === id);
+        const found = id
+          ? await recruitmentService.getHrApplicationDetail(id)
+          : null;
 
         if (found) {
           setCandidate(found);

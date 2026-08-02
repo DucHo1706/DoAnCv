@@ -58,6 +58,8 @@ export interface ApplicationDto {
   status?: string;
   appliedAt?: string;
   candidateId?: string;
+  suggestedToEmail?: string;
+  suggestedCcEmail?: string;
   overallRank?: number | null;
   selectedCriterionRank?: number | null;
   aiDataStatus?: "ready" | "partial" | "missing" | "error" | "invalid";
@@ -70,9 +72,21 @@ export interface RejectApplicationRequest {
 }
 
 export const recruitmentService = {
-  async getHrApplications() {
-    const response = await axiosClient.get<ApplicationDto[]>("/Recruitment/hr/applications");
+  async getHrApplications(includeAiDetails = true) {
+    const response = await axiosClient.get<ApplicationDto[]>("/Recruitment/hr/applications", {
+      params: { includeAiDetails },
+    });
     return response.data;
+  },
+
+  async getHrApplicationDetail(applicationId: string) {
+    const response = await axiosClient.get<ApplicationDto[]>(
+      `/Recruitment/hr/applications/${applicationId}`
+    );
+    const items = Array.isArray(response.data)
+      ? response.data
+      : (response.data as { $values?: ApplicationDto[] })?.$values || [];
+    return items[0] || null;
   },
 
   async updateApplicationStatus(applicationId: string, status: string) {

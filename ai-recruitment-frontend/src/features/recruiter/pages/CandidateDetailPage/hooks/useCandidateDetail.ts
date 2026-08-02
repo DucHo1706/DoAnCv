@@ -33,11 +33,12 @@ export function useCandidateDetail() {
     async (showLoading = false) => {
       try {
         if (showLoading) setLoading(true);
-        const data = await recruitmentService.getHrApplications();
-        const apps: ApplicationDto[] = Array.isArray(data)
-          ? data
-          : (data as { $values?: ApplicationDto[] })?.$values || [];
-        const found = apps.find((app) => app.id === id);
+        if (!id) {
+          setCandidate(null);
+          return null;
+        }
+
+        const found = await recruitmentService.getHrApplicationDetail(id);
         setCandidate(found || null);
         return found;
       } catch (error: unknown) {
