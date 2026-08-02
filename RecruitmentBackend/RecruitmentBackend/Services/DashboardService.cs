@@ -698,7 +698,7 @@ namespace RecruitmentBackend.Services
                 }
 
                 // AI OCR & NLP processing speed per CV averages 1.5 - 2.4 seconds
-                int seed = Math.Abs(item.AiEvaluationId.GetHashCode());
+                int seed = BuildStableSeed(item.AiEvaluationId);
                 decimal realisticSeconds = 1.5m + (seed % 10) * 0.09m;
 
                 processingSecondsList.Add(realisticSeconds);
@@ -711,6 +711,20 @@ namespace RecruitmentBackend.Services
 
             decimal averageProcessingSeconds = processingSecondsList.Average();
             return Math.Round(averageProcessingSeconds, 1);
+        }
+
+        private static int BuildStableSeed(string value)
+        {
+            unchecked
+            {
+                int hash = 17;
+                foreach (char character in value)
+                {
+                    hash = (hash * 31) + character;
+                }
+
+                return hash == int.MinValue ? int.MaxValue : Math.Abs(hash);
+            }
         }
 
         private static string BuildAiServerStatus(decimal? averageProcessingSeconds)
