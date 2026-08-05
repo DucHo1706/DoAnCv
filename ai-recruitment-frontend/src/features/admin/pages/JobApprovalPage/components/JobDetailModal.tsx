@@ -212,22 +212,6 @@ export function JobDetailModal({
             />
           </div>
 
-          <div>
-            <Text strong>Từ khóa AI bóc tách</Text>
-            <div style={{ marginTop: 8 }}>
-              {jobDetail.wordsToHighlight?.length ? (
-                <Space wrap>
-                  {jobDetail.wordsToHighlight.map((word: string) => (
-                    <Tag color="blue" key={word}>
-                      {word}
-                    </Tag>
-                  ))}
-                </Space>
-              ) : (
-                <Text type="secondary">Chưa có từ khóa AI</Text>
-              )}
-            </div>
-          </div>
         </>
       )}
     </Modal>

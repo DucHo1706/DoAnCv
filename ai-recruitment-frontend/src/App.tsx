@@ -43,6 +43,7 @@ const SavedJobsPage = lazy(() => import("./features/candidate-portal/pages/Saved
 // Admin pages
 const AdminDashboardPage = lazy(() => import("./features/admin/pages/AdminDashboardPage"));
 const JobApprovalPage = lazy(() => import("./features/admin/pages/JobApprovalPage"));
+const AdminJobDetailPage = lazy(() => import("./features/admin/pages/AdminJobDetailPage/AdminJobDetailPage"));
 const UserManagementPage = lazy(() => import("./features/admin/pages/UserManagementPage"));
 const AuditLogsPage = lazy(() => import("./features/admin/pages/AuditLogsPage"));
 const RolePermissionPage = lazy(() => import("./features/admin/pages/RolePermissionPage"));
@@ -102,6 +103,7 @@ function App() {
         <Route path="/admin" element={<MainLayout />}>
           <Route path="dashboard" element={<AdminDashboardPage />} />
           <Route path="approval" element={<JobApprovalPage />} />
+          <Route path="jobs/:id" element={<AdminJobDetailPage />} />
           <Route path="users" element={<UserManagementPage />} />
           <Route path="recruiter-performance" element={<RecruiterPerformancePage />} />
           <Route path="roles" element={<RolePermissionPage />} />

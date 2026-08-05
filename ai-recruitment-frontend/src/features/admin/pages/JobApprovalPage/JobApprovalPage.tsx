@@ -27,14 +27,14 @@ import {
   Skeleton,
 } from "antd";
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import PageContainer from "../../../../components/common/PageContainer";
 import EmptyState from "../../../../components/common/EmptyState";
 import AppPagination from "../../../../components/common/AppPagination";
 import { jobService, categoryService } from "../../services/jobService";
-import type { JobDto, JobReviewResponse } from "../../services/jobService";
+import type { JobDto } from "../../services/jobService";
 import { EnvironmentOutlined } from "@ant-design/icons";
 import { exportToCsv } from "../../../../utils/exportUtils";
-import { JobDetailModal } from "./components/JobDetailModal";
 import { RejectModal } from "./components/RejectModal";
 import { JobGridView } from "./components/JobGridView";
 import { JobTableView } from "./components/JobTableView";
@@ -64,6 +64,7 @@ function formatDate(value?: string | null) {
 }
 
 function JobApprovalPage() {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [approvingId, setApprovingId] = useState<string | null>(null);
   const [jobs, setJobs] = useState<JobDto[]>([]);
@@ -81,9 +82,6 @@ function JobApprovalPage() {
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>("all");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
 
-  const [detailOpen, setDetailOpen] = useState(false);
-  const [detailLoading, setDetailLoading] = useState(false);
-  const [jobDetail, setJobDetail] = useState<JobReviewResponse | null>(null);
 
   // Reject modal state
   const [rejectTarget, setRejectTarget] = useState<PendingJobTableItem | null>(null);
@@ -223,20 +221,7 @@ function JobApprovalPage() {
     setSelectedRowKeys((prev) => prev.filter((key) => validIds.has(String(key))));
   }, [tableData]);
 
-  const handleViewJob = async (record: PendingJobTableItem) => {
-    try {
-      setDetailOpen(true);
-      setDetailLoading(true);
-      const data = await jobService.getJobReview(record.id);
-      setJobDetail(data);
-    } catch (error) {
-      console.error(error);
-      message.error("Không tải được chi tiết tin tuyển dụng");
-      setDetailOpen(false);
-    } finally {
-      setDetailLoading(false);
-    }
-  };
+  const handleViewJob = (record: PendingJobTableItem) => navigate(`/admin/jobs/${record.id}`);
 
   const handleApproveJob = async (record: PendingJobTableItem) => {
     if (approvingId) return;
@@ -246,10 +231,6 @@ function JobApprovalPage() {
       const response = await jobService.approveJob(record.id);
       message.success(response?.message || "Duyệt tin tuyển dụng thành công");
       fetchAdminJobs();
-      if (jobDetail?.jobInfo.id === record.id) {
-        setDetailOpen(false);
-        setJobDetail(null);
-      }
     } catch (error: any) {
       console.error("Approve error:", error);
       const errorMessage =
@@ -269,10 +250,6 @@ function JobApprovalPage() {
       await jobService.toggleJobStatus(id);
       message.success("Cập nhật trạng thái thành công");
       fetchAdminJobs();
-      if (jobDetail?.jobInfo.id === id) {
-        setDetailOpen(false);
-        setJobDetail(null);
-      }
     } catch (error: any) {
       message.error("Lỗi khi thay đổi trạng thái!");
     }
@@ -317,10 +294,6 @@ function JobApprovalPage() {
       setRejectTarget(null);
       setRejectReasonText("");
       fetchAdminJobs();
-      if (jobDetail?.jobInfo.id === rejectTarget.id) {
-        setDetailOpen(false);
-        setJobDetail(null);
-      }
     } catch (error: any) {
       const errorMessage =
         error?.response?.data?.message ||
@@ -807,20 +780,6 @@ function JobApprovalPage() {
           onRestore={(item) => handleRestore(item.id)}
         />
       )}
-
-      {/* Detail Modal */}
-      <JobDetailModal
-        open={detailOpen}
-        loading={detailLoading}
-        jobDetail={jobDetail}
-        approvingId={approvingId}
-        onCancel={() => {
-          setDetailOpen(false);
-          setJobDetail(null);
-        }}
-        onOpenReject={handleOpenReject}
-        onApprove={handleApproveJob}
-      />
 
       {/* Reject Reason Modal */}
       <RejectModal
