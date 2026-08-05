@@ -11,6 +11,9 @@ import {
   CloseCircleFilled,
   LockFilled,
   EnvironmentOutlined,
+  EditOutlined,
+  InboxOutlined,
+  UndoOutlined,
 } from "@ant-design/icons";
 import {
   Button,
@@ -39,7 +42,7 @@ import type {
 import { appTheme } from "../../../../constants/theme";
 
 const { Text } = Typography;
-type JobStatus = "approved" | "pending" | "closed" | "rejected";
+type JobStatus = "approved" | "pending" | "closed" | "rejected" | "archived" | "flagged";
 
 type JobDtoExtended = JobDto & {
   category?: { name: string };
@@ -64,6 +67,12 @@ function getStatusMeta(status: JobStatus) {
   }
   if (status === "rejected") {
     return { label: "Bị từ chối", color: "error" as const, icon: <CloseCircleFilled /> };
+  }
+  if (status === "archived") {
+    return { label: "Đã lưu trữ", color: "default" as const, icon: <InboxOutlined /> };
+  }
+  if (status === "flagged") {
+    return { label: "Đang kiểm duyệt", color: "warning" as const, icon: <ClockCircleFilled /> };
   }
   return { label: "Chờ duyệt", color: "warning" as const, icon: <ClockCircleFilled /> };
 }
@@ -112,6 +121,10 @@ function JobManagementPage() {
       status = "closed";
     } else if (job.status === "Rejected") {
       status = "rejected";
+    } else if (job.status === "Archived") {
+      status = "archived";
+    } else if (job.status === "Flagged") {
+      status = "flagged";
     }
     const categoryNames = job.category?.name || "Chưa cập nhật";
     const isExpired = job.deadline ? new Date(job.deadline) < new Date() : false;
@@ -167,6 +180,26 @@ function JobManagementPage() {
       fetchJobs();
     } catch (error: any) {
       message.error(error.response?.data?.message || "Lỗi khi thay đổi trạng thái!");
+    }
+  };
+
+  const handleArchive = async (id: string) => {
+    try {
+      const response = await jobService.archiveJob(id);
+      message.success(response?.message || "Đã lưu trữ tin tuyển dụng");
+      fetchJobs();
+    } catch (error: any) {
+      message.error(error.response?.data?.message || "Không thể lưu trữ tin tuyển dụng");
+    }
+  };
+
+  const handleRestore = async (id: string) => {
+    try {
+      const response = await jobService.restoreJob(id);
+      message.success(response?.message || "Đã khôi phục tin tuyển dụng");
+      fetchJobs();
+    } catch (error: any) {
+      message.error(error.response?.data?.message || "Không thể khôi phục tin tuyển dụng");
     }
   };
 
@@ -241,7 +274,7 @@ function JobManagementPage() {
     {
       title: "Thao tác",
       key: "actions",
-      width: 200,
+      width: 390,
       fixed: "right" as const,
       render: (_: unknown, record: JobTableItem) => (
         <Space>
@@ -253,6 +286,16 @@ function JobManagementPage() {
           >
             Chi tiết
           </Button>
+          {record.status !== "archived" && record.raw.status !== "Flagged" && (
+            <Button
+              size="small"
+              icon={<EditOutlined />}
+              onClick={() => navigate(`/recruiter/jobs/${record.id}/edit`)}
+              style={{ borderRadius: 6 }}
+            >
+              Sửa
+            </Button>
+          )}
           {(record.status === "approved" || record.status === "closed") && (
             <Popconfirm
               title={
@@ -275,6 +318,30 @@ function JobManagementPage() {
               </Button>
             </Popconfirm>
           )}
+          {record.raw.status !== "Flagged" && (record.status === "archived" ? (
+            <Popconfirm
+              title="Khôi phục tin và gửi lại để Admin duyệt?"
+              onConfirm={() => handleRestore(record.id)}
+              okText="Khôi phục"
+              cancelText="Hủy"
+            >
+              <Button size="small" icon={<UndoOutlined />} style={{ borderRadius: 6 }}>
+                Khôi phục
+              </Button>
+            </Popconfirm>
+          ) : (
+            <Popconfirm
+              title="Lưu trữ tin tuyển dụng này?"
+              description="Tin sẽ ngừng hiển thị nhưng dữ liệu ứng viên và kết quả AI vẫn được giữ."
+              onConfirm={() => handleArchive(record.id)}
+              okText="Lưu trữ"
+              cancelText="Hủy"
+            >
+              <Button size="small" icon={<InboxOutlined />} style={{ borderRadius: 6 }}>
+                Lưu trữ
+              </Button>
+            </Popconfirm>
+          ))}
         </Space>
       ),
     },
@@ -349,6 +416,8 @@ function JobManagementPage() {
                   { label: "Tạm ẩn", value: "closed" },
                   { label: "Chờ duyệt", value: "pending" },
                   { label: "Bị từ chối", value: "rejected" },
+                  { label: "Đã lưu trữ", value: "archived" },
+                  { label: "Đang kiểm duyệt", value: "flagged" },
                 ]}
               />
               <Select

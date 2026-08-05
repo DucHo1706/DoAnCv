@@ -16,7 +16,7 @@ import {
 } from "antd";
 import dayjs from "dayjs";
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import PageContainer from "../../../../components/common/PageContainer";
 import { jobService, jobPositionService, branchService } from "../../services/jobService";
 import axiosClient from "../../../../services/axiosClient";
@@ -29,6 +29,8 @@ import type {
 function CreateJobPage() {
   const [form] = Form.useForm();
   const navigate = useNavigate();
+  const { id: editingJobId } = useParams();
+  const isEditing = Boolean(editingJobId);
   const [submitting, setSubmitting] = useState(false);
 
   // Dropdown data từ API
@@ -52,6 +54,34 @@ function CreateJobPage() {
       setBranches(branchData);
       setCategories(Array.isArray(cateData) ? cateData : cateData?.$values || []);
       setJobLevels(Array.isArray(levelData) ? levelData : levelData?.$values || []);
+      if (editingJobId) {
+        const detail = await jobService.getJobReview(editingJobId);
+        const job = detail.jobInfo;
+        const findPath = (items: any[], targetId?: string | null) => {
+          if (!targetId) return undefined;
+          const byId = new Map(items.map((item: any) => [item.id, item]));
+          const result: string[] = [];
+          let current: any = byId.get(targetId);
+          while (current) {
+            result.unshift(current.id);
+            current = current.parentId ? byId.get(current.parentId) : null;
+          }
+          return result.length ? result : undefined;
+        };
+        form.setFieldsValue({
+          categoryPath: findPath(Array.isArray(cateData) ? cateData : cateData?.$values || [], job.category?.id),
+          jobLevelPath: findPath(Array.isArray(levelData) ? levelData : levelData?.$values || [], job.jobLevel?.id),
+          positionId: job.position?.id,
+          branchId: job.branch?.id,
+          salaryRange: job.salaryRange,
+          startDate: job.startDate ? dayjs(job.startDate) : null,
+          deadline: job.deadline ? dayjs(job.deadline) : null,
+          maxCandidates: job.maxCandidates,
+          description: job.description,
+          requirements: job.requirements,
+          criteria: job.criteria || [],
+        });
+      }
     } catch {
       message.error("Không tải được dữ liệu cần thiết cho form");
     } finally {
@@ -61,7 +91,7 @@ function CreateJobPage() {
 
   useEffect(() => {
     fetchDropdownData();
-  }, []);
+  }, [editingJobId]);
 
   // Hàm xây dựng dữ liệu cho Cascader (Lĩnh vực & Cấp bậc)
   const buildCascaderData = (items: any[], parentId: string | null = null): any[] => {
@@ -118,8 +148,13 @@ function CreateJobPage() {
       };
 
       setSubmitting(true);
-      await jobService.createJob(payload as any);
-      message.success("Tạo tin tuyển dụng thành công, bài đang chờ duyệt");
+      if (editingJobId) {
+        const response = await jobService.updateJob(editingJobId, payload as any);
+        message.success(response?.message || "Đã cập nhật và gửi lại tin để duyệt");
+      } else {
+        await jobService.createJob(payload as any);
+        message.success("Tạo tin tuyển dụng thành công, bài đang chờ duyệt");
+      }
       navigate("/recruiter/jobs");
     } catch (error: any) {
       if (error?.response) {
@@ -134,8 +169,8 @@ function CreateJobPage() {
 
   return (
     <PageContainer
-      title="Tạo tin tuyển dụng mới"
-      subtitle="Điền đầy đủ các thông tin bên dưới để đăng một vị trí tuyển dụng mới."
+      title={isEditing ? "Chỉnh sửa tin tuyển dụng" : "Tạo tin tuyển dụng mới"}
+      subtitle={isEditing ? "Nội dung thay đổi sẽ được gửi lại để Admin duyệt." : "Điền đầy đủ thông tin để đăng một vị trí tuyển dụng mới."}
     >
       <Form form={form} layout="vertical" onFinish={handleCreateJob}>
         <Card>
@@ -324,7 +359,7 @@ function CreateJobPage() {
         <Card style={{ marginTop: 24, position: "sticky", bottom: 0, zIndex: 10 }}>
           <Space>
             <Button type="primary" htmlType="submit" icon={<SaveOutlined />} loading={submitting}>
-              Gửi duyệt tin
+              {isEditing ? "Lưu và gửi duyệt lại" : "Gửi duyệt tin"}
             </Button>
             <Button onClick={() => navigate("/recruiter/jobs")}>Hủy</Button>
           </Space>

@@ -63,6 +63,8 @@ namespace RecruitmentBackend.Services
                 JobID = Guid.NewGuid().ToString(),
                 PositionID = request.PositionId,
                 BranchID = request.BranchId,
+                CategoryID = request.CategoryId,
+                JobLevelID = request.JobLevelId,
                 RecruiterID = recruiter.RecruiterID,
                 JobDescription = request.Description,
                 JobRequirement = request.Requirements,
@@ -129,6 +131,120 @@ namespace RecruitmentBackend.Services
             return newJob.JobID;
         }
 
+        public async Task<(bool Success, string Message)> UpdateRecruiterJobAsync(string jobId, CreateJobRequest request, string accountId)
+        {
+            var recruiter = await _context.Recruiters.FirstOrDefaultAsync(r => r.AccountID == accountId);
+            if (recruiter == null) return (false, "Không tìm thấy thông tin HR.");
+
+            var job = await _context.JobPostings.Include(j => j.Criteria).FirstOrDefaultAsync(j => j.JobID == jobId);
+            if (job == null) return (false, "Không tìm thấy tin tuyển dụng.");
+
+            var isAssignedToBranch = await _context.RecruiterBranches.AnyAsync(rb =>
+                rb.RecruiterID == recruiter.RecruiterID && rb.BranchID == job.BranchID);
+            if (job.RecruiterID != recruiter.RecruiterID && !isAssignedToBranch)
+                return (false, "Bạn không có quyền chỉnh sửa tin tuyển dụng này.");
+
+            if (job.Status == "Archived" || job.Status == "Flagged")
+                return (false, "Tin đang được lưu trữ hoặc kiểm duyệt nên chưa thể chỉnh sửa.");
+
+            if (request.Criteria == null || request.Criteria.Count == 0 || request.Criteria.Sum(c => c.Weight) != 100)
+                return (false, "Tin phải có ít nhất một tiêu chí và tổng trọng số phải bằng 100%.");
+
+            var positionExists = await _context.Positions.AnyAsync(p => p.PositionID == request.PositionId);
+            var branchExists = await _context.Branches.AnyAsync(b => b.BranchID == request.BranchId);
+            if (!positionExists || !branchExists) return (false, "Vị trí hoặc chi nhánh không hợp lệ.");
+
+            var applicationCount = await _context.Applications.CountAsync(a => a.JobID == jobId);
+            var changesScoringContext = job.PositionID != request.PositionId
+                || job.CategoryID != request.CategoryId
+                || job.JobLevelID != request.JobLevelId
+                || job.JobDescription != request.Description
+                || job.JobRequirement != request.Requirements
+                || job.Criteria.Count != request.Criteria.Count
+                || job.Criteria.OrderBy(c => c.Name).Select(c => $"{c.Name}:{c.Weight}")
+                    .SequenceEqual(request.Criteria.OrderBy(c => c.Name).Select(c => $"{c.Name.Trim()}:{c.Weight}")) == false;
+
+            if (applicationCount > 0 && changesScoringContext)
+                return (false, "Tin đã có ứng viên. Không thể thay đổi vị trí, mô tả, yêu cầu hoặc tiêu chí vì sẽ làm sai lệch kết quả AI hiện có.");
+
+            decimal minSal = 0, maxSal = 0;
+            var cleanText = (request.SalaryRange ?? "").Replace(",", "").Replace(".", "");
+            var matches = System.Text.RegularExpressions.Regex.Matches(cleanText, @"\d+");
+            if (matches.Count >= 2)
+            {
+                decimal.TryParse(matches[0].Value, out minSal);
+                decimal.TryParse(matches[1].Value, out maxSal);
+                if (minSal > maxSal) (minSal, maxSal) = (maxSal, minSal);
+            }
+            else if (matches.Count == 1) decimal.TryParse(matches[0].Value, out minSal);
+            if (minSal >= 1000) minSal /= 1000000;
+            if (maxSal >= 1000) maxSal /= 1000000;
+
+            job.PositionID = request.PositionId;
+            job.BranchID = request.BranchId;
+            job.CategoryID = request.CategoryId;
+            job.JobLevelID = request.JobLevelId;
+            job.JobDescription = request.Description.Trim();
+            job.JobRequirement = request.Requirements.Trim();
+            job.SalaryMin = minSal;
+            job.SalaryMax = maxSal;
+            job.StartDate = request.StartDate;
+            job.Deadline = request.Deadline ?? job.Deadline;
+            job.MaxCandidates = request.MaxCandidates;
+            job.RejectReason = "";
+
+            if (applicationCount == 0)
+            {
+                _context.JobCriteria.RemoveRange(job.Criteria);
+                _context.JobCriteria.AddRange(request.Criteria.Select(c => new JobCriterion
+                {
+                    CriterionID = Guid.NewGuid().ToString(), JobID = job.JobID,
+                    Name = c.Name.Trim(), Weight = c.Weight
+                }));
+            }
+
+            // Mọi thay đổi trước khi có ứng viên đều phải được Admin duyệt lại.
+            if (applicationCount == 0) job.Status = "Pending";
+            await _context.SaveChangesAsync();
+            return (true, applicationCount == 0
+                ? "Đã cập nhật và gửi lại tin để Admin duyệt."
+                : "Đã cập nhật các thông tin vận hành của tin tuyển dụng.");
+        }
+
+        public async Task<(bool Success, string Message)> ArchiveJobAsync(string jobId, string accountId, bool isAdmin)
+        {
+            var job = await _context.JobPostings.FindAsync(jobId);
+            if (job == null) return (false, "Không tìm thấy tin tuyển dụng.");
+            if (!isAdmin)
+            {
+                var recruiter = await _context.Recruiters.FirstOrDefaultAsync(r => r.AccountID == accountId);
+                if (recruiter == null) return (false, "Không tìm thấy thông tin HR.");
+                var assigned = await _context.RecruiterBranches.AnyAsync(rb => rb.RecruiterID == recruiter.RecruiterID && rb.BranchID == job.BranchID);
+                if (job.RecruiterID != recruiter.RecruiterID && !assigned) return (false, "Bạn không có quyền lưu trữ tin này.");
+            }
+            if (job.Status == "Archived") return (false, "Tin đã được lưu trữ trước đó.");
+            job.Status = "Archived";
+            await _context.SaveChangesAsync();
+            return (true, "Đã lưu trữ tin tuyển dụng. Dữ liệu ứng viên và kết quả AI vẫn được giữ nguyên.");
+        }
+
+        public async Task<(bool Success, string Message)> RestoreArchivedJobAsync(string jobId, string accountId, bool isAdmin)
+        {
+            var job = await _context.JobPostings.FindAsync(jobId);
+            if (job == null || job.Status != "Archived") return (false, "Không tìm thấy tin đang lưu trữ.");
+            if (!isAdmin)
+            {
+                var recruiter = await _context.Recruiters.FirstOrDefaultAsync(r => r.AccountID == accountId);
+                if (recruiter == null) return (false, "Không tìm thấy thông tin HR.");
+                var assigned = await _context.RecruiterBranches.AnyAsync(rb => rb.RecruiterID == recruiter.RecruiterID && rb.BranchID == job.BranchID);
+                if (job.RecruiterID != recruiter.RecruiterID && !assigned) return (false, "Bạn không có quyền khôi phục tin này.");
+            }
+            job.Status = "Pending";
+            job.RejectReason = "";
+            await _context.SaveChangesAsync();
+            return (true, "Đã khôi phục và chuyển tin về trạng thái chờ duyệt.");
+        }
+
         public async Task<IEnumerable<object>> GetJobsByRecruiterAsync(string accountId)
         {
             var recruiter = await _context.Recruiters.FirstOrDefaultAsync(r => r.AccountID == accountId);
@@ -161,7 +277,8 @@ namespace RecruitmentBackend.Services
                               isApproved = j.Status == "Published",
                               position = p != null ? new { id = p.PositionID, name = p.PositionName } : null,
                               branch = b != null ? new { id = b.BranchID, name = b.BranchName } : null,
-                              category = c != null ? new { id = c.CategoryID, name = c.Name } : null
+                              category = c != null ? new { id = c.CategoryID, name = c.Name } : null,
+                              jobLevel = j.JobLevelID == null ? null : new { id = j.JobLevelID }
                           }).ToListAsync();
         }
 
@@ -178,7 +295,7 @@ namespace RecruitmentBackend.Services
                                  from r in rj.DefaultIfEmpty()
                                  join acc in _context.Accounts on r.AccountID equals acc.AccountID into accj
                                  from acc in accj.DefaultIfEmpty()
-                                 join c in _context.Categories on j.CategoryID equals c.CategoryID into cj
+                                 join c in _context.Categories on p.CategoryID equals c.CategoryID into cj
                                  from c in cj.DefaultIfEmpty()
                                  orderby j.CreatedAt descending
                                  select new {
@@ -206,7 +323,7 @@ namespace RecruitmentBackend.Services
         public async Task<bool> ToggleJobStatusAsync(string jobId)
         {
             var job = await _context.JobPostings.FindAsync(jobId);
-            if (job == null || job.Status == "Pending") return false;
+            if (job == null || (job.Status != "Published" && job.Status != "Closed")) return false;
 
             // Nếu đang mở thì khóa, nếu đang khóa thì mở lại
             job.Status = job.Status == "Published" ? "Closed" : "Published";
@@ -220,7 +337,7 @@ namespace RecruitmentBackend.Services
             if (recruiter == null) return false;
 
             var job = await _context.JobPostings.FindAsync(jobId);
-            if (job == null || job.Status == "Pending") return false;
+            if (job == null || (job.Status != "Published" && job.Status != "Closed")) return false;
 
             var isDirectOwner = job.RecruiterID == recruiter.RecruiterID;
             var isAssignedToBranch = await _context.RecruiterBranches.AnyAsync(rb => 
@@ -233,14 +350,23 @@ namespace RecruitmentBackend.Services
             return true;
         }
 
-        public async Task<object> ReviewJobAsync(string jobId)
+        public async Task<object?> ReviewJobAsync(string jobId, string accountId, bool isAdmin)
         {
+            if (!isAdmin)
+            {
+                var recruiter = await _context.Recruiters.FirstOrDefaultAsync(r => r.AccountID == accountId);
+                if (recruiter == null) return null;
+                var ownedJob = await _context.JobPostings.FindAsync(jobId);
+                if (ownedJob == null) return null;
+                var assigned = await _context.RecruiterBranches.AnyAsync(rb => rb.RecruiterID == recruiter.RecruiterID && rb.BranchID == ownedJob.BranchID);
+                if (ownedJob.RecruiterID != recruiter.RecruiterID && !assigned) return null;
+            }
             var query = from j in _context.JobPostings
                         join p in _context.Positions on j.PositionID equals p.PositionID into pj
                         from p in pj.DefaultIfEmpty()
                         join b in _context.Branches on j.BranchID equals b.BranchID into bj
                         from b in bj.DefaultIfEmpty()
-                        join c in _context.Categories on j.CategoryID equals c.CategoryID into cj
+                        join c in _context.Categories on p.CategoryID equals c.CategoryID into cj
                         from c in cj.DefaultIfEmpty()
                         join jl in _context.JobLevels on j.JobLevelID equals jl.JobLevelID into jlj
                         from jl in jlj.DefaultIfEmpty()
@@ -257,10 +383,10 @@ namespace RecruitmentBackend.Services
                             status = j.Status,
                             rejectReason = j.RejectReason,
                             isApproved = j.Status == "Published",
-                            position = p != null ? new { name = p.PositionName } : null,
-                            branch = b != null ? new { name = b.BranchName } : null,
-                            category = c != null ? new { name = c.Name } : null,
-                            jobLevel = jl != null ? new { name = jl.Name } : null,
+                            position = p != null ? new { id = p.PositionID, name = p.PositionName } : null,
+                            branch = b != null ? new { id = b.BranchID, name = b.BranchName } : null,
+                            category = c != null ? new { id = c.CategoryID, name = c.Name } : null,
+                            jobLevel = jl != null ? new { id = jl.JobLevelID, name = jl.Name } : null,
                             viewCount = j.ViewCount
                         };
 
@@ -318,7 +444,7 @@ namespace RecruitmentBackend.Services
         public async Task<bool> ApproveJobAndSyncAiAsync(string jobId)
         {
             var job = await _context.JobPostings.FindAsync(jobId);
-            if (job == null || job.Status == "Published") return false;
+            if (job == null || job.Status != "Pending") return false;
 
             job.Status = "Published";
             job.ApprovedAt = DateTime.Now;

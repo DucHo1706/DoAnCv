@@ -201,7 +201,7 @@ export function SideNav({
         {
           key: "/admin/organization",
           icon: <ApartmentOutlined style={{ color: "#818CF8", fontSize: 16 }} />,
-          label: <Link to="/admin/organization">Cơ cấu tổ chức</Link>,
+          label: <Link to="/admin/organization">Danh mục tuyển dụng</Link>,
         },
       ],
     },

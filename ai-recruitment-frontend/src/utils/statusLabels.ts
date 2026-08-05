@@ -16,7 +16,7 @@ export const APPLICATION_STATUS_LABELS: Record<string, string> = {
 export const JOB_STATUS_LABELS: Record<string, string> = {
   pending: "Chờ duyệt", published: "Đang tuyển", approved: "Đang tuyển",
   rejected: "Đã từ chối", closed: "Đã đóng", locked: "Đã khóa",
-  expired: "Đã hết hạn", draft: "Bản nháp",
+  expired: "Đã hết hạn", draft: "Bản nháp", archived: "Đã lưu trữ", flagged: "Đang kiểm duyệt",
 };
 
 export const AI_STATUS_LABELS: Record<string, string> = {

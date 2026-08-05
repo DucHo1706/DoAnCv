@@ -18,6 +18,7 @@ import {
   Select,
   Badge,
   Tooltip,
+  Alert,
 } from "antd";
 import {
   EnvironmentOutlined,
@@ -50,7 +51,7 @@ const { Text } = Typography;
 
 export default function OrganizationManagementPage() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const activeTabKey = searchParams.get("tab") || "branches";
+  const activeTabKey = searchParams.get("tab") || "categories";
 
   const handleTabChange = (key: string) => {
     setSearchParams({ tab: key });
@@ -58,9 +59,16 @@ export default function OrganizationManagementPage() {
 
   return (
     <PageContainer
-      title="Quản lý Cơ cấu Tổ chức"
-      subtitle="Quản lý tập trung các danh mục nền tảng: Chi nhánh làm việc, Lĩnh vực Ngành nghề, Cấp bậc và Vị trí công việc"
+      title="Danh mục tuyển dụng"
+      subtitle="Thiết lập dữ liệu dùng chung khi HR tạo tin tuyển dụng"
     >
+      <Alert
+        type="info"
+        showIcon
+        message="Cách các danh mục liên kết với nhau"
+        description="Lĩnh vực ngành nghề chứa các vị trí công việc. Cấp bậc mô tả mức kinh nghiệm, còn chi nhánh xác định nơi làm việc. Khi tạo tin, HR sẽ chọn một giá trị phù hợp từ mỗi nhóm."
+        style={{ marginBottom: 16, borderRadius: 12, border: `1px solid ${appTheme.colors.border}` }}
+      />
       <Card
         style={{
           borderRadius: appTheme.radius.lg,
@@ -76,44 +84,44 @@ export default function OrganizationManagementPage() {
           size="large"
           items={[
             {
-              key: "branches",
-              label: (
-                <Space size={8}>
-                  <EnvironmentOutlined style={{ color: appTheme.colors.primary }} />
-                  <span>Chi nhánh</span>
-                </Space>
-              ),
-              children: <BranchTab />,
-            },
-            {
               key: "categories",
               label: (
                 <Space size={8}>
                   <AppstoreOutlined style={{ color: appTheme.colors.accent }} />
-                  <span>Lĩnh vực ngành nghề</span>
+                  <span>1. Lĩnh vực ngành nghề</span>
                 </Space>
               ),
               children: <CategoryTab />,
-            },
-            {
-              key: "job-levels",
-              label: (
-                <Space size={8}>
-                  <OrderedListOutlined style={{ color: appTheme.colors.info }} />
-                  <span>Cấp bậc công việc</span>
-                </Space>
-              ),
-              children: <JobLevelTab />,
             },
             {
               key: "job-positions",
               label: (
                 <Space size={8}>
                   <SolutionOutlined style={{ color: appTheme.colors.success }} />
-                  <span>Vị trí công việc</span>
+                  <span>2. Vị trí công việc</span>
                 </Space>
               ),
               children: <JobPositionTab />,
+            },
+            {
+              key: "job-levels",
+              label: (
+                <Space size={8}>
+                  <OrderedListOutlined style={{ color: appTheme.colors.info }} />
+                  <span>3. Cấp bậc</span>
+                </Space>
+              ),
+              children: <JobLevelTab />,
+            },
+            {
+              key: "branches",
+              label: (
+                <Space size={8}>
+                  <EnvironmentOutlined style={{ color: appTheme.colors.primary }} />
+                  <span>4. Chi nhánh làm việc</span>
+                </Space>
+              ),
+              children: <BranchTab />,
             },
           ]}
         />

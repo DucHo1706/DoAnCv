@@ -8,6 +8,8 @@ namespace RecruitmentBackend.DTOs.Requests
     {
         [Required(ErrorMessage = "Vui lòng chọn Vị trí")] public string PositionId { get; set; }
         [Required(ErrorMessage = "Vui lòng chọn Chi nhánh")] public string BranchId { get; set; }
+        public string? CategoryId { get; set; }
+        public string? JobLevelId { get; set; }
         [Required(ErrorMessage = "Vui lòng nhập Mô tả")] public string Description { get; set; }
         [Required(ErrorMessage = "Vui lòng nhập Yêu cầu")] public string Requirements { get; set; }
         [Required(ErrorMessage = "Vui lòng nhập Mức lương")] public string SalaryRange { get; set; }

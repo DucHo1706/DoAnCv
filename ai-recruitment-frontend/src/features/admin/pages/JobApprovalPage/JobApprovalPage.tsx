@@ -3,7 +3,7 @@ import {
   StatusRunningIcon,
   StatusClosedIcon,
 } from "../../../../components/common/AppIcons";
-import { AppstoreOutlined, CalendarOutlined, CheckCircleOutlined, CheckOutlined, CloseOutlined, DollarOutlined, EyeOutlined, FileTextOutlined, FireOutlined, LockOutlined, SearchOutlined, StopOutlined, UnlockOutlined, UnorderedListOutlined, UserOutlined, DownloadOutlined, FlagOutlined, ClockCircleFilled, CheckCircleFilled, CloseCircleFilled, LockFilled } from "@ant-design/icons";
+import { AppstoreOutlined, CalendarOutlined, CheckCircleOutlined, CheckOutlined, CloseOutlined, DollarOutlined, EyeOutlined, FileTextOutlined, FireOutlined, LockOutlined, SearchOutlined, StopOutlined, UnlockOutlined, UnorderedListOutlined, UserOutlined, DownloadOutlined, FlagOutlined, ClockCircleFilled, CheckCircleFilled, CloseCircleFilled, LockFilled, InboxOutlined, UndoOutlined } from "@ant-design/icons";
 import {
   Button,
   Card,
@@ -175,6 +175,7 @@ function JobApprovalPage() {
         selectedStatus === "all" ||
         (selectedStatus === "pending" && job.status === "Pending") ||
         (selectedStatus === "active" && job.status === "Published") ||
+        (selectedStatus === "archived" && job.status === "Archived") ||
         (selectedStatus === "closed" &&
           (job.status === "Closed" || job.status === "Locked"));
 
@@ -274,6 +275,26 @@ function JobApprovalPage() {
       }
     } catch (error: any) {
       message.error("Lỗi khi thay đổi trạng thái!");
+    }
+  };
+
+  const handleArchive = async (id: string) => {
+    try {
+      const response = await jobService.archiveJob(id);
+      message.success(response?.message || "Đã lưu trữ tin tuyển dụng");
+      fetchAdminJobs();
+    } catch (error: any) {
+      message.error(error?.response?.data?.message || "Không thể lưu trữ tin tuyển dụng");
+    }
+  };
+
+  const handleRestore = async (id: string) => {
+    try {
+      const response = await jobService.restoreJob(id);
+      message.success(response?.message || "Đã khôi phục tin tuyển dụng");
+      fetchAdminJobs();
+    } catch (error: any) {
+      message.error(error?.response?.data?.message || "Không thể khôi phục tin tuyển dụng");
     }
   };
 
@@ -412,6 +433,7 @@ function JobApprovalPage() {
   const publishedJobsCount = jobs.filter((j) => j.status === "Published").length;
   const rejectedJobsCount = jobs.filter((j) => j.status === "Rejected").length;
   const closedJobsCount = jobs.filter((j) => j.status === "Closed" || j.status === "Locked").length;
+  const archivedJobsCount = jobs.filter((j) => j.status === "Archived").length;
 
   const columns = [
     {
@@ -505,6 +527,9 @@ function JobApprovalPage() {
             </Tooltip>
           );
         }
+        if (st === "Archived") {
+          return <Tag icon={<InboxOutlined />} color="default">Đã lưu trữ</Tag>;
+        }
         return (
           <Tag color="warning" style={{ borderRadius: 6, fontWeight: 800, padding: "3px 10px", backgroundColor: "#FFF7ED", borderColor: "#FFEDD5", color: "#C2410C" }}>
             Chờ duyệt
@@ -515,7 +540,7 @@ function JobApprovalPage() {
     {
       title: "Thao tác",
       key: "actions",
-      width: 280,
+      width: 400,
       fixed: "right" as const,
       render: (_: unknown, record: PendingJobTableItem) => (
         <Space size="small">
@@ -564,6 +589,15 @@ function JobApprovalPage() {
               >
                 {record.raw.status === "Published" ? "Tạm ẩn" : "Mở"}
               </Button>
+            </Popconfirm>
+          )}
+          {record.raw.status === "Archived" ? (
+            <Popconfirm title="Khôi phục tin và chuyển về chờ duyệt?" onConfirm={() => handleRestore(record.id)} okText="Khôi phục" cancelText="Hủy">
+              <Button icon={<UndoOutlined />} size="middle">Khôi phục</Button>
+            </Popconfirm>
+          ) : (
+            <Popconfirm title="Lưu trữ tin này?" description="Dữ liệu ứng viên và kết quả AI vẫn được giữ nguyên." onConfirm={() => handleArchive(record.id)} okText="Lưu trữ" cancelText="Hủy">
+              <Button icon={<InboxOutlined />} size="middle">Lưu trữ</Button>
             </Popconfirm>
           )}
         </Space>
@@ -702,6 +736,7 @@ function JobApprovalPage() {
           pending: pendingJobsCount,
           active: publishedJobsCount,
           closed: closedJobsCount,
+          archived: archivedJobsCount,
           all: totalJobsCount,
         }}
         onExportCsv={handleExportJobsCsv}
@@ -768,6 +803,8 @@ function JobApprovalPage() {
           onApproveJob={handleApproveJob}
           onOpenReject={handleOpenReject}
           onToggleStatus={(item) => handleToggleStatus(item.id)}
+          onArchive={(item) => handleArchive(item.id)}
+          onRestore={(item) => handleRestore(item.id)}
         />
       )}
 

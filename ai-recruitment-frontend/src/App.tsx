@@ -82,6 +82,7 @@ function App() {
           <Route path="dashboard" element={<RecruiterDashboardPage />} />
           <Route path="jobs" element={<JobManagementPage />} />
           <Route path="jobs/create" element={<CreateJobPage />} />
+          <Route path="jobs/:id/edit" element={<CreateJobPage />} />
           <Route path="jobs/:id" element={<RecruiterJobDetailPage />} />
           <Route path="applications" element={<JobCampaignListPage />} />
           <Route path="applications/:jobId" element={<CampaignApplicationsPage />} />

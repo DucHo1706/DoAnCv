@@ -10,6 +10,8 @@ import {
   CloseOutlined,
   LockOutlined,
   UnlockOutlined,
+  InboxOutlined,
+  UndoOutlined,
 } from "@ant-design/icons";
 import AppPagination from "../../../../../components/common/AppPagination";
 import EmptyState from "../../../../../components/common/EmptyState";
@@ -35,6 +37,8 @@ interface JobGridViewProps {
   onApproveJob: (item: any) => void;
   onOpenReject: (item: any) => void;
   onToggleStatus: (item: any) => void;
+  onArchive: (item: any) => void;
+  onRestore: (item: any) => void;
 }
 
 export function JobGridView({
@@ -48,6 +52,8 @@ export function JobGridView({
   onApproveJob,
   onOpenReject,
   onToggleStatus,
+  onArchive,
+  onRestore,
   approvingId,
 }: JobGridViewProps) {
   if (loading) {
@@ -115,6 +121,10 @@ export function JobGridView({
                         Đã từ chối
                       </Tag>
                     </Tooltip>
+                  ) : item.raw.status === "Archived" ? (
+                    <Tag icon={<InboxOutlined />} color="default" style={{ borderRadius: 6 }}>
+                      Đã lưu trữ
+                    </Tag>
                   ) : (
                     <Tag
                       color="warning"
@@ -162,7 +172,11 @@ export function JobGridView({
                   Chi tiết
                 </Button>
 
-                {item.raw.status === "Pending" ? (
+                {item.raw.status === "Archived" ? (
+                  <Popconfirm title="Khôi phục và chuyển tin về chờ duyệt?" onConfirm={() => onRestore(item)} okText="Khôi phục" cancelText="Hủy">
+                    <Button icon={<UndoOutlined />}>Khôi phục</Button>
+                  </Popconfirm>
+                ) : item.raw.status === "Pending" ? (
                   <Space size={8}>
                     <Button danger icon={<CloseOutlined />} onClick={() => onOpenReject(item)}>
                       Từ chối
@@ -179,23 +193,18 @@ export function JobGridView({
                     </Button>
                   </Space>
                 ) : (
-                  <Popconfirm
-                    title={
-                      item.raw.status === "Published"
-                        ? "Bạn có chắc muốn tạm ẩn tin này?"
-                        : "Bạn có chắc muốn mở lại tin này?"
-                    }
-                    onConfirm={() => onToggleStatus(item)}
-                    okText="Đồng ý"
-                    cancelText="Hủy"
-                  >
-                    <Button
-                      icon={item.raw.status === "Published" ? <LockOutlined /> : <UnlockOutlined />}
-                      danger={item.raw.status === "Published"}
-                    >
-                      {item.raw.status === "Published" ? "Tạm ẩn" : "Mở lại"}
-                    </Button>
-                  </Popconfirm>
+                  <Space size={8}>
+                    {(item.raw.status === "Published" || item.raw.status === "Closed") && (
+                      <Popconfirm title={item.raw.status === "Published" ? "Tạm ẩn tin này?" : "Mở lại tin này?"} onConfirm={() => onToggleStatus(item)} okText="Đồng ý" cancelText="Hủy">
+                        <Button icon={item.raw.status === "Published" ? <LockOutlined /> : <UnlockOutlined />} danger={item.raw.status === "Published"}>
+                          {item.raw.status === "Published" ? "Tạm ẩn" : "Mở lại"}
+                        </Button>
+                      </Popconfirm>
+                    )}
+                    <Popconfirm title="Lưu trữ tin này?" onConfirm={() => onArchive(item)} okText="Lưu trữ" cancelText="Hủy">
+                      <Button icon={<InboxOutlined />}>Lưu trữ</Button>
+                    </Popconfirm>
+                  </Space>
                 )}
               </div>
             </Card>

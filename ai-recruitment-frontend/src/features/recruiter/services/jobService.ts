@@ -16,8 +16,9 @@ export interface JobDto {
   startDate?: string | null;
   deadline?: string | null;
   maxCandidates?: number | null;
-  jobLevel?: { name: string } | null;
+  jobLevel?: { id?: string; name: string } | null;
   rejectReason?: string | null;
+  criteria?: Array<{ id?: string; name: string; weight: number }>;
 }
 
 export interface CategoryDto {
@@ -97,6 +98,21 @@ export const jobService = {
 
   async createJob(payload: CreateJobPayload) {
     const response = await axiosClient.post("/jobs", payload);
+    return response.data;
+  },
+
+  async updateJob(id: string, payload: CreateJobPayload) {
+    const response = await axiosClient.put(`/jobs/${id}`, payload);
+    return response.data;
+  },
+
+  async archiveJob(id: string) {
+    const response = await axiosClient.put(`/jobs/${id}/archive`);
+    return response.data;
+  },
+
+  async restoreJob(id: string) {
+    const response = await axiosClient.put(`/jobs/${id}/restore`);
     return response.data;
   },
 
