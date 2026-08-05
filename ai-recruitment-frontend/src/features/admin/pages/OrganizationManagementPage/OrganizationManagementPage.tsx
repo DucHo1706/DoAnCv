@@ -18,7 +18,6 @@ import {
   Select,
   Badge,
   Tooltip,
-  Alert,
 } from "antd";
 import {
   EnvironmentOutlined,
@@ -60,15 +59,7 @@ export default function OrganizationManagementPage() {
   return (
     <PageContainer
       title="Danh mục tuyển dụng"
-      subtitle="Thiết lập dữ liệu dùng chung khi HR tạo tin tuyển dụng"
     >
-      <Alert
-        type="info"
-        showIcon
-        message="Cách các danh mục liên kết với nhau"
-        description="Lĩnh vực ngành nghề chứa các vị trí công việc. Cấp bậc mô tả mức kinh nghiệm, còn chi nhánh xác định nơi làm việc. Khi tạo tin, HR sẽ chọn một giá trị phù hợp từ mỗi nhóm."
-        style={{ marginBottom: 16, borderRadius: 12, border: `1px solid ${appTheme.colors.border}` }}
-      />
       <Card
         style={{
           borderRadius: appTheme.radius.lg,
@@ -88,7 +79,7 @@ export default function OrganizationManagementPage() {
               label: (
                 <Space size={8}>
                   <AppstoreOutlined style={{ color: appTheme.colors.accent }} />
-                  <span>1. Lĩnh vực ngành nghề</span>
+                  <span>Lĩnh vực ngành nghề</span>
                 </Space>
               ),
               children: <CategoryTab />,
@@ -98,7 +89,7 @@ export default function OrganizationManagementPage() {
               label: (
                 <Space size={8}>
                   <SolutionOutlined style={{ color: appTheme.colors.success }} />
-                  <span>2. Vị trí công việc</span>
+                  <span>Vị trí công việc</span>
                 </Space>
               ),
               children: <JobPositionTab />,
@@ -108,7 +99,7 @@ export default function OrganizationManagementPage() {
               label: (
                 <Space size={8}>
                   <OrderedListOutlined style={{ color: appTheme.colors.info }} />
-                  <span>3. Cấp bậc</span>
+                  <span>Cấp bậc</span>
                 </Space>
               ),
               children: <JobLevelTab />,
@@ -118,7 +109,7 @@ export default function OrganizationManagementPage() {
               label: (
                 <Space size={8}>
                   <EnvironmentOutlined style={{ color: appTheme.colors.primary }} />
-                  <span>4. Chi nhánh làm việc</span>
+                  <span>Chi nhánh làm việc</span>
                 </Space>
               ),
               children: <BranchTab />,
@@ -599,11 +590,11 @@ function CategoryTab() {
       ),
     },
     {
-      title: "Danh mục Cha",
+      title: "Thuộc lĩnh vực lớn",
       dataIndex: "parentId",
       key: "parentId",
       render: (parentId: string | null) => {
-        if (!parentId) return <Tag color="blue">Danh mục gốc</Tag>;
+        if (!parentId) return <Tag color="blue">Lĩnh vực cấp cao nhất</Tag>;
         const parentName = categoryMap.get(parentId);
         return parentName ? <Tag color="default">{parentName}</Tag> : <Text type="secondary">—</Text>;
       },
@@ -801,12 +792,16 @@ function CategoryTab() {
             <Input placeholder="Ví dụ: Công nghệ thông tin, Marketing, Tài chính..." />
           </Form.Item>
 
-          <Form.Item name="parentId" label="Danh mục Cha (Để trống nếu là Danh mục gốc)">
+          <Form.Item
+            name="parentId"
+            label="Thuộc lĩnh vực lớn (không bắt buộc)"
+            extra="Để trống nếu đây là lĩnh vực cấp cao nhất, ví dụ: Công nghệ thông tin."
+          >
             <TreeSelect
               showSearch
               style={{ width: "100%" }}
               dropdownStyle={{ maxHeight: 400, overflow: "auto" }}
-              placeholder="Chọn danh mục cha (Không bắt buộc)"
+              placeholder="Chọn lĩnh vực lớn nếu đây là lĩnh vực con"
               allowClear
               treeDefaultExpandAll
               treeData={treeSelectData}
@@ -963,11 +958,11 @@ function JobLevelTab() {
       ),
     },
     {
-      title: "Nhóm Cấp bậc Cha",
+      title: "Thuộc nhóm cấp bậc",
       dataIndex: "parentId",
       key: "parentId",
       render: (parentId: string | null) => {
-        if (!parentId) return <Tag color="blue">Cấp bậc chuẩn</Tag>;
+        if (!parentId) return <Tag color="blue">Cấp bậc độc lập</Tag>;
         const parentName = levelMap.get(parentId);
         return parentName ? <Tag color="default">{parentName}</Tag> : <Text type="secondary">—</Text>;
       },
@@ -1136,10 +1131,14 @@ function JobLevelTab() {
             <Input placeholder="Ví dụ: Intern, Junior, Middle, Senior, Lead/Manager..." />
           </Form.Item>
 
-          <Form.Item name="parentId" label="Nhóm Cấp bậc Cha (Không bắt buộc)">
+          <Form.Item
+            name="parentId"
+            label="Thuộc nhóm cấp bậc (không bắt buộc)"
+            extra="Để trống nếu cấp bậc này không nằm trong một nhóm lớn hơn."
+          >
             <Select
               allowClear
-              placeholder="Chọn nhóm cấp bậc cha"
+              placeholder="Chọn nhóm cấp bậc nếu cần"
               options={levels
                 .filter((l) => !editingItem || l.id !== editingItem.id)
                 .map((l) => ({ value: l.id, label: l.name }))}

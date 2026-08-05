@@ -7,6 +7,7 @@ import {
   Space,
   Descriptions,
   Divider,
+  Table,
 } from "antd";
 import { CheckOutlined, CloseOutlined } from "@ant-design/icons";
 import type { JobReviewResponse } from "../../../../recruiter/services/jobService";
@@ -170,6 +171,45 @@ export function JobDetailModal({
             <Paragraph style={{ marginTop: 8, whiteSpace: "pre-line" }}>
               {jobDetail.jobInfo.requirements || "Chưa có yêu cầu"}
             </Paragraph>
+          </div>
+
+          <Divider style={{ margin: "16px 0" }} />
+
+          <div style={{ marginBottom: 16 }}>
+            <Text strong>Tiêu chí đánh giá CV do HR thiết lập</Text>
+            <Table
+              style={{ marginTop: 8 }}
+              size="small"
+              bordered
+              pagination={false}
+              rowKey={(record) => record.id || record.name}
+              dataSource={jobDetail.jobInfo.criteria || []}
+              locale={{ emptyText: "HR chưa thiết lập tiêu chí đánh giá" }}
+              columns={[
+                {
+                  title: "Tiêu chí",
+                  dataIndex: "name",
+                  key: "name",
+                  render: (value: string) => <Text strong>{value}</Text>,
+                },
+                {
+                  title: "Trọng số",
+                  dataIndex: "weight",
+                  key: "weight",
+                  width: 130,
+                  align: "center" as const,
+                  render: (value: number) => <Tag color="blue">{value}%</Tag>,
+                },
+              ]}
+              summary={(data) => (
+                <Table.Summary.Row>
+                  <Table.Summary.Cell index={0}><Text strong>Tổng trọng số</Text></Table.Summary.Cell>
+                  <Table.Summary.Cell index={1} align="center">
+                    <Text strong>{data.reduce((sum, item) => sum + Number(item.weight || 0), 0)}%</Text>
+                  </Table.Summary.Cell>
+                </Table.Summary.Row>
+              )}
+            />
           </div>
 
           <div>
