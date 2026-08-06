@@ -103,7 +103,7 @@ export default function CandidateChatbot() {
       setMessages([
         {
           role: "ai",
-          text: "Chào bạn! Mình là Trợ lý AI của AI Recruitment. Mình có thể giúp bạn phân tích xu hướng việc làm, tối ưu CV, hoặc giải đáp các thắc mắc về tuyển dụng. Bạn cần mình hỗ trợ gì nào?",
+          text: "Chào bạn! Mình có thể hỗ trợ tìm việc, đọc yêu cầu tuyển dụng và góp ý CV. Bạn cần hỗ trợ nội dung nào?",
         },
       ]);
     }
@@ -128,7 +128,7 @@ export default function CandidateChatbot() {
     setMessages([
       {
         role: "ai",
-        text: "Chào bạn! Mình là Trợ lý AI của AI Recruitment. Mình có thể giúp bạn phân tích xu hướng việc làm, tối ưu CV, hoặc giải đáp các thắc mắc về tuyển dụng. Bạn cần mình hỗ trợ gì nào?",
+        text: "Chào bạn! Mình có thể hỗ trợ tìm việc, đọc yêu cầu tuyển dụng và góp ý CV. Bạn cần hỗ trợ nội dung nào?",
       },
     ]);
     message.success("Đã xóa lịch sử trò chuyện!");
@@ -219,7 +219,7 @@ export default function CandidateChatbot() {
 
       const res = await axiosClient.post("/Chatbot/chat", formData, {
         headers: { "Content-Type": "multipart/form-data" },
-        timeout: 60000, // Tăng thời gian chờ lên 60s để AI kịp đọc File
+        timeout: 120000,
       });
       const aiText = res.data.reply;
 
@@ -229,7 +229,7 @@ export default function CandidateChatbot() {
     } catch (error) {
       setMessages((prev) => [
         ...prev,
-        { role: "ai", text: "Xin lỗi, hiện tại API AI đang bận. Bạn vui lòng thử lại sau nhé." },
+        { role: "ai", text: "Chưa thể kết nối với trợ lý. Vui lòng thử lại sau." },
       ]);
       setLoading(false);
     }
@@ -259,11 +259,21 @@ export default function CandidateChatbot() {
   const uploadProps = {
     onRemove: () => setFileList([]),
     beforeUpload: (file: any) => {
+      const extension = file.name.split(".").pop()?.toLowerCase();
+      const supportedExtensions = ["pdf", "docx", "png", "jpg", "jpeg", "webp"];
+      if (!extension || !supportedExtensions.includes(extension)) {
+        message.error("Chỉ hỗ trợ CV dạng PDF, DOCX, PNG, JPG, JPEG hoặc WEBP.");
+        return Upload.LIST_IGNORE;
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        message.error("Tệp CV không được vượt quá 10 MB.");
+        return Upload.LIST_IGNORE;
+      }
       setFileList([file]);
       return false; // Chặn upload tự động
     },
     fileList,
-    accept: ".pdf,.doc,.docx,.png,.jpg,.jpeg",
+    accept: ".pdf,.docx,.png,.jpg,.jpeg,.webp",
     showUploadList: false, // Ẩn list file mặc định
   };
 
@@ -273,7 +283,7 @@ export default function CandidateChatbot() {
         icon={<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}><AiSparkleIcon size={24} /></div>}
         style={{ right: 24, bottom: 24, width: 60, height: 60, background: "#FFFFFF", border: "1px solid #E2E8F0", boxShadow: "0 8px 32px rgba(15, 23, 42, 0.08)" }}
         onClick={() => setOpen(true)}
-        tooltip="Chat với Trợ lý AI"
+        tooltip="Mở trợ lý nghề nghiệp"
         badge={{ dot: true }}
       />
 
@@ -285,9 +295,12 @@ export default function CandidateChatbot() {
             right: 24,
             width: size.width,
             height: size.height,
+            maxWidth: "calc(100vw - 32px)",
+            maxHeight: "calc(100vh - 128px)",
             backgroundColor: "#fff",
             borderRadius: 16,
-            boxShadow: "0 10px 40px rgba(0,0,0,0.15)",
+            border: "1px solid #E2E8F0",
+            boxShadow: "0 16px 40px rgba(15, 23, 42, 0.14)",
             display: "flex",
             flexDirection: "column",
             zIndex: 1000,
@@ -299,8 +312,9 @@ export default function CandidateChatbot() {
             onMouseDown={onMouseDown}
             style={{
               padding: "16px",
-              backgroundColor: "#0F172A",
-              color: "#fff",
+              backgroundColor: "#FFFFFF",
+              color: "#0F172A",
+              borderBottom: "1px solid #E2E8F0",
               cursor: isDragging ? "grabbing" : "grab",
               display: "flex",
               alignItems: "center",
@@ -312,21 +326,21 @@ export default function CandidateChatbot() {
               <div style={{ background: "#ffffff", padding: 6, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <AiSparkleIcon size={16} />
               </div>
-              <Text strong style={{ fontSize: 16, color: "#fff" }}>
-                AI Career Assistant
+              <Text strong style={{ fontSize: 16, color: "#0F172A" }}>
+                Trợ lý nghề nghiệp
               </Text>
             </Space>
             <Space>
-              <DragOutlined style={{ fontSize: 18, color: "rgba(255,255,255,0.7)" }} />
+              <DragOutlined style={{ fontSize: 18, color: "#94A3B8" }} />
               <Button
                 type="text"
-                icon={<CloseOutlined style={{ color: "#fff" }} />}
+                icon={<CloseOutlined style={{ color: "#475569" }} />}
                 onClick={() => setOpen(false)}
               />
             </Space>
           </div>
 
-          <div style={{ flex: 1, padding: 16, overflowY: "auto", background: "#f5f7fa" }}>
+          <div style={{ flex: 1, padding: 16, overflowY: "auto", background: "#F8FAFC" }}>
             {messages.map((msg, idx) => (
               <div
                 key={idx}
@@ -402,7 +416,7 @@ export default function CandidateChatbot() {
                                   setOpen(false);
                                 }}
                               >
-                                Xem Chi Tiết & Ứng Tuyển
+                                Xem việc làm
                               </Button>
                             </div>
                           );
@@ -426,6 +440,10 @@ export default function CandidateChatbot() {
                             const linkText = linkMatch[1];
                             const url = linkMatch[2];
                             const isInternal = url.startsWith("/");
+                            const isSafeExternal = /^https?:\/\//i.test(url);
+                            if (!isInternal && !isSafeExternal) {
+                              return <span key={i}>{linkText}</span>;
+                            }
                             return (
                               <a
                                 key={i}
@@ -543,7 +561,7 @@ export default function CandidateChatbot() {
                 >
                   <Spin size="small" />{" "}
                   <Text type="secondary" style={{ marginLeft: 8 }}>
-                    AI đang suy nghĩ...
+                    Đang tìm câu trả lời...
                   </Text>
                 </div>
               </div>
@@ -581,7 +599,7 @@ export default function CandidateChatbot() {
               </Upload>
               <Input
                 size="large"
-                placeholder="Hỏi AI hoặc ném CV vào đây..."
+                placeholder="Hỏi về việc làm hoặc đính kèm CV..."
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onPressEnter={handleSend}

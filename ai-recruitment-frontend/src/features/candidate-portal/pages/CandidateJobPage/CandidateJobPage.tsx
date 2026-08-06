@@ -631,7 +631,7 @@ export default function CandidateJobPage() {
                     <Option value="aiMatch">
                       <Space size={4}>
                         <ThunderboltOutlined style={{ color: "#2563EB" }} />
-                        <span>Phù hợp nhất với CV (AI)</span>
+                        <span>Phù hợp nhất với hồ sơ</span>
                       </Space>
                     </Option>
                   )}

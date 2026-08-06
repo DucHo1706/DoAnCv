@@ -332,7 +332,7 @@ function CandidateDashboardPage() {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div>
                 <span style={{ color: "#64748B", fontSize: 13, fontWeight: 600, display: "block", marginBottom: 4 }}>
-                  TƯƠNG HỢP AI TRUNG BÌNH
+                  ĐIỂM PHÙ HỢP TRUNG BÌNH
                 </span>
                 <span style={{ fontSize: 26, fontWeight: 800, color: "#0F172A" }}>
                   {avgScore}%
@@ -363,7 +363,7 @@ function CandidateDashboardPage() {
               title={
                 <Space>
                   <CompassOutlined style={{ color: "#2563EB", fontSize: 18 }} />
-                  <span style={{ fontWeight: 700, fontSize: 16, color: "#0F172A" }}>Năng lực & Cảnh báo</span>
+                  <span style={{ fontWeight: 700, fontSize: 16, color: "#0F172A" }}>Kỹ năng trong hồ sơ</span>
                 </Space>
               }
               bordered={false}
@@ -406,31 +406,6 @@ function CandidateDashboardPage() {
                   </div>
                 )}
               </div>
-
-              {/* Visual Skill Gauges */}
-              {cvSkills.length > 0 && (
-                <div style={{ borderTop: "1px solid #F1F5F9", paddingTop: 16, marginBottom: 16 }}>
-                  <Text strong style={{ display: "block", marginBottom: 12, color: "#334155", fontSize: 14 }}>
-                    Độ đáp ứng kỹ năng thực tế:
-                  </Text>
-                  <Row gutter={[16, 12]}>
-                    {cvSkills.map((sk, idx) => {
-                      const mockProficiency = Math.min(95, 70 + (idx * 7) % 25);
-                      return (
-                        <Col xs={24} sm={12} key={idx}>
-                          <div style={{ background: "#F8FAFC", padding: "10px 12px", borderRadius: 8, border: "1px solid #F1F5F9" }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                              <Text strong style={{ fontSize: 13, color: "#0F172A" }}>{sk}</Text>
-                              <Text type="secondary" style={{ fontSize: 12 }}>{mockProficiency}%</Text>
-                            </div>
-                            <Progress percent={mockProficiency} showInfo={false} strokeColor="#2563EB" size="small" />
-                          </div>
-                        </Col>
-                      );
-                    })}
-                  </Row>
-                </div>
-              )}
 
               {totalApplied > 0 && (
                 <div style={{ borderTop: "1px solid #F1F5F9", paddingTop: 16 }}>
@@ -584,17 +559,17 @@ function CandidateDashboardPage() {
         </Col>
       </Row>
 
-      {/* AI Recommended Jobs Section */}
+      {/* Recommended Jobs Section */}
       <Divider style={{ margin: "36px 0 24px" }} />
 
       <div style={{ marginBottom: 20, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
         <div>
           <Title level={4} style={{ margin: 0, color: "#0F172A", display: "flex", alignItems: "center", gap: 8, fontSize: 18 }}>
             <ThunderboltOutlined style={{ color: "#2563EB" }} />
-            <span>Gợi ý việc làm phù hợp (Phân tích đối khớp bởi AI)</span>
+            <span>Việc làm phù hợp với hồ sơ</span>
           </Title>
           <Text type="secondary" style={{ fontSize: 13 }}>
-            Tự động đối khớp chuẩn xác dựa trên kỹ năng CV và vị trí của bạn.
+            Được sắp xếp theo kỹ năng trong CV, vị trí và yêu cầu tuyển dụng.
           </Text>
         </div>
         <Button 
@@ -608,7 +583,7 @@ function CandidateDashboardPage() {
 
       {loadingSuggestions ? (
         <div style={{ textAlign: "center", padding: "40px 0" }}>
-          <Spin tip="Đang chạy mô hình AI đối sánh năng lực..." />
+          <Spin tip="Đang tìm việc làm phù hợp..." />
         </div>
       ) : suggestedJobs.length === 0 ? (
         <Card style={{ borderRadius: 16, textAlign: "center", padding: "32px 24px", border: "1px solid #E2E8F0" }}>
@@ -621,7 +596,7 @@ function CandidateDashboardPage() {
           {suggestedJobs.map((job) => {
             const matchScore = Math.round(job.aiScore);
             return (
-              <Col xs={24} sm={12} lg={8} key={job.id}>
+              <Col xs={24} lg={12} key={job.id}>
                 <Card
                   hoverable
                   style={{
@@ -646,13 +621,11 @@ function CandidateDashboardPage() {
                           {job.company}
                         </Text>
                       </div>
-                      <Progress
-                        type="circle"
-                        percent={matchScore}
-                        size={44}
-                        strokeColor={getScoreColor(matchScore)}
-                        format={(p) => <span style={{ fontSize: 11, fontWeight: 800, color: "#0F172A" }}>{p}%</span>}
-                      />
+                      <Tag
+                        style={{ margin: 0, borderRadius: 999, color: getScoreColor(matchScore), fontWeight: 700 }}
+                      >
+                        Mức phù hợp {matchScore}%
+                      </Tag>
                     </div>
 
                     <div style={{ margin: "10px 0", display: "flex", gap: 6, flexWrap: "wrap" }}>
@@ -682,10 +655,14 @@ function CandidateDashboardPage() {
 
                   <div style={{ borderTop: "1px solid #F1F5F9", paddingTop: 12, marginTop: 14, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <span style={{ fontSize: 12, fontWeight: 600, color: matchScore >= 70 ? "#10B981" : "#2563EB", display: "inline-flex", alignItems: "center", gap: 4 }}>
-                      {matchScore >= 70 ? <><ThunderboltOutlined /> Tương thích cao</> : <><CheckCircleOutlined /> Phù hợp chuyên môn</>}
+                      {matchScore >= 75
+                        ? <><ThunderboltOutlined /> Phù hợp cao</>
+                        : matchScore >= 50
+                          ? <><CheckCircleOutlined /> Có thể phù hợp</>
+                          : <>Nên xem kỹ yêu cầu</>}
                     </span>
                     <Button type="primary" size="small" style={{ borderRadius: 6, background: "#2563EB", fontWeight: 600 }}>
-                      Xem ngay
+                      Xem việc làm
                     </Button>
                   </div>
                 </Card>
