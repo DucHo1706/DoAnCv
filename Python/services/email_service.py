@@ -2,6 +2,7 @@ from .gemini_service import generate_content_with_retry
 from prompts.email_prompts import get_email_generation_prompt
 from utils.logger import logger
 import json
+import os
 
 def generate_candidate_email(
     email_type,
@@ -45,6 +46,26 @@ def generate_candidate_email(
         email_type == "invite"
         and "talent pool" in email_context_text.lower()
     )
+
+    # Email drafting must remain available even when the upstream AI provider is
+    # slow or unavailable. AI drafting is opt-in; the default path is an
+    # immediate, editable template built from verified recruitment data.
+    ai_email_enabled = os.getenv("ENABLE_AI_EMAIL_DRAFT", "false").strip().lower() == "true"
+    if not ai_email_enabled:
+        if is_talent_pool_invite:
+            fallback_subject = f"[{company_name}] Lời mời ứng tuyển vị trí {job_title}"
+        else:
+            fallback_subject = f"[{company_name}] Kết quả ứng tuyển vị trí {job_title}"
+        return {
+            "subject": fallback_subject,
+            "body": build_default_email_body(
+                email_type,
+                candidate_name,
+                job_title,
+                reject_reason,
+                email_context
+            ).strip()
+        }
 
     matched_skills_text = ", ".join(matched_skills)
     missing_skills_text = ", ".join(missing_skills)
@@ -134,9 +155,9 @@ Lưu ý quan trọng:
 
         if not isinstance(subject, str) or subject.strip() == "":
             if is_talent_pool_invite:
-                subject = f"[{company_name}] Loi moi ung tuyen vi tri {job_title}"
+                subject = f"[{company_name}] Lời mời ứng tuyển vị trí {job_title}"
             else:
-                subject = f"[{company_name}] Ket qua ung tuyen vi tri {job_title}"
+                subject = f"[{company_name}] Kết quả ứng tuyển vị trí {job_title}"
 
         if not isinstance(body, str) or body.strip() == "":
             body = build_default_email_body(
@@ -156,9 +177,9 @@ Lưu ý quan trọng:
         logger.error(f"Loi AI generate email: {exception}")
 
         if is_talent_pool_invite:
-            fallback_subject = f"[{company_name}] Loi moi ung tuyen vi tri {job_title}"
+            fallback_subject = f"[{company_name}] Lời mời ứng tuyển vị trí {job_title}"
         else:
-            fallback_subject = f"[{company_name}] Ket qua ung tuyen vi tri {job_title}"
+            fallback_subject = f"[{company_name}] Kết quả ứng tuyển vị trí {job_title}"
 
         return {
             "subject": fallback_subject,

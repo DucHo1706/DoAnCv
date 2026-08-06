@@ -127,7 +127,7 @@ namespace RecruitmentBackend.Services
                     return (false, "AI đã phản hồi nhưng nội dung email bị trống.", null);
                 }
 
-                return (true, "AI đã soạn email thành công.", result);
+                return (true, "Đã tạo nội dung email thành công.", result);
             }
             catch (HttpRequestException)
             {

@@ -71,7 +71,7 @@ export default function EmailCandidatePage() {
   return (
     <PageContainer
       title="Soạn Email gửi Ứng viên"
-      subtitle="Sử dụng AI để phác thảo email hoặc tự viết nội dung cá nhân hóa."
+      subtitle="Tạo nội dung mẫu từ thông tin tuyển dụng, sau đó kiểm tra và chỉnh sửa trước khi gửi."
       extra={
         <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)}>
           Quay lại
@@ -187,7 +187,7 @@ export default function EmailCandidatePage() {
                 disabled={isGeneratingAi || isSending}
                 style={{ borderColor: "#52c41a", color: "#52c41a" }}
               >
-                {isTalentPoolInvite ? "AI Soạn Thư Mời Talent Pool" : "AI Soạn Thư Mời"}
+                {isTalentPoolInvite ? "Tạo thư mời Talent Pool" : "Tạo thư mời"}
               </Button>
 
               {!isTalentPoolInvite && (
@@ -197,7 +197,7 @@ export default function EmailCandidatePage() {
                   disabled={isGeneratingAi || isSending}
                   style={{ borderColor: "#ff4d4f", color: "#ff4d4f" }}
                 >
-                  AI Soạn Thư Từ Chối
+                  Tạo thư từ chối
                 </Button>
               )}
             </Space>
@@ -225,7 +225,7 @@ export default function EmailCandidatePage() {
                     borderRadius: 8,
                   }}
                 >
-                  <Spin tip="AI đang phân tích hồ sơ và soạn email..." />
+                  <Spin tip="Đang tạo nội dung email..." />
                 </div>
               )}
 
@@ -279,7 +279,7 @@ export default function EmailCandidatePage() {
         </Col>
 
         <Col xs={24} lg={8}>
-          <Card title="Gợi ý từ AI Hệ thống" style={{ borderRadius: 12, background: "#f8fafc" }}>
+          <Card title="Thông tin hỗ trợ ra quyết định" style={{ borderRadius: 12, background: "#f8fafc" }}>
             <Paragraph>
               Hệ thống đánh giá ứng viên này đạt{" "}
               <Tag color={getScoreColor()}>{candidate?.aiScore} điểm</Tag>.
@@ -349,7 +349,7 @@ export default function EmailCandidatePage() {
         footer={null}
       >
         <Paragraph>
-          Ứng viên này có điểm số cao. Vui lòng chọn lý do từ chối để AI soạn thư khéo léo và tránh
+          Ứng viên này có điểm số cao. Vui lòng chọn lý do từ chối để tạo nội dung phù hợp và tránh
           mâu thuẫn với kết quả đánh giá.
         </Paragraph>
 
