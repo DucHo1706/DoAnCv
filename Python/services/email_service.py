@@ -124,7 +124,8 @@ Lưu ý quan trọng:
         # so prefer one fast model and fall back to the editable template on error.
         response_text = generate_content_with_retry(
             prompt,
-            models=["gemini-2.5-flash-lite"]
+            models=["gemini-2.5-flash-lite"],
+            request_timeout_ms=20000
         )
         result = json.loads(response_text)
 

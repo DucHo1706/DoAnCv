@@ -114,7 +114,12 @@ def clean_json_text(text: str) -> str:
     return text
 
 
-def generate_content_with_retry(prompt: str, is_json: bool = True, models: list = None) -> str:
+def generate_content_with_retry(
+    prompt: str,
+    is_json: bool = True,
+    models: list = None,
+    request_timeout_ms: int = None
+) -> str:
     """
     Goi Gemini API voi co che tu dong thu lai tren danh sach API Keys
     """
@@ -137,8 +142,15 @@ def generate_content_with_retry(prompt: str, is_json: bool = True, models: list 
         
         is_model_not_found = False
         for client_idx, active_client in shuffled_clients:
+            request_client = active_client
             try:
-                response = active_client.models.generate_content(
+                if request_timeout_ms is not None:
+                    request_client = genai.Client(
+                        api_key=api_keys[client_idx],
+                        http_options=types.HttpOptions(timeout=request_timeout_ms)
+                    )
+
+                response = request_client.models.generate_content(
                     model=model_name,
                     contents=prompt,
                     config=config
@@ -163,6 +175,9 @@ def generate_content_with_retry(prompt: str, is_json: bool = True, models: list 
                 if "429" in err_str or "resource_exhausted" in err_str or "quota" in err_str:
                     logger.warning(f"Model {model_name} Key #{client_idx+1} dat Quota/Rate Limit (429). Dang thu sang Key/Model khac...")
                     _cool_down_key(client_idx)
+            finally:
+                if request_client is not active_client:
+                    request_client.close()
 
         if is_model_not_found:
             continue
