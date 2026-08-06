@@ -151,10 +151,14 @@ namespace RecruitmentBackend.Services
             GenerateCandidateEmailRequest request,
             string emailType)
         {
-            string candidateName = WebUtility.HtmlEncode(request.CandidateName.Trim());
-            string jobTitle = WebUtility.HtmlEncode(request.JobTitle.Trim());
-            string companyName = WebUtility.HtmlEncode(
-                string.IsNullOrWhiteSpace(request.CompanyName) ? "AI Recruitment" : request.CompanyName.Trim());
+            string rawCandidateName = request.CandidateName.Trim();
+            string rawJobTitle = request.JobTitle.Trim();
+            string rawCompanyName = string.IsNullOrWhiteSpace(request.CompanyName)
+                ? "AI Recruitment"
+                : request.CompanyName.Trim();
+            string candidateName = WebUtility.HtmlEncode(rawCandidateName);
+            string jobTitle = WebUtility.HtmlEncode(rawJobTitle);
+            string companyName = WebUtility.HtmlEncode(rawCompanyName);
             bool isTalentPoolInvite = emailType == "invite" &&
                 (request.EmailContext ?? string.Empty).Contains("talent pool", StringComparison.OrdinalIgnoreCase);
 
@@ -163,7 +167,7 @@ namespace RecruitmentBackend.Services
                 string reason = WebUtility.HtmlEncode(request.RejectReason?.Trim() ?? string.Empty);
                 return new GenerateCandidateEmailResponse
                 {
-                    Subject = $"[{companyName}] Kết quả ứng tuyển vị trí {jobTitle}",
+                    Subject = $"[{rawCompanyName}] Kết quả ứng tuyển vị trí {rawJobTitle}",
                     Body = $"""
                         <p>Chào {candidateName},</p>
                         <p>Cảm ơn bạn đã quan tâm và ứng tuyển vào vị trí <strong>{jobTitle}</strong>.</p>
@@ -178,7 +182,7 @@ namespace RecruitmentBackend.Services
             {
                 return new GenerateCandidateEmailResponse
                 {
-                    Subject = $"[{companyName}] Lời mời ứng tuyển vị trí {jobTitle}",
+                    Subject = $"[{rawCompanyName}] Lời mời ứng tuyển vị trí {rawJobTitle}",
                     Body = $"""
                         <p>Chào {candidateName},</p>
                         <p>Phòng Nhân sự đang lưu hồ sơ của bạn trong Ngân hàng ứng viên. Hiện tại, chúng tôi có vị trí <strong>{jobTitle}</strong> đang mở và nhận thấy hồ sơ của bạn có thể phù hợp.</p>
@@ -190,7 +194,7 @@ namespace RecruitmentBackend.Services
 
             return new GenerateCandidateEmailResponse
             {
-                Subject = $"[{companyName}] Thư mời phỏng vấn vị trí {jobTitle}",
+                Subject = $"[{rawCompanyName}] Thư mời phỏng vấn vị trí {rawJobTitle}",
                 Body = $"""
                     <p>Chào {candidateName},</p>
                     <p>Cảm ơn bạn đã ứng tuyển vào vị trí <strong>{jobTitle}</strong>. Chúng tôi trân trọng mời bạn tham gia buổi phỏng vấn.</p>

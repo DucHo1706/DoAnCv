@@ -15,12 +15,12 @@ import {
 } from "antd";
 import {
   ArrowLeftOutlined,
-  RobotOutlined,
   SendOutlined,
   UploadOutlined,
   EditOutlined,
 } from "@ant-design/icons";
 import PageContainer from "../../../../components/common/PageContainer";
+import AiCoreIcon from "../../../../components/common/AiCoreIcon";
 import RichTextEditor from "./components/RichTextEditor";
 import EmailRecipientsEditor from "./components/EmailRecipientsEditor";
 import { useEmailCandidate } from "./hooks/useEmailCandidate";
@@ -182,7 +182,7 @@ export default function EmailCandidatePage() {
               }}
             >
               <Button
-                icon={<RobotOutlined />}
+                icon={<AiCoreIcon size={16} />}
                 onClick={() => generateAiEmail("invite")}
                 disabled={isGeneratingAi || isSending}
                 style={{ borderColor: "#52c41a", color: "#52c41a" }}
@@ -192,7 +192,7 @@ export default function EmailCandidatePage() {
 
               {!isTalentPoolInvite && (
                 <Button
-                  icon={<RobotOutlined />}
+                  icon={<AiCoreIcon size={16} />}
                   onClick={() => generateAiEmail("reject")}
                   disabled={isGeneratingAi || isSending}
                   style={{ borderColor: "#ff4d4f", color: "#ff4d4f" }}
