@@ -119,7 +119,13 @@ Lưu ý quan trọng:
     )
 
     try:
-        response_text = generate_content_with_retry(prompt)
+        # Email is an assistive feature and already has a deterministic fallback.
+        # Trying every configured model/key can exceed the backend HTTP timeout,
+        # so prefer one fast model and fall back to the editable template on error.
+        response_text = generate_content_with_retry(
+            prompt,
+            models=["gemini-2.5-flash-lite"]
+        )
         result = json.loads(response_text)
 
         subject = result.get("subject", "")
