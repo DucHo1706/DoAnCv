@@ -8,7 +8,9 @@ import {
   CompassOutlined,
   CheckCircleOutlined,
   RightOutlined,
-  SafetyCertificateOutlined
+  SafetyCertificateOutlined,
+  EnvironmentOutlined,
+  DollarOutlined
 } from "@ant-design/icons";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -113,7 +115,7 @@ function CandidateDashboardPage() {
               ? jobsData
               : (jobsData?.items || jobsData?.items?.$values || []);
 
-            const processedRecommendations = processJobRecommendations(jobList, parsedSkills, profileData.major);
+            const processedRecommendations = processJobRecommendations(jobList, parsedSkills);
             setSuggestedJobs(processedRecommendations);
           } catch (err) {
             console.error("Lỗi khi tải gợi ý việc làm tự động:", err);
@@ -130,8 +132,8 @@ function CandidateDashboardPage() {
     fetchData();
   }, []);
 
-  // Strict AI Recommendation Engine with Word Boundary Regex
-  const processJobRecommendations = (rawJobs: any[], candidateSkills: string[], major?: string) => {
+  // Local, explainable pre-filter. It does not produce an AI evaluation score.
+  const processJobRecommendations = (rawJobs: any[], candidateSkills: string[]) => {
     if (!candidateSkills || candidateSkills.length === 0) return [];
 
     const validSkills = candidateSkills.filter(s => s && s.trim().length > 1);
@@ -161,34 +163,22 @@ function CandidateDashboardPage() {
         }
       });
 
-      const isTechJob = ["developer", "engineer", "lập trình", "software", "react", "frontend", "backend", "fullstack", "devops", "cloud", "data", "python", "java", "c#", ".net", "design", "figma", "ui/ux", "it", "hệ thống", "tester", "qa", "web"].some(k => title.toLowerCase().includes(k));
-
-      let score = 0;
       if (matchedSkills.length > 0) {
-        score = Math.round((matchedSkills.length / Math.max(1, validSkills.length)) * 50) + 40;
-        if (titleMatchedSkills.length > 0) {
-          score += 15;
-        }
-      } else if (isTechJob) {
-        score = 55;
-      } else {
-        score = 0; // Exclude non-matching unrelated jobs
-      }
-
-      if (score >= 45) {
         scoredJobs.push({
           id: j.jobID || j.id,
           title: title,
           company: j.companyName || j.company || "Công ty Tuyển dụng",
           location: j.locationName || j.address || j.location || "TP. Hồ Chí Minh",
           salary: j.salaryRange || (j.salaryMin ? `${(j.salaryMin / 1000000).toFixed(0)} - ${(j.salaryMax / 1000000).toFixed(0)} triệu` : "Thỏa thuận"),
-          aiScore: Math.min(98, Math.max(50, score)),
-          matchedSkillsList: matchedSkills.length > 0 ? matchedSkills : validSkills.slice(0, 3)
+          matchedSkillsList: matchedSkills,
+          matchedSkillCount: matchedSkills.length,
+          totalProfileSkills: validSkills.length,
+          relevanceRank: matchedSkills.length * 10 + titleMatchedSkills.length * 5
         });
       }
     });
 
-    scoredJobs.sort((a, b) => b.aiScore - a.aiScore);
+    scoredJobs.sort((a, b) => b.relevanceRank - a.relevanceRank);
     return scoredJobs.slice(0, 6);
   };
 
@@ -206,10 +196,12 @@ function CandidateDashboardPage() {
     .filter((sch) => sch.date >= new Date())
     .sort((a, b) => a.date.getTime() - b.date.getTime());
 
-  const appsWithScore = applications.filter((app) => app.aiEvaluation && app.aiEvaluation.fitScore > 0);
-  const avgScore = appsWithScore.length > 0
+  const appsWithScore = applications.filter(
+    (app) => app.aiEvaluation && Number.isFinite(app.aiEvaluation.fitScore)
+  );
+  const avgScore: number | null = appsWithScore.length > 0
     ? Math.round(appsWithScore.reduce((sum, app) => sum + app.aiEvaluation!.fitScore, 0) / appsWithScore.length)
-    : (cvSkills.length > 0 ? 82 : 0);
+    : null;
 
   // Compile Match & Missing Skills from applications
   const missingSkillsMap: { [key: string]: number } = {};
@@ -335,18 +327,25 @@ function CandidateDashboardPage() {
                   ĐIỂM PHÙ HỢP TRUNG BÌNH
                 </span>
                 <span style={{ fontSize: 26, fontWeight: 800, color: "#0F172A" }}>
-                  {avgScore}%
+                  {avgScore === null ? "—" : `${avgScore}%`}
                 </span>
+                {avgScore === null && (
+                  <Text type="secondary" style={{ display: "block", fontSize: 12 }}>
+                    Chưa có kết quả đánh giá
+                  </Text>
+                )}
               </div>
-              <Progress
-                type="circle"
-                percent={avgScore}
-                size={48}
-                strokeColor={{
-                  "0%": "#3B82F6",
-                  "100%": "#10B981"
-                }}
-              />
+              {avgScore !== null && (
+                <Progress
+                  type="circle"
+                  percent={avgScore}
+                  size={48}
+                  strokeColor={{
+                    "0%": "#3B82F6",
+                    "100%": "#10B981"
+                  }}
+                />
+              )}
             </div>
           </Card>
         </Col>
@@ -587,14 +586,22 @@ function CandidateDashboardPage() {
         </div>
       ) : suggestedJobs.length === 0 ? (
         <Card style={{ borderRadius: 16, textAlign: "center", padding: "32px 24px", border: "1px solid #E2E8F0" }}>
-          <Text type="secondary" style={{ fontSize: 14 }}>
-            Không tìm thấy gợi ý việc làm tương thích. Hãy thử tải lên CV mẫu ở mục 'Hồ sơ cá nhân'.
-          </Text>
+          <Empty
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+            description={
+              cvSkills.length === 0
+                ? "Cập nhật CV để hệ thống nhận diện kỹ năng và tìm việc làm phù hợp."
+                : "Chưa có việc làm nào chứa các kỹ năng đã nhận diện trong CV của bạn."
+            }
+          >
+            <Button type="primary" onClick={() => navigate(cvSkills.length === 0 ? "/profile" : "/jobs")}>
+              {cvSkills.length === 0 ? "Cập nhật CV" : "Khám phá tất cả việc làm"}
+            </Button>
+          </Empty>
         </Card>
       ) : (
         <Row gutter={[20, 20]}>
           {suggestedJobs.map((job) => {
-            const matchScore = Math.round(job.aiScore);
             return (
               <Col xs={24} lg={12} key={job.id}>
                 <Card
@@ -622,18 +629,19 @@ function CandidateDashboardPage() {
                         </Text>
                       </div>
                       <Tag
-                        style={{ margin: 0, borderRadius: 999, color: getScoreColor(matchScore), fontWeight: 700 }}
+                        color="blue"
+                        style={{ margin: 0, borderRadius: 999, fontWeight: 700 }}
                       >
-                        Mức phù hợp {matchScore}%
+                        Khớp {job.matchedSkillCount}/{job.totalProfileSkills} kỹ năng
                       </Tag>
                     </div>
 
                     <div style={{ margin: "10px 0", display: "flex", gap: 6, flexWrap: "wrap" }}>
-                      <Tag color="blue" style={{ borderRadius: 6, fontSize: 12, margin: 0 }}>
-                        📍 {job.location}
+                      <Tag style={{ borderRadius: 6, fontSize: 12, margin: 0 }}>
+                        <EnvironmentOutlined /> {job.location}
                       </Tag>
                       <Tag color="green" style={{ borderRadius: 6, fontSize: 12, margin: 0, fontWeight: 600 }}>
-                        💵 {job.salary}
+                        <DollarOutlined /> {job.salary}
                       </Tag>
                     </div>
 
@@ -654,12 +662,8 @@ function CandidateDashboardPage() {
                   </div>
 
                   <div style={{ borderTop: "1px solid #F1F5F9", paddingTop: 12, marginTop: 14, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span style={{ fontSize: 12, fontWeight: 600, color: matchScore >= 70 ? "#10B981" : "#2563EB", display: "inline-flex", alignItems: "center", gap: 4 }}>
-                      {matchScore >= 75
-                        ? <><ThunderboltOutlined /> Phù hợp cao</>
-                        : matchScore >= 50
-                          ? <><CheckCircleOutlined /> Có thể phù hợp</>
-                          : <>Nên xem kỹ yêu cầu</>}
+                    <span style={{ fontSize: 12, fontWeight: 600, color: "#2563EB", display: "inline-flex", alignItems: "center", gap: 4 }}>
+                      <CheckCircleOutlined /> Có kỹ năng trùng khớp
                     </span>
                     <Button type="primary" size="small" style={{ borderRadius: 6, background: "#2563EB", fontWeight: 600 }}>
                       Xem việc làm

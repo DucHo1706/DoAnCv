@@ -25,7 +25,6 @@ import {
   ClockCircleOutlined,
   StarOutlined,
   StarFilled,
-  ThunderboltOutlined,
   CheckCircleOutlined,
   DollarOutlined,
   DatabaseOutlined,
@@ -307,11 +306,11 @@ export default function CandidateJobPage() {
     }
   };
 
-  // Thuật toán tính toán AI Match score giữa CV ứng viên và Công việc
+  // Đối chiếu từ khóa minh bạch; đây không phải điểm đánh giá AI.
   const calculateJobMatch = (job: any) => {
-    if (!candidateSkills || candidateSkills.length === 0) return { score: 0, matched: [] };
+    if (!candidateSkills || candidateSkills.length === 0) return { matched: [], total: 0 };
     const validSkills = candidateSkills.filter(s => s && s.trim().length > 1);
-    if (validSkills.length === 0) return { score: 0, matched: [] };
+    if (validSkills.length === 0) return { matched: [], total: 0 };
 
     const title = job.title || job.position || "";
     const desc = job.description || job.requirements || "";
@@ -326,23 +325,14 @@ export default function CandidateJobPage() {
       }
     });
 
-    const isTechJob = ["developer", "engineer", "lập trình", "software", "react", "frontend", "backend", "fullstack", "devops", "cloud", "data", "python", "java", "c#", ".net", "design", "figma", "ui/ux", "it", "hệ thống", "tester", "qa", "web"].some(k => title.toLowerCase().includes(k));
-
-    let score = 0;
-    if (matched.length > 0) {
-      score = Math.min(98, Math.round((matched.length / validSkills.length) * 50) + 48);
-    } else if (isTechJob) {
-      score = 55;
-    }
-
-    return { score, matched };
+    return { matched, total: validSkills.length };
   };
 
   // Sắp xếp danh sách việc làm
   const processedJobs = [...jobs].sort((a, b) => {
     if (sortBy === "aiMatch") {
-      const matchA = calculateJobMatch(a).score;
-      const matchB = calculateJobMatch(b).score;
+      const matchA = calculateJobMatch(a).matched.length;
+      const matchB = calculateJobMatch(b).matched.length;
       return matchB - matchA;
     }
     return 0; // Giữ nguyên thứ tự từ API (Mới cập nhật)
@@ -630,8 +620,8 @@ export default function CandidateJobPage() {
                   {isLoggedIn && isCandidate && candidateSkills.length > 0 && (
                     <Option value="aiMatch">
                       <Space size={4}>
-                        <ThunderboltOutlined style={{ color: "#2563EB" }} />
-                        <span>Phù hợp nhất với hồ sơ</span>
+                        <CheckCircleOutlined style={{ color: "#2563EB" }} />
+                        <span>Nhiều kỹ năng trùng khớp</span>
                       </Space>
                     </Option>
                   )}
@@ -737,22 +727,18 @@ export default function CandidateJobPage() {
                                   {jobTitle}
                                 </Title>
 
-                                {/* Badge AI Match Score */}
-                                {isLoggedIn && isCandidate && matchResult.score >= 50 && (
+                                {isLoggedIn && isCandidate && matchResult.matched.length > 0 && (
                                   <Tag
-                                    color="purple"
+                                    color="blue"
                                     style={{
                                       borderRadius: 20,
-                                      fontWeight: 800,
+                                      fontWeight: 700,
                                       padding: "3px 10px",
                                       fontSize: 11,
-                                      background: "#F3E8FF",
-                                      border: "1px solid #E9D5FF",
-                                      color: "#6B21A8",
                                       margin: 0,
                                     }}
                                   >
-                                    <ThunderboltOutlined /> {matchResult.score}% PHÙ HỢP CV
+                                    <CheckCircleOutlined /> Khớp {matchResult.matched.length}/{matchResult.total} kỹ năng
                                   </Tag>
                                 )}
                               </div>
