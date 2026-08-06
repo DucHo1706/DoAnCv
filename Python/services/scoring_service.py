@@ -1,7 +1,7 @@
 from .gemini_service import generate_content_with_retry
 from .ml_service import calculate_scikit_similarity, HAS_SKLEARN
 from . import interview_service
-from prompts.scoring_prompts import get_scoring_prompt, get_cv_validation_prompt, get_deep_analysis_prompt
+from prompts.scoring_prompts import get_scoring_prompt, get_deep_analysis_prompt
 from prompts.language_prompts import get_language_review_prompt
 from utils.logger import logger
 import json
@@ -248,28 +248,15 @@ def is_document_a_resume(cv_text: str) -> tuple[bool, str]:
         "kinh nghiệm", "kinh nghiem", "học vấn", "hoc van", "kỹ năng",
         "ky nang", "mục tiêu nghề nghiệp", "muc tieu nghe nghiep",
         "chứng chỉ", "chung chi", "thông tin liên hệ", "email",
-        "experience", "education", "skills", "curriculum vitae", "resume"
+        "kinh nghiệm làm việc", "dự án", "du an", "quá trình công tác",
+        "experience", "education", "skills", "curriculum vitae", "resume",
+        "work experience", "projects", "certifications", "career objective"
     ]
     signal_count = sum(1 for signal in resume_signals if signal in normalized)
     word_count = len(cv_text.split())
     if word_count >= 25 and signal_count >= 2:
         return True, "Đã xác minh dựa trên cấu trúc và các mục nội dung của CV."
-    if word_count < 25 or signal_count == 0:
-        return False, "Nội dung quá ít hoặc không có các mục cơ bản của một CV."
-
-    prompt = get_cv_validation_prompt(cv_text)
-    try:
-        res = generate_content_with_retry(prompt)
-        data = json.loads(res)
-        return bool(data.get("is_resume", True)), data.get("reason", "")
-    except Exception as e:
-        logger.error(f"Loi is_document_a_resume: {e}")
-        is_likely_resume = len(cv_text.split()) >= 25 and signal_count >= 2
-        return is_likely_resume, (
-            "Đã kiểm định dự phòng dựa trên cấu trúc CV."
-            if is_likely_resume
-            else "Nội dung trích xuất quá ít hoặc thiếu các mục cơ bản của CV."
-        )
+    return False, "Nội dung quá ít hoặc thiếu ít nhất hai mục cơ bản của một CV (kinh nghiệm, học vấn, kỹ năng, dự án hoặc thông tin liên hệ)."
 
 def analyze_cv_deep(cv_text: str, jd_text: str, cv_skills: list, jd_skills: list, job_title: str = "", company_name: str = ""):
     """
