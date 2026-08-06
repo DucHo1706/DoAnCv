@@ -13,7 +13,7 @@ function UploadCVPage() {
   const props = {
     name: "file",
     multiple: false,
-    accept: ".pdf,.doc,.docx",
+    accept: ".pdf,.docx,.png,.jpg,.jpeg,.webp",
     fileList,
     onChange(info: any) {
       const { status } = info.file;
@@ -96,7 +96,7 @@ function UploadCVPage() {
               Kéo thả CV của bạn vào đây hoặc click để duyệt file
             </p>
             <p className="ant-upload-hint" style={{ fontSize: 12, color: appTheme.colors.textSecondary }}>
-              Hỗ trợ định dạng PDF, DOC, DOCX. Dung lượng tối đa 10MB.
+              Hỗ trợ PDF, DOCX, PNG, JPG, WEBP. Dung lượng tối đa 10MB.
             </p>
           </Dragger>
 

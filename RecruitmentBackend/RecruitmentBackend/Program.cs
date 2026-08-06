@@ -107,7 +107,10 @@ builder.Services.Configure<EmailSettings>(
 
 // 3. Đăng ký các Services
 builder.Services.AddScoped<IFileService, FileService>();
-builder.Services.AddHttpClient<IAiService, AiService>();
+builder.Services.AddHttpClient<IAiService, AiService>(client =>
+{
+    client.Timeout = TimeSpan.FromMinutes(5);
+});
 builder.Services.AddScoped<IJobService, JobService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IAuthService, AuthService>();

@@ -9,6 +9,51 @@ import time
 
 router = APIRouter()
 
+ALLOWED_CV_EXTENSIONS = {".pdf", ".docx", ".png", ".jpg", ".jpeg", ".webp"}
+MAX_CV_BYTES = 10 * 1024 * 1024
+
+
+def _validate_upload_shape(file_bytes: bytes, filename: str) -> None:
+    import os
+    extension = os.path.splitext(filename or "")[1].lower()
+    if extension not in ALLOWED_CV_EXTENSIONS:
+        raise ValueError("Định dạng tệp không được hỗ trợ. Vui lòng dùng PDF, DOCX, PNG, JPG hoặc WEBP.")
+    if not file_bytes:
+        raise ValueError("Tệp CV đang trống.")
+    if len(file_bytes) > MAX_CV_BYTES:
+        raise ValueError("Tệp CV vượt quá dung lượng tối đa 10 MB.")
+    signatures = {
+        ".pdf": file_bytes.startswith(b"%PDF-"),
+        ".docx": file_bytes.startswith(b"PK"),
+        ".png": file_bytes.startswith(b"\x89PNG\r\n\x1a\n"),
+        ".jpg": file_bytes.startswith(b"\xff\xd8\xff"),
+        ".jpeg": file_bytes.startswith(b"\xff\xd8\xff"),
+        ".webp": file_bytes.startswith(b"RIFF") and file_bytes[8:12] == b"WEBP",
+    }
+    if not signatures.get(extension, False):
+        raise ValueError("Nội dung tệp không đúng với định dạng được khai báo hoặc tệp đã bị hỏng.")
+
+
+@router.post("/validate-cv")
+async def validate_cv(file: UploadFile = File(...)):
+    try:
+        file_bytes = await file.read()
+        _validate_upload_shape(file_bytes, file.filename or "")
+        cv_text = cv_analysis_service.doc_parser_service.extract_text_from_file(
+            file_bytes, file.filename or "", file.content_type or ""
+        )
+        if not cv_text or len(cv_text.strip()) < 50:
+            return {"is_valid": False, "message": "Không đọc được đủ nội dung CV. Vui lòng dùng tệp rõ nét hơn hoặc PDF/DOCX có văn bản."}
+        is_resume, reason = scoring_service.is_document_a_resume(cv_text)
+        if not is_resume:
+            return {"is_valid": False, "message": f"Tệp đã chọn không phải CV hợp lệ. {reason}".strip()}
+        return {"is_valid": True, "message": "CV hợp lệ."}
+    except ValueError as error:
+        return {"is_valid": False, "message": str(error)}
+    except Exception as error:
+        logger.error(f"Lỗi kiểm tra CV trước khi nộp: {error}", exc_info=True)
+        raise HTTPException(status_code=503, detail="Chưa thể kiểm tra nội dung CV lúc này. Vui lòng thử lại sau.")
+
 @router.post("/score-cv")
 async def score_cv(
     request: Request,
@@ -17,7 +62,7 @@ async def score_cv(
     criteria: str = Form(...)
 ):
     try:
-        check_ip_rate_limit(request, cooldown_seconds=10.0, max_requests_per_minute=10)
+        check_ip_rate_limit(request, cooldown_seconds=0.0, max_requests_per_minute=30)
         try:
             criteria_list = json.loads(criteria)
         except Exception:
@@ -76,6 +121,7 @@ async def score_cv(
             }
 
         file_bytes = await file.read()
+        _validate_upload_shape(file_bytes, file.filename or "")
         res = cv_analysis_service.score_resume_sync(
             file_bytes=file_bytes,
             filename=file.filename,

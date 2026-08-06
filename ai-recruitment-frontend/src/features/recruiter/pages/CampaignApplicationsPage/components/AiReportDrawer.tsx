@@ -10,6 +10,7 @@ import {
   Space,
   Table,
   Skeleton,
+  Alert,
 } from "antd";
 import { FilePdfOutlined } from "@ant-design/icons";
 import type { ApplicationDto } from "../../../services/recruitmentService";
@@ -33,6 +34,7 @@ export function AiReportDrawer({
   onClose,
   parseSkills,
 }: AiReportDrawerProps) {
+  const isAiError = application?.classification === "AI_ERROR";
   const getParsedAnalysis = (app: any) => {
     if (!app || !app.aiReason) return null;
     if (typeof app.aiReason === "object" && !Array.isArray(app.aiReason)) return app.aiReason;
@@ -85,7 +87,9 @@ export function AiReportDrawer({
         <div>
           <Row gutter={[16, 16]} align="middle" style={{ marginBottom: 24, marginTop: 16 }}>
             <Col span={6} style={{ textAlign: "center" }}>
-              {application.aiScore == null ? (
+              {isAiError ? (
+                <Tag color="error">Chưa có kết quả</Tag>
+              ) : application.aiScore == null ? (
                 <Tag>Chưa có điểm AI</Tag>
               ) : (
                 <Progress
@@ -124,7 +128,7 @@ export function AiReportDrawer({
                       : "red"
                   }
                 >
-                  {application.classification || "Chưa phân loại"}
+                  {isAiError ? "Lỗi phân tích AI" : application.classification || "Chưa phân loại"}
                 </Tag>
               </div>
             </Col>
@@ -139,6 +143,14 @@ export function AiReportDrawer({
               </Row>
               <Skeleton active title={{ width: "32%" }} paragraph={{ rows: 4 }} style={{ marginTop: 24 }} />
             </div>
+          ) : isAiError ? (
+            <Alert
+              type="error"
+              showIcon
+              message="Chưa thể hoàn tất phân tích CV"
+              description="Đây là lỗi kỹ thuật của dịch vụ AI, không phải kết quả đánh giá ứng viên. Không sử dụng mức 0 điểm để đưa ra quyết định tuyển dụng; vui lòng xem CV gốc và thử lại sau khi dịch vụ ổn định."
+              style={{ borderRadius: 12, border: "1px solid #FECACA" }}
+            />
           ) : (
           <div>
           {(() => {

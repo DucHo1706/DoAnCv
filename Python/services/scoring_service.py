@@ -243,6 +243,20 @@ def is_document_a_resume(cv_text: str) -> tuple[bool, str]:
     if not cv_text or len(cv_text.strip()) < 50:
         return False, "Noi dung text qua ngan."
         
+    normalized = cv_text.lower()
+    resume_signals = [
+        "kinh nghiệm", "kinh nghiem", "học vấn", "hoc van", "kỹ năng",
+        "ky nang", "mục tiêu nghề nghiệp", "muc tieu nghe nghiep",
+        "chứng chỉ", "chung chi", "thông tin liên hệ", "email",
+        "experience", "education", "skills", "curriculum vitae", "resume"
+    ]
+    signal_count = sum(1 for signal in resume_signals if signal in normalized)
+    word_count = len(cv_text.split())
+    if word_count >= 25 and signal_count >= 2:
+        return True, "Đã xác minh dựa trên cấu trúc và các mục nội dung của CV."
+    if word_count < 25 or signal_count == 0:
+        return False, "Nội dung quá ít hoặc không có các mục cơ bản của một CV."
+
     prompt = get_cv_validation_prompt(cv_text)
     try:
         res = generate_content_with_retry(prompt)
@@ -250,13 +264,6 @@ def is_document_a_resume(cv_text: str) -> tuple[bool, str]:
         return bool(data.get("is_resume", True)), data.get("reason", "")
     except Exception as e:
         logger.error(f"Loi is_document_a_resume: {e}")
-        normalized = cv_text.lower()
-        resume_signals = [
-            "kinh nghiệm", "kinh nghiem", "học vấn", "hoc van", "kỹ năng",
-            "ky nang", "mục tiêu nghề nghiệp", "muc tieu nghe nghiep",
-            "chứng chỉ", "chung chi", "thông tin liên hệ", "email"
-        ]
-        signal_count = sum(1 for signal in resume_signals if signal in normalized)
         is_likely_resume = len(cv_text.split()) >= 25 and signal_count >= 2
         return is_likely_resume, (
             "Đã kiểm định dự phòng dựa trên cấu trúc CV."

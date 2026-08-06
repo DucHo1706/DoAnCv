@@ -237,18 +237,17 @@ export function useJobDetail() {
       const name = file.name?.toLowerCase() || "";
       const isValidType =
         file.type === "application/pdf" ||
-        file.type === "application/msword" ||
         file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
         file.type.startsWith("image/") ||
         name.endsWith(".pdf") ||
-        name.endsWith(".doc") ||
         name.endsWith(".docx") ||
         name.endsWith(".png") ||
         name.endsWith(".jpg") ||
-        name.endsWith(".jpeg");
+        name.endsWith(".jpeg") ||
+        name.endsWith(".webp");
 
       if (!isValidType) {
-        message.error("Vui lòng chọn đúng file CV (hỗ trợ PDF, DOC, DOCX, PNG, JPG, JPEG).");
+        message.error("Vui lòng chọn đúng file CV (hỗ trợ PDF, DOCX, PNG, JPG, JPEG, WEBP).");
         return Upload.LIST_IGNORE;
       }
 

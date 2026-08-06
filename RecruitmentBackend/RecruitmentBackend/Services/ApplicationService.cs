@@ -29,19 +29,47 @@ namespace RecruitmentBackend.Services
         private readonly IServiceScopeFactory _serviceScopeFactory;
         private readonly IHubContext<AIEvaluationHub> _hubContext;
         private readonly INotificationService _notificationService;
+        private readonly IAiService _aiService;
 
         public ApplicationService(
             AppDbContext context,
             IFileService fileService,
             IServiceScopeFactory serviceScopeFactory,
             IHubContext<AIEvaluationHub> hubContext,
-            INotificationService notificationService)
+            INotificationService notificationService,
+            IAiService aiService)
         {
             _context = context;
             _fileService = fileService;
             _serviceScopeFactory = serviceScopeFactory;
             _hubContext = hubContext;
             _notificationService = notificationService;
+            _aiService = aiService;
+        }
+
+        private static readonly HashSet<string> AllowedCvExtensions = new(StringComparer.OrdinalIgnoreCase)
+        {
+            ".pdf", ".docx", ".png", ".jpg", ".jpeg", ".webp"
+        };
+
+        private static string? ValidateCvFile(byte[] bytes, string fileName)
+        {
+            if (bytes.Length == 0) return "Tệp CV đang trống.";
+            if (bytes.Length > 10 * 1024 * 1024) return "Tệp CV vượt quá dung lượng tối đa 10 MB.";
+            var extension = Path.GetExtension(fileName);
+            if (!AllowedCvExtensions.Contains(extension))
+                return "Định dạng tệp không được hỗ trợ. Vui lòng dùng PDF, DOCX, PNG, JPG hoặc WEBP.";
+
+            bool signatureMatches = extension.ToLowerInvariant() switch
+            {
+                ".pdf" => bytes.Length >= 5 && bytes.AsSpan(0, 5).SequenceEqual("%PDF-"u8),
+                ".docx" => bytes.Length >= 2 && bytes[0] == (byte)'P' && bytes[1] == (byte)'K',
+                ".png" => bytes.Length >= 8 && bytes.AsSpan(0, 8).SequenceEqual(new byte[] { 137, 80, 78, 71, 13, 10, 26, 10 }),
+                ".jpg" or ".jpeg" => bytes.Length >= 3 && bytes[0] == 0xFF && bytes[1] == 0xD8 && bytes[2] == 0xFF,
+                ".webp" => bytes.Length >= 12 && bytes.AsSpan(0, 4).SequenceEqual("RIFF"u8) && bytes.AsSpan(8, 4).SequenceEqual("WEBP"u8),
+                _ => false
+            };
+            return signatureMatches ? null : "Nội dung tệp không đúng với định dạng được khai báo hoặc tệp đã bị hỏng.";
         }
 
         public async Task<(bool IsSuccess, string Message, object Data)> ApplyJobAsync(ApplyJobRequest request, ClaimsPrincipal user)
@@ -128,9 +156,14 @@ namespace RecruitmentBackend.Services
                     }
                     cvUrl = candidate.DefaultCvUrl;
                     originalFileName = candidate.DefaultCvName ?? "CV_MacDinh.pdf";
-                    contentType = originalFileName.EndsWith(".docx", StringComparison.OrdinalIgnoreCase) 
-                        ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document" 
-                        : "application/pdf";
+                    contentType = Path.GetExtension(originalFileName).ToLowerInvariant() switch
+                    {
+                        ".docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                        ".png" => "image/png",
+                        ".jpg" or ".jpeg" => "image/jpeg",
+                        ".webp" => "image/webp",
+                        _ => "application/pdf"
+                    };
 
                     // Trích xuất tên file nguyên bản
                     string fileNameOnly = Path.GetFileName(cvUrl);
@@ -200,7 +233,32 @@ namespace RecruitmentBackend.Services
 
                     originalFileName = request.CvFile.FileName;
                     contentType = request.CvFile.ContentType;
-                    cvUrl = await _fileService.SaveFileAsync(request.CvFile);
+                    cvUrl = string.Empty;
+                }
+
+                var fileValidationError = ValidateCvFile(cvFileBytes, originalFileName);
+                if (fileValidationError != null)
+                {
+                    return (false, fileValidationError, null);
+                }
+
+                try
+                {
+                    var cvValidation = await _aiService.ValidateCvAsync(cvFileBytes, originalFileName, contentType);
+                    if (!cvValidation.IsValid)
+                    {
+                        return (false, cvValidation.Message, null);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Lỗi kiểm tra CV trước khi nộp: {ex.Message}");
+                    return (false, "Chưa thể kiểm tra nội dung CV lúc này. Vui lòng thử lại sau.", null);
+                }
+
+                if (!request.UseDefaultCv)
+                {
+                    cvUrl = await _fileService.SaveFileAsync(request.CvFile!);
                 }
 
                 // 7. Lưu thông tin CV vào database trước

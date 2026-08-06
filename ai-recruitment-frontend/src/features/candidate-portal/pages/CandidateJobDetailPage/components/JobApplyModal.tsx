@@ -70,7 +70,7 @@ const JobApplyModal: React.FC<JobApplyModalProps> = ({
             <Button icon={<UploadOutlined />} type="primary" ghost>Chọn file CV của bạn</Button>
           </Upload>
           <div style={{ marginTop: 8, color: "#94a3b8", fontSize: "12px" }}>
-            Hỗ trợ PDF, DOC, DOCX, dung lượng dưới 10MB
+            Hỗ trợ PDF, DOCX, PNG, JPG, WEBP; dung lượng tối đa 10MB
           </div>
         </div>
       )}

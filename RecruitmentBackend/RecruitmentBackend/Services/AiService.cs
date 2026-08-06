@@ -81,12 +81,41 @@ namespace RecruitmentBackend.Services
             return result;
         }
 
+        public async Task<(bool IsValid, string Message)> ValidateCvAsync(byte[] fileBytes, string fileName, string contentType)
+        {
+            using var content = new MultipartFormDataContent();
+            using var fileContent = new ByteArrayContent(fileBytes);
+            if (!string.IsNullOrWhiteSpace(contentType))
+            {
+                fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(contentType);
+            }
+            content.Add(fileContent, "file", fileName);
+
+            using var response = await _httpClient.PostAsync("validate-cv", content);
+            var responseBody = await response.Content.ReadAsStringAsync();
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new HttpRequestException($"Dịch vụ kiểm tra CV trả về {response.StatusCode}.");
+            }
+
+            using var document = JsonDocument.Parse(responseBody);
+            var root = document.RootElement;
+            var isValid = root.TryGetProperty("is_valid", out var validElement) && validElement.GetBoolean();
+            var message = root.TryGetProperty("message", out var messageElement)
+                ? messageElement.GetString() ?? "Không thể xác minh nội dung CV."
+                : "Không thể xác minh nội dung CV.";
+            return (isValid, message);
+        }
+
         public async Task<bool> SyncSkillsToAiAsync(List<string> skills)
         {
             try
             {
                 var payload = new { skills = skills };
-                var jsonContent = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
+                var jsonContent = new StringContent(
+                    JsonSerializer.Serialize(payload, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }),
+                    Encoding.UTF8,
+                    "application/json");
 
                 var response = await _httpClient.PostAsync("update-skills", jsonContent);
 
@@ -240,7 +269,10 @@ namespace RecruitmentBackend.Services
                     Query = query,
                     Jobs = jobs
                 };
-                var jsonContent = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
+                var jsonContent = new StringContent(
+                    JsonSerializer.Serialize(payload, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }),
+                    Encoding.UTF8,
+                    "application/json");
                 var response = await _httpClient.PostAsync("semantic-search", jsonContent);
                 if (response.IsSuccessStatusCode == false)
                 {

@@ -31,7 +31,6 @@ export const ApplicationHistoryTab: React.FC<ApplicationHistoryTabProps> = ({
   loading,
   applications,
   onViewReport,
-  onReEvaluate,
 }) => {
   const [searchText, setSearchText] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -347,20 +346,8 @@ export const ApplicationHistoryTab: React.FC<ApplicationHistoryTabProps> = ({
                         {error && (
                           <div style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "flex-end" }}>
                             <Text type="danger" style={{ fontStyle: "italic", fontSize: 13 }}>
-                              Hệ thống AI gặp trục trặc khi đọc file.
+                              Hệ thống chưa thể hoàn tất phân tích CV. Kết quả 0% không phải là điểm đánh giá hồ sơ.
                             </Text>
-                            {onReEvaluate && (
-                              <Button
-                                type="primary"
-                                danger
-                                ghost
-                                size="small"
-                                onClick={() => onReEvaluate(app.id)}
-                                style={{ borderRadius: 8, fontWeight: 600 }}
-                              >
-                                Thử lại đánh giá AI
-                              </Button>
-                            )}
                           </div>
                         )}
                       </div>
