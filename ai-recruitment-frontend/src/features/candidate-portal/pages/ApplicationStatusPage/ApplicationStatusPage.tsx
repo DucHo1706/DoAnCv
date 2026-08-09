@@ -28,6 +28,7 @@ import {
 } from "@ant-design/icons";
 import { useApplicationStatus } from "./hooks/useApplicationStatus";
 import { getApplicationStatusLabel as translateApplicationStatus } from "../../../../utils/statusLabels";
+import { downloadElementAsPdf } from "../../../../utils/exportUtils";
 import PageContainer from "../../../../components/common/PageContainer";
 import AiDetailedTabs from "../../../../components/ai-report/AiDetailedTabs";
 import CompetencyTab from "../../../../components/ai-report/CompetencyTab";
@@ -188,24 +189,13 @@ export default function ApplicationStatusPage() {
       return;
     }
     const hideMessage = message.loading("Đang khởi tạo tệp PDF báo cáo AI...", 0);
-    element.style.display = "block";
-    const opt = {
-      margin: [15, 15, 15, 15] as [number, number, number, number],
-      filename: `BaoCao_AI_${selectedApp?.jobTitle || "UngVien"}.pdf`,
-      image: { type: "jpeg" as const, quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true },
-      jsPDF: { unit: "mm" as const, format: "a4" as const, orientation: "portrait" as const }
-    };
     try {
-      // @ts-ignore
-      const html2pdf = (await import("html2pdf.js")).default;
-      await html2pdf().set(opt).from(element).save();
-      element.style.display = "none";
+      const safeTitle = (selectedApp?.jobTitle || "UngVien").replace(/[\\/:*?"<>|]+/g, "-");
+      await downloadElementAsPdf(element, `BaoCao_AI_${safeTitle}.pdf`, [15, 15, 15, 15]);
       hideMessage();
       message.success("Xuất báo cáo PDF thành công!");
     } catch (err: any) {
       console.error(err);
-      element.style.display = "none";
       hideMessage();
       message.error("Có lỗi xảy ra khi xuất PDF!");
     }

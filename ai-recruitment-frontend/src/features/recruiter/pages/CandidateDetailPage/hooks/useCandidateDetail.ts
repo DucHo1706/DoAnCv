@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { message } from "antd";
 import { useNavigate, useParams } from "react-router-dom";
 import { recruitmentService, type ApplicationDto } from "../../../../../services/recruitmentService";
+import { downloadElementAsPdf } from "../../../../../utils/exportUtils";
 
 export function useCandidateDetail() {
   const navigate = useNavigate();
@@ -58,46 +59,23 @@ export function useCandidateDetail() {
     [id]
   );
 
-  const handleExportPDF = () => {
+  const handleExportPDF = async () => {
     const element = document.getElementById("ai-report-printable-area");
     if (!element) {
       message.error("Không tìm thấy vùng báo cáo để xuất!");
       return;
     }
     const hideMessage = message.loading("Đang khởi tạo tệp PDF báo cáo AI...", 0);
-    element.style.display = "block";
-    import("html2pdf.js")
-      .then((html2pdfModule) => {
-        const html2pdf = html2pdfModule.default || html2pdfModule;
-        const opt = {
-          margin: [15, 15, 15, 15] as [number, number, number, number],
-          filename: `BaoCao_AI_${candidate?.candidateName || "UngVien"}.pdf`,
-          image: { type: "jpeg" as const, quality: 0.98 },
-          html2canvas: { scale: 2, useCORS: true },
-          jsPDF: { unit: "mm" as const, format: "a4" as const, orientation: "portrait" as const },
-        };
-
-        html2pdf()
-          .set(opt)
-          .from(element)
-          .save()
-          .then(() => {
-            element.style.display = "none";
-            hideMessage();
-            message.success("Xuất báo cáo PDF thành công!");
-          })
-          .catch((err: unknown) => {
-            console.error(err);
-            element.style.display = "none";
-            hideMessage();
-            message.error("Có lỗi xảy ra khi xuất PDF!");
-          });
-      })
-      .catch(() => {
-        element.style.display = "none";
-        hideMessage();
-        message.error("Không thể tải thư viện xuất PDF!");
-      });
+    try {
+      const safeName = (candidate?.candidateName || "UngVien").replace(/[\\/:*?"<>|]+/g, "-");
+      await downloadElementAsPdf(element, `BaoCao_AI_${safeName}.pdf`, [15, 15, 15, 15]);
+      message.success("Xuất báo cáo PDF thành công!");
+    } catch (error) {
+      console.error(error);
+      message.error("Có lỗi xảy ra khi xuất PDF!");
+    } finally {
+      hideMessage();
+    }
   };
 
   const handleReEvaluate = async () => {
