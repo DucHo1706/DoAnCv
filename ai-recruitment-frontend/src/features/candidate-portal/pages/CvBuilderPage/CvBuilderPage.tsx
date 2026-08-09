@@ -168,6 +168,7 @@ export default function CvBuilderPage() {
   const [documentId, setDocumentId] = useState<string>();
   const [documents, setDocuments] = useState<CvBuilderDocumentSummary[]>([]);
   const [savingToAccount, setSavingToAccount] = useState(false);
+  const [exportingPdf, setExportingPdf] = useState(false);
   const [editorStep, setEditorStep] = useState<EditorStep>("personal");
   const [starterDismissed, setStarterDismissed] = useState(false);
 
@@ -343,9 +344,63 @@ export default function CvBuilderPage() {
       }
       setValues(currentValues);
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ values: currentValues, settings }));
-      window.setTimeout(() => window.print(), 100);
-    } catch {
-      message.warning("Vui lòng hoàn thiện các trường bắt buộc trước khi lưu PDF.");
+      setExportingPdf(true);
+      await new Promise((resolve) => window.setTimeout(resolve, 100));
+
+      const preview = document.getElementById("cv-builder-preview");
+      if (!preview) throw new Error("Không tìm thấy bản xem trước CV.");
+
+      const clone = preview.cloneNode(true) as HTMLElement;
+      clone.removeAttribute("id");
+      Object.assign(clone.style, {
+        width: "210mm",
+        minHeight: "297mm",
+        transform: "none",
+        transformOrigin: "top left",
+        border: "none",
+        borderRadius: "0",
+        boxShadow: "none",
+        outline: "none",
+        overflow: "visible",
+      });
+
+      const renderHost = document.createElement("div");
+      Object.assign(renderHost.style, {
+        position: "fixed",
+        left: "-10000px",
+        top: "0",
+        width: "210mm",
+        background: "#FFFFFF",
+        zIndex: "-1",
+      });
+      renderHost.appendChild(clone);
+      document.body.appendChild(renderHost);
+
+      try {
+        const html2pdfModule = await import("html2pdf.js");
+        const html2pdf = html2pdfModule.default || html2pdfModule;
+        const safeName = (documentName.trim() || "CV")
+          .replace(/[\\/:*?"<>|]+/g, "-")
+          .replace(/\s+/g, " ");
+        await (html2pdf as any)()
+          .set({
+            margin: 0,
+            filename: `${safeName}.pdf`,
+            image: { type: "jpeg", quality: 0.98 },
+            html2canvas: { scale: 2, useCORS: true, backgroundColor: "#FFFFFF", logging: false },
+            jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+            pagebreak: { mode: ["css", "legacy"] },
+          })
+          .from(clone)
+          .save();
+        message.success("Đã tải CV dưới dạng PDF.");
+      } finally {
+        renderHost.remove();
+      }
+    } catch (error: any) {
+      message.error(error?.message || "Không thể tạo tệp PDF. Vui lòng thử lại.");
+    } finally {
+      setExportingPdf(false);
     }
   };
 
@@ -368,15 +423,6 @@ export default function CvBuilderPage() {
 
   return (
     <div style={{ maxWidth: 1500, margin: "0 auto", padding: "24px 20px 56px" }}>
-      <style>{`
-        @media print {
-          body * { visibility: hidden !important; }
-          #cv-builder-preview, #cv-builder-preview * { visibility: visible !important; }
-          #cv-builder-preview { position: absolute !important; inset: 0 auto auto 0 !important; width: 210mm !important; min-height: 297mm !important; margin: 0 !important; border: 0 !important; border-radius: 0 !important; box-shadow: none !important; }
-          @page { size: A4; margin: 0; }
-        }
-      `}</style>
-
       <Row justify="space-between" align="middle" gutter={[16, 16]} style={{ marginBottom: 20 }}>
         <Col>
           <Title level={2} style={{ margin: 0, color: appTheme.colors.textPrimary }}>Tạo CV trực tuyến</Title>
@@ -401,7 +447,7 @@ export default function CvBuilderPage() {
                 <Button danger icon={<DeleteOutlined />}>Xóa</Button>
               </Popconfirm>
             ) : null}
-            <Button type="primary" icon={<DownloadOutlined />} onClick={printPdf}>Lưu dưới dạng PDF</Button>
+            <Button type="primary" icon={<DownloadOutlined />} loading={exportingPdf} onClick={printPdf}>Lưu dưới dạng PDF</Button>
           </Space>
         </Col>
       </Row>
