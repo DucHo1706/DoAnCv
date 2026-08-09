@@ -100,7 +100,7 @@ export default function TalentPoolDetailPage() {
 
   if (loading && !detail) {
     return (
-      <PageContainer title="Chi tiết Ứng viên" subtitle="Đang tải thông tin ứng viên...">
+      <PageContainer title="Chi tiết ứng viên">
         <Card style={{ borderRadius: 16, border: "1px solid #E2E8F0", padding: 24 }}>
           <Skeleton active paragraph={{ rows: 10 }} />
         </Card>
@@ -110,8 +110,8 @@ export default function TalentPoolDetailPage() {
 
   if (!detail || !candidate) {
     return (
-      <PageContainer title="Chi tiết Ứng viên" subtitle="Không tìm thấy dữ liệu ứng viên.">
-        <Alert type="warning" showIcon message="Không tìm thấy ứng viên trong Talent Pool." />
+      <PageContainer title="Chi tiết ứng viên">
+        <Alert type="warning" showIcon message="Không tìm thấy ứng viên trong kho ứng viên tiềm năng." />
       </PageContainer>
     );
   }
@@ -119,7 +119,6 @@ export default function TalentPoolDetailPage() {
   return (
     <PageContainer
       title={`Chi tiết ứng viên: ${candidate?.fullName || ""}`}
-      subtitle="Quản lý thông tin ứng viên, xem lịch sử tương tác và đối sánh năng lực với các vị trí tuyển dụng."
       extra={
         <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)}>
           Quay lại

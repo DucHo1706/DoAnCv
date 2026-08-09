@@ -51,7 +51,7 @@ export default function JobCampaignListPage() {
   const hasJobFilters = Boolean(jobSearchQuery || jobCategoryFilter || jobStatusFilter);
 
   return (
-    <PageContainer title="Quản lý Chiến dịch Tuyển dụng">
+    <PageContainer title="Quản lý chiến dịch tuyển dụng">
       {error && (
         <Alert
           type="error"

@@ -53,7 +53,7 @@ export default function AdminDashboardPage() {
   } = useAdminDashboard();
 
   return (
-    <PageContainer title="Thống kê & Phân tích">
+    <PageContainer title="Thống kê và phân tích">
       {/* Filter bar */}
       <Card
         bordered={false}
@@ -117,7 +117,7 @@ export default function AdminDashboardPage() {
           <Row gutter={[24, 24]} style={{ marginBottom: 24 }}>
             <Col xs={24} sm={12} lg={6}>
               <MetricCard
-                title="Tổng Người Dùng"
+                title="Tổng người dùng"
                 value={stats.quickMetrics.totalUsers}
                 subtitle={`${formatNumber(stats.quickMetrics.totalHrUsers)} Nhà tuyển dụng | ${formatNumber(stats.quickMetrics.totalCandidateUsers)} Ứng viên`}
                 icon={<TeamOutlined />}
@@ -128,7 +128,7 @@ export default function AdminDashboardPage() {
             </Col>
             <Col xs={24} sm={12} lg={6}>
               <MetricCard
-                title="Tin Tuyển Dụng Đang Mở"
+                title="Tin tuyển dụng đang mở"
                 value={stats.quickMetrics.activeJobs}
                 subtitle="Tin đang hiển thị công khai và chưa hết hạn"
                 icon={<FileTextOutlined />}
@@ -139,7 +139,7 @@ export default function AdminDashboardPage() {
             </Col>
             <Col xs={24} sm={12} lg={6}>
               <MetricCard
-                title="CV Đã Phân Tích AI"
+                title="CV đã phân tích AI"
                 value={stats.quickMetrics.analyzedCvs}
                 subtitle="AI OCR/NLP xử lý thành công"
                 icon={<RobotOutlined />}
@@ -176,12 +176,12 @@ export default function AdminDashboardPage() {
           {/* Biểu đồ xu hướng tăng trưởng */}
           <Row gutter={[24, 24]} style={{ marginBottom: 24 }}>
             <Col xs={24} xl={16}>
-              <Card bordered={false} title="Lưu lượng Hoạt động theo thời gian" extra={<Text type="secondary">CV nộp vào hệ thống và tin tuyển dụng mới</Text>} style={{ height: "100%", ...cardShadowStyle }}>
+              <Card bordered={false} title="Lưu lượng hoạt động theo thời gian" extra={<Text type="secondary">CV nộp vào hệ thống và tin tuyển dụng mới</Text>} style={{ height: "100%", ...cardShadowStyle }}>
                 <ActivityTrendChart data={stats.activityTrend} />
               </Card>
             </Col>
             <Col xs={24} xl={8}>
-              <Card bordered={false} title="Tỷ trọng Tin đăng theo Lĩnh vực" style={{ height: "100%", ...cardShadowStyle }}>
+              <Card bordered={false} title="Tỷ trọng tin đăng theo lĩnh vực" style={{ height: "100%", ...cardShadowStyle }}>
                 <CategoryDonutChart data={stats.jobCategoryShare} />
               </Card>
             </Col>
@@ -195,7 +195,7 @@ export default function AdminDashboardPage() {
               </Card>
             </Col>
             <Col xs={24} xl={10}>
-              <Card bordered={false} title="Thống kê Lỗi Nhận diện OCR/NLP" extra={<Text type="secondary">Tỷ lệ lỗi</Text>} style={{ height: "100%", ...cardShadowStyle }}>
+              <Card bordered={false} title="Thống kê lỗi nhận diện OCR/NLP" extra={<Text type="secondary">Tỷ lệ lỗi</Text>} style={{ height: "100%", ...cardShadowStyle }}>
                 <OcrErrorRateChart data={stats.ocrErrorRate} />
               </Card>
             </Col>

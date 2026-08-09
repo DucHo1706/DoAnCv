@@ -721,7 +721,7 @@ export default function InterviewSchedulePage() {
       </Drawer>
 
       <Modal
-        title="Chỉnh sửa lịch phỏng vấn & Gửi Email"
+        title="Chỉnh sửa lịch phỏng vấn và gửi email"
         open={editModalOpen}
         onCancel={() => setEditModalOpen(false)}
         footer={null}

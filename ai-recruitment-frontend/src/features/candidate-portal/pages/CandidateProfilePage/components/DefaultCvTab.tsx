@@ -146,7 +146,7 @@ export const DefaultCvTab: React.FC<DefaultCvTabProps> = ({
         >
           <iframe
             src={defaultCvUrl}
-            title="CV Preview"
+            title="Xem trước CV"
             width="100%"
             height="700px"
             style={{ border: "none", borderRadius: "0 0 8px 8px" }}

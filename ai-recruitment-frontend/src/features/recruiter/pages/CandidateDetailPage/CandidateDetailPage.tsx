@@ -72,7 +72,6 @@ export default function CandidateDetailPage() {
   return (
     <PageContainer
       title={candidate.candidateName}
-      subtitle={`Hồ sơ chi tiết cho vị trí ${candidate.jobTitle}`}
       extra={
         <Space size="middle">
           <Button
@@ -184,7 +183,7 @@ export default function CandidateDetailPage() {
                   );
                 })()}
               </Descriptions.Item>
-              <Descriptions.Item label="Fit Score" span={2}>
+              <Descriptions.Item label="Điểm phù hợp" span={2}>
                 {(() => {
                   let color = appTheme.colors.error;
                   let bg = "#FEF2F2";

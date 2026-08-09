@@ -203,10 +203,10 @@ function AuditLogsPage() {
           <StatCard title="Tổng vết thao tác" value={logs.length} subtitle="Ghi nhận trên CSDL" accent="primary" index={0} />
         </Col>
         <Col xs={24} sm={12} md={6}>
-          <StatCard title="Thao tác Admin" value={logs.filter((l) => (l.userEmail || "").includes("admin")).length} subtitle="Quản trị viên thực hiện" accent="info" index={1} />
+          <StatCard title="Thao tác quản trị" value={logs.filter((l) => (l.userEmail || "").includes("admin")).length} subtitle="Quản trị viên thực hiện" accent="info" index={1} />
         </Col>
         <Col xs={24} sm={12} md={6}>
-          <StatCard title="Vận hành AI Engine" value={logs.filter((l) => (l.action || "").toLowerCase().includes("ai") || (l.action || "").toLowerCase().includes("apriori") || (l.action || "").toLowerCase().includes("huim")).length} subtitle="Lượt huấn luyện AI" accent="success" index={2} />
+          <StatCard title="Vận hành hệ thống AI" value={logs.filter((l) => (l.action || "").toLowerCase().includes("ai") || (l.action || "").toLowerCase().includes("apriori") || (l.action || "").toLowerCase().includes("huim")).length} subtitle="Lượt huấn luyện AI" accent="success" index={2} />
         </Col>
         <Col xs={24} sm={12} md={6}>
           <StatCard title="Sự kiện bảo mật" value={logs.filter((l) => (l.action || "").toLowerCase().includes("đăng nhập")).length} subtitle="Lượt truy cập hệ thống" accent="warning" index={3} />
@@ -238,7 +238,7 @@ function AuditLogsPage() {
               options={[
                 { value: "all", label: "Tất cả nhóm sự kiện" },
                 { value: "auth", label: "Đăng nhập & Bảo mật" },
-                { value: "ai", label: "Vận hành AI Engine" },
+                { value: "ai", label: "Vận hành hệ thống AI" },
                 { value: "jobs", label: "Quản lý Tin tuyển dụng" },
                 { value: "roles", label: "Tài khoản & Phân quyền" },
               ]}

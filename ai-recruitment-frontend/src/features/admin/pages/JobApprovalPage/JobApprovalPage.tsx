@@ -580,7 +580,7 @@ function JobApprovalPage() {
 
   return (
     <PageContainer
-      title="Quản lý & Duyệt Tin tuyển dụng"
+      title="Quản lý và duyệt tin tuyển dụng"
     >
       {fetchError && (
         <Alert

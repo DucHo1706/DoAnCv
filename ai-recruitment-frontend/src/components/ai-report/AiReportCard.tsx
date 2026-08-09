@@ -262,11 +262,11 @@ export const AiReportCard: React.FC<AiReportCardProps> = ({
         </div>
       </div>
 
-      {/* Questions Block */}
+      {/* Topics that should be clarified or reviewed */}
       {questions.length > 0 && (
         <div style={{ marginBottom: 20 }}>
           <Text strong style={{ display: "block", marginBottom: 8, color: "#F59E0B", fontSize: 13 }}>
-            Gợi ý câu hỏi phỏng vấn:
+            Nội dung cần làm rõ:
           </Text>
           <ul style={{ paddingLeft: 16, margin: 0, fontSize: 13, color: "#475569" }}>
             {questions.map((q: string, idx: number) => (

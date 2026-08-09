@@ -262,7 +262,7 @@ function CandidateDashboardPage() {
 
   if (loading) {
     return (
-      <PageContainer title="Báo cáo Năng lực Cá nhân">
+      <PageContainer title="Báo cáo năng lực cá nhân">
         <Card style={{ borderRadius: 16, border: "1px solid #E2E8F0", padding: 24 }}>
           <Skeleton active paragraph={{ rows: 10 }} />
         </Card>
@@ -271,7 +271,7 @@ function CandidateDashboardPage() {
   }
 
   return (
-    <PageContainer title="Báo cáo Năng lực Cá nhân" subtitle="Tự động bóc tách từ CV mẫu và dữ liệu các đơn ứng tuyển của bạn.">
+    <PageContainer title="Báo cáo năng lực cá nhân">
 
       {/* Metric Cards */}
       <Row gutter={[20, 20]} style={{ marginBottom: 24 }}>

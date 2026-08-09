@@ -962,12 +962,12 @@ function HomePage() {
                   </div>
                   <div style={{ display: "flex", gap: 40, marginTop: 32 }}>
                     <div>
-                      <div style={{ fontSize: 32, fontWeight: 800, color: "#0F172A" }}>65%</div>
-                      <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.15em", color: "#64748B", marginTop: 6 }}>Giảm thời gian lọc CV</div>
+                      <div style={{ fontSize: 32, fontWeight: 800, color: "#0F172A" }}>3 lớp</div>
+                      <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.15em", color: "#64748B", marginTop: 6 }}>Trích xuất PDF & OCR</div>
                     </div>
                     <div>
-                      <div style={{ fontSize: 32, fontWeight: 800, color: "#2563EB" }}>98%</div>
-                      <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.15em", color: "#64748B", marginTop: 6 }}>Độ chính xác AI Matching</div>
+                      <div style={{ fontSize: 32, fontWeight: 800, color: "#2563EB" }}>Rõ ràng</div>
+                      <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.15em", color: "#64748B", marginTop: 6 }}>Điểm số có giải thích</div>
                     </div>
                   </div>
                 </div>
@@ -996,7 +996,7 @@ function HomePage() {
                       Báo cáo Phân tích Dự báo
                     </Title>
                     <Paragraph style={{ fontSize: 14, color: "#64748B", lineHeight: 1.65, margin: 0 }}>
-                      Khai phá dữ liệu tuyển dụng để dự báo nguồn ứng viên, đo lường tỷ lệ chuyển đổi phỏng vấn và đưa ra **Gợi ý phỏng vấn** chuyên sâu.
+                      Khai phá dữ liệu tuyển dụng để nhận diện nhóm kỹ năng liên quan, theo dõi tỷ lệ chuyển đổi và hỗ trợ ứng viên xây dựng lộ trình ôn tập phù hợp.
                     </Paragraph>
                   </div>
                   <Button
@@ -1529,7 +1529,7 @@ function HomePage() {
                 key="3"
                 className="faq-panel"
               >
-                Theo thực tế khảo sát, các doanh nghiệp áp dụng giải pháp của chúng tôi ghi nhận thời gian lọc hồ sơ vòng đầu giảm trung bình 65%, đồng thời tỷ lệ chuyển đổi sang phỏng vấn thành công tăng 40%.
+                Hệ thống hỗ trợ tự động hóa bước đọc, đối chiếu và xếp hạng ban đầu. Mức cải thiện thực tế phụ thuộc vào số lượng hồ sơ, tiêu chí tuyển dụng và quy trình của từng doanh nghiệp; kết quả AI vẫn cần được HR xem xét.
               </Panel>
             </Collapse>
           </div>

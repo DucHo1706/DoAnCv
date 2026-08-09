@@ -145,7 +145,7 @@ export default function CvAiPreviewModal({
             onClick={handleAnalyze}
             disabled={!file}
             style={{
-              background: file ? "linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)" : undefined,
+              background: file ? "#2563EB" : undefined,
               border: "none",
               fontWeight: 600,
               paddingInline: 28,

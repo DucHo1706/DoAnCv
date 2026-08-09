@@ -190,7 +190,7 @@ export default function TalentPoolPage() {
   ];
 
   return (
-    <PageContainer title="Kho ứng viên tiềm năng (Talent Pool)">
+    <PageContainer title="Kho ứng viên tiềm năng">
       <Space direction="vertical" size="large" style={{ width: "100%" }}>
         {/* Stat Cards Grid */}
         <Row gutter={[16, 16]}>

@@ -467,7 +467,7 @@ export default function CvAnalysisResultPage() {
           });
         }
       } catch (e) {
-        message.error("Lỗi kết nối khi tải bộ câu hỏi phỏng vấn.");
+        message.error("Lỗi kết nối khi tải lộ trình ôn tập.");
       } finally {
         setInterviewLoading(false);
       }

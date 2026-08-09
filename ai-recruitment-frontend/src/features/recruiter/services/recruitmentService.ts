@@ -62,6 +62,10 @@ export interface ApplicationDto {
   selectedCriterionRank?: number | null;
   aiDataStatus?: "ready" | "partial" | "missing" | "error" | "invalid";
   aiDataMessage?: string;
+  degree?: string;
+  major?: string;
+  university?: string;
+  yearsOfExperience?: number | null;
 }
 
 export interface RejectApplicationRequest {

@@ -91,7 +91,7 @@ export default function RecruiterDashboardPage() {
 
         <Col xs={12} sm={8} md={4}>
           <Card style={{ borderRadius: 16, height: "100%", width: "100%", boxShadow: appTheme.shadow.card, border: `1px solid ${appTheme.colors.border}` }} bodyStyle={{ padding: 16 }}>
-            <Statistic title="Điểm Fit Score TB" value={stats.quickMetrics.averageFitScore} precision={1} suffix="/100" valueStyle={{ fontSize: 22, fontWeight: 700, lineHeight: 1.1, color: getAverageFitScoreColor(stats.quickMetrics.averageFitScore) }} prefix={<RiseOutlined />} />
+            <Statistic title="Điểm phù hợp trung bình" value={stats.quickMetrics.averageFitScore} precision={1} suffix="/100" valueStyle={{ fontSize: 22, fontWeight: 700, lineHeight: 1.1, color: getAverageFitScoreColor(stats.quickMetrics.averageFitScore) }} prefix={<RiseOutlined />} />
           </Card>
         </Col>
 
@@ -140,7 +140,7 @@ export default function RecruiterDashboardPage() {
             </Col>
 
             <Col xs={24} lg={12}>
-              <Card title="Chất lượng Ứng viên (Fit Score Distribution)" style={{ borderRadius: 16, boxShadow: appTheme.shadow.card, border: `1px solid ${appTheme.colors.border}` }}>
+              <Card title="Phân bố điểm phù hợp của ứng viên" style={{ borderRadius: 16, boxShadow: appTheme.shadow.card, border: `1px solid ${appTheme.colors.border}` }}>
                 <FitScoreDistributionChart distributionData={stats.fitScoreDistribution || []} getFitScoreColumnColor={getFitScoreColumnColor} />
               </Card>
             </Col>

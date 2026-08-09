@@ -320,7 +320,7 @@ function JobManagementPage() {
           )}
           {record.raw.status !== "Flagged" && (record.status === "archived" ? (
             <Popconfirm
-              title="Khôi phục tin và gửi lại để Admin duyệt?"
+              title="Khôi phục tin và gửi lại để quản trị viên duyệt?"
               onConfirm={() => handleRestore(record.id)}
               okText="Khôi phục"
               cancelText="Hủy"
@@ -369,7 +369,7 @@ function JobManagementPage() {
           <StatCard title="Tin đang hiển thị" value={approvedJobs} subtitle="Đã duyệt & Đang tuyển" accent="success" index={0} />
         </Col>
         <Col xs={12} sm={6}>
-          <StatCard title="Tin chờ duyệt" value={pendingJobs} subtitle="Đang chờ Admin duyệt" accent="warning" index={1} />
+          <StatCard title="Tin chờ duyệt" value={pendingJobs} subtitle="Đang chờ quản trị viên duyệt" accent="warning" index={1} />
         </Col>
         <Col xs={12} sm={6}>
           <StatCard title="Tin bị từ chối" value={rejectedJobs} subtitle="Cần cập nhật lại" accent="error" index={2} />

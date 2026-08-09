@@ -23,6 +23,7 @@ namespace RecruitmentBackend.Data
         // 3. Module Recruitment
         public DbSet<JobPosting> JobPostings { get; set; }
         public DbSet<CandidateCV> CandidateCVs { get; set; }
+        public DbSet<CvBuilderDocument> CvBuilderDocuments { get; set; }
         public DbSet<Application> Applications { get; set; }
         public DbSet<AIEvaluation> AIEvaluations { get; set; }
         public DbSet<JobCriterion> JobCriteria { get; set; }
@@ -92,6 +93,15 @@ namespace RecruitmentBackend.Data
 
             modelBuilder.Entity<Application>()
                 .HasIndex(a => a.AppliedAt);
+
+            modelBuilder.Entity<CvBuilderDocument>()
+                .HasIndex(document => new { document.CandidateID, document.UpdatedAt });
+            modelBuilder.Entity<CvBuilderDocument>()
+                .Property(document => document.ContentJson)
+                .HasColumnType("nvarchar(max)");
+            modelBuilder.Entity<CvBuilderDocument>()
+                .Property(document => document.SettingsJson)
+                .HasColumnType("nvarchar(max)");
 
             modelBuilder.Entity<AuditLog>()
                 .HasIndex(al => al.CreatedAt);

@@ -154,7 +154,6 @@ function SavedJobsPage() {
   return (
     <PageContainer
       title="Việc làm đã lưu"
-      subtitle="Danh sách các công việc bạn đã lưu để xem xét hoặc ứng tuyển sau này."
     >
       {savedJobs.length === 0 ? (
         <Card style={{ borderRadius: 16, border: "1px solid #E2E8F0" }}>

@@ -18,7 +18,7 @@ import TableToolbar from "../../../components/common/TableToolbar";
 
 interface SystemCategoryManagerProps {
   title: string;
-  subtitle: string;
+  subtitle?: string;
   entityName: string; // VD: "Chi nhánh", "Lĩnh vực"
   icon: React.ReactNode;
   fetchApi: () => Promise<any[]>;

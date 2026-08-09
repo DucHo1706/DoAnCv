@@ -5,7 +5,7 @@ import { appTheme } from "../../constants/theme";
 const { Title, Paragraph } = Typography;
 
 type PageContainerProps = {
-  title: string;
+  title?: string;
   subtitle?: string;
   extra?: ReactNode;
   children: ReactNode;
@@ -14,7 +14,7 @@ type PageContainerProps = {
 function PageContainer({ title, subtitle, extra, children }: PageContainerProps) {
   return (
     <div>
-      <div
+      {title || subtitle || extra ? <div
         style={{
           marginBottom: 28,
           paddingBottom: 20,
@@ -27,9 +27,9 @@ function PageContainer({ title, subtitle, extra, children }: PageContainerProps)
         }}
       >
         <Space direction="vertical" size={4}>
-          <Title level={2} style={{ margin: 0, color: appTheme.colors.textPrimary, fontWeight: 800 }}>
+          {title ? <Title level={2} style={{ margin: 0, color: appTheme.colors.textPrimary, fontWeight: 800 }}>
             {title}
-          </Title>
+          </Title> : null}
           {subtitle ? (
             <Paragraph type="secondary" style={{ margin: 0, fontSize: 14 }}>
               {subtitle}
@@ -38,7 +38,7 @@ function PageContainer({ title, subtitle, extra, children }: PageContainerProps)
         </Space>
 
         {extra ? <div>{extra}</div> : null}
-      </div>
+      </div> : null}
 
       {children}
     </div>

@@ -63,6 +63,9 @@ export interface CandidateRankingQuery {
   sortBy: CandidateRankingSortType;
   criterionName?: string;
   search?: string;
+  skill?: string;
+  minScore?: number;
+  minYearsOfExperience?: number;
 }
 
 export interface CompareCandidatesRequest {

@@ -39,6 +39,7 @@ const CandidateJobDetailPage = lazy(() => import("./features/candidate-portal/pa
 const CvAnalysisResultPage = lazy(() => import("./features/candidate-portal/pages/CvAnalysisResultPage"));
 const CandidateDashboardPage = lazy(() => import("./features/candidate-portal/pages/CandidateDashboardPage"));
 const SavedJobsPage = lazy(() => import("./features/candidate-portal/pages/SavedJobsPage"));
+const CvBuilderPage = lazy(() => import("./features/candidate-portal/pages/CvBuilderPage"));
 
 // Admin pages
 const AdminDashboardPage = lazy(() => import("./features/admin/pages/AdminDashboardPage"));
@@ -76,6 +77,7 @@ function App() {
           <Route path="profile" element={<CandidateProfilePage />} />
           <Route path="candidate/dashboard" element={<CandidateDashboardPage />} />
           <Route path="candidate/saved-jobs" element={<SavedJobsPage />} />
+          <Route path="candidate/cv-builder" element={<CvBuilderPage />} />
         </Route>
 
         {/* Recruiter */}

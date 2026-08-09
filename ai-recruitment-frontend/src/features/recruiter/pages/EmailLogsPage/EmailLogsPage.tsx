@@ -198,8 +198,7 @@ export default function EmailLogsPage() {
 
   return (
     <PageContainer
-      title="Nhật Ký Gửi Email"
-      subtitle="Theo dõi, quản lý toàn bộ email mời phỏng vấn, mời ứng tuyển hoặc phản hồi đã gửi tới các ứng viên."
+      title="Nhật ký gửi email"
     >
       {fetchError && (
         <Alert

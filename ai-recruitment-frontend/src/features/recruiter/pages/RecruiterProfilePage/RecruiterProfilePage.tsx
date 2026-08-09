@@ -280,8 +280,7 @@ export default function RecruiterProfilePage() {
 
   return (
     <PageContainer
-      title="Hồ sơ Nhà tuyển dụng"
-      subtitle="Quản lý thông tin cá nhân, định danh tổ chức và tổng quan hoạt động tuyển dụng."
+      title="Hồ sơ nhà tuyển dụng"
     >
       {loading && !profileData ? (
         <Card style={{ borderRadius: appTheme.radius.lg, border: "1px solid #E2E8F0" }}>

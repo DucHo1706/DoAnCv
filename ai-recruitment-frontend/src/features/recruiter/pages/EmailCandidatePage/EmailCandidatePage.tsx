@@ -11,7 +11,6 @@ import {
   Tag,
   Typography,
   Upload,
-  Alert,
 } from "antd";
 import {
   ArrowLeftOutlined,
@@ -70,7 +69,7 @@ export default function EmailCandidatePage() {
 
   return (
     <PageContainer
-      title="Soạn Email gửi Ứng viên"
+      title="Soạn email gửi ứng viên"
       subtitle="Tạo nội dung mẫu từ thông tin tuyển dụng, sau đó kiểm tra và chỉnh sửa trước khi gửi."
       extra={
         <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)}>
@@ -143,24 +142,16 @@ export default function EmailCandidatePage() {
                     </div>
                   )}
 
-                  {/* Giải thích logic To/CC */}
                   <div style={{ marginTop: 8 }}>
-                    <Alert
-                      type="info"
-                      message={
-                        <Text style={{ fontSize: 12 }}>
+                    <Text type="secondary" style={{ display: "block", fontSize: 12, lineHeight: 1.5 }}>
                           {candidate?.cvEmail && candidate?.accountEmail
                             ? candidate.cvEmail === candidate.accountEmail
-                              ? "✓ Email CV và tài khoản giống nhau, gửi tới email CV"
-                              : `✓ Email CV khác tài khoản, gửi tới email CV và CC email tài khoản`
+                              ? "Email trong CV trùng với email tài khoản."
+                              : "Email trong CV khác email tài khoản; hệ thống sẽ gửi thêm bản sao đến email tài khoản."
                             : candidate?.cvEmail
-                              ? "✓ Chỉ bóc tách được email CV, gửi tới email CV"
-                              : "⚠ Không bóc tách được email ứng viên cung cấp trong CV, nên hiện tại gửi tới email tài khoản ứng viên"}
-                        </Text>
-                      }
-                      style={{ padding: "6px 12px", marginTop: 8 }}
-                      showIcon={false}
-                    />
+                              ? "Hệ thống sẽ gửi đến email được trích xuất từ CV."
+                              : "Không tìm thấy email trong CV; hệ thống sẽ dùng email tài khoản."}
+                    </Text>
                   </div>
                 </div>
 
@@ -187,7 +178,7 @@ export default function EmailCandidatePage() {
                 disabled={isGeneratingAi || isSending}
                 style={{ borderColor: "#52c41a", color: "#52c41a" }}
               >
-                {isTalentPoolInvite ? "Tạo thư mời Talent Pool" : "Tạo thư mời"}
+                {isTalentPoolInvite ? "Tạo thư mời vào kho ứng viên" : "Tạo thư mời"}
               </Button>
 
               {!isTalentPoolInvite && (

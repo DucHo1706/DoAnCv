@@ -87,12 +87,14 @@ const CompetencyTab: React.FC<CompetencyTabProps> = (props) => {
 
   return (
     <Space direction="vertical" size={20} style={{ width: "100%" }}>
-      <Alert
-        message="Tóm tắt nhận xét chuyên sâu từ AI"
-        description={scoreAnalysis?.summary || "Hệ thống đã phân tích CV so với JD."}
-        type="info"
-        showIcon
-      />
+      <section style={{ paddingBottom: 16, borderBottom: "1px solid #E2E8F0" }}>
+        <Text strong style={{ display: "block", marginBottom: 6, color: "#0F172A" }}>
+          Tóm tắt nhận xét chuyên sâu từ AI
+        </Text>
+        <Text style={{ color: "#475569", lineHeight: 1.65 }}>
+          {scoreAnalysis?.summary || "Hệ thống đã phân tích CV so với mô tả công việc."}
+        </Text>
+      </section>
 
       <Row gutter={[16, 16]}>
         <Col xs={24} md={12}>

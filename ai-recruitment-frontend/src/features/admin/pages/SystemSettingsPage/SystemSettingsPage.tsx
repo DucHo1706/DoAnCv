@@ -66,8 +66,7 @@ export default function SystemSettingsPage() {
 
   return (
     <PageContainer
-      title="Cài đặt & Cấu hình Hệ thống"
-      subtitle="Cấu hình ngưỡng thuật toán AI Matching, cảnh báo tỷ lệ lỗi OCR, thời hạn tin tuyển dụng và quyền vận hành hệ thống"
+      title="Cài đặt hệ thống"
     >
       <Row gutter={[24, 24]}>
         <Col xs={24} lg={16}>
@@ -114,7 +113,7 @@ export default function SystemSettingsPage() {
                   <Form.Item
                     name="ocrErrorNoticeThreshold"
                     label="Ngưỡng cảnh báo Tỷ lệ lỗi OCR (%)"
-                    tooltip="Kích hoạt cảnh báo trên Dashboard Admin khi tỷ lệ trích xuất lỗi vượt quá ngưỡng này"
+                    tooltip="Kích hoạt cảnh báo trên trang tổng quan khi tỷ lệ trích xuất lỗi vượt quá ngưỡng này"
                     rules={[{ required: true, message: "Vui lòng nhập ngưỡng lỗi OCR" }]}
                   >
                     <InputNumber min={0} max={100} addonAfter="%" style={{ width: "100%" }} size="large" />
@@ -154,7 +153,7 @@ export default function SystemSettingsPage() {
 
               <Form.Item
                 name="autoApproveRecruiters"
-                label="Tự động phê duyệt Tin tuyển dụng từ Recruiter uy tín"
+                label="Tự động phê duyệt tin tuyển dụng từ nhà tuyển dụng uy tín"
                 valuePropName="checked"
               >
                 <Switch checkedChildren="Bật" unCheckedChildren="Tắt" />
@@ -191,7 +190,7 @@ export default function SystemSettingsPage() {
 
         <Col xs={24} lg={8}>
           <Alert
-            message="Lưu ý quan trọng cho Admin"
+            message="Lưu ý khi thay đổi cấu hình"
             description="Các thay đổi ngưỡng thuật toán AI và cảnh báo lỗi OCR sẽ có hiệu lực ngay lập tức trên toàn hệ thống. Hãy kiểm tra kỹ trước khi cập nhật."
             type="info"
             showIcon
@@ -199,7 +198,7 @@ export default function SystemSettingsPage() {
           />
 
           <Card
-            title="Phiên bản & Môi trường"
+            title="Phiên bản và môi trường"
             bordered={false}
             style={{ borderRadius: appTheme.radius.lg, border: `1px solid ${appTheme.colors.border}` }}
           >

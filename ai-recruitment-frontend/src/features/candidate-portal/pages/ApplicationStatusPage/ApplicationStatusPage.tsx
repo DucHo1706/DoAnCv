@@ -353,7 +353,7 @@ export default function ApplicationStatusPage() {
 
   if (isDetailModalOpen) {
     return (
-      <PageContainer title="" subtitle="">
+      <PageContainer>
         <style dangerouslySetInnerHTML={{ __html: customStyles }} />
         <div
           style={{
@@ -475,7 +475,7 @@ export default function ApplicationStatusPage() {
   }
 
   return (
-    <PageContainer title="" subtitle="">
+    <PageContainer>
       <style dangerouslySetInnerHTML={{ __html: customStyles }} />
       <div
         style={{

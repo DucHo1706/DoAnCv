@@ -19,6 +19,7 @@ import {
   Card,
   Col,
   Input,
+  InputNumber,
   message,
   Modal,
   Radio,
@@ -83,6 +84,12 @@ export default function CampaignApplicationsPage() {
     setFilterClassification,
     filterStatus,
     setFilterStatus,
+    filterSkill,
+    setFilterSkill,
+    minAiScore,
+    setMinAiScore,
+    minYearsOfExperience,
+    setMinYearsOfExperience,
     handleResetFilters,
     isModalOpen,
     setIsModalOpen,
@@ -411,7 +418,7 @@ export default function CampaignApplicationsPage() {
   };
 
   return (
-    <PageContainer title="Quản lý Ứng viên">
+    <PageContainer title="Quản lý ứng viên">
       <div style={{ marginBottom: 16 }}>
         <Button
           icon={<ArrowLeftOutlined />}
@@ -545,11 +552,41 @@ export default function CampaignApplicationsPage() {
 
       <Card style={{ overflow: "hidden" }}>
         <TableToolbar
-          searchPlaceholder="Tìm theo tên, email, sđt, vị trí..."
+          searchPlaceholder="Tìm theo tên, email, SĐT, vị trí hoặc kỹ năng..."
           searchValue={searchQuery}
           onSearchChange={setSearchQuery}
           extra={
             <Space wrap>
+              <Input
+                aria-label="Lọc theo kỹ năng"
+                placeholder="Kỹ năng: Python, tiếng Nhật..."
+                style={{ width: 220 }}
+                allowClear
+                value={filterSkill}
+                onChange={(event) => setFilterSkill(event.target.value)}
+              />
+              <InputNumber
+                aria-label="Điểm AI tối thiểu"
+                placeholder="Điểm AI từ"
+                min={0}
+                max={100}
+                precision={0}
+                style={{ width: 130 }}
+                value={minAiScore}
+                onChange={setMinAiScore}
+              />
+              <InputNumber
+                aria-label="Số năm kinh nghiệm tối thiểu"
+                placeholder="Kinh nghiệm từ"
+                min={0}
+                max={80}
+                precision={1}
+                addonAfter="năm"
+                style={{ width: 180 }}
+                value={minYearsOfExperience}
+                onChange={setMinYearsOfExperience}
+                disabled={!jobId}
+              />
               <Select
                 placeholder="Lọc trạng thái"
                 style={{ width: 160 }}
@@ -576,7 +613,7 @@ export default function CampaignApplicationsPage() {
                   { label: "Chưa phù hợp", value: "Chưa phù hợp" },
                 ]}
               />
-              {(searchQuery || filterStatus || filterClassification) && (
+              {(searchQuery || filterStatus || filterClassification || filterSkill || minAiScore != null || minYearsOfExperience != null) && (
                 <Button
                   icon={<RotateLeftOutlined />}
                   onClick={handleResetFilters}
@@ -659,12 +696,9 @@ export default function CampaignApplicationsPage() {
         rankingError.length === 0 &&
         loading === false &&
         rankingCandidateCount === 1 ? (
-          <Alert
-            type="info"
-            showIcon
-            message="Cần ít nhất 2 ứng viên để thực hiện so sánh."
-            style={{ marginBottom: 16 }}
-          />
+          <Text type="secondary" style={{ display: "block", marginBottom: 16 }}>
+            Cần ít nhất hai ứng viên để thực hiện so sánh.
+          </Text>
         ) : null}
 
         {selectionMode ? (
@@ -784,7 +818,7 @@ export default function CampaignApplicationsPage() {
             <Text strong>Ghi chú thêm</Text>
 
             <Input.TextArea
-              placeholder="Nhập ghi chú để lưu vào Talent Pool..."
+              placeholder="Nhập ghi chú để lưu vào kho ứng viên..."
               value={rejectNote}
               onChange={(e) => setRejectNote(e.target.value)}
               rows={4}

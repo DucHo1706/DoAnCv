@@ -359,7 +359,7 @@ function CandidateProfilePage() {
   `;
 
   return (
-    <PageContainer title="Hồ sơ của tôi" subtitle="Quản lý thông tin cá nhân và lịch sử ứng tuyển">
+    <PageContainer title="Hồ sơ của tôi">
       <style dangerouslySetInnerHTML={{ __html: profileStyles }} />
       {fetchError && (
         <Alert

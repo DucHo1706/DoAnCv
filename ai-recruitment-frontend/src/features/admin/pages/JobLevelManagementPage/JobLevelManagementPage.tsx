@@ -210,13 +210,13 @@ function JobLevelManagementPage() {
 
   return (
     <PageContainer
-      title="Cấu trúc Cấp Bậc (Job Levels)"
+      title="Cấu trúc cấp bậc"
     >
       <Row gutter={24}>
         {/* CỘT TRÁI: CÂY THƯ MỤC */}
         <Col xs={24} md={10} lg={9}>
           <Card
-            title="Danh sách Cấp bậc"
+            title="Danh sách cấp bậc"
             extra={
               <Button
                 type="primary"
@@ -328,7 +328,7 @@ function JobLevelManagementPage() {
       </Row>
 
       <Modal
-        title="Thêm Cấp bậc mới"
+        title="Thêm cấp bậc mới"
         open={isCreateModalOpen}
         onOk={handleCreateSave}
         onCancel={() => setIsCreateModalOpen(false)}

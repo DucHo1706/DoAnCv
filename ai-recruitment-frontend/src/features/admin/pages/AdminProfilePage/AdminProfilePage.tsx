@@ -95,8 +95,7 @@ export default function AdminProfilePage() {
 
   return (
     <PageContainer
-      title="Thông tin Tài khoản Quản trị"
-      subtitle="Quản lý chi tiết hồ sơ cá nhân Quản trị viên, bảo mật tài khoản và quyền hạn hệ thống"
+      title="Tài khoản quản trị viên"
     >
       {loading ? (
         <Card style={{ borderRadius: appTheme.radius.lg, textAlign: "center", padding: 60 }}>

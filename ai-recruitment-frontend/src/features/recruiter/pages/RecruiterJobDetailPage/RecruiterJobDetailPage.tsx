@@ -417,7 +417,7 @@ export default function RecruiterJobDetailPage() {
 
             {/* AI Config Weight Card */}
             <Card
-              title="Tiêu chí đánh giá AI (AI Engine)"
+              title="Tiêu chí đánh giá của hệ thống AI"
               style={{
                 borderRadius: 16,
                 border: `1px solid ${appTheme.colors.border}`,

@@ -11,6 +11,9 @@ namespace RecruitmentBackend.Interfaces
             string? sortBy,
             string? criterionName,
             string? search,
+            string? skill,
+            decimal? minScore,
+            double? minYearsOfExperience,
             ClaimsPrincipal user
         );
 

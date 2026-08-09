@@ -27,6 +27,9 @@ export function useCampaignApplications() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterClassification, setFilterClassification] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<string | null>(null);
+  const [filterSkill, setFilterSkill] = useState("");
+  const [minAiScore, setMinAiScore] = useState<number | null>(null);
+  const [minYearsOfExperience, setMinYearsOfExperience] = useState<number | null>(null);
 
   // Modal / Drawer states
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -184,6 +187,9 @@ export function useCampaignApplications() {
           sortBy: CandidateRankingSortType;
           criterionName?: string;
           search?: string;
+          skill?: string;
+          minScore?: number;
+          minYearsOfExperience?: number;
         } = {
           sortBy: selectedSortType,
         };
@@ -194,6 +200,18 @@ export function useCampaignApplications() {
 
         if (searchQuery.trim().length > 0) {
           query.search = searchQuery.trim();
+        }
+
+        if (filterSkill.trim().length > 0) {
+          query.skill = filterSkill.trim();
+        }
+
+        if (minAiScore != null) {
+          query.minScore = minAiScore;
+        }
+
+        if (minYearsOfExperience != null) {
+          query.minYearsOfExperience = minYearsOfExperience;
         }
 
         const response = await candidateComparisonService.getCandidateRankings(jobId, query);
@@ -223,7 +241,7 @@ export function useCampaignApplications() {
     }, 350);
 
     return () => window.clearTimeout(timeoutId);
-  }, [jobId, selectedSortType, selectedCriterion, searchQuery]);
+  }, [jobId, selectedSortType, selectedCriterion, searchQuery, filterSkill, minAiScore, minYearsOfExperience]);
 
   const rankingApplications = useMemo(() => {
     return rankingCandidates.map((candidate) => {
@@ -252,6 +270,10 @@ export function useCampaignApplications() {
         selectedCriterionRank: candidate.selectedCriterionRank,
         aiDataStatus: candidate.aiDataStatus,
         aiDataMessage: candidate.aiDataMessage,
+        degree: candidate.degree,
+        major: candidate.major,
+        university: candidate.university,
+        yearsOfExperience: candidate.yearsOfExperience,
       };
     });
   }, [applications, rankingCandidates]);
@@ -260,6 +282,9 @@ export function useCampaignApplications() {
     setSearchQuery("");
     setFilterClassification(null);
     setFilterStatus(null);
+    setFilterSkill("");
+    setMinAiScore(null);
+    setMinYearsOfExperience(null);
   };
 
   const filteredApplications = useMemo(() => {
@@ -274,6 +299,8 @@ export function useCampaignApplications() {
       const email = (app.email || "").toLowerCase();
       const jobTitle = removeVietnameseTones(app.jobTitle || "");
       const phone = (app.phone || "").toLowerCase();
+      const skills = parseSkills(app.matchedSkills).map(removeVietnameseTones);
+      const normalizedSkillFilter = removeVietnameseTones(filterSkill);
 
       const matchesSearch =
         query === ""
@@ -281,7 +308,8 @@ export function useCampaignApplications() {
           : candName.includes(query) ||
             email.includes(query) ||
             jobTitle.includes(query) ||
-            phone.includes(query);
+            phone.includes(query) ||
+            skills.some((skill) => skill.includes(query));
 
       const matchesClassification = filterClassification
         ? app.classification === filterClassification
@@ -289,9 +317,21 @@ export function useCampaignApplications() {
 
       const matchesStatus = filterStatus ? app.status === filterStatus : true;
 
-      return matchesSearch && matchesClassification && matchesStatus;
+      const matchesSkill = normalizedSkillFilter.length === 0
+        ? true
+        : skills.some((skill) => skill.includes(normalizedSkillFilter));
+
+      const matchesScore = minAiScore == null
+        ? true
+        : app.aiScore != null && app.aiScore >= minAiScore;
+
+      const matchesExperience = minYearsOfExperience == null
+        ? true
+        : app.yearsOfExperience != null && app.yearsOfExperience >= minYearsOfExperience;
+
+      return matchesSearch && matchesClassification && matchesStatus && matchesSkill && matchesScore && matchesExperience;
     });
-  }, [applications, rankingApplications, jobId, searchQuery, filterClassification, filterStatus]);
+  }, [applications, rankingApplications, jobId, searchQuery, filterClassification, filterStatus, filterSkill, minAiScore, minYearsOfExperience]);
 
   // Group into Kanban stages
   const kanbanData = useMemo(() => {
@@ -495,6 +535,12 @@ export function useCampaignApplications() {
     setFilterClassification,
     filterStatus,
     setFilterStatus,
+    filterSkill,
+    setFilterSkill,
+    minAiScore,
+    setMinAiScore,
+    minYearsOfExperience,
+    setMinYearsOfExperience,
     handleResetFilters,
     isModalOpen,
     setIsModalOpen,

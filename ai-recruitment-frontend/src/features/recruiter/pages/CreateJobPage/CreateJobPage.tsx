@@ -170,7 +170,7 @@ function CreateJobPage() {
   return (
     <PageContainer
       title={isEditing ? "Chỉnh sửa tin tuyển dụng" : "Tạo tin tuyển dụng mới"}
-      subtitle={isEditing ? "Nội dung thay đổi sẽ được gửi lại để Admin duyệt." : "Điền đầy đủ thông tin để đăng một vị trí tuyển dụng mới."}
+      subtitle={isEditing ? "Nội dung thay đổi sẽ được gửi lại để quản trị viên duyệt." : undefined}
     >
       <Form form={form} layout="vertical" onFinish={handleCreateJob}>
         <Card>

@@ -207,7 +207,6 @@ export default function CVRankingPage() {
   return (
     <PageContainer
       title="Xếp hạng ứng viên"
-      subtitle="Đánh giá và sắp xếp ứng viên theo tiêu chuẩn năng lực và chỉ số phù hợp."
     >
       {errorMessage.length > 0 ? (
         <Alert

@@ -190,7 +190,7 @@ function JobPositionManagementPage() {
 
   return (
     <PageContainer
-      title="Quản lý Vị trí công việc"
+      title="Quản lý vị trí công việc"
       extra={
         <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenCreate}>
           Thêm Vị trí
