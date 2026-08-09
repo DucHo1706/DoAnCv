@@ -6,6 +6,7 @@ from utils.rate_limiter import check_ip_rate_limit
 from utils.error_handler import get_user_friendly_error_message
 import os
 import json
+from starlette.concurrency import run_in_threadpool
 
 router = APIRouter()
 
@@ -63,7 +64,8 @@ async def train_apriori(request: AprioriTrainRequest, req: Request):
     try:
         check_ip_rate_limit(req, cooldown_seconds=0.0, max_requests_per_minute=60)
         from services import apriori_service
-        rules = apriori_service.train_and_save_rules(
+        rules = await run_in_threadpool(
+            apriori_service.train_and_save_rules,
             transactions_list=request.transactions,
             min_support=request.min_support,
             min_confidence=request.min_confidence
@@ -127,7 +129,8 @@ async def train_huim(request: HUIMTrainRequest, req: Request):
                 "quantities": tx.quantities
             })
         
-        results = huim_service.train_and_save_huim(
+        results = await run_in_threadpool(
+            huim_service.train_and_save_huim,
             transactions_input=tx_list,
             external_utilities=request.external_utilities,
             min_utility=request.min_utility

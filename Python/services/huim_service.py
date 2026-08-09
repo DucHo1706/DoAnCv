@@ -4,8 +4,11 @@ from typing import List, Dict, Set, Tuple, Any
 from utils.logger import logger
 
 class TwoPhaseHUIM:
-    def __init__(self, min_utility: float):
+    def __init__(self, min_utility: float, max_itemset_size: int = 3):
         self.min_utility = min_utility
+        # Các tập quá lớn vừa khó giải thích cho HR vừa làm số lượng ứng viên
+        # tăng theo cấp số nhân. Ba kỹ năng là đủ cho mục tiêu gợi ý học tập.
+        self.max_itemset_size = max(1, max_itemset_size)
 
     def run(self, transactions: List[Dict[str, Any]], external_utilities: Dict[str, float]) -> List[Dict[str, Any]]:
         """
@@ -48,7 +51,7 @@ class TwoPhaseHUIM:
         k = 2
 
         # Tạo level-wise candidates giống Apriori nhưng cắt tỉa theo TWU
-        while len(current_htwui) > 0:
+        while len(current_htwui) > 0 and k <= self.max_itemset_size:
             candidates = []
             n = len(current_htwui)
             for i in range(n):
