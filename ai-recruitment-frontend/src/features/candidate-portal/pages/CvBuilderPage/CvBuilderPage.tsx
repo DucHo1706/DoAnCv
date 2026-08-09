@@ -5,10 +5,8 @@ import {
   DeleteOutlined,
   DownloadOutlined,
   FileAddOutlined,
-  FileSearchOutlined,
   PlusOutlined,
   SaveOutlined,
-  SendOutlined,
   StarOutlined,
 } from "@ant-design/icons";
 import {
@@ -18,7 +16,6 @@ import {
   ColorPicker,
   Form,
   Input,
-  Modal,
   Popconfirm,
   Progress,
   Radio,
@@ -30,9 +27,7 @@ import {
   Typography,
   message,
 } from "antd";
-import { useNavigate } from "react-router-dom";
 import { appTheme } from "../../../../constants/theme";
-import axiosClient from "../../../../services/axiosClient";
 import { cvBuilderService, type CvBuilderDocumentSummary } from "../../services/cvBuilderService";
 
 const { Text, Title } = Typography;
@@ -137,6 +132,18 @@ const defaultSettings: BuilderSettings = {
   sectionOrder: ["summary", "experience", "education", "projects", "skills", "certificates"],
 };
 
+function normalizeCvValues(source?: CvBuilderValues): CvBuilderValues {
+  const stored = source || {};
+  return {
+    ...emptyValues,
+    ...stored,
+    education: Array.isArray(stored.education) && stored.education.length ? stored.education : emptyValues.education,
+    experience: Array.isArray(stored.experience) && stored.experience.length ? stored.experience : emptyValues.experience,
+    projects: Array.isArray(stored.projects) && stored.projects.length ? stored.projects : emptyValues.projects,
+    certificates: Array.isArray(stored.certificates) ? stored.certificates : [],
+  };
+}
+
 function loadDraft(): { values: CvBuilderValues; settings: BuilderSettings } {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -144,14 +151,7 @@ function loadDraft(): { values: CvBuilderValues; settings: BuilderSettings } {
     const parsed = JSON.parse(raw) as { values?: CvBuilderValues; settings?: BuilderSettings };
     const stored = parsed.values || {};
     return {
-      values: {
-        ...emptyValues,
-        ...stored,
-        education: stored.education?.length ? stored.education : emptyValues.education,
-        experience: stored.experience?.length ? stored.experience : emptyValues.experience,
-        projects: stored.projects?.length ? stored.projects : emptyValues.projects,
-        certificates: stored.certificates || [],
-      },
+      values: normalizeCvValues(stored),
       settings: { ...defaultSettings, ...(parsed.settings || {}) },
     };
   } catch {
@@ -160,7 +160,6 @@ function loadDraft(): { values: CvBuilderValues; settings: BuilderSettings } {
 }
 
 export default function CvBuilderPage() {
-  const navigate = useNavigate();
   const initialDraft = useMemo(() => loadDraft(), []);
   const [form] = Form.useForm<CvBuilderValues>();
   const [values, setValues] = useState(initialDraft.values);
@@ -171,10 +170,6 @@ export default function CvBuilderPage() {
   const [savingToAccount, setSavingToAccount] = useState(false);
   const [editorStep, setEditorStep] = useState<EditorStep>("personal");
   const [starterDismissed, setStarterDismissed] = useState(false);
-  const [jobActionOpen, setJobActionOpen] = useState(false);
-  const [publishedJobs, setPublishedJobs] = useState<any[]>([]);
-  const [selectedJobId, setSelectedJobId] = useState<string>();
-  const [jobActionLoading, setJobActionLoading] = useState(false);
 
   useEffect(() => {
     form.setFieldsValue(initialDraft.values);
@@ -246,7 +241,8 @@ export default function CvBuilderPage() {
       return;
     }
     try {
-      const currentValues = await form.validateFields();
+      await form.validateFields();
+      const currentValues = form.getFieldsValue(true);
       if (!documentName.trim()) {
         message.warning("Vui lòng đặt tên CV.");
         return;
@@ -280,7 +276,7 @@ export default function CvBuilderPage() {
   const loadDocument = async (id: string) => {
     try {
       const document = await cvBuilderService.getById<CvBuilderValues, BuilderSettings>(id);
-      const loadedValues = { ...emptyValues, ...document.content };
+      const loadedValues = normalizeCvValues(document.content);
       const loadedSettings = { ...defaultSettings, ...document.settings };
       setDocumentId(document.id);
       setDocumentName(document.name);
@@ -337,120 +333,10 @@ export default function CvBuilderPage() {
     setSettings((old) => ({ ...old, sectionOrder }));
   };
 
-  const openJobAction = async () => {
-    if (!localStorage.getItem("token")) {
-      message.info("Vui lòng đăng nhập để kiểm tra hoặc ứng tuyển bằng CV này.");
-      navigate(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
-      return;
-    }
-    try {
-      const response = await axiosClient.get("/Jobs/published", { params: { PageIndex: 1, PageSize: 100 } });
-      setPublishedJobs(response.data?.items?.$values || response.data?.items || []);
-      setJobActionOpen(true);
-    } catch {
-      message.error("Không thể tải danh sách việc làm đang tuyển.");
-    }
-  };
-
-  const createPdfFile = async () => {
-    const currentValues = await form.validateFields();
-    if (!currentValues.email && !currentValues.phone) {
-      throw new Error("Vui lòng nhập email hoặc số điện thoại trước khi sử dụng CV.");
-    }
-    setValues(currentValues);
-    await new Promise((resolve) => window.setTimeout(resolve, 50));
-    const preview = document.getElementById("cv-builder-preview");
-    if (!preview) throw new Error("Không tìm thấy bản xem trước CV.");
-
-    const clone = preview.cloneNode(true) as HTMLElement;
-    clone.removeAttribute("id");
-    Object.assign(clone.style, {
-      position: "fixed",
-      left: "-10000px",
-      top: "0",
-      width: "794px",
-      minHeight: "1123px",
-      transform: "none",
-      border: "none",
-      borderRadius: "0",
-      boxShadow: "none",
-      zIndex: "-1",
-    });
-    document.body.appendChild(clone);
-    try {
-      const html2pdfModule = await import("html2pdf.js");
-      const html2pdf = html2pdfModule.default || html2pdfModule;
-      const worker = (html2pdf as any)().set({
-        margin: 0,
-        filename: `${documentName.trim() || "CV"}.pdf`,
-        image: { type: "jpeg", quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff" },
-        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-      }).from(clone).toPdf();
-      const blob = await worker.outputPdf("blob");
-      return new File([blob], `${documentName.trim() || "CV"}.pdf`, { type: "application/pdf" });
-    } finally {
-      clone.remove();
-    }
-  };
-
-  const getSelectedJob = () => publishedJobs.find((job) => (job.id || job.jobId || job.jobID) === selectedJobId);
-
-  const analyzeWithSelectedJob = async () => {
-    if (!selectedJobId) {
-      message.warning("Vui lòng chọn một việc làm.");
-      return;
-    }
-    setJobActionLoading(true);
-    try {
-      const [file, jobResponse] = await Promise.all([
-        createPdfFile(),
-        axiosClient.get(`/Jobs/published/${selectedJobId}`),
-      ]);
-      const job = jobResponse.data || getSelectedJob();
-      setJobActionOpen(false);
-      navigate(`/jobs/${selectedJobId}/cv-analysis`, {
-        state: {
-          file,
-          jobTitle: job?.title || job?.position || "Vị trí tuyển dụng",
-          companyName: job?.companyName || "AI Recruitment",
-          jobDescription: [job?.description, job?.jobDescription, job?.requirements, job?.jobRequirement].filter(Boolean).join("\n"),
-          triggerAnalysis: true,
-        },
-      });
-    } catch (error: any) {
-      message.error(error?.message || "Không thể tạo tệp CV để phân tích.");
-    } finally {
-      setJobActionLoading(false);
-    }
-  };
-
-  const applyWithSelectedJob = async () => {
-    if (!selectedJobId) {
-      message.warning("Vui lòng chọn một việc làm.");
-      return;
-    }
-    setJobActionLoading(true);
-    try {
-      const file = await createPdfFile();
-      const formData = new FormData();
-      formData.append("JobId", selectedJobId);
-      formData.append("UseDefaultCv", "false");
-      formData.append("CvFile", file);
-      await axiosClient.post("/Recruitment/apply", formData, { headers: { "Content-Type": "multipart/form-data" } });
-      setJobActionOpen(false);
-      message.success("Đã nộp hồ sơ. Hệ thống đang phân tích CV bằng AI.");
-      navigate("/my-applications");
-    } catch (error: any) {
-      message.error(error?.response?.data?.message || error?.message || "Không thể nộp hồ sơ bằng CV này.");
-    } finally {
-      setJobActionLoading(false);
-    }
-  };
-
   const printPdf = async () => {
     try {
-      const currentValues = await form.validateFields();
+      await form.validateFields();
+      const currentValues = form.getFieldsValue(true);
       if (!currentValues.email && !currentValues.phone) {
         message.warning("Vui lòng nhập email hoặc số điện thoại trước khi lưu PDF.");
         return;
@@ -515,7 +401,6 @@ export default function CvBuilderPage() {
                 <Button danger icon={<DeleteOutlined />}>Xóa</Button>
               </Popconfirm>
             ) : null}
-            <Button icon={<FileSearchOutlined />} onClick={openJobAction}>Kiểm tra & ứng tuyển</Button>
             <Button type="primary" icon={<DownloadOutlined />} onClick={printPdf}>Lưu dưới dạng PDF</Button>
           </Space>
         </Col>
@@ -714,39 +599,6 @@ export default function CvBuilderPage() {
           </div>
         </Col>
       </Row>
-      <Modal
-        title="Sử dụng CV với việc làm"
-        open={jobActionOpen}
-        onCancel={() => setJobActionOpen(false)}
-        footer={null}
-        width={560}
-        destroyOnHidden
-      >
-        <Text type="secondary" style={{ display: "block", marginBottom: 16 }}>
-          Chọn vị trí để xem mức độ phù hợp trước hoặc nộp trực tiếp CV đang thiết kế.
-        </Text>
-        <Select
-          showSearch
-          value={selectedJobId}
-          placeholder="Chọn việc làm đang tuyển"
-          optionFilterProp="label"
-          style={{ width: "100%", marginBottom: 20 }}
-          onChange={setSelectedJobId}
-          options={publishedJobs.map((job) => ({
-            value: job.id || job.jobId || job.jobID,
-            label: job.title || job.position || job.positionName || "Vị trí tuyển dụng",
-          }))}
-        />
-        <Space style={{ width: "100%", justifyContent: "flex-end" }} wrap>
-          <Button onClick={() => setJobActionOpen(false)}>Hủy</Button>
-          <Button icon={<FileSearchOutlined />} loading={jobActionLoading} onClick={analyzeWithSelectedJob}>
-            Kiểm tra mức độ phù hợp
-          </Button>
-          <Button type="primary" icon={<SendOutlined />} loading={jobActionLoading} onClick={applyWithSelectedJob}>
-            Ứng tuyển bằng CV này
-          </Button>
-        </Space>
-      </Modal>
     </div>
   );
 }

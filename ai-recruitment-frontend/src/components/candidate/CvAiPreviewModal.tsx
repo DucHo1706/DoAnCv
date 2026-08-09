@@ -1,7 +1,8 @@
-import { useState } from "react";
-import { Modal, Upload, Button, Typography, Space, Alert } from "antd";
+import { useEffect, useState } from "react";
+import { Modal, Upload, Button, Typography, Space, Alert, Radio, Select } from "antd";
 import { CloseOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
+import axiosClient from "../../services/axiosClient";
 
 const { Title, Paragraph } = Typography;
 const { Dragger } = Upload;
@@ -26,10 +27,28 @@ export default function CvAiPreviewModal({
   const navigate = useNavigate();
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [savedCvs, setSavedCvs] = useState<Array<{ id: string; name: string; isDefault: boolean }>>([]);
+  const [source, setSource] = useState<"stored" | "upload">("upload");
+  const [savedCvId, setSavedCvId] = useState<string>();
+  const [analyzing, setAnalyzing] = useState(false);
+
+  useEffect(() => {
+    if (!open || !localStorage.getItem("token")) return;
+    axiosClient.get("/candidate-cvs").then((response) => {
+      const items = Array.isArray(response.data) ? response.data : response.data?.$values || [];
+      setSavedCvs(items);
+      if (items.length > 0) {
+        setSource("stored");
+        setSavedCvId(items[0].id);
+      }
+    }).catch(() => setSavedCvs([]));
+  }, [open]);
 
   const handleClose = () => {
     setFile(null);
     setError(null);
+    setSavedCvId(undefined);
+    setSource("upload");
     onClose();
   };
 
@@ -62,20 +81,31 @@ export default function CvAiPreviewModal({
   };
 
   const handleAnalyze = async () => {
-    if (!file) {
+    if (source === "upload" && !file) {
       setError("Vui lòng chọn file CV trước khi phân tích.");
       return;
     }
-    handleClose();
-    navigate(`/jobs/${jobId}/cv-analysis`, {
-      state: {
-        file,
-        jobTitle,
-        companyName,
-        jobDescription,
-        triggerAnalysis: true,
-      },
-    });
+    if (source === "stored" && !savedCvId) {
+      setError("Vui lòng chọn một CV đã lưu trên hệ thống.");
+      return;
+    }
+    setAnalyzing(true);
+    try {
+      let selectedFile = file;
+      if (source === "stored" && savedCvId) {
+        const selected = savedCvs.find((item) => item.id === savedCvId);
+        const response = await axiosClient.get(`/candidate-cvs/${savedCvId}/file`, { responseType: "blob" });
+        selectedFile = new File([response.data], selected?.name || "CV.pdf", { type: response.data.type || "application/pdf" });
+      }
+      handleClose();
+      navigate(`/jobs/${jobId}/cv-analysis`, {
+        state: { file: selectedFile, jobTitle, companyName, jobDescription, triggerAnalysis: true },
+      });
+    } catch (requestError: any) {
+      setError(requestError?.response?.data?.message || "Không thể tải CV đã lưu. Vui lòng thử lại.");
+    } finally {
+      setAnalyzing(false);
+    }
   };
 
   return (
@@ -100,6 +130,24 @@ export default function CvAiPreviewModal({
       </div>
 
       <>
+        {savedCvs.length > 0 && (
+          <Radio.Group
+            value={source}
+            onChange={(event) => { setSource(event.target.value); setError(null); }}
+            style={{ display: "flex", marginBottom: 16 }}
+          >
+            <Radio.Button value="stored" style={{ flex: 1, textAlign: "center" }}>Chọn CV đã lưu</Radio.Button>
+            <Radio.Button value="upload" style={{ flex: 1, textAlign: "center" }}>Tải file mới</Radio.Button>
+          </Radio.Group>
+        )}
+        {source === "stored" && savedCvs.length > 0 ? (
+          <Select
+            value={savedCvId}
+            onChange={setSavedCvId}
+            style={{ width: "100%", marginBottom: 16 }}
+            options={savedCvs.map((cv) => ({ value: cv.id, label: `${cv.name}${cv.isDefault ? " · Mặc định" : ""}` }))}
+          />
+        ) : (
         <Dragger
           accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
           beforeUpload={beforeUpload}
@@ -131,6 +179,7 @@ export default function CvAiPreviewModal({
             Hỗ trợ PDF, DOC, DOCX, PNG, JPG, JPEG · Tối đa 10MB
           </p>
         </Dragger>
+        )}
         {error && (
           <Alert type="error" message={error} style={{ marginTop: 12, borderRadius: 8 }} showIcon />
         )}
@@ -143,7 +192,8 @@ export default function CvAiPreviewModal({
             type="primary"
             size="large"
             onClick={handleAnalyze}
-            disabled={!file}
+            loading={analyzing}
+            disabled={source === "stored" ? !savedCvId : !file}
             style={{
               background: file ? "#2563EB" : undefined,
               border: "none",

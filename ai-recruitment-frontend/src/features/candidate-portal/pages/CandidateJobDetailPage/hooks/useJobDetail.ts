@@ -21,11 +21,17 @@ export function useJobDetail() {
   const [hasDefaultCv, setHasDefaultCv] = useState(false);
   const [defaultCvName, setDefaultCvName] = useState<string | null>(null);
   const [useDefaultCv, setUseDefaultCv] = useState(false);
+  const [savedCvs, setSavedCvs] = useState<Array<{ id: string; name: string; isDefault: boolean; createdAt: string }>>([]);
+  const [selectedSavedCvId, setSelectedSavedCvId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchDefaultCvStatus = async () => {
       try {
-        const res = await axiosClient.get("/profile");
+        const [res, savedCvResponse] = await Promise.all([
+          axiosClient.get("/profile"),
+          axiosClient.get("/candidate-cvs").catch(() => ({ data: [] })),
+        ]);
+        setSavedCvs(Array.isArray(savedCvResponse.data) ? savedCvResponse.data : savedCvResponse.data?.$values || []);
         if (res.data?.defaultCvUrl) {
           setHasDefaultCv(true);
           setDefaultCvName(res.data.defaultCvName);
@@ -134,6 +140,7 @@ export function useJobDetail() {
   const handleCancelApplyModal = () => {
     setIsApplyModalOpen(false);
     setApplyFile(null);
+    setSelectedSavedCvId(null);
   };
 
   const handleGoToAiEvaluation = () => {
@@ -159,7 +166,7 @@ export function useJobDetail() {
   };
 
   const handleDirectApply = async () => {
-    if (!useDefaultCv && !applyFile) {
+    if (!useDefaultCv && !selectedSavedCvId && !applyFile) {
       message.error("Vui lòng chọn file CV của bạn!");
       return;
     }
@@ -172,7 +179,9 @@ export function useJobDetail() {
       const formData = new FormData();
       formData.append("JobId", job.id);
       formData.append("UseDefaultCv", String(useDefaultCv));
-      if (!useDefaultCv && applyFile) {
+      if (selectedSavedCvId) {
+        formData.append("SavedCvId", selectedSavedCvId);
+      } else if (!useDefaultCv && applyFile) {
         formData.append("CvFile", applyFile);
       }
 
@@ -197,6 +206,7 @@ export function useJobDetail() {
       setSubmittedApplicationId(applicationId);
       setIsApplyModalOpen(false);
       setApplyFile(null);
+      setSelectedSavedCvId(null);
       message.success("Nộp hồ sơ thành công!");
       setIsApplySuccessModalOpen(true);
     } catch (error: any) {
@@ -220,6 +230,7 @@ export function useJobDetail() {
         setSubmittedApplicationId(existingApplicationId);
         setIsApplyModalOpen(false);
         setApplyFile(null);
+        setSelectedSavedCvId(null);
         setIsApplySuccessModalOpen(true);
         return;
       }
@@ -271,6 +282,9 @@ export function useJobDetail() {
     isApplyModalOpen,
     setIsApplyModalOpen,
     applyFile,
+    savedCvs,
+    selectedSavedCvId,
+    setSelectedSavedCvId,
     isSubmitting,
     isApplySuccessModalOpen,
     setIsApplySuccessModalOpen,

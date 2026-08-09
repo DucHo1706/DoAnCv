@@ -29,6 +29,9 @@ export default function CandidateJobDetailPage() {
     defaultCvName,
     useDefaultCv,
     setUseDefaultCv,
+    savedCvs,
+    selectedSavedCvId,
+    setSelectedSavedCvId,
   } = useJobDetail();
 
   if (loading) {
@@ -88,6 +91,9 @@ export default function CandidateJobDetailPage() {
           defaultCvName={defaultCvName}
           useDefaultCv={useDefaultCv}
           setUseDefaultCv={setUseDefaultCv}
+          savedCvs={savedCvs}
+          selectedSavedCvId={selectedSavedCvId}
+          setSelectedSavedCvId={setSelectedSavedCvId}
         />
 
         {/* 3. Modal thông báo thành công */}

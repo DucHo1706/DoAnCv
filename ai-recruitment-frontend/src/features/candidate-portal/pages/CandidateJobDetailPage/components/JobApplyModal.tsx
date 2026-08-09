@@ -13,6 +13,9 @@ interface JobApplyModalProps {
   defaultCvName: string | null;
   useDefaultCv: boolean;
   setUseDefaultCv: (val: boolean) => void;
+  savedCvs: Array<{ id: string; name: string; isDefault: boolean; createdAt: string }>;
+  selectedSavedCvId: string | null;
+  setSelectedSavedCvId: (id: string | null) => void;
 }
 
 const JobApplyModal: React.FC<JobApplyModalProps> = ({
@@ -26,7 +29,13 @@ const JobApplyModal: React.FC<JobApplyModalProps> = ({
   defaultCvName,
   useDefaultCv,
   setUseDefaultCv,
+  savedCvs,
+  selectedSavedCvId,
+  setSelectedSavedCvId,
 }) => {
+  const selectedMethod = selectedSavedCvId ? `saved:${selectedSavedCvId}` : useDefaultCv ? "default" : "new";
+  const uploadedCvs = savedCvs.filter((cv) => !cv.isDefault);
+
   return (
     <Modal
       title={`Ứng tuyển vị trí: ${title}`}
@@ -42,29 +51,43 @@ const JobApplyModal: React.FC<JobApplyModalProps> = ({
         Vui lòng chọn phương thức nộp CV của bạn. Hệ thống sẽ phân tích CV để đánh giá độ phù hợp với tin tuyển dụng này.
       </div>
 
-      {hasDefaultCv ? (
+      {(hasDefaultCv || uploadedCvs.length > 0) ? (
         <div style={{ marginBottom: 20 }}>
           <Radio.Group 
-            value={useDefaultCv ? "default" : "new"} 
-            onChange={(e) => setUseDefaultCv(e.target.value === "default")}
+            value={selectedMethod}
+            onChange={(e) => {
+              const value = String(e.target.value);
+              setUseDefaultCv(value === "default");
+              setSelectedSavedCvId(value.startsWith("saved:") ? value.slice(6) : null);
+            }}
             style={{ width: "100%" }}
           >
             <Space direction="vertical" style={{ width: "100%" }}>
-              <Radio value="default" style={{ width: "100%" }}>
+              {hasDefaultCv && <Radio value="default" style={{ width: "100%" }}>
                 <div style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
                   <span>Sử dụng CV mặc định trong hồ sơ</span>
                   <Tag color="blue" style={{ display: "inline-flex", alignItems: "center", gap: 4, margin: 0 }}>
                     <FilePdfOutlined /> {defaultCvName || "CV mẫu"}
                   </Tag>
                 </div>
-              </Radio>
+              </Radio>}
+              {uploadedCvs.map((cv) => (
+                <Radio key={cv.id} value={`saved:${cv.id}`} style={{ width: "100%" }}>
+                  <div style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+                    <span>CV đã lưu trên hệ thống</span>
+                    <Tag style={{ display: "inline-flex", alignItems: "center", gap: 4, margin: 0 }}>
+                      <FilePdfOutlined /> {cv.name}
+                    </Tag>
+                  </div>
+                </Radio>
+              ))}
               <Radio value="new">Tải lên CV mới từ thiết bị</Radio>
             </Space>
           </Radio.Group>
         </div>
       ) : null}
 
-      {(!hasDefaultCv || !useDefaultCv) && (
+      {selectedMethod === "new" && (
         <div style={{ padding: "16px 20px", background: "#f8fafc", borderRadius: 12, border: "1px dashed #cbd5e1" }}>
           <Upload {...uploadProps}>
             <Button icon={<UploadOutlined />} type="primary" ghost>Chọn file CV của bạn</Button>

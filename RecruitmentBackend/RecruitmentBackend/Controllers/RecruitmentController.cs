@@ -13,6 +13,7 @@ namespace RecruitmentBackend.Controllers
         public IFormFile? CvFile { get; set; }
         public string JobId { get; set; }
         public bool UseDefaultCv { get; set; } = false;
+        public string? SavedCvId { get; set; }
     }
 
     [Route("api/[controller]")]
@@ -36,7 +37,7 @@ namespace RecruitmentBackend.Controllers
             if (string.IsNullOrEmpty(jobId))
                 return BadRequest("Mã công việc (JobId) không hợp lệ.");
 
-            if ((request == null || !request.UseDefaultCv) && (cvFile == null || cvFile.Length == 0))
+            if ((request == null || (!request.UseDefaultCv && string.IsNullOrWhiteSpace(request.SavedCvId))) && (cvFile == null || cvFile.Length == 0))
                 return BadRequest("Vui lòng tải lên file CV.");
 
             var result = await _recruitmentService.ApplyJobAsync(request, User);

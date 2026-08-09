@@ -148,14 +148,28 @@ namespace RecruitmentBackend.Services
                 string contentType;
                 string cvUrl;
 
-                if (request.UseDefaultCv)
+                var useStoredCv = request.UseDefaultCv || !string.IsNullOrWhiteSpace(request.SavedCvId);
+                if (useStoredCv)
                 {
-                    if (string.IsNullOrEmpty(candidate.DefaultCvUrl))
+                    CandidateCV? selectedStoredCv = null;
+                    if (!string.IsNullOrWhiteSpace(request.SavedCvId))
+                    {
+                        selectedStoredCv = await _context.CandidateCVs.AsNoTracking()
+                            .FirstOrDefaultAsync(item => item.CVID == request.SavedCvId && item.CandidateID == candidate.CandidateID);
+                        if (selectedStoredCv == null || string.IsNullOrWhiteSpace(selectedStoredCv.FilePath))
+                        {
+                            return (false, "Không tìm thấy CV đã lưu hoặc bạn không có quyền sử dụng CV này.", null);
+                        }
+                    }
+
+                    if (selectedStoredCv == null && string.IsNullOrEmpty(candidate.DefaultCvUrl))
                     {
                         return (false, "Bạn chưa tải lên CV mặc định trong hồ sơ cá nhân.", null);
                     }
-                    cvUrl = candidate.DefaultCvUrl;
-                    originalFileName = candidate.DefaultCvName ?? "CV_MacDinh.pdf";
+                    cvUrl = selectedStoredCv?.FilePath ?? candidate.DefaultCvUrl!;
+                    originalFileName = selectedStoredCv == null
+                        ? candidate.DefaultCvName ?? "CV_MacDinh.pdf"
+                        : Path.GetFileName(new Uri(cvUrl, UriKind.RelativeOrAbsolute).IsAbsoluteUri ? new Uri(cvUrl).AbsolutePath : cvUrl);
                     contentType = Path.GetExtension(originalFileName).ToLowerInvariant() switch
                     {
                         ".docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -256,7 +270,7 @@ namespace RecruitmentBackend.Services
                     return (false, "Chưa thể kiểm tra nội dung CV lúc này. Vui lòng thử lại sau.", null);
                 }
 
-                if (!request.UseDefaultCv)
+                if (!useStoredCv)
                 {
                     cvUrl = await _fileService.SaveFileAsync(request.CvFile!);
                 }
