@@ -527,8 +527,14 @@ export default function CvBuilderPage() {
               onChange={(value) => setEditorStep(value as EditorStep)}
               style={{ marginBottom: 20 }}
             />
-            <Form<CvBuilderValues> form={form} layout="vertical" initialValues={initialDraft.values} onValuesChange={(_, all) => setValues(all)}>
-              {editorStep === "personal" && <>
+            <Form<CvBuilderValues>
+              form={form}
+              layout="vertical"
+              initialValues={initialDraft.values}
+              preserve
+              onValuesChange={(changedValues) => setValues((current) => ({ ...current, ...changedValues }))}
+            >
+              <div style={{ display: editorStep === "personal" ? "block" : "none" }}>
               <Title level={5}>Thông tin cá nhân</Title>
               <Row gutter={12}>
                 <Col xs={24} md={12}><Form.Item name="fullName" label="Họ và tên" rules={[{ required: true, message: "Vui lòng nhập họ tên" }]}><Input placeholder="Nguyễn Văn A" /></Form.Item></Col>
@@ -540,9 +546,9 @@ export default function CvBuilderPage() {
               </Row>
               <Form.Item name="summary" label="Mục tiêu nghề nghiệp"><TextArea rows={4} placeholder="Tóm tắt kinh nghiệm, định hướng và giá trị bạn có thể đóng góp." /></Form.Item>
               <Form.Item name="skills" label="Kỹ năng" extra="Phân tách bằng dấu phẩy hoặc xuống dòng."><TextArea rows={3} placeholder="C#, ASP.NET Core, SQL Server, Docker" /></Form.Item>
-              </>}
+              </div>
 
-              {editorStep === "experience" &&
+              <div style={{ display: editorStep === "experience" ? "block" : "none" }}>
               <RepeatableSection title="Kinh nghiệm làm việc" name="experience" addLabel="Thêm kinh nghiệm" emptyValue={{}} render={(name, rest) => (
                 <Row gutter={12}>
                   <Col xs={24} md={12}><Form.Item {...rest} name={[name, "company"]} label="Công ty"><Input /></Form.Item></Col>
@@ -550,9 +556,10 @@ export default function CvBuilderPage() {
                   <Col span={24}><Form.Item {...rest} name={[name, "period"]} label="Thời gian"><Input placeholder="01/2024 – 07/2026" /></Form.Item></Col>
                   <Col span={24}><Form.Item {...rest} name={[name, "description"]} label="Mô tả và kết quả"><TextArea rows={3} placeholder="Ưu tiên hành động, kết quả và số liệu có thể kiểm chứng." /></Form.Item></Col>
                 </Row>
-              )} />}
+              )} />
+              </div>
 
-              {editorStep === "education" &&
+              <div style={{ display: editorStep === "education" ? "block" : "none" }}>
               <RepeatableSection title="Học vấn" name="education" addLabel="Thêm học vấn" emptyValue={{}} render={(name, rest) => (
                 <>
                   <Form.Item {...rest} name={[name, "school"]} label="Trường / Cơ sở đào tạo"><Input /></Form.Item>
@@ -561,9 +568,10 @@ export default function CvBuilderPage() {
                     <Col xs={24} md={12}><Form.Item {...rest} name={[name, "period"]} label="Thời gian"><Input placeholder="2022 – 2026" /></Form.Item></Col>
                   </Row>
                 </>
-              )} />}
+              )} />
+              </div>
 
-              {editorStep === "projects" &&
+              <div style={{ display: editorStep === "projects" ? "block" : "none" }}>
               <RepeatableSection title="Dự án" name="projects" addLabel="Thêm dự án" emptyValue={{}} render={(name, rest) => (
                 <Row gutter={12}>
                   <Col xs={24} md={12}><Form.Item {...rest} name={[name, "name"]} label="Tên dự án"><Input /></Form.Item></Col>
@@ -571,16 +579,18 @@ export default function CvBuilderPage() {
                   <Col span={24}><Form.Item {...rest} name={[name, "description"]} label="Mô tả"><TextArea rows={3} /></Form.Item></Col>
                   <Col span={24}><Form.Item {...rest} name={[name, "link"]} label="Liên kết"><Input /></Form.Item></Col>
                 </Row>
-              )} />}
+              )} />
+              </div>
 
-              {editorStep === "certificates" &&
+              <div style={{ display: editorStep === "certificates" ? "block" : "none" }}>
               <RepeatableSection title="Chứng chỉ" name="certificates" addLabel="Thêm chứng chỉ" emptyValue={{}} render={(name, rest) => (
                 <Row gutter={12}>
                   <Col xs={24} md={12}><Form.Item {...rest} name={[name, "name"]} label="Tên chứng chỉ"><Input /></Form.Item></Col>
                   <Col xs={24} md={8}><Form.Item {...rest} name={[name, "issuer"]} label="Đơn vị cấp"><Input /></Form.Item></Col>
                   <Col xs={24} md={4}><Form.Item {...rest} name={[name, "year"]} label="Năm"><Input /></Form.Item></Col>
                 </Row>
-              )} />}
+              )} />
+              </div>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 24, paddingTop: 16, borderTop: "1px solid #E2E8F0" }}>
                 <Button disabled={editorStep === editorSteps[0].value} onClick={() => moveEditorStep(-1)}>Quay lại</Button>
                 <Text type="secondary">Bước {editorSteps.findIndex((item) => item.value === editorStep) + 1}/{editorSteps.length}</Text>
