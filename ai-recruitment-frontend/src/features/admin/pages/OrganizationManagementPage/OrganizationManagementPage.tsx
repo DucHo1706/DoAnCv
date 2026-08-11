@@ -48,6 +48,34 @@ import { exportToCsv } from "../../../../utils/exportUtils";
 
 const { Text } = Typography;
 
+function getApiErrorMessage(error: any, fallback = "Thao tác thất bại!") {
+  const data = error?.response?.data;
+
+  if (typeof data === "string" && data.trim()) {
+    return data.trim();
+  }
+
+  if (typeof data?.message === "string" && data.message.trim()) {
+    return data.message.trim();
+  }
+
+  if (data?.errors && typeof data.errors === "object") {
+    const validationMessages = Object.values(data.errors)
+      .flatMap((value) => (Array.isArray(value) ? value : [value]))
+      .filter((value): value is string => typeof value === "string" && value.trim().length > 0);
+
+    if (validationMessages.length > 0) {
+      return validationMessages.join(" ");
+    }
+  }
+
+  if (!error?.response && typeof error?.message === "string" && error.message.trim()) {
+    return error.message.trim();
+  }
+
+  return fallback;
+}
+
 export default function OrganizationManagementPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTabKey = searchParams.get("tab") || "categories";
@@ -206,8 +234,7 @@ function BranchTab() {
       setIsModalOpen(false);
       fetchBranches();
     } catch (err: any) {
-      const errMsg = err?.response?.data?.message || err?.message || "Thao tác thất bại!";
-      message.error(errMsg);
+      message.error(getApiErrorMessage(err));
     } finally {
       setSaving(false);
     }
@@ -219,7 +246,7 @@ function BranchTab() {
       message.success("Cập nhật trạng thái Chi nhánh thành công");
       fetchBranches();
     } catch (err) {
-      message.error("Lỗi khi thay đổi trạng thái!");
+      message.error(getApiErrorMessage(err, "Lỗi khi thay đổi trạng thái chi nhánh!"));
     }
   };
 
@@ -545,8 +572,7 @@ function CategoryTab() {
       setIsModalOpen(false);
       fetchCategories();
     } catch (err: any) {
-      const errMsg = err?.response?.data?.message || err?.message || "Thao tác thất bại!";
-      message.error(errMsg);
+      message.error(getApiErrorMessage(err));
     } finally {
       setSaving(false);
     }
@@ -558,7 +584,7 @@ function CategoryTab() {
       message.success("Cập nhật trạng thái Lĩnh vực thành công");
       fetchCategories();
     } catch (err) {
-      message.error("Lỗi khi thay đổi trạng thái!");
+      message.error(getApiErrorMessage(err, "Lỗi khi thay đổi trạng thái lĩnh vực!"));
     }
   };
 
@@ -913,8 +939,7 @@ function JobLevelTab() {
       setIsModalOpen(false);
       fetchLevels();
     } catch (err: any) {
-      const errMsg = err?.response?.data?.message || err?.message || "Thao tác thất bại!";
-      message.error(errMsg);
+      message.error(getApiErrorMessage(err));
     } finally {
       setSaving(false);
     }
@@ -926,7 +951,7 @@ function JobLevelTab() {
       message.success("Cập nhật trạng thái Cấp bậc thành công");
       fetchLevels();
     } catch (err) {
-      message.error("Lỗi khi thay đổi trạng thái!");
+      message.error(getApiErrorMessage(err, "Lỗi khi thay đổi trạng thái cấp bậc!"));
     }
   };
 
@@ -1253,8 +1278,7 @@ function JobPositionTab() {
       setIsModalOpen(false);
       fetchData();
     } catch (err: any) {
-      const errMsg = err?.response?.data?.message || err?.message || "Thao tác thất bại!";
-      message.error(errMsg);
+      message.error(getApiErrorMessage(err));
     } finally {
       setSaving(false);
     }
@@ -1266,7 +1290,7 @@ function JobPositionTab() {
       message.success("Cập nhật trạng thái Vị trí thành công");
       fetchData();
     } catch (err) {
-      message.error("Lỗi khi thay đổi trạng thái!");
+      message.error(getApiErrorMessage(err, "Lỗi khi thay đổi trạng thái vị trí công việc!"));
     }
   };
 
