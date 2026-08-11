@@ -101,7 +101,7 @@ export function useTalentPoolDetail() {
       const data = await talentPoolService.getInviteSuggestions(id);
       setInviteSuggestion(data);
 
-      const firstVisibleJob = data.suggestedJobs.find((job: any) => Number(job.matchScore || 0) > 0);
+      const firstVisibleJob = data.suggestedJobs[0];
       if (firstVisibleJob) {
         setSelectedJobId(firstVisibleJob.jobId);
       } else {
@@ -227,7 +227,9 @@ export function useTalentPoolDetail() {
   const skills = parseSkills(candidate?.highlightSkillsJson);
 
   const visibleSuggestedJobs = useMemo(() => {
-    return (inviteSuggestion?.suggestedJobs || []).filter((job: any) => Number(job.matchScore || 0) > 0);
+    // Vẫn hiển thị các tin đạt 0% để HR biết hệ thống đã đối sánh nhưng
+    // chưa tìm thấy bằng chứng phù hợp, thay vì tạo cảm giác API bị lỗi.
+    return inviteSuggestion?.suggestedJobs || [];
   }, [inviteSuggestion]);
 
   const openJobs = useMemo(() => {

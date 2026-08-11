@@ -96,7 +96,7 @@ export const AccountSecurityTab: React.FC = () => {
 
     try {
       setChangingPassword(true);
-      await axiosClient.post("/profile/change-password", {
+      await axiosClient.post("/auth/change-password", {
         currentPassword,
         newPassword,
       });

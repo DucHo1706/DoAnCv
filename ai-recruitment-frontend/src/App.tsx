@@ -1,7 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { lazy, Suspense } from "react";
+import { Suspense } from "react";
 import ScrollToTop from "./components/common/ScrollToTop";
 import RouteLoading from "./components/common/RouteLoading";
+import { lazyWithRetry as lazy } from "./utils/lazyWithRetry";
 
 // Auth
 const LoginPage = lazy(() => import("./features/auth/pages/LoginPage"));
@@ -35,7 +36,10 @@ const RecruiterJobDetailPage = lazy(() => import("./features/recruiter/pages/Rec
 const CandidateJobPage = lazy(() => import("./features/candidate-portal/pages/CandidateJobPage"));
 const ApplicationStatusPage = lazy(() => import("./features/candidate-portal/pages/ApplicationStatusPage"));
 const CandidateProfilePage = lazy(() => import("./features/candidate-portal/pages/CandidateProfilePage"));
-const CandidateJobDetailPage = lazy(() => import("./features/candidate-portal/pages/CandidateJobDetailPage"));
+const CandidateJobDetailPage = lazy(
+  () => import("./features/candidate-portal/pages/CandidateJobDetailPage"),
+  "CandidateJobDetailPage"
+);
 const CvAnalysisResultPage = lazy(() => import("./features/candidate-portal/pages/CvAnalysisResultPage"));
 const CandidateDashboardPage = lazy(() => import("./features/candidate-portal/pages/CandidateDashboardPage"));
 const SavedJobsPage = lazy(() => import("./features/candidate-portal/pages/SavedJobsPage"));

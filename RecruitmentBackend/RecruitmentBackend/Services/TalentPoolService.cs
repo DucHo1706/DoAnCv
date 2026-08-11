@@ -6,7 +6,10 @@ using RecruitmentBackend.DTOs.Responses;
 using RecruitmentBackend.Interfaces;
 using RecruitmentBackend.Models;
 using System.Security.Claims;
+using System.Globalization;
+using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace RecruitmentBackend.Services
 {
@@ -412,6 +415,15 @@ namespace RecruitmentBackend.Services
                     }
                 ).ToListAsync();
 
+                // JDExtractedSkills của các tin cũ có thể đang là [] vì luồng tạo tin
+                // chưa bóc tách kỹ năng. Dùng danh mục kỹ năng đã duyệt để khôi phục
+                // khả năng đối sánh trực tiếp từ mô tả/yêu cầu công việc.
+                var approvedSkillNames = await _context.Skills
+                    .AsNoTracking()
+                    .Where(skill => skill.IsApproved == true)
+                    .Select(skill => skill.Name)
+                    .ToListAsync();
+
                 var suggestedJobs = new List<TalentPoolSuggestedJobResponse>();
 
                 foreach (var job in openJobs)
@@ -420,7 +432,24 @@ namespace RecruitmentBackend.Services
 
                     if (jobSkills.Count == 0)
                     {
-                        jobSkills = ExtractSkillNames(job.JobRequirement + " " + job.JobDescription);
+                        string jobText = (job.JobRequirement ?? "") + " " + (job.JobDescription ?? "");
+
+                        foreach (string knownSkill in approvedSkillNames)
+                        {
+                            if (ContainsSkill(jobText, knownSkill))
+                            {
+                                AddSkills(jobSkills, new List<string> { knownSkill });
+                            }
+                        }
+
+                        // Kỹ năng mới lấy từ CV có thể chưa được admin duyệt vào danh mục.
+                        foreach (string candidateSkill in candidateSkills)
+                        {
+                            if (ContainsSkill(jobText, candidateSkill))
+                            {
+                                AddSkills(jobSkills, new List<string> { candidateSkill });
+                            }
+                        }
                     }
 
                     var matchedSkills = new List<string>();
@@ -429,7 +458,7 @@ namespace RecruitmentBackend.Services
                     {
                         foreach (string jobSkill in jobSkills)
                         {
-                            bool isSameSkill = NormalizeSkill(candidateSkill) == NormalizeSkill(jobSkill);
+                            bool isSameSkill = AreSkillsEquivalent(candidateSkill, jobSkill);
 
                             if (isSameSkill == true && HasSkill(matchedSkills, candidateSkill) == false)
                             {
@@ -692,7 +721,58 @@ namespace RecruitmentBackend.Services
                 return "";
             }
 
-            return skill.Trim().ToLower();
+            string normalized = skill.Trim().ToLowerInvariant()
+                .Replace("c#", "csharp")
+                .Replace(".net", "dotnet")
+                .Replace("node.js", "nodejs")
+                .Replace("react.js", "reactjs")
+                .Normalize(NormalizationForm.FormD);
+
+            var builder = new StringBuilder(normalized.Length);
+            foreach (char character in normalized)
+            {
+                if (CharUnicodeInfo.GetUnicodeCategory(character) != UnicodeCategory.NonSpacingMark)
+                {
+                    builder.Append(char.IsLetterOrDigit(character) ? character : ' ');
+                }
+            }
+
+            return Regex.Replace(builder.ToString(), @"\s+", " ").Trim();
+        }
+
+        private bool AreSkillsEquivalent(string firstSkill, string secondSkill)
+        {
+            string first = NormalizeSkill(firstSkill);
+            string second = NormalizeSkill(secondSkill);
+
+            if (first.Length == 0 || second.Length == 0)
+            {
+                return false;
+            }
+
+            if (first == second)
+            {
+                return true;
+            }
+
+            // Cho phép ASP.NET khớp ASP.NET Core, nhưng không dùng contains cho
+            // kỹ năng một ký tự như C/R để tránh kết quả dương tính giả.
+            return first.Length >= 3 && second.Length >= 3
+                && (ContainsNormalizedPhrase(first, second) || ContainsNormalizedPhrase(second, first));
+        }
+
+        private bool ContainsSkill(string sourceText, string skill)
+        {
+            string normalizedSource = NormalizeSkill(sourceText);
+            string normalizedSkill = NormalizeSkill(skill);
+
+            return normalizedSkill.Length > 0
+                && ContainsNormalizedPhrase(normalizedSource, normalizedSkill);
+        }
+
+        private bool ContainsNormalizedPhrase(string source, string phrase)
+        {
+            return (" " + source + " ").Contains(" " + phrase + " ", StringComparison.Ordinal);
         }
 
         private int CalculateMatchScore(

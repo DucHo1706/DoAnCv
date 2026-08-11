@@ -187,11 +187,6 @@ export const branchService = {
     return response.data;
   },
 
-  async deleteBranch(id: string) {
-    const response = await axiosClient.delete(`/branches/${id}`);
-    return response.data;
-  },
-
   async toggleBranchStatus(id: string) {
     const response = await axiosClient.put(`/branches/${id}/toggle-status`);
     return response.data;
@@ -246,11 +241,6 @@ export const jobPositionService = {
 
   async updateJobPosition(id: string, payload: JobPositionPayload) {
     const response = await axiosClient.put<JobPositionDto>(`/jobpositions/${id}`, payload);
-    return response.data;
-  },
-
-  async deleteJobPosition(id: string) {
-    const response = await axiosClient.delete(`/jobpositions/${id}`);
     return response.data;
   },
 
