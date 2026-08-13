@@ -290,17 +290,6 @@ export default function RecruiterJobDetailPage() {
                   </Paragraph>
                 </div>
 
-                <div>
-                  <Title level={5} style={{ fontSize: 16, marginTop: 12, marginBottom: 12, fontWeight: 600, color: "#0F172A" }}>
-                    Quyền lợi
-                  </Title>
-                  <Paragraph style={{ fontSize: 14, whiteSpace: "pre-line", lineHeight: 1.7, color: "#475569" }}>
-                    - Môi trường làm việc trẻ trung, năng động, chuyên nghiệp. {"\n"}- Được review lương
-                    2 lần/năm. {"\n"}- Lương tháng 13 + thưởng KPI, thưởng dự án theo năng lực. {"\n"}-
-                    Trợ cấp ăn trưa, đi lại, team building hàng quý.
-                  </Paragraph>
-                </div>
-
                 <Divider style={{ margin: "24px 0 16px" }} />
 
                 <div>

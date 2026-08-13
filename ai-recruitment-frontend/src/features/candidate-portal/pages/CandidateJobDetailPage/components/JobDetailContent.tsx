@@ -215,15 +215,6 @@ const JobDetailContent: React.FC<JobDetailContentProps> = ({
               {job.requirements || "Đang cập nhật nội dung..."}
             </Paragraph>
 
-            <Title level={5} style={{ fontSize: 16, marginTop: 24, marginBottom: 12, fontFamily: appTheme.font.family, fontWeight: 600, color: appTheme.colors.textPrimary }}>
-              Quyền lợi
-            </Title>
-            <Paragraph style={{ fontSize: 14, whiteSpace: "pre-line", lineHeight: 1.7, color: appTheme.colors.textSecondary, fontFamily: appTheme.font.family }}>
-              - Môi trường làm việc trẻ trung, năng động, chuyên nghiệp. {"\n"}- Được review lương
-              2 lần/năm. {"\n"}- Lương tháng 13 + thưởng KPI, thưởng dự án theo năng lực. {"\n"}-
-              Trợ cấp ăn trưa, đi lại, team building hàng quý.
-            </Paragraph>
-
             <Divider style={{ margin: "32px 0 24px" }} />
 
             <Title level={5} style={{ fontSize: 16, marginBottom: 16, fontFamily: appTheme.font.family, fontWeight: 600, color: appTheme.colors.textPrimary }}>

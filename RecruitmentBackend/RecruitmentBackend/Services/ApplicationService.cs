@@ -5,6 +5,7 @@ using RecruitmentBackend.Controllers;
 using RecruitmentBackend.Data;
 using RecruitmentBackend.DTOs.Responses;
 using RecruitmentBackend.Interfaces;
+using RecruitmentBackend.Utilities;
 using RecruitmentBackend.Models;
 using RecruitmentBackend.Constants;
 using RecruitmentBackend.DTOs.Requests;
@@ -168,8 +169,8 @@ namespace RecruitmentBackend.Services
                     }
                     cvUrl = selectedStoredCv?.FilePath ?? candidate.DefaultCvUrl!;
                     originalFileName = selectedStoredCv == null
-                        ? candidate.DefaultCvName ?? "CV_MacDinh.pdf"
-                        : Path.GetFileName(new Uri(cvUrl, UriKind.RelativeOrAbsolute).IsAbsoluteUri ? new Uri(cvUrl).AbsolutePath : cvUrl);
+                        ? CvFileNameHelper.GetDisplayName(candidate.DefaultCvName ?? cvUrl, "CV_MacDinh.pdf")
+                        : CvFileNameHelper.GetDisplayName(cvUrl, "CV.pdf");
                     contentType = Path.GetExtension(originalFileName).ToLowerInvariant() switch
                     {
                         ".docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",

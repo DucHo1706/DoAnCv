@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using RecruitmentBackend.Data;
 using RecruitmentBackend.Interfaces;
+using RecruitmentBackend.Utilities;
 using RecruitmentBackend.Models;
 using System;
 using System.Collections.Generic;
@@ -75,7 +76,7 @@ namespace RecruitmentBackend.Services
                 if (defaultCv != null && string.IsNullOrEmpty(candidate.DefaultCvUrl))
                 {
                     candidate.DefaultCvUrl = defaultCv.FilePath;
-                    candidate.DefaultCvName = Path.GetFileName(defaultCv.FilePath);
+                    candidate.DefaultCvName = CvFileNameHelper.GetDisplayName(defaultCv.FilePath);
                     _context.Candidates.Update(candidate);
                     await _context.SaveChangesAsync();
                 }
@@ -90,7 +91,7 @@ namespace RecruitmentBackend.Services
                 address = candidate.Address,
                 avatarUrl = candidate.AvatarUrl,
                 defaultCvUrl = candidate.DefaultCvUrl,
-                defaultCvName = candidate.DefaultCvName,
+                defaultCvName = CvFileNameHelper.GetDisplayName(candidate.DefaultCvName ?? candidate.DefaultCvUrl, "CV mặc định"),
                 skills = defaultCv != null ? defaultCv.CVExtractedSkills : "[]",
                 degree = defaultCv?.Degree,
                 major = defaultCv?.Major,
@@ -273,7 +274,7 @@ namespace RecruitmentBackend.Services
             if (string.IsNullOrEmpty(candidate.DefaultCvUrl))
             {
                 candidate.DefaultCvUrl = cvPath;
-                candidate.DefaultCvName = Path.GetFileName(cvPath);
+                candidate.DefaultCvName = CvFileNameHelper.GetDisplayName(cvPath);
             }
 
             string rawText = candidateCv?.RawText ?? "";

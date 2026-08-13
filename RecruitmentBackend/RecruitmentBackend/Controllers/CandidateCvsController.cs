@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using RecruitmentBackend.Data;
+using RecruitmentBackend.Utilities;
 
 namespace RecruitmentBackend.Controllers;
 
@@ -40,9 +41,7 @@ public class CandidateCvsController : ControllerBase
             .Select(item => new
             {
                 id = item.CVID,
-                name = Path.GetFileName(new Uri(item.FilePath, UriKind.RelativeOrAbsolute).IsAbsoluteUri
-                    ? new Uri(item.FilePath).AbsolutePath
-                    : item.FilePath),
+                name = CvFileNameHelper.GetDisplayName(item.FilePath),
                 isDefault = string.Equals(item.FilePath, candidate.DefaultCvUrl, StringComparison.OrdinalIgnoreCase),
                 createdAt = item.CreatedAt
             })
