@@ -1,6 +1,7 @@
 import React from "react";
 import { Modal, Button, Upload, Radio, Space, Tag } from "antd";
 import { UploadOutlined, FilePdfOutlined } from "@ant-design/icons";
+import type { CvBuilderDocumentSummary } from "../../../services/cvBuilderService";
 
 interface JobApplyModalProps {
   open: boolean;
@@ -16,6 +17,9 @@ interface JobApplyModalProps {
   savedCvs: Array<{ id: string; name: string; isDefault: boolean; createdAt: string }>;
   selectedSavedCvId: string | null;
   setSelectedSavedCvId: (id: string | null) => void;
+  builderDocuments: CvBuilderDocumentSummary[];
+  selectedBuilderDocumentId: string | null;
+  setSelectedBuilderDocumentId: (id: string | null) => void;
 }
 
 const JobApplyModal: React.FC<JobApplyModalProps> = ({
@@ -32,8 +36,13 @@ const JobApplyModal: React.FC<JobApplyModalProps> = ({
   savedCvs,
   selectedSavedCvId,
   setSelectedSavedCvId,
+  builderDocuments,
+  selectedBuilderDocumentId,
+  setSelectedBuilderDocumentId,
 }) => {
-  const selectedMethod = selectedSavedCvId ? `saved:${selectedSavedCvId}` : useDefaultCv ? "default" : "new";
+  const selectedMethod = selectedBuilderDocumentId
+    ? `builder:${selectedBuilderDocumentId}`
+    : selectedSavedCvId ? `saved:${selectedSavedCvId}` : useDefaultCv ? "default" : "new";
   const uploadedCvs = savedCvs.filter((cv) => !cv.isDefault);
 
   return (
@@ -51,7 +60,7 @@ const JobApplyModal: React.FC<JobApplyModalProps> = ({
         Vui lòng chọn phương thức nộp CV của bạn. Hệ thống sẽ phân tích CV để đánh giá độ phù hợp với tin tuyển dụng này.
       </div>
 
-      {(hasDefaultCv || uploadedCvs.length > 0) ? (
+      {(hasDefaultCv || uploadedCvs.length > 0 || builderDocuments.length > 0) ? (
         <div style={{ marginBottom: 20 }}>
           <Radio.Group 
             value={selectedMethod}
@@ -59,6 +68,7 @@ const JobApplyModal: React.FC<JobApplyModalProps> = ({
               const value = String(e.target.value);
               setUseDefaultCv(value === "default");
               setSelectedSavedCvId(value.startsWith("saved:") ? value.slice(6) : null);
+              setSelectedBuilderDocumentId(value.startsWith("builder:") ? value.slice(8) : null);
             }}
             style={{ width: "100%" }}
           >
@@ -77,6 +87,16 @@ const JobApplyModal: React.FC<JobApplyModalProps> = ({
                     <span>CV đã lưu trên hệ thống</span>
                     <Tag style={{ display: "inline-flex", alignItems: "center", gap: 4, margin: 0 }}>
                       <FilePdfOutlined /> {cv.name}
+                    </Tag>
+                  </div>
+                </Radio>
+              ))}
+              {builderDocuments.map((document) => (
+                <Radio key={document.id} value={`builder:${document.id}`} style={{ width: "100%" }}>
+                  <div style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+                    <span>CV tạo trực tuyến</span>
+                    <Tag color="purple" style={{ display: "inline-flex", alignItems: "center", gap: 4, margin: 0 }}>
+                      <FilePdfOutlined /> {document.name}{document.isDefault ? " · Mặc định" : ""}
                     </Tag>
                   </div>
                 </Radio>

@@ -24,7 +24,6 @@ namespace RecruitmentBackend.Interfaces
             RejectApplicationRequest request,
             ClaimsPrincipal user
         );
-        Task<(bool IsSuccess, string Message, object Data)> ReEvaluateApplicationAsync(string applicationId, ClaimsPrincipal user);
         Task<(bool IsSuccess, string Message, object Data)> ScheduleInterviewAsync(
             string applicationId,
             ScheduleInterviewRequest request,

@@ -43,7 +43,7 @@ interface ExperienceItem { company?: string; position?: string; period?: string;
 interface ProjectItem { name?: string; role?: string; description?: string; link?: string }
 interface CertificateItem { name?: string; issuer?: string; year?: string }
 
-interface CvBuilderValues {
+export interface CvBuilderValues {
   fullName?: string;
   professionalTitle?: string;
   email?: string;
@@ -58,7 +58,7 @@ interface CvBuilderValues {
   certificates?: CertificateItem[];
 }
 
-interface BuilderSettings {
+export interface BuilderSettings {
   template: TemplateName;
   accentColor: string;
   textColor: string;
@@ -119,7 +119,7 @@ const editorSteps: Array<{ value: EditorStep; label: string }> = [
   { value: "certificates", label: "5. Chứng chỉ" },
 ];
 
-const defaultSettings: BuilderSettings = {
+export const defaultSettings: BuilderSettings = {
   template: "standard",
   accentColor: "#2563EB",
   textColor: "#0F172A",
@@ -132,7 +132,7 @@ const defaultSettings: BuilderSettings = {
   sectionOrder: ["summary", "experience", "education", "projects", "skills", "certificates"],
 };
 
-function normalizeCvValues(source?: CvBuilderValues): CvBuilderValues {
+export function normalizeCvValues(source?: CvBuilderValues): CvBuilderValues {
   const stored = source || {};
   return {
     ...emptyValues,
@@ -685,7 +685,7 @@ function RepeatableSection({ title, name, addLabel, emptyValue, render }: {
   );
 }
 
-function CvPreview({ values, skills, settings }: { values: CvBuilderValues; skills: string[]; settings: BuilderSettings }) {
+export function CvPreview({ values, skills, settings }: { values: CvBuilderValues; skills: string[]; settings: BuilderSettings }) {
   const content = <PreviewContent values={values} skills={skills} settings={settings} />;
   if (settings.template === "modern") {
     return (
@@ -713,7 +713,7 @@ function CvPreview({ values, skills, settings }: { values: CvBuilderValues; skil
   );
 }
 
-function PreviewContent({ values, skills, settings }: { values: CvBuilderValues; skills: string[]; settings: BuilderSettings }) {
+export function PreviewContent({ values, skills, settings }: { values: CvBuilderValues; skills: string[]; settings: BuilderSettings }) {
   const paragraphStyle: CSSProperties = { whiteSpace: "pre-line", lineHeight: 1.55, color: settings.textColor, margin: "6px 0 0", fontSize: settings.fontSize };
   const sections: Record<SectionKey, ReactNode> = {
     summary: values.summary ? <CvSection title="MỤC TIÊU NGHỀ NGHIỆP" settings={settings}><p style={paragraphStyle}>{values.summary}</p></CvSection> : null,

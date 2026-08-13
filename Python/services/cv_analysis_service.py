@@ -132,12 +132,13 @@ def score_resume_sync(
     content_type: str,
     job_description: str,
     criteria_list: List[Dict[str, Any]],
-    criteria_raw_str: str
+    criteria_raw_str: str,
+    cv_text_override: str = None
 ) -> Dict[str, Any]:
     """
     Cham diem CV theo tieu chi HR va JD yeu cau
     """
-    cv_hash = get_bytes_hash(file_bytes)
+    cv_hash = get_str_hash(cv_text_override) if cv_text_override is not None else get_bytes_hash(file_bytes)
     jd_hash = get_str_hash(job_description)
     criteria_hash = get_str_hash(criteria_raw_str)
     
@@ -149,7 +150,12 @@ def score_resume_sync(
         return SCORE_CACHE[score_key]
 
     # 2. Trich xuat noi dung (Kiem tra Cache cap 1)
-    if cv_hash in TEXT_CACHE and "cv_text" in TEXT_CACHE[cv_hash]:
+    if cv_text_override is not None:
+        cv_text = cv_text_override.strip()
+        if cv_hash not in TEXT_CACHE:
+            TEXT_CACHE[cv_hash] = {}
+        TEXT_CACHE[cv_hash]["cv_text"] = cv_text
+    elif cv_hash in TEXT_CACHE and "cv_text" in TEXT_CACHE[cv_hash]:
         logger.info(f"Lay van ban CV tu cache: {cv_hash}")
         cv_text = TEXT_CACHE[cv_hash]["cv_text"]
     else:
@@ -164,7 +170,7 @@ def score_resume_sync(
             TEXT_CACHE[cv_hash]["cv_text"] = cv_text
             clean_cache_if_large()
 
-    if _is_image_upload(filename, content_type) and not _has_sufficient_ocr_text(cv_text):
+    if cv_text_override is None and _is_image_upload(filename, content_type) and not _has_sufficient_ocr_text(cv_text):
         logger.warning("OCR ảnh CV không đủ dữ liệu; trả kết quả 0% thay vì suy diễn điểm.")
         response_data = _build_insufficient_score_response(criteria_list, cv_text)
         SCORE_CACHE[score_key] = response_data
@@ -299,15 +305,21 @@ def preview_resume_sync(
     content_type: str,
     job_description: str,
     job_title: str,
-    company_name: str
+    company_name: str,
+    cv_text_override: str | None = None
 ) -> Dict[str, Any]:
     """
     Phan tich nhanh CV phục vụ xem truoc (Preview)
     """
-    cv_hash = get_bytes_hash(file_bytes)
+    cv_hash = get_bytes_hash(cv_text_override.encode("utf-8") if cv_text_override else file_bytes)
 
     # Kiem tra Cache text
-    if cv_hash in TEXT_CACHE and "cv_text" in TEXT_CACHE[cv_hash]:
+    if cv_text_override:
+        cv_text = cv_text_override
+        if cv_hash not in TEXT_CACHE:
+            TEXT_CACHE[cv_hash] = {}
+        TEXT_CACHE[cv_hash]["cv_text"] = cv_text
+    elif cv_hash in TEXT_CACHE and "cv_text" in TEXT_CACHE[cv_hash]:
         logger.info(f"Lay text CV tu cache trong preview: {cv_hash}")
         cv_text = TEXT_CACHE[cv_hash]["cv_text"]
     else:

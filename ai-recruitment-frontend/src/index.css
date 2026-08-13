@@ -170,6 +170,22 @@ h1, h2, h3, h4, h5, h6, p, span, a, button, div {
   transform: translateY(-1px) scale(0.99);
 }
 
+/* Keep similar-job links stationary so hover cannot move them away from the pointer. */
+.related-job-link {
+  transition: background-color 0.18s ease, border-color 0.18s ease;
+}
+
+.related-job-link:hover,
+.related-job-link:focus-visible {
+  background: #f8fafc;
+  border-color: #bfdbfe !important;
+  outline: none;
+}
+
+.related-job-link:focus-visible {
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.16);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .hover-card,
   .hover-card:hover,

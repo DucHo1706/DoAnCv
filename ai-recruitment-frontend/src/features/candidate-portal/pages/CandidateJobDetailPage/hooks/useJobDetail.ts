@@ -2,6 +2,9 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { message, Upload } from "antd";
 import axiosClient from "../../../../../services/axiosClient";
+import { cvBuilderService, type CvBuilderDocumentSummary } from "../../../services/cvBuilderService";
+import { createCvBuilderPdf } from "../../../utils/createCvBuilderPdf";
+import type { BuilderSettings, CvBuilderValues } from "../../CvBuilderPage/CvBuilderPage";
 
 export function useJobDetail() {
   const { id } = useParams<{ id: string }>();
@@ -23,15 +26,19 @@ export function useJobDetail() {
   const [useDefaultCv, setUseDefaultCv] = useState(false);
   const [savedCvs, setSavedCvs] = useState<Array<{ id: string; name: string; isDefault: boolean; createdAt: string }>>([]);
   const [selectedSavedCvId, setSelectedSavedCvId] = useState<string | null>(null);
+  const [builderDocuments, setBuilderDocuments] = useState<CvBuilderDocumentSummary[]>([]);
+  const [selectedBuilderDocumentId, setSelectedBuilderDocumentId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchDefaultCvStatus = async () => {
       try {
-        const [res, savedCvResponse] = await Promise.all([
+        const [res, savedCvResponse, builderResponse] = await Promise.all([
           axiosClient.get("/profile"),
           axiosClient.get("/candidate-cvs").catch(() => ({ data: [] })),
+          cvBuilderService.getAll().catch(() => []),
         ]);
         setSavedCvs(Array.isArray(savedCvResponse.data) ? savedCvResponse.data : savedCvResponse.data?.$values || []);
+        setBuilderDocuments(builderResponse);
         if (res.data?.defaultCvUrl) {
           setHasDefaultCv(true);
           setDefaultCvName(res.data.defaultCvName);
@@ -69,7 +76,7 @@ export function useJobDetail() {
     return data?.$values || [];
   };
 
-  const fetchAppliedApplication = async (currentJobId: string) => {
+  const fetchAppliedApplication = async (currentJobId: string, isCurrent: () => boolean = () => true) => {
     try {
       const response = await axiosClient.get("/Recruitment/my-applications");
       const applications = normalizeArrayData(response.data);
@@ -78,10 +85,11 @@ export function useJobDetail() {
         return getApplicationJobId(application) === currentJobId;
       });
 
+      if (!isCurrent()) return;
       if (foundApplication) {
         setAppliedApplication(foundApplication);
       } else {
-        setAppliedApplication(null);
+        if (isCurrent()) setAppliedApplication(null);
       }
     } catch (error: any) {
       if (error?.response?.status === 401 || error?.response?.status === 403) {
@@ -89,32 +97,50 @@ export function useJobDetail() {
         return;
       }
       console.error("Lỗi kiểm tra trạng thái ứng tuyển:", error);
-      setAppliedApplication(null);
+      if (isCurrent()) setAppliedApplication(null);
     }
   };
 
   useEffect(() => {
+    let isCurrentRequest = true;
+
     const fetchJobDetail = async () => {
+      setLoading(true);
+      setJob(null);
+      setRelatedJobs([]);
       try {
         const res = await axiosClient.get(`/Jobs/published/${id}`);
+        if (!isCurrentRequest) return;
         setJob(res.data);
         const currentJobId = getJobId(res.data);
 
         const isLoggedIn = !!localStorage.getItem("token");
         if (isLoggedIn && currentJobId) {
-          await fetchAppliedApplication(currentJobId);
+          await fetchAppliedApplication(currentJobId, () => isCurrentRequest);
         }
 
-        const relatedRes = await axiosClient.get(`/Jobs/${id}/related?limit=3`);
-        setRelatedJobs(relatedRes.data?.$values || relatedRes.data || []);
+        try {
+          const relatedRes = await axiosClient.get(`/Jobs/${id}/related?limit=3`);
+          if (isCurrentRequest) {
+            setRelatedJobs(relatedRes.data?.$values || relatedRes.data || []);
+          }
+        } catch (relatedError) {
+          console.error("Không thể tải việc làm tương tự:", relatedError);
+          if (isCurrentRequest) setRelatedJobs([]);
+        }
       } catch (error) {
+        if (!isCurrentRequest) return;
         message.error("Không thể tải chi tiết công việc hoặc tin đã hết hạn.");
         navigate("/jobs");
       } finally {
-        setLoading(false);
+        if (isCurrentRequest) setLoading(false);
       }
     };
     fetchJobDetail();
+
+    return () => {
+      isCurrentRequest = false;
+    };
   }, [id, navigate]);
 
   const handleApplyWithAI = () => {
@@ -141,6 +167,7 @@ export function useJobDetail() {
     setIsApplyModalOpen(false);
     setApplyFile(null);
     setSelectedSavedCvId(null);
+    setSelectedBuilderDocumentId(null);
   };
 
   const handleGoToAiEvaluation = () => {
@@ -166,7 +193,7 @@ export function useJobDetail() {
   };
 
   const handleDirectApply = async () => {
-    if (!useDefaultCv && !selectedSavedCvId && !applyFile) {
+    if (!useDefaultCv && !selectedSavedCvId && !selectedBuilderDocumentId && !applyFile) {
       message.error("Vui lòng chọn file CV của bạn!");
       return;
     }
@@ -179,7 +206,12 @@ export function useJobDetail() {
       const formData = new FormData();
       formData.append("JobId", job.id);
       formData.append("UseDefaultCv", String(useDefaultCv));
-      if (selectedSavedCvId) {
+      if (selectedBuilderDocumentId) {
+        const builderDocument = await cvBuilderService.getById<CvBuilderValues, BuilderSettings>(selectedBuilderDocumentId);
+        const snapshotFile = await createCvBuilderPdf(builderDocument);
+        formData.append("CvBuilderDocumentId", selectedBuilderDocumentId);
+        formData.append("CvFile", snapshotFile);
+      } else if (selectedSavedCvId) {
         formData.append("SavedCvId", selectedSavedCvId);
       } else if (!useDefaultCv && applyFile) {
         formData.append("CvFile", applyFile);
@@ -207,6 +239,7 @@ export function useJobDetail() {
       setIsApplyModalOpen(false);
       setApplyFile(null);
       setSelectedSavedCvId(null);
+      setSelectedBuilderDocumentId(null);
       message.success("Nộp hồ sơ thành công!");
       setIsApplySuccessModalOpen(true);
     } catch (error: any) {
@@ -214,6 +247,7 @@ export function useJobDetail() {
       const errorMessage =
         error?.response?.data?.message ||
         error?.response?.data ||
+        error?.message ||
         "Đã có lỗi xảy ra khi nộp hồ sơ. Vui lòng thử lại.";
 
       const existingApplicationId =
@@ -231,6 +265,7 @@ export function useJobDetail() {
         setIsApplyModalOpen(false);
         setApplyFile(null);
         setSelectedSavedCvId(null);
+        setSelectedBuilderDocumentId(null);
         setIsApplySuccessModalOpen(true);
         return;
       }
@@ -285,6 +320,9 @@ export function useJobDetail() {
     savedCvs,
     selectedSavedCvId,
     setSelectedSavedCvId,
+    builderDocuments,
+    selectedBuilderDocumentId,
+    setSelectedBuilderDocumentId,
     isSubmitting,
     isApplySuccessModalOpen,
     setIsApplySuccessModalOpen,

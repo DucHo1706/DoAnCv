@@ -154,13 +154,6 @@ export const recruitmentService = {
     return response.data;
   },
 
-  async reEvaluateApplication(applicationId: string) {
-    const response = await axiosClient.post(
-      `/Recruitment/hr/applications/${applicationId}/re-evaluate`
-    );
-    return response.data;
-  },
-
   async scheduleInterview(applicationId: string, request: any) {
     const response = await axiosClient.post(
       `/Recruitment/hr/applications/${applicationId}/schedule`,

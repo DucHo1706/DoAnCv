@@ -14,6 +14,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Security.Claims;
+using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -71,6 +72,40 @@ namespace RecruitmentBackend.Services
                 _ => false
             };
             return signatureMatches ? null : "Nội dung tệp không đúng với định dạng được khai báo hoặc tệp đã bị hỏng.";
+        }
+
+        private static string BuildCvBuilderText(string contentJson)
+        {
+            using var document = JsonDocument.Parse(contentJson);
+            var output = new StringBuilder();
+            AppendBuilderValue(document.RootElement, output, null);
+            return output.ToString().Trim();
+        }
+
+        private static void AppendBuilderValue(JsonElement element, StringBuilder output, string? label)
+        {
+            if (element.ValueKind == JsonValueKind.Object)
+            {
+                foreach (var property in element.EnumerateObject())
+                {
+                    AppendBuilderValue(property.Value, output, property.Name);
+                }
+                return;
+            }
+
+            if (element.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var item in element.EnumerateArray())
+                {
+                    AppendBuilderValue(item, output, label);
+                }
+                return;
+            }
+
+            if (element.ValueKind != JsonValueKind.String) return;
+            var value = element.GetString()?.Trim();
+            if (string.IsNullOrWhiteSpace(value)) return;
+            output.AppendLine(string.IsNullOrWhiteSpace(label) ? value : $"{label}: {value}");
         }
 
         public async Task<(bool IsSuccess, string Message, object Data)> ApplyJobAsync(ApplyJobRequest request, ClaimsPrincipal user)
@@ -148,6 +183,8 @@ namespace RecruitmentBackend.Services
                 string originalFileName;
                 string contentType;
                 string cvUrl;
+                CvBuilderDocument? sourceBuilderDocument = null;
+                string? structuredCvText = null;
 
                 var useStoredCv = request.UseDefaultCv || !string.IsNullOrWhiteSpace(request.SavedCvId);
                 if (useStoredCv)
@@ -246,7 +283,31 @@ namespace RecruitmentBackend.Services
                         cvFileBytes = memoryStream.ToArray();
                     }
 
-                    originalFileName = request.CvFile.FileName;
+                    if (!string.IsNullOrWhiteSpace(request.CvBuilderDocumentId))
+                    {
+                        sourceBuilderDocument = await _context.CvBuilderDocuments
+                            .AsNoTracking()
+                            .FirstOrDefaultAsync(document =>
+                                document.Id == request.CvBuilderDocumentId
+                                && document.CandidateID == candidate.CandidateID);
+
+                        if (sourceBuilderDocument == null)
+                        {
+                            return (false, "Không tìm thấy CV trực tuyến hoặc bạn không có quyền sử dụng CV này.", null);
+                        }
+
+                        var builderDisplayName = CvFileNameHelper.GetDisplayName(sourceBuilderDocument.Name, "CV");
+                        originalFileName = Path.ChangeExtension(builderDisplayName, ".pdf");
+                        structuredCvText = BuildCvBuilderText(sourceBuilderDocument.ContentJson);
+                        if (structuredCvText.Length < 80)
+                        {
+                            return (false, "CV trực tuyến chưa có đủ nội dung để ứng tuyển. Vui lòng bổ sung thông tin cá nhân, kỹ năng hoặc kinh nghiệm.", null);
+                        }
+                    }
+                    else
+                    {
+                        originalFileName = request.CvFile.FileName;
+                    }
                     contentType = request.CvFile.ContentType;
                     cvUrl = string.Empty;
                 }
@@ -259,10 +320,13 @@ namespace RecruitmentBackend.Services
 
                 try
                 {
-                    var cvValidation = await _aiService.ValidateCvAsync(cvFileBytes, originalFileName, contentType);
-                    if (!cvValidation.IsValid)
+                    if (sourceBuilderDocument == null)
                     {
-                        return (false, cvValidation.Message, null);
+                        var cvValidation = await _aiService.ValidateCvAsync(cvFileBytes, originalFileName, contentType);
+                        if (!cvValidation.IsValid)
+                        {
+                            return (false, cvValidation.Message, null);
+                        }
                     }
                 }
                 catch (Exception ex)
@@ -282,7 +346,7 @@ namespace RecruitmentBackend.Services
                     CVID = Guid.NewGuid().ToString(),
                     CandidateID = candidate.CandidateID,
                     FilePath = cvUrl,
-                    RawText = "",
+                    RawText = structuredCvText ?? "",
                     ExtractedEmail = null,
                     ExtractedPhone = null,
                     CVExtractedSkills = "[]",
@@ -291,6 +355,10 @@ namespace RecruitmentBackend.Services
                     University = null,
                     YearsOfExperience = 0,
                     Certificates = "[]",
+                    SourceType = sourceBuilderDocument != null
+                        ? "CvBuilder"
+                        : useStoredCv ? "Stored" : "Uploaded",
+                    SourceDocumentId = sourceBuilderDocument?.Id,
                     CreatedAt = DateTime.Now
                 };
 
@@ -347,7 +415,8 @@ namespace RecruitmentBackend.Services
                             applicationIdForAi,
                             cvFileBytes,
                             originalFileName,
-                            contentType
+                            contentType,
+                            structuredCvText
                         );
                     }
                     catch (Exception ex)

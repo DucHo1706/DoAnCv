@@ -24,7 +24,6 @@ interface ApplicationHistoryTabProps {
   loading: boolean;
   applications: any[];
   onViewReport: (app: any) => void;
-  onReEvaluate?: (applicationId: string) => void;
 }
 
 export const ApplicationHistoryTab: React.FC<ApplicationHistoryTabProps> = ({

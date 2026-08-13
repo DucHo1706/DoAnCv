@@ -19,6 +19,8 @@ namespace RecruitmentBackend.Models
         public string? University { get; set; }
         public double? YearsOfExperience { get; set; }
         public string? Certificates { get; set; } // Lưu chuỗi JSON
+        public string? SourceType { get; set; }
+        public string? SourceDocumentId { get; set; }
 
         public DateTime CreatedAt { get; set; } = DateTime.Now;
     }

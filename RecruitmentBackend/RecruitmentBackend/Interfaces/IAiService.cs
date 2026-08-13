@@ -8,6 +8,7 @@ namespace RecruitmentBackend.Interfaces
     public interface IAiService
     {
         Task<AiMatchingResponse> GetMatchingScoreAsync(IFormFile cvFile, string jobDescription, string criteriaJson);
+        Task<AiMatchingResponse> GetMatchingScoreFromTextAsync(string cvText, string jobDescription, string criteriaJson);
         Task<(bool IsValid, string Message)> ValidateCvAsync(byte[] fileBytes, string fileName, string contentType);
         Task<bool> SyncSkillsToAiAsync(List<string> skills);
         Task<bool> TrainAprioriAsync(List<List<string>> transactions);

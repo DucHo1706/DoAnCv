@@ -9,7 +9,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Security.Claims;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -58,7 +57,12 @@ namespace RecruitmentBackend.Services
             }
         }
 
-        public async Task RunAiEvaluationInBackgroundAsync(string applicationId, byte[] cvFileBytes, string fileName, string contentType)
+        public async Task RunAiEvaluationInBackgroundAsync(
+            string applicationId,
+            byte[] cvFileBytes,
+            string fileName,
+            string contentType,
+            string? structuredCvText = null)
         {
             try
             {
@@ -167,11 +171,9 @@ namespace RecruitmentBackend.Services
 
                 await SendProgressAsync(applicationId, 45, "AI_CALL", "Đang phân tích và so khớp năng lực bằng Gemini AI...");
 
-                var aiResult = await _aiService.GetMatchingScoreAsync(
-                    cvFile,
-                    jobDescriptionForAi,
-                    criteriaJson
-                );
+                var aiResult = string.IsNullOrWhiteSpace(structuredCvText)
+                    ? await _aiService.GetMatchingScoreAsync(cvFile, jobDescriptionForAi, criteriaJson)
+                    : await _aiService.GetMatchingScoreFromTextAsync(structuredCvText, jobDescriptionForAi, criteriaJson);
 
                 await SendProgressAsync(applicationId, 80, "DATABASE_UPDATE", "Đang cập nhật hồ sơ và lưu kết quả AI vào cơ sở dữ liệu...");
 
@@ -331,83 +333,6 @@ namespace RecruitmentBackend.Services
 
                 await SendProgressAsync(applicationId, 0, "FAILED", "Phân tích AI thất bại.");
                 await _hubContext.Clients.Group(applicationId).SendAsync("ReceiveResult", new { aiStatus = "Failed", message = ex.Message });
-            }
-        }
-
-        public async Task<(bool IsSuccess, string Message, object Data)> ReEvaluateApplicationAsync(string applicationId, ClaimsPrincipal user)
-        {
-            try
-            {
-                var app = await _context.Applications.FirstOrDefaultAsync(a => a.ApplicationID == applicationId);
-                if (app == null) return (false, "Không tìm thấy hồ sơ ứng tuyển.", null);
-
-                var cv = await _context.CandidateCVs.FirstOrDefaultAsync(c => c.CVID == app.CVID);
-                if (cv == null) return (false, "Không tìm thấy file CV.", null);
-
-                byte[] cvFileBytes;
-                string fileName = Path.GetFileName(cv.FilePath);
-                string contentType = "application/pdf"; 
-                if (fileName.EndsWith(".docx", StringComparison.OrdinalIgnoreCase)) contentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
-                else if (fileName.EndsWith(".doc", StringComparison.OrdinalIgnoreCase)) contentType = "application/msword";
-                else if (fileName.EndsWith(".png", StringComparison.OrdinalIgnoreCase)) contentType = "image/png";
-                else if (fileName.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase) || fileName.EndsWith(".jpeg", StringComparison.OrdinalIgnoreCase)) contentType = "image/jpeg";
-
-                if (cv.FilePath.StartsWith("http", StringComparison.OrdinalIgnoreCase))
-                {
-                    using var httpClient = new HttpClient();
-                    httpClient.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)");
-                    var response = await httpClient.GetAsync(cv.FilePath);
-                    if (!response.IsSuccessStatusCode)
-                    {
-                        return (false, $"Không thể tải file CV từ Cloudinary (Mã lỗi: {response.StatusCode}).", null);
-                    }
-                    cvFileBytes = await response.Content.ReadAsByteArrayAsync();
-                }
-                else
-                {
-                    string localPath = Path.Combine(Directory.GetCurrentDirectory(), cv.FilePath.TrimStart('/'));
-                    if (!File.Exists(localPath))
-                    {
-                        localPath = Path.Combine(Directory.GetCurrentDirectory(), "Uploads", fileName);
-                    }
-                    if (!File.Exists(localPath))
-                    {
-                        return (false, "Không tìm thấy file CV vật lý trên server để chấm lại.", null);
-                    }
-                    cvFileBytes = await File.ReadAllBytesAsync(localPath);
-                }
-
-                var oldEvaluation = await _context.AIEvaluations.FirstOrDefaultAsync(e => e.ApplicationID == applicationId);
-                if (oldEvaluation != null)
-                {
-                    _context.AIEvaluations.Remove(oldEvaluation);
-                    await _context.SaveChangesAsync();
-                }
-
-                _ = Task.Run(async () =>
-                {
-                    try
-                    {
-                        using var scope = _serviceScopeFactory.CreateScope();
-                        var aiEvaluationService = scope.ServiceProvider.GetRequiredService<IAiEvaluationService>();
-                        await aiEvaluationService.RunAiEvaluationInBackgroundAsync(
-                            applicationId,
-                            cvFileBytes,
-                            fileName,
-                            contentType
-                        );
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine("Lỗi background AI chấm lại: " + ex.Message);
-                    }
-                });
-
-                return (true, "Yêu cầu AI phân tích lại thành công. Vui lòng chờ vài giây và tải lại trang.", new { aiStatus = "Processing" });
-            }
-            catch (Exception ex)
-            {
-                return (false, $"Lỗi hệ thống khi chấm lại: {ex.Message}", null);
             }
         }
 

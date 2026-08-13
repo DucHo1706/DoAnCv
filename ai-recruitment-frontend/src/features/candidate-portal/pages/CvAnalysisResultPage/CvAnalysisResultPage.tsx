@@ -3,6 +3,9 @@ import { Typography, Button, Tag, Space, Row, Col, Card, Progress, message } fro
 import { ArrowLeftOutlined, SendOutlined, AlertOutlined } from "@ant-design/icons";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import axiosClient from "../../../../services/axiosClient";
+import { cvBuilderService } from "../../services/cvBuilderService";
+import { createCvBuilderPdf } from "../../utils/createCvBuilderPdf";
+import type { BuilderSettings, CvBuilderValues } from "../CvBuilderPage/CvBuilderPage";
 import AiDetailedTabs from "../../../../components/ai-report/AiDetailedTabs";
 import PdfExportUtils from "./components/PdfExportUtils";
 import AiCoreIcon from "../../../../components/common/AiCoreIcon";
@@ -130,6 +133,8 @@ export default function CvAnalysisResultPage() {
   const locationCompanyName = location.state?.companyName || "AI Recruitment";
   const locationJobDescription = location.state?.jobDescription || "";
   const triggerAnalysis = location.state?.triggerAnalysis;
+  const structuredCvText = location.state?.structuredCvText || "";
+  const cvBuilderDocumentId = location.state?.cvBuilderDocumentId as string | undefined;
 
   const runPageAnalysis = async () => {
     if (!locationFile) return;
@@ -142,6 +147,7 @@ export default function CvAnalysisResultPage() {
       formData.append("job_description", locationJobDescription || "");
       formData.append("job_title", locationJobTitle || "");
       formData.append("company_name", locationCompanyName || "AI Recruitment");
+      if (structuredCvText) formData.append("cv_text", structuredCvText);
 
       const response = await fetch(getAiApiUrl("/analyze-cv-preview"), {
         method: "POST",
@@ -480,9 +486,15 @@ export default function CvAnalysisResultPage() {
     try {
       const formData = new FormData();
       formData.append("JobId", id);
-      if (cvFile) {
+      if (cvBuilderDocumentId) {
+        formData.append("CvBuilderDocumentId", cvBuilderDocumentId);
+        const builderDocument = await cvBuilderService.getById<CvBuilderValues, BuilderSettings>(cvBuilderDocumentId);
+        const snapshotFile = await createCvBuilderPdf(builderDocument);
+        formData.append("CvFile", snapshotFile);
+      }
+      if (!cvBuilderDocumentId && cvFile) {
         formData.append("CvFile", cvFile);
-      } else {
+      } else if (!cvBuilderDocumentId) {
         message.error(
           "Không tìm thấy tệp CV trong bộ nhớ tạm. Vui lòng chọn 'Quay lại' để thực hiện lại."
         );

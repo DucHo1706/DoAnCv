@@ -81,6 +81,43 @@ namespace RecruitmentBackend.Services
             return result;
         }
 
+        public async Task<AiMatchingResponse> GetMatchingScoreFromTextAsync(
+            string cvText,
+            string jobDescription,
+            string criteriaJson)
+        {
+            using var content = new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["cv_text"] = cvText ?? string.Empty,
+                ["job_description"] = jobDescription ?? string.Empty,
+                ["criteria"] = criteriaJson ?? "[]"
+            });
+
+            using var response = await _httpClient.PostAsync("score-cv-text", content);
+            var jsonResponse = await response.Content.ReadAsStringAsync();
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new Exception("Lỗi từ AI Service Python: " + response.StatusCode + " - " + jsonResponse);
+            }
+
+            var result = JsonSerializer.Deserialize<AiMatchingResponse>(jsonResponse, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+            if (result == null)
+            {
+                throw new Exception("AI Service không trả về dữ liệu hợp lệ.");
+            }
+            if (result.Status != "success")
+            {
+                throw new Exception(string.IsNullOrWhiteSpace(result.Message)
+                    ? "AI Service xử lý CV trực tuyến thất bại."
+                    : result.Message);
+            }
+
+            return result;
+        }
+
         public async Task<(bool IsValid, string Message)> ValidateCvAsync(byte[] fileBytes, string fileName, string contentType)
         {
             using var content = new MultipartFormDataContent();

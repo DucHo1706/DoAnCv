@@ -82,22 +82,6 @@ function CandidateProfilePage() {
     }
   };
 
-  const handleReEvaluate = async (applicationId: string) => {
-    try {
-      message.loading({ content: "Đang gửi yêu cầu phân tích lại cho AI...", key: "reevaluate", duration: 0 });
-      await axiosClient.post(`/Recruitment/hr/applications/${applicationId}/re-evaluate`);
-      message.success({ content: "Đã gửi yêu cầu thành công! AI đang phân tích lại CV của bạn.", key: "reevaluate", duration: 3 });
-      
-      // Reload applications list after a small delay to allow background processing
-      setTimeout(() => {
-        fetchMyApplications();
-      }, 3000);
-    } catch (err: any) {
-      const errMsg = err.response?.data?.message || "Lỗi khi yêu cầu AI chấm điểm lại.";
-      message.error({ content: errMsg, key: "reevaluate", duration: 3 });
-    }
-  };
-
   const fetchProfile = async () => {
     try {
       setProfileLoading(true);
@@ -462,7 +446,6 @@ function CandidateProfilePage() {
                   loading={loading} 
                   applications={applications} 
                   onViewReport={setSelectedAppForReport} 
-                  onReEvaluate={handleReEvaluate}
                 />
               )}
 

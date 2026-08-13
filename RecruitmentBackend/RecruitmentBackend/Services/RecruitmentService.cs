@@ -61,11 +61,6 @@ namespace RecruitmentBackend.Services
             return _applicationService.RejectApplicationAsync(applicationId, request, user);
         }
 
-        public Task<(bool IsSuccess, string Message, object Data)> ReEvaluateApplicationAsync(string applicationId, ClaimsPrincipal user)
-        {
-            return _aiEvaluationService.ReEvaluateApplicationAsync(applicationId, user);
-        }
-
         public Task<(bool IsSuccess, string Message, object Data)> ScheduleInterviewAsync(
             string applicationId,
             ScheduleInterviewRequest request,

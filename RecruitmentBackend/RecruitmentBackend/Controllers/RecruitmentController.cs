@@ -14,6 +14,7 @@ namespace RecruitmentBackend.Controllers
         public string JobId { get; set; }
         public bool UseDefaultCv { get; set; } = false;
         public string? SavedCvId { get; set; }
+        public string? CvBuilderDocumentId { get; set; }
     }
 
     [Route("api/[controller]")]
@@ -37,8 +38,22 @@ namespace RecruitmentBackend.Controllers
             if (string.IsNullOrEmpty(jobId))
                 return BadRequest("Mã công việc (JobId) không hợp lệ.");
 
-            if ((request == null || (!request.UseDefaultCv && string.IsNullOrWhiteSpace(request.SavedCvId))) && (cvFile == null || cvFile.Length == 0))
+            var hasFile = cvFile != null && cvFile.Length > 0;
+            var hasSavedCv = !string.IsNullOrWhiteSpace(request.SavedCvId);
+            var hasBuilderCv = !string.IsNullOrWhiteSpace(request.CvBuilderDocumentId);
+            var sourceCount = (request.UseDefaultCv ? 1 : 0)
+                + (hasSavedCv ? 1 : 0)
+                + (hasBuilderCv ? 1 : 0)
+                + (hasFile && !hasBuilderCv ? 1 : 0);
+
+            if (sourceCount == 0)
                 return BadRequest("Vui lòng tải lên file CV.");
+
+            if (sourceCount > 1)
+                return BadRequest("Vui lòng chỉ chọn một nguồn CV để ứng tuyển.");
+
+            if (hasBuilderCv && !hasFile)
+                return BadRequest("Không thể tạo bản PDF từ CV trực tuyến. Vui lòng thử lại.");
 
             var result = await _recruitmentService.ApplyJobAsync(request, User);
 
@@ -141,15 +156,6 @@ namespace RecruitmentBackend.Controllers
             if (!result.IsSuccess) return Unauthorized(new { message = result.Message });
             
             return Ok(result.Data);
-        }
-
-        [HttpPost("hr/applications/{applicationId}/re-evaluate")]
-        [Authorize(Roles = "Recruiter,Candidate")]
-        public async Task<IActionResult> ReEvaluateApplication(string applicationId)
-        {
-            var result = await _recruitmentService.ReEvaluateApplicationAsync(applicationId, User);
-            if (!result.IsSuccess) return BadRequest(new { message = result.Message });
-            return Ok(new { message = result.Message, data = result.Data });
         }
 
         [HttpPost("hr/applications/{applicationId}/schedule")]

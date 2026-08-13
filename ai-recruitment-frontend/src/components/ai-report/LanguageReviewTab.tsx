@@ -79,7 +79,7 @@ const LanguageReviewTab: React.FC<LanguageReviewTabProps> = ({ languageReview })
       {lang.insufficient_data ? (
         <Alert
           message="Không đủ dữ liệu để đánh giá ngôn từ"
-          description={summaryText || "Vui lòng tải CV rõ nét hơn hoặc thử phân tích lại."}
+          description={summaryText || "Hệ thống chưa có đủ dữ liệu để đánh giá ngôn từ của hồ sơ này."}
           type="warning"
           showIcon
           style={{ borderRadius: 12, border: "1px solid #FDE68A", background: "#FFFBEB" }}

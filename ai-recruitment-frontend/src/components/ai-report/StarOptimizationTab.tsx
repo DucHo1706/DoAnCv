@@ -395,7 +395,7 @@ const StarOptimizationTab: React.FC<StarOptimizationTabProps> = ({ optimizationT
       ) : (
         <Alert
           message="Chưa có đủ dữ liệu để đề xuất viết lại theo STAR."
-          description="Vui lòng tải CV rõ nét hơn hoặc thử phân tích lại khi dịch vụ AI sẵn sàng."
+          description="Hệ thống chưa có đủ dữ liệu để tạo nội dung tối ưu STAR cho hồ sơ này."
           type="warning"
           showIcon
           style={{ borderRadius: 12 }}

@@ -34,12 +34,8 @@ export default function CandidateDetailPage() {
     navigate,
     candidate,
     loading,
-    reEvaluating,
-    evalProgress,
-    evalStatusText,
     parsed,
     handleExportPDF,
-    handleReEvaluate,
   } = useCandidateDetail();
 
   if (loading) {
@@ -83,22 +79,6 @@ export default function CandidateDetailPage() {
             }}
           >
             Quay lại
-          </Button>
-          <Button
-            type="primary"
-            ghost
-            icon={<AiCoreIcon size={16} style={{ verticalAlign: "middle" }} />}
-            loading={reEvaluating}
-            onClick={handleReEvaluate}
-            style={{
-              borderColor: appTheme.colors.primary,
-              color: appTheme.colors.primary,
-              borderRadius: 10,
-              fontWeight: 600,
-              fontFamily: appTheme.font.family,
-            }}
-          >
-            Yêu cầu AI phân tích lại
           </Button>
           <Button
             type="primary"
@@ -216,40 +196,14 @@ export default function CandidateDetailPage() {
               </Descriptions.Item>
             </Descriptions>
 
-            {reEvaluating && evalProgress !== null && (
-              <Card
-                style={{
-                  marginTop: 20,
-                  borderRadius: 14,
-                  background: "#EFF6FF",
-                  border: "1px solid #BFDBFE",
-                  boxShadow: "0 4px 12px rgba(37, 99, 235, 0.08)"
-                }}
-              >
-                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span style={{ fontWeight: 650, color: "#1E40AF", display: "inline-flex", alignItems: "center", gap: 6 }}>
-                      <AiCoreIcon spin size={16} /> Tiến trình phân tích AI thời gian thực (Real-time)
-                    </span>
-                    <span style={{ fontWeight: 700, color: "#2563EB" }}>{evalProgress}%</span>
-                  </div>
-                  <Progress percent={evalProgress} strokeColor="#2563EB" status="active" showInfo={false} />
-                  <Text style={{ fontSize: 13, color: "#475569", fontStyle: "italic" }}>
-                    {evalStatusText || "Đang xử lý hồ sơ..."}
-                  </Text>
-                </div>
-              </Card>
-            )}
-
-            {!parsed && !reEvaluating && (
+            {!parsed && (
               <div style={{ marginTop: 20 }}>
                 <Alert
-                  message="Báo cáo AI chưa được nâng cấp"
+                  message="Báo cáo AI phiên bản cũ"
                   description={
                     <div>
                       <Paragraph style={{ marginBottom: 12, color: "#475569", fontFamily: appTheme.font.family }}>
-                        Hồ sơ này được AI chấm bằng phiên bản cũ, chỉ có nhận xét tổng quát. Bấm nút
-                        bên dưới để AI phân tích lại đầy đủ với 4 báo cáo chi tiết.
+                        Hồ sơ này được AI chấm bằng phiên bản cũ nên chỉ có nhận xét tổng quát. Kết quả được giữ nguyên theo CV tại thời điểm ứng tuyển.
                       </Paragraph>
                       <Paragraph
                         style={{
@@ -325,25 +279,6 @@ export default function CandidateDetailPage() {
                           }
                         })()}
                       </Paragraph>
-                      <Button
-                        type="primary"
-                        size="large"
-                        icon={<AiCoreIcon size={16} style={{ filter: "brightness(0) invert(1)", verticalAlign: "middle" }} />}
-                        loading={reEvaluating}
-                        onClick={handleReEvaluate}
-                        style={{
-                          background: appTheme.colors.primary,
-                          borderColor: appTheme.colors.primary,
-                          borderRadius: 12,
-                          fontWeight: 600,
-                          height: 44,
-                          padding: "0 28px",
-                          boxShadow: "0 4px 12px rgba(37, 99, 235, 0.2)",
-                          fontFamily: appTheme.font.family,
-                        }}
-                      >
-                        🚀 Nâng cấp báo cáo AI chi tiết ngay
-                      </Button>
                     </div>
                   }
                   type="warning"

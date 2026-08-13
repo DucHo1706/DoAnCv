@@ -138,13 +138,61 @@ async def score_cv(
         return {"status": "error", "message": msg}
 
 
+@router.post("/score-cv-text")
+async def score_cv_text(
+    request: Request,
+    cv_text: str = Form(...),
+    job_description: str = Form(...),
+    criteria: str = Form(...)
+):
+    try:
+        check_ip_rate_limit(request, cooldown_seconds=0.0, max_requests_per_minute=30)
+        criteria_list = json.loads(criteria)
+        if not isinstance(criteria_list, list) or not criteria_list:
+            return {"status": "error", "message": "Vui lòng truyền ít nhất 1 tiêu chí đánh giá."}
+
+        total_weight = 0
+        for criterion in criteria_list:
+            if "name" not in criterion or "weight" not in criterion:
+                return {"status": "error", "message": "Mỗi tiêu chí phải có name và weight."}
+            criterion_name = str(criterion["name"]).strip()
+            criterion_weight = int(criterion["weight"])
+            if not criterion_name or criterion_weight <= 0 or criterion_weight > 100:
+                return {"status": "error", "message": "Tiêu chí đánh giá không hợp lệ."}
+            total_weight += criterion_weight
+
+        if total_weight != 100:
+            return {"status": "error", "message": f"Tổng trọng số tiêu chí phải bằng 100%. Hiện tại đang là {total_weight}%."}
+
+        normalized_text = cv_text.strip()
+        if len(normalized_text) < 80:
+            return {"status": "error", "message": "CV trực tuyến chưa có đủ nội dung để phân tích."}
+
+        return cv_analysis_service.score_resume_sync(
+            file_bytes=b"",
+            filename="cv-builder.txt",
+            content_type="text/plain",
+            job_description=job_description,
+            criteria_list=criteria_list,
+            criteria_raw_str=criteria,
+            cv_text_override=normalized_text
+        )
+    except (ValueError, TypeError, json.JSONDecodeError) as error:
+        return {"status": "error", "message": str(error)}
+    except Exception as error:
+        logger.error(f"Lỗi chấm CV trực tuyến: {error}", exc_info=True)
+        msg = get_user_friendly_error_message(error, "Không thể chấm điểm CV trực tuyến lúc này. Vui lòng thử lại sau.")
+        return {"status": "error", "message": msg}
+
+
 @router.post("/analyze-cv-preview")
 async def analyze_cv_preview(
     request: Request,
     file: UploadFile = File(...),
     job_description: str = Form(...),
     job_title: str = Form(""),
-    company_name: str = Form("")
+    company_name: str = Form(""),
+    cv_text: str = Form("")
 ):
     try:
         check_ip_rate_limit(request, cooldown_seconds=10.0, max_requests_per_minute=10)
@@ -156,7 +204,8 @@ async def analyze_cv_preview(
             content_type=file.content_type,
             job_description=job_description,
             job_title=job_title,
-            company_name=company_name
+            company_name=company_name,
+            cv_text_override=cv_text.strip() or None
         )
         return res
     except HTTPException as he:

@@ -32,6 +32,9 @@ export default function CandidateJobDetailPage() {
     savedCvs,
     selectedSavedCvId,
     setSelectedSavedCvId,
+    builderDocuments,
+    selectedBuilderDocumentId,
+    setSelectedBuilderDocumentId,
   } = useJobDetail();
 
   if (loading) {
@@ -94,6 +97,9 @@ export default function CandidateJobDetailPage() {
           savedCvs={savedCvs}
           selectedSavedCvId={selectedSavedCvId}
           setSelectedSavedCvId={setSelectedSavedCvId}
+          builderDocuments={builderDocuments}
+          selectedBuilderDocumentId={selectedBuilderDocumentId}
+          setSelectedBuilderDocumentId={setSelectedBuilderDocumentId}
         />
 
         {/* 3. Modal thông báo thành công */}

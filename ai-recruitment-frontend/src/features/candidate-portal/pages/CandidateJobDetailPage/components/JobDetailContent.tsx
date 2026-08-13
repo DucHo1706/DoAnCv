@@ -1,5 +1,5 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { Row, Col, Card, Typography, Space, Divider, Button } from "antd";
 import {
   DollarOutlined,
@@ -31,7 +31,6 @@ const JobDetailContent: React.FC<JobDetailContentProps> = ({
   handleApplyWithAI,
   relatedJobs = [],
 }) => {
-  const navigate = useNavigate();
   return (
     <>
       {/* 1. KHU VỰC HERO CARD (TOP) */}
@@ -363,17 +362,18 @@ const JobDetailContent: React.FC<JobDetailContentProps> = ({
             >
               <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                 {relatedJobs.map((rJob: any) => (
-                  <div
+                  <Link
                     key={rJob.id}
-                    onClick={() => {
-                      navigate(`/jobs/${rJob.id}`);
-                      window.scrollTo(0, 0);
-                    }}
-                    className="hover-card"
+                    to={`/jobs/${rJob.id}`}
+                    onClick={() => window.scrollTo({ top: 0, behavior: "auto" })}
+                    className="related-job-link"
                     style={{
-                      cursor: "pointer",
-                      paddingBottom: 12,
+                      display: "block",
+                      color: "inherit",
+                      textDecoration: "none",
+                      padding: "10px 12px 12px",
                       borderBottom: "1px solid #f1f5f9",
+                      borderRadius: 8,
                     }}
                   >
                     <Text strong style={{ display: "block", fontSize: 14, color: appTheme.colors.textPrimary, marginBottom: 4 }}>
@@ -383,7 +383,7 @@ const JobDetailContent: React.FC<JobDetailContentProps> = ({
                       <Text type="secondary" style={{ fontSize: 12 }}>{rJob.location}</Text>
                       <Text strong style={{ color: appTheme.colors.primary, fontSize: 13 }}>{rJob.salary}</Text>
                     </div>
-                  </div>
+                  </Link>
                 ))}
               </div>
             </Card>
