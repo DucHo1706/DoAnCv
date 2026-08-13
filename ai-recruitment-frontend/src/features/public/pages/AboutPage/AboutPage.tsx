@@ -123,12 +123,12 @@ function AboutPage() {
       {/* 1. HERO SHOWCASE SECTION */}
       <div
         style={{
-          background: "linear-gradient(135deg, #0F172A 0%, #1E293B 100%)",
+          background: "linear-gradient(135deg, #FFFFFF 0%, #EFF6FF 100%)",
           borderRadius: 24,
           padding: "48px 40px",
-          color: "#FFFFFF",
           marginBottom: 48,
-          boxShadow: appTheme.shadow.panel,
+          boxShadow: "0 18px 50px rgba(37, 99, 235, 0.08)",
+          border: "1px solid #DBEAFE",
           position: "relative",
           overflow: "hidden",
         }}
@@ -140,25 +140,28 @@ function AboutPage() {
                 display: "inline-flex",
                 alignItems: "center",
                 gap: 8,
-                background: "rgba(37, 99, 235, 0.2)",
-                border: "1px solid rgba(59, 130, 246, 0.3)",
+                background: "#EFF6FF",
+                border: "1px solid #BFDBFE",
                 padding: "6px 16px",
                 borderRadius: 30,
                 marginBottom: 20,
               }}
             >
-              <ThunderboltOutlined style={{ color: "#60A5FA" }} />
-              <span style={{ color: "#93C5FD", fontSize: 13, fontWeight: 700, letterSpacing: "0.04em" }}>
+              <ThunderboltOutlined style={{ color: "#2563EB" }} />
+              <span style={{ color: "#1D4ED8", fontSize: 13, fontWeight: 700, letterSpacing: "0.04em" }}>
                 AI RECRUITMENT PLATFORM • NỀN TẢNG TUYỂN DỤNG THÔNG MINH
               </span>
             </div>
 
-            <Title level={1} style={{ color: "#FFFFFF", fontWeight: 800, fontSize: 36, margin: "0 0 18px", lineHeight: 1.25 }}>
+            <Title level={1} style={{ color: "#0F172A", fontWeight: 800, fontSize: 36, margin: "0 0 18px", lineHeight: 1.25 }}>
               Tối Ưu Hóa Tuyển Dụng Với AI Đa Mô-Hình & Khai Phá Dữ Liệu Lớn
             </Title>
 
-            <Paragraph style={{ color: "#94A3B8", fontSize: 16, lineHeight: 1.7, marginBottom: 32 }}>
-              Hệ thống **AI Recruitment** đột phá quy trình tuyển dụng truyền thống bằng việc kết hợp giữa **Mô hình Ngôn ngữ Lớn (Google Gemini)**, **Thuật toán Hộp trắng minh bạch (TF-IDF)** và **Khai phá luật kết hợp (Apriori Mining)**. Giúp doanh nghiệp chọn đúng tài năng nhanh chóng và hỗ trợ ứng viên nâng cao năng lực.
+            <Paragraph style={{ color: "#475569", fontSize: 16, lineHeight: 1.75, marginBottom: 32, maxWidth: 720 }}>
+              Hệ thống <Text strong style={{ color: "#0F172A" }}>AI Recruitment</Text> hỗ trợ số hóa và sàng lọc hồ sơ bằng cách kết hợp
+              {" "}<Text strong style={{ color: "#1D4ED8" }}>Google Gemini</Text> để phân tích ngữ cảnh,
+              {" "}<Text strong style={{ color: "#1D4ED8" }}>TF-IDF và Cosine Similarity</Text> để đối chiếu minh bạch,
+              cùng <Text strong style={{ color: "#1D4ED8" }}>Apriori</Text> để khai phá nhóm kỹ năng liên quan. Kết quả giúp HR ưu tiên hồ sơ cần xem xét và giúp ứng viên nhận biết khoảng trống năng lực.
             </Paragraph>
 
             <Space size={16} wrap>
@@ -182,15 +185,15 @@ function AboutPage() {
               </Button>
               <Button
                 size="large"
-                ghost
                 icon={<RobotOutlined />}
                 onClick={() => navigate("/candidate/dashboard")}
                 style={{
                   borderRadius: 10,
                   height: 48,
                   padding: "0 24px",
-                  color: "#FFFFFF",
-                  borderColor: "rgba(255, 255, 255, 0.3)",
+                  color: "#1D4ED8",
+                  borderColor: "#93C5FD",
+                  background: "#FFFFFF",
                   fontWeight: 600,
                   fontSize: 15,
                 }}
@@ -204,40 +207,40 @@ function AboutPage() {
           <Col xs={24} lg={10}>
             <div
               style={{
-                background: "rgba(255, 255, 255, 0.04)",
-                backdropFilter: "blur(20px)",
-                border: "1px solid rgba(255, 255, 255, 0.1)",
+                background: "#FFFFFF",
+                border: "1px solid #DBEAFE",
                 borderRadius: 20,
                 padding: 24,
+                boxShadow: "0 12px 36px rgba(15, 23, 42, 0.06)",
               }}
             >
-              <div style={{ fontSize: 12, fontWeight: 800, color: "#60A5FA", letterSpacing: "0.08em", marginBottom: 20, textTransform: "uppercase" }}>
-                HIỆU NĂNG VÀ CHỈ SỐ HỆ THỐNG
+              <div style={{ fontSize: 12, fontWeight: 800, color: "#2563EB", letterSpacing: "0.08em", marginBottom: 20, textTransform: "uppercase" }}>
+                CÁCH HỆ THỐNG TẠO KẾT QUẢ
               </div>
 
               <Row gutter={[14, 14]}>
                 <Col span={12}>
-                  <div style={{ background: "rgba(15, 23, 42, 0.65)", padding: 18, borderRadius: 12, border: "1px solid rgba(255, 255, 255, 0.08)" }}>
-                    <div style={{ fontSize: 28, fontWeight: 800, color: "#10B981" }}>99.2%</div>
-                    <div style={{ fontSize: 12, color: "#94A3B8", marginTop: 4, fontWeight: 500 }}>Chính xác bóc tách CV</div>
+                  <div style={{ background: "#F8FAFC", padding: 18, borderRadius: 12, border: "1px solid #E2E8F0", height: "100%" }}>
+                    <div style={{ fontSize: 20, fontWeight: 800, color: "#2563EB" }}>OCR + NLP</div>
+                    <div style={{ fontSize: 12, color: "#64748B", marginTop: 6, fontWeight: 500 }}>Đọc và chuẩn hóa nội dung CV</div>
                   </div>
                 </Col>
                 <Col span={12}>
-                  <div style={{ background: "rgba(15, 23, 42, 0.65)", padding: 18, borderRadius: 12, border: "1px solid rgba(255, 255, 255, 0.08)" }}>
-                    <div style={{ fontSize: 28, fontWeight: 800, color: "#3B82F6" }}>80%</div>
-                    <div style={{ fontSize: 12, color: "#94A3B8", marginTop: 4, fontWeight: 500 }}>Tiết kiệm thời gian HR</div>
+                  <div style={{ background: "#F8FAFC", padding: 18, borderRadius: 12, border: "1px solid #E2E8F0", height: "100%" }}>
+                    <div style={{ fontSize: 20, fontWeight: 800, color: "#2563EB" }}>TF-IDF</div>
+                    <div style={{ fontSize: 12, color: "#64748B", marginTop: 6, fontWeight: 500 }}>Đối chiếu từ khóa có thể kiểm chứng</div>
                   </div>
                 </Col>
                 <Col span={12}>
-                  <div style={{ background: "rgba(15, 23, 42, 0.65)", padding: 18, borderRadius: 12, border: "1px solid rgba(255, 255, 255, 0.08)" }}>
-                    <div style={{ fontSize: 28, fontWeight: 800, color: "#F59E0B" }}>3 Lớp</div>
-                    <div style={{ fontSize: 12, color: "#94A3B8", marginTop: 4, fontWeight: 500 }}>Đối sánh đa thuật toán</div>
+                  <div style={{ background: "#F8FAFC", padding: 18, borderRadius: 12, border: "1px solid #E2E8F0", height: "100%" }}>
+                    <div style={{ fontSize: 20, fontWeight: 800, color: "#2563EB" }}>Gemini</div>
+                    <div style={{ fontSize: 12, color: "#64748B", marginTop: 6, fontWeight: 500 }}>Phân tích ngữ cảnh và giải thích</div>
                   </div>
                 </Col>
                 <Col span={12}>
-                  <div style={{ background: "rgba(15, 23, 42, 0.65)", padding: 18, borderRadius: 12, border: "1px solid rgba(255, 255, 255, 0.08)" }}>
-                    <div style={{ fontSize: 28, fontWeight: 800, color: "#EC4899" }}>Apriori</div>
-                    <div style={{ fontSize: 12, color: "#94A3B8", marginTop: 4, fontWeight: 500 }}>Khai phá luật kết hợp</div>
+                  <div style={{ background: "#F8FAFC", padding: 18, borderRadius: 12, border: "1px solid #E2E8F0", height: "100%" }}>
+                    <div style={{ fontSize: 20, fontWeight: 800, color: "#2563EB" }}>Apriori</div>
+                    <div style={{ fontSize: 12, color: "#64748B", marginTop: 6, fontWeight: 500 }}>Khai phá nhóm kỹ năng liên quan</div>
                   </div>
                 </Col>
               </Row>
