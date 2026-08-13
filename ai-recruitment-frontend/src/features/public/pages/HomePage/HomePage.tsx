@@ -39,6 +39,15 @@ const { Title, Paragraph, Text } = Typography;
 const { Option } = Select;
 const { Panel } = Collapse;
 
+const getFeaturedJobTitle = (job: JobDto | any): string =>
+  job?.title || (typeof job?.position === "string" ? job.position : job?.position?.name) || "Vị trí tuyển dụng";
+
+const getFeaturedJobLocation = (job: JobDto | any): string =>
+  job?.location || (typeof job?.branch === "string" ? job.branch : job?.branch?.name) || "Chưa cập nhật";
+
+const getFeaturedJobSalary = (job: JobDto | any): string =>
+  job?.salary || job?.salaryRange || "Thỏa thuận";
+
 // ScrollReveal component for smooth entry staggers
 function ScrollReveal({ children }: { children: React.ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -273,7 +282,7 @@ function HomePage() {
     // 1. Apply category filter
     if (selectedFilterCategory !== "all") {
       list = list.filter((job) => {
-        const title = (job.position?.name || "").toLowerCase();
+        const title = getFeaturedJobTitle(job).toLowerCase();
         if (selectedFilterCategory === "tech") {
           return (
             title.includes("machine") ||
@@ -365,8 +374,8 @@ function HomePage() {
         .filter(k => k.length > 2 && !["và", "cho", "của", "tại", "với", "đã", "đang", "phát", "triển"].includes(k));
 
       list = list.map((job, idx) => {
-        const title = (job.position?.name || "").toLowerCase();
-        const branchName = (job.branch?.name || "").toLowerCase();
+        const title = getFeaturedJobTitle(job).toLowerCase();
+        const branchName = getFeaturedJobLocation(job).toLowerCase();
         const description = (job.description || "").toLowerCase();
         const requirements = (job.requirements || "").toLowerCase();
         const fullJobText = `${title} ${branchName} ${description} ${requirements}`;
@@ -1369,7 +1378,7 @@ function HomePage() {
                           justifyContent: "center",
                           fontSize: 18
                         }}>
-                          {getJobCategoryIcon(job.position?.name || "")}
+                          {getJobCategoryIcon(getFeaturedJobTitle(job))}
                         </div>
                         {isSmartRecommend && (job as any).isCvMatched ? (
                           <Tag
@@ -1407,17 +1416,17 @@ function HomePage() {
                         style={{ fontSize: "17px", fontWeight: 800, color: "#0F172A", marginBottom: 20, lineHeight: 1.4, flex: 1 }}
                         className="plus-jakarta-sans"
                       >
-                        {job.position?.name || "Vị trí tuyển dụng"}
+                        {getFeaturedJobTitle(job)}
                       </Title>
 
                       <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 24 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 10, color: "#64748B" }}>
                           <EnvironmentOutlined style={{ fontSize: 15 }} />
-                          <span style={{ fontSize: 13 }}>{job.branch?.name || "Hồ Chí Minh, Việt Nam"}</span>
+                          <span style={{ fontSize: 13 }}>{getFeaturedJobLocation(job)}</span>
                         </div>
                         <div style={{ display: "flex", alignItems: "center", gap: 10, color: "#0F172A", fontWeight: 700 }}>
                           <DollarOutlined style={{ fontSize: 15 }} />
-                          <span style={{ fontSize: 13 }}>{job.salaryRange || "Thỏa thuận"}</span>
+                          <span style={{ fontSize: 13 }}>{getFeaturedJobSalary(job)}</span>
                         </div>
                       </div>
 
