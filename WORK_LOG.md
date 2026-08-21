@@ -6,11 +6,24 @@ File này là nhật ký nối tiếp, không chứa credential hoặc dữ li�
 
 | Môi trường | Trạng thái xác nhận gần nhất | Commit | Ghi chú |
 |---|---|---|---|
-| Local | Unit/build/benchmark đạt lúc 2026-08-22 01:48 +07:00 | `122d6fd` + hotfix chưa commit | 75 Python test, backend/frontend build đạt; đang sửa host nội bộ Docker |
-| Git remote | Đã push lúc 2026-08-22 01:40 +07:00 | `122d6fd` | Nhánh `feature/feature-based-refactor-vps` |
-| VPS | Ba container healthy; migration alias đã áp | `122d6fd` | HTTPS ngoài VPS đang bị Cloudflare 522; taxonomy sync nội bộ đang hotfix |
+| Local | Unit/build/benchmark đạt lúc 2026-08-22 01:54 +07:00 | `4e57223` | 75 Python test, backend/frontend build đạt; runtime JSON sau test được giữ ngoài commit |
+| Git remote | Đã push lúc 2026-08-22 01:49 +07:00 | `4e57223` | Nhánh `feature/feature-based-refactor-vps` |
+| VPS | Code/runtime `ĐÃ XONG`; public ingress `BỊ CHẶN` | `4e57223` | Ba container healthy, migration/taxonomy đạt; domain ngoài origin đang trả Cloudflare 522 |
 
 ## Nhật ký thực hiện
+
+### 2026-08-22 01:54 +07:00 — VPS-DEPLOY-VERIFY — Xác minh hotfix, migration và runtime VPS
+
+- Trạng thái: `ĐÃ XONG` phần code, migration và runtime Docker tại origin; `BỊ CHẶN` riêng đường truy cập công khai do Cloudflare 522/lớp ingress ngoài máy chủ.
+- Mục tiêu/phạm vi: triển khai hotfix hostname nội bộ, xác minh từ AI tới backend, kiểm tra TLS/Nginx/API/phân quyền ẩn danh và phân tách lỗi ứng dụng khỏi lỗi hạ tầng mạng.
+- Git/VPS: commit `4e57223` đã push và VPS fast-forward đúng commit. Deploy lần hai hoàn tất bằng script có rollback; `ai-service`, `backend`, `frontend` đều `running/healthy`. Stash và patch dự phòng trước deploy vẫn được giữ, không xóa dữ liệu cũ.
+- Database/AI nền: migration `20260822011500_AddSkillAliases` đã có trong `__EFMigrationsHistory`; không phát sinh migration mới ở hotfix. Từ AI container, `GET http://backend:8080/api/skills` trả 200 với 140 kỹ năng duyệt và 58 bí danh. Log xác nhận taxonomy đã reload; scheduler backend khởi động theo lịch startup/02:00.
+- Smoke origin qua Nginx/TLS: `/health`, `/api/jobs/published?pageIndex=1&pageSize=1`, `/api/skills` đều 200. Ba API bảo vệ `/api/dashboard/admin-stats`, `/api/systemsettings`, `/api/jobs` trả 401 khi ẩn danh. VPS không cấu hình bộ biến credential smoke Admin/HR/Ứng viên nên chưa chạy E2E đăng nhập theo vai trò; không dùng credential thật hoặc ghi chúng vào log.
+- HTTPS công khai: gọi trực tiếp origin bằng hostname/certificate trả 200; Nginx listen 80/443, host firewall INPUT accept và UFW inactive. Từ mạng ngoài không kết nối được 443, Cloudflare trả 522 và bộ đếm NAT Docker không nhận gói ngoài; bằng chứng nghiêng về Cloudflare origin mapping hoặc firewall/security rule của nhà cung cấp. Không tự ý sửa DNS/firewall vì cần quyền hạ tầng riêng.
+- File ảnh hưởng: không thêm code sau hotfix; cập nhật `WORK_LOG.md` và `PROJECT_CONTEXT.md` để phản ánh trạng thái triển khai thực, không ghi “HTTPS đạt” khi mới chỉ đạt ở origin.
+- Kiểm thử tổng hợp trước deploy: Python 75/75; benchmark nội dung 1.170 CV/162 JD/3.510 cặp đạt; corpus tài liệu 15 CV đa layout + 1 non-CV đạt 16/16 theo ngưỡng, exact dấu tên OCR 13/15; backend/frontend production build đạt. Đây là kiểm thử synthetic/fixture, không phải độ chính xác thị trường.
+- Rollback: deploy script đã giữ image rollback; migration alias có `Down` về `20260821233000_AddJobRepostingLifecycle`; source VPS cũ còn trong stash/patch. Không cần rollback vì runtime mới healthy và smoke origin đạt.
+- Bước tiếp theo: trên bảng điều khiển VPS/Cloudflare, kiểm tra bản ghi origin và cho phép inbound TCP 80/443 tới VPS; sau đó chạy `PROJECT_DIR=/home/ubuntu/KhoaLuan PUBLIC_URL=https://recruitinsightai.com bash deploy/vps/health-check.sh` và E2E đọc-only theo ba vai trò khi có biến credential riêng.
 
 ### 2026-08-22 01:48 +07:00 — VPS-DEPLOY-HOST-HOTFIX — Triển khai và sửa hostname đồng bộ taxonomy
 

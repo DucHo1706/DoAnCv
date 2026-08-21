@@ -26,6 +26,7 @@ AI chỉ hỗ trợ quyết định; không tự động loại ứng viên và 
 - Khai phá dữ liệu: Apriori/HUIM nhưng phải chạy trên dữ liệu thật, theo phạm vi ngành nghề và công khai điều kiện đầu vào.
 - Triển khai: Docker trên VPS; Git là nguồn phát hành nhưng push Git không đồng nghĩa đã deploy VPS.
 - Giao tiếp nội bộ Docker dùng hostname service (`backend`, `ai-service`); `AllowedHosts` của ASP.NET phải cho phép đúng hostname nội bộ cần thiết, không mở wildcard chỉ để vận hành tiện.
+- Health nội bộ/container và health công khai là hai phép kiểm tra riêng. Nginx/origin trả 200 không đủ để tuyên bố deploy công khai thành công nếu Cloudflare hoặc lớp ingress nhà cung cấp chưa chuyển được TCP 80/443 tới VPS.
 
 ## 3. Các quyết định nghiệp vụ đã thống nhất
 
