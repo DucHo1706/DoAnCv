@@ -1,10 +1,11 @@
 from fastapi import APIRouter, UploadFile, File, Form, Request, HTTPException
 from dtos.request_dtos import LazyAnalysisRequest
 from services import cv_analysis_service, interview_service, scoring_service
+from services.criterion_validation_service import parse_and_validate_criteria
 from utils.logger import logger
 from utils.rate_limiter import check_ip_rate_limit
 from utils.error_handler import get_user_friendly_error_message
-import json
+from starlette.concurrency import run_in_threadpool
 import time
 
 router = APIRouter()
@@ -39,12 +40,18 @@ async def validate_cv(file: UploadFile = File(...)):
     try:
         file_bytes = await file.read()
         _validate_upload_shape(file_bytes, file.filename or "")
-        cv_text = cv_analysis_service.doc_parser_service.extract_text_from_file(
-            file_bytes, file.filename or "", file.content_type or ""
+        extraction = await run_in_threadpool(
+            cv_analysis_service.doc_parser_service.extract_document_from_file,
+            file_bytes,
+            file.filename or "",
+            file.content_type or "",
         )
-        if not cv_text or len(cv_text.strip()) < 50:
-            return {"is_valid": False, "message": "Không đọc được đủ nội dung CV. Vui lòng dùng tệp rõ nét hơn hoặc PDF/DOCX có văn bản."}
+        cv_text = extraction.text or ""
+        cv_hash = cv_analysis_service.cache_document_extraction(file_bytes, extraction)
+        if not extraction.analysis_safe or len(cv_text.strip()) < 50:
+            return {"is_valid": False, "message": cv_analysis_service.OCR_INSUFFICIENT_MESSAGE}
         is_resume, reason = scoring_service.is_document_a_resume(cv_text)
+        cv_analysis_service.TEXT_CACHE[cv_hash]["validation"] = (is_resume, reason)
         if not is_resume:
             return {"is_valid": False, "message": f"Tệp đã chọn không phải CV hợp lệ. {reason}".strip()}
         return {"is_valid": True, "message": "CV hợp lệ."}
@@ -53,6 +60,63 @@ async def validate_cv(file: UploadFile = File(...)):
     except Exception as error:
         logger.error(f"Lỗi kiểm tra CV trước khi nộp: {error}", exc_info=True)
         raise HTTPException(status_code=503, detail="Chưa thể kiểm tra nội dung CV lúc này. Vui lòng thử lại sau.")
+
+
+@router.post("/extract-cv")
+async def extract_cv(file: UploadFile = File(...)):
+    """Trích xuất CV dùng chung cho hồ sơ mặc định, không chấm điểm theo job."""
+    try:
+        file_bytes = await file.read()
+        _validate_upload_shape(file_bytes, file.filename or "")
+        extraction = await run_in_threadpool(
+            cv_analysis_service.doc_parser_service.extract_document_from_file,
+            file_bytes,
+            file.filename or "",
+            file.content_type or "",
+        )
+        cv_text = extraction.text or ""
+        if not extraction.analysis_safe or len(cv_text.strip()) < 50:
+            return {
+                "status": "insufficient_data",
+                "message": "Không đọc được đủ nội dung CV.",
+                "extraction_quality": {
+                    "method": extraction.method,
+                    "quality_score": extraction.quality_score,
+                    "quality_level": extraction.quality_level,
+                    "warnings": extraction.warnings,
+                    "agreement_score": extraction.agreement_score,
+                    "agreement_kind": extraction.agreement_kind,
+                    "analysis_safe": extraction.analysis_safe,
+                },
+            }
+        is_resume, reason = scoring_service.is_document_a_resume(cv_text)
+        if not is_resume:
+            return {"status": "invalid_document", "message": reason}
+        info = nlp_processor.extract_information(cv_text)
+        timeline = cv_analysis_service.extract_experience_timeline(cv_text, info.get("skills", []))
+        return {
+            "status": "success",
+            "message": "Đã trích xuất CV thành công.",
+            "raw_text": cv_text,
+            "email": info.get("email"),
+            "phone": info.get("phone"),
+            "skills": info.get("skills", []),
+            "years_of_experience": round(float(timeline.get("total_experience_months", 0) or 0) / 12, 2),
+            "extraction_quality": {
+                "method": extraction.method,
+                "quality_score": extraction.quality_score,
+                "quality_level": extraction.quality_level,
+                "warnings": extraction.warnings,
+                "agreement_score": extraction.agreement_score,
+                "agreement_kind": extraction.agreement_kind,
+                "analysis_safe": extraction.analysis_safe,
+            },
+        }
+    except ValueError as error:
+        return {"status": "invalid_document", "message": str(error)}
+    except Exception as error:
+        logger.error(f"Lỗi trích xuất CV mặc định: {error}", exc_info=True)
+        raise HTTPException(status_code=503, detail="Chưa thể trích xuất CV lúc này. Vui lòng thử lại sau.")
 
 @router.post("/score-cv")
 async def score_cv(
@@ -63,66 +127,12 @@ async def score_cv(
 ):
     try:
         check_ip_rate_limit(request, cooldown_seconds=0.0, max_requests_per_minute=30)
-        try:
-            criteria_list = json.loads(criteria)
-        except Exception:
-            return {
-                "status": "error",
-                "message": "Danh sách tiêu chí đánh giá không đúng định dạng JSON."
-            }
-
-        if not isinstance(criteria_list, list):
-            return {
-                "status": "error",
-                "message": "Danh sách tiêu chí đánh giá phải là một mảng JSON."
-            }
-
-        if len(criteria_list) == 0:
-            return {
-                "status": "error",
-                "message": "Vui lòng truyền ít nhất 1 tiêu chí đánh giá."
-            }
-
-        total_weight = 0
-        for criterion in criteria_list:
-            if "name" not in criterion or "weight" not in criterion:
-                return {
-                    "status": "error",
-                    "message": "Mỗi tiêu chí phải có name và weight."
-                }
-
-            criterion_name = str(criterion["name"]).strip()
-            if criterion_name == "":
-                return {
-                    "status": "error",
-                    "message": "Tên tiêu chí không được để trống."
-                }
-
-            try:
-                criterion_weight = int(criterion["weight"])
-            except Exception:
-                return {
-                    "status": "error",
-                    "message": "Trọng số tiêu chí phải là số nguyên."
-                }
-
-            if criterion_weight <= 0 or criterion_weight > 100:
-                return {
-                    "status": "error",
-                    "message": "Trọng số mỗi tiêu chí phải từ 1 đến 100."
-                }
-
-            total_weight += criterion_weight
-
-        if total_weight != 100:
-            return {
-                "status": "error",
-                "message": f"Tổng trọng số tiêu chí phải bằng 100%. Hiện tại đang là {total_weight}%."
-            }
+        criteria_list = parse_and_validate_criteria(criteria)
 
         file_bytes = await file.read()
         _validate_upload_shape(file_bytes, file.filename or "")
-        res = cv_analysis_service.score_resume_sync(
+        res = await run_in_threadpool(
+            cv_analysis_service.score_resume_sync,
             file_bytes=file_bytes,
             filename=file.filename,
             content_type=file.content_type,
@@ -133,9 +143,11 @@ async def score_cv(
         return res
     except HTTPException as he:
         raise he
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
     except Exception as e:
         msg = get_user_friendly_error_message(e, "Không thể chấm điểm CV lúc này. Vui lòng thử lại sau.")
-        return {"status": "error", "message": msg}
+        raise HTTPException(status_code=503, detail=msg) from e
 
 
 @router.post("/score-cv-text")
@@ -147,28 +159,14 @@ async def score_cv_text(
 ):
     try:
         check_ip_rate_limit(request, cooldown_seconds=0.0, max_requests_per_minute=30)
-        criteria_list = json.loads(criteria)
-        if not isinstance(criteria_list, list) or not criteria_list:
-            return {"status": "error", "message": "Vui lòng truyền ít nhất 1 tiêu chí đánh giá."}
-
-        total_weight = 0
-        for criterion in criteria_list:
-            if "name" not in criterion or "weight" not in criterion:
-                return {"status": "error", "message": "Mỗi tiêu chí phải có name và weight."}
-            criterion_name = str(criterion["name"]).strip()
-            criterion_weight = int(criterion["weight"])
-            if not criterion_name or criterion_weight <= 0 or criterion_weight > 100:
-                return {"status": "error", "message": "Tiêu chí đánh giá không hợp lệ."}
-            total_weight += criterion_weight
-
-        if total_weight != 100:
-            return {"status": "error", "message": f"Tổng trọng số tiêu chí phải bằng 100%. Hiện tại đang là {total_weight}%."}
+        criteria_list = parse_and_validate_criteria(criteria)
 
         normalized_text = cv_text.strip()
         if len(normalized_text) < 80:
             return {"status": "error", "message": "CV trực tuyến chưa có đủ nội dung để phân tích."}
 
-        return cv_analysis_service.score_resume_sync(
+        return await run_in_threadpool(
+            cv_analysis_service.score_resume_sync,
             file_bytes=b"",
             filename="cv-builder.txt",
             content_type="text/plain",
@@ -177,12 +175,12 @@ async def score_cv_text(
             criteria_raw_str=criteria,
             cv_text_override=normalized_text
         )
-    except (ValueError, TypeError, json.JSONDecodeError) as error:
-        return {"status": "error", "message": str(error)}
+    except (ValueError, TypeError) as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
     except Exception as error:
         logger.error(f"Lỗi chấm CV trực tuyến: {error}", exc_info=True)
         msg = get_user_friendly_error_message(error, "Không thể chấm điểm CV trực tuyến lúc này. Vui lòng thử lại sau.")
-        return {"status": "error", "message": msg}
+        raise HTTPException(status_code=503, detail=msg) from error
 
 
 @router.post("/analyze-cv-preview")
@@ -264,7 +262,9 @@ def analyze_cv_interview(request_data: LazyAnalysisRequest, req: Request):
             cv_text=request_data.cv_text,
             jd_text=request_data.jd_text,
             job_title=request_data.job_title,
-            company_name=request_data.company_name
+            company_name=request_data.company_name,
+            cv_skills=request_data.cv_skills,
+            jd_skills=request_data.jd_skills
         )
         elapsed = time.time() - start
         logger.info(f"Phân tích câu hỏi phỏng vấn hoàn thành trong {elapsed:.1f}s")

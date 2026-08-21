@@ -12,6 +12,7 @@ interface OptimizationTip {
   star_guidance?: string;
   example_before?: string | null;
   example_after?: string | null;
+  is_fallback?: boolean;
 }
 
 interface StarOptimizationTabProps {
@@ -248,6 +249,16 @@ const StarOptimizationTab: React.FC<StarOptimizationTabProps> = ({ optimizationT
           (Situation, Task, Action, Result) để gây ấn tượng mạnh với nhà tuyển dụng.
         </Text>
       </div>
+
+      {normalizedTips.some((tip: any) => tip.is_fallback) && (
+        <Alert
+          message="Đang hiển thị phân tích cơ bản"
+          description="Gemini tạm thời không khả dụng. Các gợi ý dưới đây được tạo từ câu và kỹ năng có thật trong CV; hệ thống không tự tạo thành tích hoặc số liệu."
+          type="info"
+          showIcon
+          style={{ borderRadius: 12 }}
+        />
+      )}
 
       {Object.keys(tipGroups).length > 0 ? (
         Object.entries(tipGroups).map(([group, groupTips]) => (

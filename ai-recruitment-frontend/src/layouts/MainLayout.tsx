@@ -35,6 +35,7 @@ const BREADCRUMB_MAP: Record<string, { group: string; label: string }> = {
   "/recruiter/applications": { group: "Recruiter Workspace", label: "Quản lý Chiến dịch Tuyển dụng" },
   "/recruiter/schedules": { group: "Recruiter Workspace", label: "Lịch phỏng vấn" },
   "/recruiter/talent-pool": { group: "Recruiter Workspace", label: "Kho ứng viên tiềm năng" },
+  "/recruiter/candidate-search": { group: "Recruiter Workspace", label: "Tìm ứng viên" },
   "/recruiter/email-logs": { group: "Recruiter Workspace", label: "Lịch sử Email" },
   "/recruiter/profile": { group: "Cá nhân", label: "Thông tin tài khoản" },
 };
@@ -143,6 +144,7 @@ export default function MainLayout() {
           await connection.invoke("JoinGroup", accountId);
 
           connection.on("ReceiveNotification", (newNotif: any) => {
+            window.dispatchEvent(new CustomEvent("recruitment:dashboard-refresh", { detail: newNotif }));
             const formattedNotif = {
               id: newNotif.id || newNotif.NotificationID,
               title: newNotif.title || newNotif.Title,

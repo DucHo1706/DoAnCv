@@ -27,6 +27,10 @@ interface RedFlag {
   type: string;
   title: string;
   description: string;
+  evidence_text?: string;
+  evidence_section?: string;
+  confidence?: number;
+  needs_verification?: boolean;
 }
 
 interface ScoreAnalysis {
@@ -977,6 +981,7 @@ export default function CvAnalysisResultPage() {
             <Card style={glassCardStyle(0)} bodyStyle={{ padding: "24px 32px" }} bordered={false}>
               <AiDetailedTabs
                 parsedAnalysis={analysisData}
+                extractedSkills={cvSkills}
                 onChange={handleTabChange}
                 tipsLoading={tipsLoading}
                 langLoading={langLoading}

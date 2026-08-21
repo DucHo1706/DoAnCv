@@ -189,7 +189,7 @@ export function useJobDetail() {
       message.info("Không tìm thấy mã hồ sơ ứng tuyển.");
       return;
     }
-    navigate(`/my-applications?showAiDetail=${applicationId}`);
+    navigate("/my-applications");
   };
 
   const handleDirectApply = async () => {

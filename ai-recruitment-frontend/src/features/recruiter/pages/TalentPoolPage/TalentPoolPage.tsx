@@ -1,4 +1,4 @@
-import { Avatar, Button, Card, Input, Select, Space, Table, Tag, Tooltip, Typography, Row, Col } from "antd";
+import { Avatar, Button, Card, Input, Select, Space, Table, Tag, Tooltip, Typography, Row, Col, Modal, message, Tabs } from "antd";
 import {
   SearchOutlined,
   UserOutlined,
@@ -8,15 +8,20 @@ import {
   FilePdfOutlined,
   EyeOutlined,
   RedoOutlined,
+  DeleteOutlined,
+  PlusOutlined,
 } from "@ant-design/icons";
 import PageContainer from "../../../../components/common/PageContainer";
 import { useTalentPool } from "./hooks/useTalentPool";
-import type { TalentPoolCandidateDto } from "../../services/talentPoolService";
+import { talentPoolService, type TalentPoolCandidateDto } from "../../services/talentPoolService";
 import { appTheme } from "../../../../constants/theme";
+import CandidateSearchPage from "../CandidateSearchPage/CandidateSearchPage";
+import { useState } from "react";
 
 const { Text } = Typography;
 
 export default function TalentPoolPage() {
+  const [activeView, setActiveView] = useState("saved");
   const {
     navigate,
     searchText,
@@ -41,7 +46,28 @@ export default function TalentPoolPage() {
     readyCount,
     lockedCount,
     averageAiScore,
+    refreshTalentPool,
   } = useTalentPool();
+
+  const handleRemoveFromPool = (record: TalentPoolCandidateDto) => {
+    Modal.confirm({
+      title: "Loại ứng viên khỏi kho tiềm năng?",
+      content: "Thao tác này chỉ loại ứng viên khỏi kho. Tài khoản, CV và lịch sử ứng tuyển vẫn được giữ nguyên.",
+      okText: "Loại khỏi kho",
+      okType: "danger",
+      cancelText: "Hủy",
+      onOk: async () => {
+        try {
+          await talentPoolService.removeTalentPoolCandidate(record.talentPoolCandidateId);
+          message.success("Đã loại ứng viên khỏi kho tiềm năng.");
+          await refreshTalentPool();
+        } catch (error: any) {
+          message.error(error?.response?.data?.message || "Không thể loại ứng viên khỏi kho lúc này.");
+          throw error;
+        }
+      },
+    });
+  };
 
   const handleResetFilters = () => {
     setSearchText("");
@@ -123,7 +149,7 @@ export default function TalentPoolPage() {
     },
     {
       title: "Trạng thái",
-      dataIndex: "isLockedInOtherProcess",
+      dataIndex: "isInviteLocked",
       key: "status",
       width: 160,
       render: (isLocked: boolean) =>
@@ -140,7 +166,7 @@ export default function TalentPoolPage() {
     {
       title: "Thao tác",
       key: "actions",
-      width: 300,
+      width: 350,
       fixed: "right" as const,
       render: (_: any, record: TalentPoolCandidateDto) => (
         <Space size="small">
@@ -180,18 +206,66 @@ export default function TalentPoolPage() {
             size="small"
             icon={<MailOutlined />}
             style={{ borderRadius: 8 }}
-            onClick={() => navigate(`/recruiter/candidates/${record.candidateId}/email`)}
+            onClick={() =>
+              navigate(`/recruiter/candidates/${record.candidateId}/email`, {
+                state: {
+                  source: "talent-pool",
+                  emailType: "invite",
+                  emailContext: `Mời ứng viên trong kho tiềm năng trao đổi về vị trí ${record.highestScoreJobTitle || "phù hợp"}`,
+                  talentPoolCandidateId: record.talentPoolCandidateId,
+                  candidate: {
+                    candidateId: record.candidateId,
+                    candidateName: record.fullName,
+                    fullName: record.fullName,
+                    email: record.email,
+                    cvEmail: record.email,
+                    phone: record.phone,
+                    jobTitle: record.highestScoreJobTitle || "Vị trí phù hợp",
+                    aiScore: record.highestAiScore || 0,
+                    classification: "Kho ứng viên tiềm năng",
+                    matchedSkills: parseSkills(record.highlightSkillsJson),
+                    missingSkills: [],
+                    source: "TalentPool",
+                  },
+                },
+              })
+            }
           >
             Email
           </Button>
+          <Tooltip title="Chỉ loại khỏi kho, không xóa hồ sơ ứng viên">
+            <Button
+              danger
+              size="small"
+              icon={<DeleteOutlined />}
+              style={{ borderRadius: 8 }}
+              onClick={() => handleRemoveFromPool(record)}
+            />
+          </Tooltip>
         </Space>
       ),
     },
   ];
 
   return (
-    <PageContainer title="Kho ứng viên tiềm năng">
-      <Space direction="vertical" size="large" style={{ width: "100%" }}>
+    <PageContainer
+      title="Kho ứng viên tiềm năng"
+      subtitle="Ứng viên được lưu từ quy trình xét duyệt hồ sơ; bạn có thể ghi chú, liên hệ hoặc loại khỏi kho."
+      extra={
+        <Space>
+          <Button icon={<PlusOutlined />} onClick={() => navigate("/recruiter/applications")}>
+            Chọn từ hồ sơ ứng viên
+          </Button>
+        </Space>
+      }
+    >
+      <Tabs
+        activeKey={activeView}
+        onChange={setActiveView}
+        items={[{ key: "saved", label: "Ứng viên đã lưu" }, { key: "search", label: "Tìm ứng viên" }]}
+        style={{ marginBottom: 16 }}
+      />
+      {activeView === "search" ? <CandidateSearchPage embedded /> : <Space direction="vertical" size="large" style={{ width: "100%" }}>
         {/* Stat Cards Grid */}
         <Row gutter={[16, 16]}>
           <Col xs={24} sm={12} lg={6}>
@@ -384,7 +458,7 @@ export default function TalentPoolPage() {
             style={{ borderRadius: appTheme.radius.md }}
           />
         </Card>
-      </Space>
+      </Space>}
     </PageContainer>
   );
 }

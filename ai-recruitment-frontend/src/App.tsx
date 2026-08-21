@@ -24,6 +24,8 @@ const CampaignApplicationsPage = lazy(() => import("./features/recruiter/pages/C
 const CandidateComparisonPage = lazy(() => import("./features/recruiter/pages/CandidateComparisonPage"));
 const EmailCandidatePage = lazy(() => import("./features/recruiter/pages/EmailCandidatePage"));
 const TalentPoolPage = lazy(() => import("./features/recruiter/pages/TalentPoolPage"));
+const CandidateSearchPage = lazy(() => import("./features/recruiter/pages/CandidateSearchPage/CandidateSearchPage"));
+const CandidateSearchDetailPage = lazy(() => import("./features/recruiter/pages/CandidateSearchDetailPage/CandidateSearchDetailPage"));
 const TalentPoolDetailPage = lazy(() => import("./features/recruiter/pages/TalentPoolDetailPage"));
 const InterviewSchedulePage = lazy(() => import("./features/recruiter/pages/InterviewSchedulePage"));
 const EmailLogsPage = lazy(() => import("./features/recruiter/pages/EmailLogsPage"));
@@ -89,6 +91,7 @@ function App() {
           <Route path="dashboard" element={<RecruiterDashboardPage />} />
           <Route path="jobs" element={<JobManagementPage />} />
           <Route path="jobs/create" element={<CreateJobPage />} />
+          <Route path="jobs/:repostSourceId/repost" element={<CreateJobPage />} />
           <Route path="jobs/:id/edit" element={<CreateJobPage />} />
           <Route path="jobs/:id" element={<RecruiterJobDetailPage />} />
           <Route path="applications" element={<JobCampaignListPage />} />
@@ -99,6 +102,8 @@ function App() {
           <Route path="ranking" element={<Navigate to="/recruiter/applications" replace />} />
           <Route path="ranking/compare" element={<CandidateComparisonPage />} />
           <Route path="talent-pool" element={<TalentPoolPage />} />
+          <Route path="candidate-search" element={<CandidateSearchPage />} />
+          <Route path="candidate-search/:candidateId" element={<CandidateSearchDetailPage />} />
           <Route path="talent-pool/:id" element={<TalentPoolDetailPage />} />
           <Route path="email-logs" element={<EmailLogsPage />} />
           <Route path="profile" element={<RecruiterProfilePage />} />

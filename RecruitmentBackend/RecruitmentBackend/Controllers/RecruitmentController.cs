@@ -158,6 +158,32 @@ namespace RecruitmentBackend.Controllers
             return Ok(result.Data);
         }
 
+        [HttpPost("applications/{applicationId}/retry-ai")]
+        [Authorize(Roles = "Candidate")]
+        public async Task<IActionResult> RetryAiEvaluation(string applicationId)
+        {
+            var result = await _recruitmentService.RetryAiEvaluationAsync(applicationId, User);
+            if (!result.IsSuccess)
+            {
+                return BadRequest(new { message = result.Message });
+            }
+
+            return Accepted(new { message = result.Message, data = result.Data });
+        }
+
+        [HttpDelete("applications/{applicationId}/withdraw")]
+        [Authorize(Roles = "Candidate")]
+        public async Task<IActionResult> WithdrawApplication(string applicationId)
+        {
+            var result = await _recruitmentService.WithdrawApplicationAsync(applicationId, User);
+            if (!result.IsSuccess)
+            {
+                return BadRequest(new { message = result.Message });
+            }
+
+            return Ok(new { message = result.Message, data = result.Data });
+        }
+
         [HttpPost("hr/applications/{applicationId}/schedule")]
         [Authorize(Roles = "Recruiter")]
         public async Task<IActionResult> ScheduleInterview(string applicationId, [FromBody] ScheduleInterviewRequest request)

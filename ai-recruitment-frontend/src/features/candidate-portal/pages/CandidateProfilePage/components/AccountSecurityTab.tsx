@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Form, Input, Row, Col, Button, Space, Card, message, Progress, Alert } from "antd";
+import { Form, Input, Row, Col, Button, Space, Card, message, Progress, Alert, Switch, Typography } from "antd";
 import { 
   LockOutlined, 
   UnlockOutlined, 
@@ -11,7 +11,23 @@ import {
 import axiosClient from "../../../../../services/axiosClient";
 import { authService } from "../../../../../services/authService";
 
-export const AccountSecurityTab: React.FC = () => {
+const { Text } = Typography;
+
+interface AccountSecurityTabProps {
+  profile?: any;
+  discoverySaving?: boolean;
+  onDiscoveryChange?: (enabled: boolean) => void;
+  onContactChange?: (allowed: boolean) => void;
+  onCvChange?: (allowed: boolean) => void;
+}
+
+export const AccountSecurityTab: React.FC<AccountSecurityTabProps> = ({
+  profile,
+  discoverySaving = false,
+  onDiscoveryChange,
+  onContactChange,
+  onCvChange,
+}) => {
   const [step, setStep] = useState(1); // 1: Normal Change Password, 2: Reset with OTP
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -365,6 +381,41 @@ export const AccountSecurityTab: React.FC = () => {
           </Card>
         )}
       </div>
+      <Card
+        title="Quyền riêng tư hồ sơ"
+        style={{ maxWidth: 700, marginTop: 20, borderRadius: 16, border: "1px solid #E2E8F0" }}
+        extra={
+          <Switch
+            checked={Boolean(profile?.recruiterDiscoveryEnabled)}
+            loading={discoverySaving}
+            onChange={onDiscoveryChange}
+          />
+        }
+      >
+        <Text type="secondary">
+          Cho phép nhà tuyển dụng tìm thấy hồ sơ tóm tắt của bạn. Email, số điện thoại và CV gốc vẫn được ẩn cho đến khi bạn cho phép liên hệ.
+        </Text>
+        <div style={{ marginTop: 16, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <Text strong>Cho phép HR gửi lời mời liên hệ</Text>
+          <Switch
+            size="small"
+            checked={Boolean(profile?.recruiterContactAllowed)}
+            disabled={!profile?.recruiterDiscoveryEnabled}
+            loading={discoverySaving}
+            onChange={onContactChange}
+          />
+        </div>
+        <div style={{ marginTop: 14, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <Text strong>Cho phép HR xem CV đầy đủ</Text>
+          <Switch
+            size="small"
+            checked={Boolean(profile?.recruiterCvAllowed)}
+            disabled={!profile?.recruiterDiscoveryEnabled}
+            loading={discoverySaving}
+            onChange={onCvChange}
+          />
+        </div>
+      </Card>
     </div>
   );
 };

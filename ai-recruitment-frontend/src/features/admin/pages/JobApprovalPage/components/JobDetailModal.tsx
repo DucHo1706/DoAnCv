@@ -11,14 +11,12 @@ import {
 } from "antd";
 import { CheckOutlined, CloseOutlined } from "@ant-design/icons";
 import type { JobReviewResponse } from "../../../../recruiter/services/jobService";
+import { formatJobDate, resolveJobLifecycle } from "../../../../../utils/jobLifecycle";
 
 const { Text, Paragraph } = Typography;
 
 function formatDate(value?: string | null) {
-  if (!value) return "Chưa cập nhật";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleDateString("vi-VN");
+  return formatJobDate(value);
 }
 
 interface JobDetailModalProps {
@@ -90,9 +88,13 @@ export function JobDetailModal({
       {jobDetail && (
         <>
           <Space style={{ marginBottom: 16 }}>
-            {jobDetail.jobInfo.status === "Published" ? (
-              <Tag color="success">Đang chạy</Tag>
-            ) : jobDetail.jobInfo.status === "Closed" ? (
+            {resolveJobLifecycle(jobDetail.jobInfo) === "Expired" ? (
+              <Tag color="error">Đã duyệt · Hết hạn</Tag>
+            ) : resolveJobLifecycle(jobDetail.jobInfo) === "Scheduled" ? (
+              <Tag color="processing">Đã duyệt · Sắp mở</Tag>
+            ) : resolveJobLifecycle(jobDetail.jobInfo) === "Recruiting" ? (
+              <Tag color="success">Đang tuyển</Tag>
+            ) : resolveJobLifecycle(jobDetail.jobInfo) === "Closed" ? (
               <Tag color="default">Đã đóng</Tag>
             ) : jobDetail.jobInfo.status === "Rejected" ? (
               <Tag color="error" style={{ fontWeight: 700 }}>

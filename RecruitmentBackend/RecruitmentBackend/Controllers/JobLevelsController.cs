@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using RecruitmentBackend.DTOs.Requests;
 using RecruitmentBackend.Interfaces;
 using System.Threading.Tasks;
+using RecruitmentBackend.Services;
 
 namespace RecruitmentBackend.Controllers
 {
@@ -10,10 +11,12 @@ namespace RecruitmentBackend.Controllers
     public class JobLevelsController : ControllerBase
     {
         private readonly IJobLevelService _jobLevelService;
+        private readonly IMetadataChangeNotifier _notifier;
 
-        public JobLevelsController(IJobLevelService jobLevelService)
+        public JobLevelsController(IJobLevelService jobLevelService, IMetadataChangeNotifier notifier)
         {
             _jobLevelService = jobLevelService;
+            _notifier = notifier;
         }
 
         [HttpGet]
@@ -34,6 +37,7 @@ namespace RecruitmentBackend.Controllers
             
             if (result.IsSuccess == false) return BadRequest(result.Message);
             
+            await _notifier.NotifyAsync("job-levels", "created");
             return Ok(result.Data);
         }
 
@@ -52,6 +56,7 @@ namespace RecruitmentBackend.Controllers
                 return BadRequest(result.Message);
             }
 
+            await _notifier.NotifyAsync("job-levels", "updated");
             return Ok(result.Data);
         }
 
@@ -63,6 +68,7 @@ namespace RecruitmentBackend.Controllers
             
             if (result.IsSuccess == false) return NotFound(result.Message);
             
+            await _notifier.NotifyAsync("job-levels", "status-changed");
             return Ok(result.Data);
         }
 
@@ -78,6 +84,7 @@ namespace RecruitmentBackend.Controllers
                 return BadRequest(result.Message);
             }
             
+            await _notifier.NotifyAsync("job-levels", "deleted");
             return Ok(new { message = result.Message });
         }
     }

@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using RecruitmentBackend.Data;
 using RecruitmentBackend.Interfaces;
 using RecruitmentBackend.Models;
+using RecruitmentBackend.Constants;
 using System.Text.Json;
 
 namespace RecruitmentBackend.Services
@@ -15,9 +16,13 @@ namespace RecruitmentBackend.Services
             _context = context;
         }
 
-        public async Task<object> GetAdminDashboardStatsAsync(string? categoryId, DateTime? fromDate, DateTime? toDate)
+        public async Task<object> GetAdminDashboardStatsAsync(string? categoryId, string? positionId, string? jobLevelId, string? branchId, string? jobId, DateTime? fromDate, DateTime? toDate)
         {
             string? selectedCategoryId = NormalizeCategoryId(categoryId);
+            string? selectedPositionId = NormalizeFilterId(positionId);
+            string? selectedJobLevelId = NormalizeFilterId(jobLevelId);
+            string? selectedBranchId = NormalizeFilterId(branchId);
+            string? selectedJobId = NormalizeFilterId(jobId);
 
             DateTime? fromDateValue = null;
             DateTime? toDateExclusive = null;
@@ -54,16 +59,34 @@ namespace RecruitmentBackend.Services
                 snapshotDate = DateTime.Now;
             }
 
-            var categoryOptions = await _context.Categories
+            var categoryRows = await _context.Categories
                 .AsNoTracking()
                 .Where(category => category.IsActive == true)
                 .OrderBy(category => category.Name)
                 .Select(category => new
                 {
                     categoryId = category.CategoryID,
-                    categoryName = category.Name
+                    categoryName = category.Name,
+                    parentId = category.ParentId
                 })
                 .ToListAsync();
+            var categoryOptions = categoryRows;
+            HashSet<string>? selectedCategoryScope = null;
+            if (!string.IsNullOrWhiteSpace(selectedCategoryId))
+            {
+                selectedCategoryScope = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { selectedCategoryId };
+                bool changed;
+                do
+                {
+                    changed = false;
+                    foreach (var category in categoryRows.Where(item =>
+                                 !string.IsNullOrWhiteSpace(item.parentId)
+                                 && selectedCategoryScope.Contains(item.parentId!)))
+                    {
+                        changed |= selectedCategoryScope.Add(category.categoryId);
+                    }
+                } while (changed);
+            }
 
             /*
                 QUICK METRIC 1:
@@ -103,7 +126,12 @@ namespace RecruitmentBackend.Services
                                  select new AdminDashboardJobItem
                                  {
                                      JobId = job.JobID,
+                                     PositionId = job.PositionID,
+                                     PositionName = position != null ? position.PositionName : "Chưa cập nhật vị trí",
+                                     JobLevelId = job.JobLevelID,
+                                     BranchId = job.BranchID,
                                      Status = job.Status,
+                                     StartDate = job.StartDate,
                                      Deadline = job.Deadline,
                                      CreatedAt = job.CreatedAt,
                                      CategoryId = string.IsNullOrWhiteSpace(job.CategoryID) == false
@@ -124,7 +152,7 @@ namespace RecruitmentBackend.Services
                 - Tin đăng mới theo ngày.
             */
             var jobsInSelectedRange = allJobs
-                .Where(job => IsCategoryMatched(job.CategoryId, selectedCategoryId) == true)
+                .Where(job => IsDashboardJobMatched(job, selectedCategoryScope, selectedPositionId, selectedJobLevelId, selectedBranchId, selectedJobId))
                 .Where(job => IsDateInRange(job.CreatedAt, fromDateValue, toDateExclusive) == true)
                 .ToList();
 
@@ -138,7 +166,7 @@ namespace RecruitmentBackend.Services
                 Tính các job đã tồn tại tính đến ngày kết thúc filter.
             */
             var snapshotJobs = allJobs
-                .Where(job => IsCategoryMatched(job.CategoryId, selectedCategoryId) == true)
+                .Where(job => IsDashboardJobMatched(job, selectedCategoryScope, selectedPositionId, selectedJobLevelId, selectedBranchId, selectedJobId))
                 .Where(job => job.CreatedAt < snapshotDateExclusive)
                 .ToList();
 
@@ -152,7 +180,8 @@ namespace RecruitmentBackend.Services
             */
             int activeJobs = snapshotJobs.Count(job =>
                 job.Status == "Published" &&
-                job.Deadline >= snapshotDate);
+                (!job.StartDate.HasValue || job.StartDate.Value.Date <= snapshotDate.Date) &&
+                job.Deadline.Date >= snapshotDate.Date);
 
             /*
                 Lấy toàn bộ Application kèm CV, Job, Category, AI Evaluation.
@@ -171,6 +200,11 @@ namespace RecruitmentBackend.Services
                                          from ai in aiGroup.DefaultIfEmpty()
                                          select new AdminDashboardApplicationItem
                                          {
+                                             ApplicationId = application.ApplicationID,
+                                             JobId = job.JobID,
+                                             PositionId = job.PositionID,
+                                             JobLevelId = job.JobLevelID,
+                                             BranchId = job.BranchID,
                                              ApplicationStatus = application.Status,
                                              AppliedAt = application.AppliedAt,
                                              CvId = cv.CVID,
@@ -200,7 +234,7 @@ namespace RecruitmentBackend.Services
                 - OCR/NLP error rate.
             */
             var filteredApplications = allApplications
-                .Where(item => IsCategoryMatched(item.CategoryId, selectedCategoryId) == true)
+                .Where(item => IsDashboardApplicationMatched(item, selectedCategoryScope, selectedPositionId, selectedJobLevelId, selectedBranchId, selectedJobId))
                 .Where(item => IsDateInRange(item.AppliedAt, fromDateValue, toDateExclusive) == true)
                 .ToList();
 
@@ -210,7 +244,7 @@ namespace RecruitmentBackend.Services
                 Ý nghĩa: hồ sơ đã nộp tính đến ngày kết thúc filter.
             */
             var snapshotApplications = allApplications
-                .Where(item => IsCategoryMatched(item.CategoryId, selectedCategoryId) == true)
+                .Where(item => IsDashboardApplicationMatched(item, selectedCategoryScope, selectedPositionId, selectedJobLevelId, selectedBranchId, selectedJobId))
                 .Where(item => item.AppliedAt < snapshotDateExclusive)
                 .ToList();
 
@@ -242,7 +276,7 @@ namespace RecruitmentBackend.Services
                 - Tính Avg xử lý AI của toàn bộ CV đã phân tích tính đến hiện tại.
             */
             var performanceApplications = allApplications
-                .Where(item => IsCategoryMatched(item.CategoryId, selectedCategoryId) == true)
+                .Where(item => IsDashboardApplicationMatched(item, selectedCategoryScope, selectedPositionId, selectedJobLevelId, selectedBranchId, selectedJobId))
                 .Where(item =>
                     item.AiEvaluatedAt.HasValue &&
                     IsDateInRange(item.AiEvaluatedAt.Value, fromDateValue, toDateExclusive) == true)
@@ -260,21 +294,51 @@ namespace RecruitmentBackend.Services
             int highMatchCount = analyzedApplications.Count(item => item.AiFitScore >= 75);
             double highMatchRate = analyzedCvs > 0 ? Math.Round((double)highMatchCount / analyzedCvs * 100, 1) : 0;
 
-            // Tối ưu hóa tính toán Time-to-hire và Chi nhánh hiệu quả trực tiếp trên Database
-            var avgDays = await (from app in _context.Applications
-                                 join schedule in _context.InterviewSchedules on app.ApplicationID equals schedule.ApplicationID
-                                 select EF.Functions.DateDiffDay(app.AppliedAt, schedule.InterviewDate))
-                                .AverageAsync(val => (double?)val);
-            double timeToHireDays = avgDays.HasValue ? Math.Round(avgDays.Value, 1) : 0;
+            var filteredApplicationIds = filteredApplications.Select(item => item.ApplicationId).ToList();
+            var hiredEvents = await _context.ApplicationStatusHistories.AsNoTracking()
+                .Where(history => filteredApplicationIds.Contains(history.ApplicationID)
+                    && history.ToStatus == ApplicationStatuses.Hired)
+                .Select(history => new { history.ApplicationID, history.ChangedAtUtc })
+                .ToListAsync();
+            var appliedAtById = filteredApplications.ToDictionary(item => item.ApplicationId, item => item.AppliedAt);
+            var hireDurations = hiredEvents
+                .Where(item => appliedAtById.ContainsKey(item.ApplicationID))
+                .Select(item => Math.Max(0, (VietnamTimeService.ToLocal(item.ChangedAtUtc) - appliedAtById[item.ApplicationID]).TotalDays))
+                .ToList();
+            double timeToHireDays = hireDurations.Count > 0 ? Math.Round(hireDurations.Average(), 1) : 0;
 
-            var topBranches = await (from job in _context.JobPostings
-                                     where job.Status == "Published"
-                                     join branch in _context.Branches on job.BranchID equals branch.BranchID
-                                     group job by branch.BranchName into g
-                                     select new { branchName = g.Key, count = g.Count() })
-                                    .OrderByDescending(x => x.count)
-                                    .Take(5)
-                                    .ToListAsync();
+            var branchNames = await _context.Branches.AsNoTracking()
+                .ToDictionaryAsync(branch => branch.BranchID, branch => branch.BranchName);
+            var topBranches = snapshotJobs
+                .Where(job => job.Status == "Published"
+                    && (!job.StartDate.HasValue || job.StartDate.Value.Date <= snapshotDate.Date)
+                    && job.Deadline.Date >= snapshotDate.Date
+                    && !string.IsNullOrWhiteSpace(job.BranchId))
+                .GroupBy(job => job.BranchId!)
+                .Select(group => new
+                {
+                    branchName = branchNames.TryGetValue(group.Key, out var name) ? name : "Chưa cập nhật",
+                    count = group.Count()
+                })
+                .OrderByDescending(item => item.count)
+                .Take(5)
+                .ToList();
+
+            var adminApplicationIds = filteredApplications.Select(item => item.ApplicationId).ToList();
+            var (adminTodayStartUtc, adminTodayEndUtc) = VietnamTimeService.GetUtcDayRange();
+            var adminTodayEvents = await _context.ApplicationStatusHistories
+                .AsNoTracking()
+                .Where(history => adminApplicationIds.Contains(history.ApplicationID)
+                    && history.ChangedAtUtc >= adminTodayStartUtc
+                    && history.ChangedAtUtc < adminTodayEndUtc)
+                .ToListAsync();
+            int applicationsToday = adminTodayEvents
+                .Where(history => history.ToStatus == ApplicationStatuses.Applied)
+                .Select(history => history.ApplicationID)
+                .Distinct()
+                .Count();
+            int statusChangesToday = adminTodayEvents
+                .Count(history => history.FromStatus != history.ToStatus && history.FromStatus != string.Empty);
 
             var quickMetrics = new
             {
@@ -287,7 +351,9 @@ namespace RecruitmentBackend.Services
                 averageProcessingSeconds,
                 highMatchRate,
                 timeToHireDays,
-                topBranches
+                topBranches,
+                applicationsToday,
+                statusChangesToday
             };
 
             /*
@@ -316,10 +382,18 @@ namespace RecruitmentBackend.Services
                 filters = new
                 {
                     selectedCategoryId,
+                    selectedPositionId,
+                    selectedJobLevelId,
+                    selectedBranchId,
+                    selectedJobId,
                     fromDate = fromDateValue,
                     toDate
                 },
                 categoryOptions,
+                positionOptions = await _context.Positions.AsNoTracking().OrderBy(item => item.PositionName).Select(item => new { id = item.PositionID, name = item.PositionName, categoryId = item.CategoryID }).ToListAsync(),
+                jobLevelOptions = await _context.JobLevels.AsNoTracking().Where(item => item.IsActive).OrderBy(item => item.Name).Select(item => new { id = item.JobLevelID, name = item.Name, parentId = item.ParentId }).ToListAsync(),
+                branchOptions = await _context.Branches.AsNoTracking().OrderBy(item => item.BranchName).Select(item => new { id = item.BranchID, name = item.BranchName }).ToListAsync(),
+                jobOptions = allJobs.Select(item => new { jobId = item.JobId, jobTitle = item.PositionName, positionId = item.PositionId, jobLevelId = item.JobLevelId, branchId = item.BranchId, categoryId = item.CategoryId, status = item.Status, deadline = item.Deadline }).Distinct().OrderBy(item => item.jobTitle).ToList(),
                 quickMetrics,
                 activityTrend,
                 jobCategoryShare,
@@ -340,7 +414,7 @@ namespace RecruitmentBackend.Services
             };
         }
 
-        public async Task<object> GetHrDashboardStatsAsync(string accountId, string? jobId, string? timeRange)
+        public async Task<object> GetHrDashboardStatsAsync(string accountId, string? categoryId, string? positionId, string? jobLevelId, string? branchId, string? jobId, string? timeRange)
         {
             if (string.IsNullOrWhiteSpace(accountId) == true)
             {
@@ -374,7 +448,7 @@ namespace RecruitmentBackend.Services
                 .Select(g => new { JobID = g.Key, Count = g.Count() })
                 .ToDictionaryAsync(g => g.JobID, g => g.Count);
 
-            var hrJobs = await (from job in _context.JobPostings
+            var allHrJobs = await (from job in _context.JobPostings
                                 where job.RecruiterID == recruiter.RecruiterID
                                 join position in _context.Positions on job.PositionID equals position.PositionID into positionGroup
                                 from position in positionGroup.DefaultIfEmpty()
@@ -384,6 +458,10 @@ namespace RecruitmentBackend.Services
                                 select new
                                 {
                                     jobId = job.JobID,
+                                    positionId = job.PositionID,
+                                    jobLevelId = job.JobLevelID,
+                                    branchId = job.BranchID,
+                                    categoryId = job.CategoryID ?? (position != null ? position.CategoryID : null),
                                     jobTitle = position != null ? position.PositionName : "Tin tuyển dụng chưa cập nhật vị trí",
                                     status = job.Status,
                                     createdAt = job.CreatedAt,
@@ -393,16 +471,17 @@ namespace RecruitmentBackend.Services
                                     unreadCount = unreadCounts.ContainsKey(job.JobID) ? unreadCounts[job.JobID] : 0
                                 }).ToListAsync();
 
+            var hrJobs = allHrJobs
+                .Where(job => IsCategoryMatched(job.categoryId, NormalizeFilterId(categoryId)))
+                .Where(job => IsFilterMatched(job.positionId, NormalizeFilterId(positionId)))
+                .Where(job => IsFilterMatched(job.jobLevelId, NormalizeFilterId(jobLevelId)))
+                .Where(job => IsFilterMatched(job.branchId, NormalizeFilterId(branchId)))
+                .Where(job => IsFilterMatched(job.jobId, NormalizeFilterId(jobId)))
+                .ToList();
+
             var hrJobIds = hrJobs.Select(job => job.jobId).ToList();
 
-            bool isJobOwnedByHr = true;
-
-            if (string.IsNullOrWhiteSpace(jobId) == false)
-            {
-                isJobOwnedByHr = hrJobIds.Contains(jobId);
-            }
-
-            if (isJobOwnedByHr == false)
+            if (string.IsNullOrWhiteSpace(jobId) == false && rawHrJobIds.Contains(jobId) == false)
             {
                 return new
                 {
@@ -441,11 +520,6 @@ namespace RecruitmentBackend.Services
                                        Classification = ai != null ? ai.Classification : null
                                    };
 
-            if (string.IsNullOrWhiteSpace(jobId) == false)
-            {
-                applicationQuery = applicationQuery.Where(item => item.JobId == jobId);
-            }
-
             DateTime? minAppliedAt = GetMinAppliedAtByTimeRange(timeRange);
 
             if (minAppliedAt.HasValue == true)
@@ -454,6 +528,24 @@ namespace RecruitmentBackend.Services
             }
 
             var dashboardApplications = await applicationQuery.ToListAsync();
+
+            var selectedApplicationIds = dashboardApplications
+                .Select(item => item.ApplicationId)
+                .ToList();
+            var (todayStartUtc, todayEndUtc) = VietnamTimeService.GetUtcDayRange();
+            var todayStatusEvents = await _context.ApplicationStatusHistories
+                .AsNoTracking()
+                .Where(history => selectedApplicationIds.Contains(history.ApplicationID)
+                    && history.ChangedAtUtc >= todayStartUtc
+                    && history.ChangedAtUtc < todayEndUtc)
+                .ToListAsync();
+            int applicationsToday = todayStatusEvents
+                .Where(history => history.ToStatus == ApplicationStatuses.Applied)
+                .Select(history => history.ApplicationID)
+                .Distinct()
+                .Count();
+            int statusChangesToday = todayStatusEvents
+                .Count(history => history.FromStatus != history.ToStatus && history.FromStatus != string.Empty);
 
             var totalJobs = hrJobIds.Count;
             var totalApplications = dashboardApplications.Count;
@@ -509,11 +601,24 @@ namespace RecruitmentBackend.Services
 
             // Calculate Application Growth Trend (last 14 days)
             var applicationTrend = new List<object>();
-            var today = DateTime.Today;
+            var today = VietnamTimeService.NowLocal.Date;
+            var (trendStartUtc, _) = VietnamTimeService.GetUtcDayRange(today.AddDays(-13));
+            var recentAppliedEvents = await _context.ApplicationStatusHistories
+                .AsNoTracking()
+                .Where(history => selectedApplicationIds.Contains(history.ApplicationID)
+                    && history.ToStatus == ApplicationStatuses.Applied
+                    && history.ChangedAtUtc >= trendStartUtc
+                    && history.ChangedAtUtc < todayEndUtc)
+                .Select(history => new { history.ApplicationID, history.ChangedAtUtc })
+                .ToListAsync();
             for (int i = 13; i >= 0; i--)
             {
                 var targetDate = today.AddDays(-i);
-                int count = dashboardApplications.Count(item => item.AppliedAt.Date == targetDate);
+                int count = recentAppliedEvents
+                    .Where(item => VietnamTimeService.ToLocal(item.ChangedAtUtc).Date == targetDate)
+                    .Select(item => item.ApplicationID)
+                    .Distinct()
+                    .Count();
                 applicationTrend.Add(new
                 {
                     date = targetDate.ToString("dd/MM"),
@@ -562,7 +667,9 @@ namespace RecruitmentBackend.Services
                 averageFitScore,
                 totalViews,
                 applicationRate,
-                avgTimeToHireDays
+                avgTimeToHireDays,
+                applicationsToday,
+                statusChangesToday
             };
 
             var skillCloudData = BuildSkillCloudData(dashboardApplications);
@@ -576,12 +683,19 @@ namespace RecruitmentBackend.Services
             {
                 isSuccess = true,
                 message = "Lấy thống kê HR Dashboard thành công.",
-                selectedJobId = jobId,
+                selectedCategoryId = NormalizeFilterId(categoryId),
+                selectedPositionId = NormalizeFilterId(positionId),
+                selectedJobLevelId = NormalizeFilterId(jobLevelId),
+                selectedBranchId = NormalizeFilterId(branchId),
+                selectedJobId = NormalizeFilterId(jobId),
                 quickMetrics,
                 funnel,
                 applicationTrend,
                 upcomingInterviews,
-                jobOptions = hrJobs,
+                jobOptions = allHrJobs,
+                positionOptions = allHrJobs.GroupBy(job => new { job.positionId, job.jobTitle }).Select(group => new { id = group.Key.positionId, name = group.Key.jobTitle }).OrderBy(item => item.name).ToList(),
+                jobLevelOptions = await _context.JobLevels.AsNoTracking().Where(item => item.IsActive).OrderBy(item => item.Name).Select(item => new { id = item.JobLevelID, name = item.Name, parentId = item.ParentId }).ToListAsync(),
+                branchOptions = await _context.Branches.AsNoTracking().OrderBy(item => item.BranchName).Select(item => new { id = item.BranchID, name = item.BranchName }).ToListAsync(),
                 totalApplications,
                 newApplications,
                 averageFitScore,
@@ -619,7 +733,12 @@ namespace RecruitmentBackend.Services
         private sealed class AdminDashboardJobItem
         {
             public string JobId { get; set; } = "";
+            public string? PositionId { get; set; }
+            public string PositionName { get; set; } = "Chưa cập nhật vị trí";
+            public string? JobLevelId { get; set; }
+            public string? BranchId { get; set; }
             public string Status { get; set; } = "";
+            public DateTime? StartDate { get; set; }
             public DateTime Deadline { get; set; }
             public DateTime CreatedAt { get; set; }
             public string? CategoryId { get; set; }
@@ -628,6 +747,11 @@ namespace RecruitmentBackend.Services
 
         private sealed class AdminDashboardApplicationItem
         {
+            public string ApplicationId { get; set; } = "";
+            public string JobId { get; set; } = "";
+            public string? PositionId { get; set; }
+            public string? JobLevelId { get; set; }
+            public string? BranchId { get; set; }
             public string ApplicationStatus { get; set; } = "";
             public DateTime AppliedAt { get; set; }
             public string CvId { get; set; } = "";
@@ -656,6 +780,46 @@ namespace RecruitmentBackend.Services
             return categoryId;
         }
 
+        private static string? NormalizeFilterId(string? value)
+        {
+            return string.IsNullOrWhiteSpace(value) || value == "all" ? null : value;
+        }
+
+        private static bool IsDashboardJobMatched(
+            AdminDashboardJobItem item,
+            ISet<string>? categoryIds,
+            string? positionId,
+            string? jobLevelId,
+            string? branchId,
+            string? jobId)
+        {
+            return IsCategoryMatched(item.CategoryId, categoryIds)
+                && IsFilterMatched(item.PositionId, positionId)
+                && IsFilterMatched(item.JobLevelId, jobLevelId)
+                && IsFilterMatched(item.BranchId, branchId)
+                && IsFilterMatched(item.JobId, jobId);
+        }
+
+        private static bool IsDashboardApplicationMatched(
+            AdminDashboardApplicationItem item,
+            ISet<string>? categoryIds,
+            string? positionId,
+            string? jobLevelId,
+            string? branchId,
+            string? jobId)
+        {
+            return IsCategoryMatched(item.CategoryId, categoryIds)
+                && IsFilterMatched(item.PositionId, positionId)
+                && IsFilterMatched(item.JobLevelId, jobLevelId)
+                && IsFilterMatched(item.BranchId, branchId)
+                && IsFilterMatched(item.JobId, jobId);
+        }
+
+        private static bool IsFilterMatched(string? actual, string? expected)
+        {
+            return string.IsNullOrWhiteSpace(expected) || string.Equals(actual, expected, StringComparison.OrdinalIgnoreCase);
+        }
+
         private static bool IsCategoryMatched(string? itemCategoryId, string? selectedCategoryId)
         {
             if (string.IsNullOrWhiteSpace(selectedCategoryId) == true)
@@ -669,6 +833,12 @@ namespace RecruitmentBackend.Services
             }
 
             return itemCategoryId == selectedCategoryId;
+        }
+
+        private static bool IsCategoryMatched(string? itemCategoryId, ISet<string>? selectedCategoryIds)
+        {
+            return selectedCategoryIds == null
+                || (!string.IsNullOrWhiteSpace(itemCategoryId) && selectedCategoryIds.Contains(itemCategoryId));
         }
 
         private static bool IsDateInRange(DateTime dateValue, DateTime? fromDateValue, DateTime? toDateExclusive)
@@ -970,7 +1140,12 @@ namespace RecruitmentBackend.Services
                 return null;
             }
 
-            DateTime now = DateTime.Now;
+            DateTime now = VietnamTimeService.NowLocal;
+
+            if (timeRange == "today")
+            {
+                return now.Date;
+            }
 
             if (timeRange == "week")
             {

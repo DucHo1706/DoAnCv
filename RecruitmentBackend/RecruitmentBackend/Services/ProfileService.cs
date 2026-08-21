@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using RecruitmentBackend.Data;
+using RecruitmentBackend.DTOs.Responses;
 using RecruitmentBackend.Interfaces;
 using RecruitmentBackend.Utilities;
 using RecruitmentBackend.Models;
@@ -21,11 +22,13 @@ namespace RecruitmentBackend.Services
     {
         private readonly AppDbContext _context;
         private readonly IFileService _fileService;
+        private readonly IAiService _aiService;
 
-        public ProfileService(AppDbContext context, IFileService fileService)
+        public ProfileService(AppDbContext context, IFileService fileService, IAiService aiService)
         {
             _context = context;
             _fileService = fileService;
+            _aiService = aiService;
         }
 
         public async Task<object?> GetProfileAsync(ClaimsPrincipal user)
@@ -97,8 +100,55 @@ namespace RecruitmentBackend.Services
                 major = defaultCv?.Major,
                 university = defaultCv?.University,
                 yearsOfExperience = defaultCv?.YearsOfExperience ?? 0,
-                extractedPhone = defaultCv?.ExtractedPhone
+                extractedPhone = defaultCv?.ExtractedPhone,
+                recruiterDiscoveryEnabled = candidate.RecruiterDiscoveryEnabled,
+                recruiterContactAllowed = candidate.RecruiterContactAllowed,
+                recruiterCvAllowed = candidate.RecruiterCvAllowed,
+                recruiterDiscoveryUpdatedAt = candidate.RecruiterDiscoveryUpdatedAt,
+                recruiterDiscoveryExpiresAt = candidate.RecruiterDiscoveryExpiresAt
             };
+        }
+
+        public async Task<(bool Success, string Message, object? Data)> UpdateRecruiterDiscoveryAsync(
+            ClaimsPrincipal user,
+            bool enabled,
+            bool contactAllowed,
+            bool cvAllowed,
+            DateTime? expiresAt)
+        {
+            string? accountId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrWhiteSpace(accountId))
+            {
+                return (false, "Không xác định được tài khoản ứng viên.", null);
+            }
+
+            var candidate = await _context.Candidates.FirstOrDefaultAsync(item => item.AccountID == accountId);
+            if (candidate == null)
+            {
+                return (false, "Không tìm thấy hồ sơ ứng viên.", null);
+            }
+
+            if (expiresAt.HasValue && expiresAt.Value <= DateTime.UtcNow)
+            {
+                return (false, "Thời hạn cho phép tìm kiếm phải ở tương lai.", null);
+            }
+
+            candidate.RecruiterDiscoveryEnabled = enabled;
+            candidate.RecruiterContactAllowed = enabled && contactAllowed;
+            candidate.RecruiterCvAllowed = enabled && cvAllowed;
+            candidate.RecruiterDiscoveryExpiresAt = enabled ? expiresAt : null;
+            candidate.RecruiterDiscoveryUpdatedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+
+            return (true, enabled
+                ? "Đã cho phép nhà tuyển dụng tìm kiếm hồ sơ của bạn."
+                : "Đã tắt cho phép nhà tuyển dụng tìm kiếm hồ sơ.", new
+                {
+                enabled = candidate.RecruiterDiscoveryEnabled,
+                contactAllowed = candidate.RecruiterContactAllowed,
+                cvAllowed = candidate.RecruiterCvAllowed,
+                    expiresAt = candidate.RecruiterDiscoveryExpiresAt
+                });
         }
 
         public async Task<(bool Success, string Message)> UpdateProfileAsync(ClaimsPrincipal user, string fullName, string phone, DateTime? dob, string gender, string address)
@@ -155,42 +205,40 @@ namespace RecruitmentBackend.Services
 
             try
             {
+                if (file.Length <= 0 || file.Length > 10 * 1024 * 1024)
+                    return (false, "Tệp CV phải có dung lượng từ 1 byte đến 10 MB.", null);
+
+                byte[] fileBytes;
+                await using (var input = file.OpenReadStream())
+                await using (var memory = new MemoryStream())
+                {
+                    await input.CopyToAsync(memory);
+                    fileBytes = memory.ToArray();
+                }
+
+                var extraction = await _aiService.ExtractCvAsync(
+                    fileBytes,
+                    file.FileName,
+                    file.ContentType ?? "application/octet-stream");
+                if (!string.Equals(extraction.Status, "success", StringComparison.OrdinalIgnoreCase))
+                {
+                    var extractionMessage = string.IsNullOrWhiteSpace(extraction.Message)
+                        ? "Không thể trích xuất đủ nội dung CV."
+                        : extraction.Message;
+                    return (false, extractionMessage, new
+                    {
+                        status = extraction.Status,
+                        extractionQuality = extraction.ExtractionQuality
+                    });
+                }
+
                 string cvUrl = await _fileService.SaveFileAsync(file);
                 candidate.DefaultCvUrl = cvUrl;
                 candidate.DefaultCvName = file.FileName;
-
-                string rawText = "";
-                try
-                {
-                    using (var stream = file.OpenReadStream())
-                    using (var reader = new StreamReader(stream, Encoding.UTF8, true, 1024, leaveOpen: true))
-                    {
-                        rawText = await reader.ReadToEndAsync();
-                    }
-                }
-                catch { }
-
-                string? extractedPhone = null;
-                string? extractedEmail = null;
-                var extractedSkills = new List<string>();
-
-                if (!string.IsNullOrWhiteSpace(rawText))
-                {
-                    var phoneMatch = Regex.Match(rawText, @"(?:0|\+84)[35789]\d{8}\b");
-                    if (phoneMatch.Success) extractedPhone = phoneMatch.Value;
-
-                    var emailMatch = Regex.Match(rawText, @"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}");
-                    if (emailMatch.Success) extractedEmail = emailMatch.Value;
-
-                    var commonSkills = new[] { "React", "TypeScript", "JavaScript", "C#", ".NET", "Python", "SQL", "HTML", "CSS", "Node.js", "Java", "Docker", "Git", "Figma", "Go", "Github" };
-                    foreach (var sk in commonSkills)
-                    {
-                        if (rawText.Contains(sk, StringComparison.OrdinalIgnoreCase))
-                        {
-                            extractedSkills.Add(sk);
-                        }
-                    }
-                }
+                string rawText = extraction.RawText;
+                string? extractedPhone = extraction.Phone;
+                string? extractedEmail = extraction.Email;
+                var extractedSkills = extraction.Skills;
 
                 if (!string.IsNullOrEmpty(extractedPhone) && string.IsNullOrEmpty(candidate.Phone))
                 {
@@ -211,6 +259,8 @@ namespace RecruitmentBackend.Services
                         ExtractedEmail = extractedEmail,
                         ExtractedPhone = extractedPhone,
                         CVExtractedSkills = JsonSerializer.Serialize(extractedSkills),
+                        YearsOfExperience = extraction.YearsOfExperience,
+                        SourceType = "Uploaded",
                         CreatedAt = DateTime.Now
                     };
                     _context.CandidateCVs.Add(defaultCv);
@@ -223,6 +273,9 @@ namespace RecruitmentBackend.Services
                     {
                         defaultCv.CVExtractedSkills = JsonSerializer.Serialize(extractedSkills);
                     }
+                    defaultCv.RawText = rawText;
+                    defaultCv.YearsOfExperience = extraction.YearsOfExperience;
+                    defaultCv.SourceType = "Uploaded";
                     _context.CandidateCVs.Update(defaultCv);
                 }
 
@@ -237,10 +290,16 @@ namespace RecruitmentBackend.Services
                     address = candidate.Address,
                     extractedPhone = extractedPhone,
                     extractedEmail = extractedEmail,
-                    skills = extractedSkills
+                    skills = extractedSkills,
+                    yearsOfExperience = extraction.YearsOfExperience,
+                    extractionQuality = extraction.ExtractionQuality
                 };
 
-                return (true, "Tải lên và bóc tách thông tin CV thành công!", data);
+                return (true, "Tải lên và trích xuất CV thành công.", data);
+            }
+            catch (HttpRequestException)
+            {
+                return (false, "Dịch vụ đọc CV đang tạm thời không khả dụng. Tệp chưa được đặt làm CV mặc định; vui lòng thử lại sau.", null);
             }
             catch (Exception ex)
             {
@@ -279,6 +338,7 @@ namespace RecruitmentBackend.Services
 
             string rawText = candidateCv?.RawText ?? "";
             string? extractedPhone = candidateCv?.ExtractedPhone;
+            CvExtractionResponse? extraction = null;
 
             // 3. Nếu chưa có RawText hoặc ExtractedPhone, tải và bóc tách file CV
             if (string.IsNullOrEmpty(rawText) || string.IsNullOrEmpty(extractedPhone))
@@ -307,13 +367,30 @@ namespace RecruitmentBackend.Services
 
                     if (fileBytes != null && fileBytes.Length > 0)
                     {
-                        rawText = Encoding.UTF8.GetString(fileBytes);
-                        
-                        var phoneMatch = Regex.Match(rawText, @"(?:0|\+84)[35789]\d{8}\b");
-                        if (phoneMatch.Success) extractedPhone = phoneMatch.Value;
+                        var fileName = Path.GetFileName(
+                            Uri.TryCreate(cvPath, UriKind.Absolute, out var uri) ? uri.LocalPath : cvPath);
+                        var extension = Path.GetExtension(fileName).ToLowerInvariant();
+                        var contentType = extension switch
+                        {
+                            ".pdf" => "application/pdf",
+                            ".docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                            ".png" => "image/png",
+                            ".jpg" or ".jpeg" => "image/jpeg",
+                            ".webp" => "image/webp",
+                            _ => "application/octet-stream"
+                        };
+                        extraction = await _aiService.ExtractCvAsync(fileBytes, fileName, contentType);
+                        if (string.Equals(extraction.Status, "success", StringComparison.OrdinalIgnoreCase))
+                        {
+                            rawText = extraction.RawText;
+                            extractedPhone = extraction.Phone;
+                        }
                     }
                 }
-                catch { }
+                catch (Exception)
+                {
+                    return (false, "Không thể đọc lại CV lúc này. Dữ liệu hồ sơ hiện có vẫn được giữ nguyên.", null);
+                }
             }
 
             // 4. Đồng bộ SĐT và Địa chỉ vào Candidate
@@ -345,6 +422,12 @@ namespace RecruitmentBackend.Services
             {
                 candidateCv.ExtractedPhone = extractedPhone ?? candidateCv.ExtractedPhone;
                 candidateCv.RawText = string.IsNullOrEmpty(candidateCv.RawText) ? rawText : candidateCv.RawText;
+                if (extraction != null && string.Equals(extraction.Status, "success", StringComparison.OrdinalIgnoreCase))
+                {
+                    candidateCv.ExtractedEmail = extraction.Email ?? candidateCv.ExtractedEmail;
+                    candidateCv.CVExtractedSkills = JsonSerializer.Serialize(extraction.Skills);
+                    candidateCv.YearsOfExperience = extraction.YearsOfExperience;
+                }
                 _context.CandidateCVs.Update(candidateCv);
             }
 

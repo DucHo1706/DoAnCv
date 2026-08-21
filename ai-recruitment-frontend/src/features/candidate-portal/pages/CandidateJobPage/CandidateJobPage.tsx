@@ -85,6 +85,19 @@ const escapeRegExp = (string: string) => {
   return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 };
 
+const getPublicJobCode = (value: unknown) => {
+  const raw = String(value || "");
+  const guid = raw.match(/[0-9a-f]{8}(?:-?[0-9a-f]{4}){3}-?[0-9a-f]{12}/i)?.[0];
+  if (guid) return guid.replaceAll("-", "").slice(0, 8).toUpperCase();
+
+  let hash = 2166136261;
+  for (let index = 0; index < raw.length; index += 1) {
+    hash ^= raw.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(16).padStart(8, "0").toUpperCase();
+};
+
 const canonicalizeLocation = (name: string) => {
   const normalized = (name || "")
     .normalize("NFD")
@@ -524,7 +537,7 @@ export default function CandidateJobPage() {
                     }
                   >
                     <Option value="all">Tất cả cấp bậc</Option>
-                    {jobLevels.map((l) => (
+                    {jobLevels.filter((l) => l.parentId).map((l) => (
                       <Option key={l.id} value={l.id}>
                         {l.name}
                       </Option>
@@ -846,7 +859,7 @@ export default function CandidateJobPage() {
                             </Space>
 
                             <Text type="secondary" style={{ fontSize: 12 }}>
-                              Mã tin: #{String(job.id || job.jobID).slice(0, 8)}
+                              Mã tin: #{getPublicJobCode(job.id || job.jobID)}
                             </Text>
                           </div>
                         </div>

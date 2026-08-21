@@ -7,6 +7,14 @@ import axiosClient from "../../../../../services/axiosClient";
 export interface CategoryOption {
   categoryId: string;
   categoryName: string;
+  parentId?: string | null;
+}
+
+export interface DashboardOption {
+  id: string;
+  name: string;
+  parentId?: string | null;
+  categoryId?: string | null;
 }
 
 export interface QuickMetrics {
@@ -17,6 +25,8 @@ export interface QuickMetrics {
   analyzedCvs: number;
   aiServerStatus: string;
   averageProcessingSeconds: number | null;
+  applicationsToday: number;
+  statusChangesToday: number;
 }
 
 export interface ActivityTrendItem {
@@ -48,6 +58,10 @@ export interface AdminDashboardStats {
   isSuccess: boolean;
   message: string;
   categoryOptions: CategoryOption[];
+  positionOptions: DashboardOption[];
+  jobLevelOptions: DashboardOption[];
+  branchOptions: DashboardOption[];
+  jobOptions: Array<{ jobId: string; jobTitle: string; positionId?: string; jobLevelId?: string; branchId?: string; categoryId?: string; status?: string; deadline?: string }>;
   quickMetrics: QuickMetrics;
   activityTrend: ActivityTrendItem[];
   jobCategoryShare: JobCategoryShareItem[];
@@ -59,6 +73,10 @@ export const emptyAdminDashboardStats: AdminDashboardStats = {
   isSuccess: true,
   message: "",
   categoryOptions: [],
+  positionOptions: [],
+  jobLevelOptions: [],
+  branchOptions: [],
+  jobOptions: [],
   quickMetrics: {
     totalUsers: 0,
     totalHrUsers: 0,
@@ -67,6 +85,8 @@ export const emptyAdminDashboardStats: AdminDashboardStats = {
     analyzedCvs: 0,
     aiServerStatus: "Chưa có dữ liệu",
     averageProcessingSeconds: null,
+    applicationsToday: 0,
+    statusChangesToday: 0,
   },
   activityTrend: [],
   jobCategoryShare: [],
@@ -129,7 +149,12 @@ export function normalizeAdminDashboardStats(rawData: any): AdminDashboardStats 
     categoryOptions: getArrayValue<CategoryOption>(source?.categoryOptions).map((item: any) => ({
       categoryId: item.categoryId || item.categoryID || item.id || "",
       categoryName: item.categoryName || item.name || "Chưa phân loại",
+      parentId: item.parentId ?? null,
     })),
+    positionOptions: getArrayValue<DashboardOption>(source?.positionOptions),
+    jobLevelOptions: getArrayValue<DashboardOption>(source?.jobLevelOptions),
+    branchOptions: getArrayValue<DashboardOption>(source?.branchOptions),
+    jobOptions: getArrayValue<any>(source?.jobOptions),
     quickMetrics: {
       totalUsers: getNumberValue(quickMetricsSource.totalUsers ?? source?.totalUsers),
       totalHrUsers: getNumberValue(quickMetricsSource.totalHrUsers ?? source?.totalHrUsers),
@@ -149,6 +174,8 @@ export function normalizeAdminDashboardStats(rawData: any): AdminDashboardStats 
         quickMetricsSource.aiServerStatus || source?.aiServerStatus || "Chưa có dữ liệu",
       averageProcessingSeconds:
         quickMetricsSource.averageProcessingSeconds ?? source?.averageProcessingSeconds ?? null,
+      applicationsToday: getNumberValue(quickMetricsSource.applicationsToday),
+      statusChangesToday: getNumberValue(quickMetricsSource.statusChangesToday),
     },
     activityTrend: getArrayValue<ActivityTrendItem>(source?.activityTrend).map((item: any) => ({
       date: item.date || "",
@@ -235,6 +262,10 @@ export function useAdminDashboard() {
   const [stats, setStats] = useState<AdminDashboardStats>(emptyAdminDashboardStats);
   const [previousStats, setPreviousStats] = useState<AdminDashboardStats | null>(null);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | undefined>(undefined);
+  const [selectedPositionId, setSelectedPositionId] = useState<string | undefined>(undefined);
+  const [selectedJobLevelId, setSelectedJobLevelId] = useState<string | undefined>(undefined);
+  const [selectedBranchId, setSelectedBranchId] = useState<string | undefined>(undefined);
+  const [selectedJobId, setSelectedJobId] = useState<string | undefined>(undefined);
   const [selectedDateRange, setSelectedDateRange] = useState<[Dayjs, Dayjs] | null>(null);
 
   const fetchStats = async () => {
@@ -242,6 +273,10 @@ export function useAdminDashboard() {
     try {
       const params: {
         categoryId?: string;
+        positionId?: string;
+        jobLevelId?: string;
+        branchId?: string;
+        jobId?: string;
         fromDate?: string;
         toDate?: string;
       } = {};
@@ -249,18 +284,26 @@ export function useAdminDashboard() {
       if (stringIsEmpty(selectedCategoryId) === false) {
         params.categoryId = selectedCategoryId;
       }
+      if (stringIsEmpty(selectedPositionId) === false) params.positionId = selectedPositionId;
+      if (stringIsEmpty(selectedJobLevelId) === false) params.jobLevelId = selectedJobLevelId;
+      if (stringIsEmpty(selectedBranchId) === false) params.branchId = selectedBranchId;
+      if (stringIsEmpty(selectedJobId) === false) params.jobId = selectedJobId;
       if (selectedDateRange !== null) {
         params.fromDate = selectedDateRange[0].format("YYYY-MM-DD");
         params.toDate = selectedDateRange[1].format("YYYY-MM-DD");
       }
 
       const previousPeriod = getPreviousPeriod(selectedDateRange);
-      const previousParams: { categoryId?: string; fromDate: string; toDate: string } = {
+      const previousParams: { categoryId?: string; positionId?: string; jobLevelId?: string; branchId?: string; jobId?: string; fromDate: string; toDate: string } = {
         ...previousPeriod,
       };
       if (stringIsEmpty(selectedCategoryId) === false) {
         previousParams.categoryId = selectedCategoryId;
       }
+      if (stringIsEmpty(selectedPositionId) === false) previousParams.positionId = selectedPositionId;
+      if (stringIsEmpty(selectedJobLevelId) === false) previousParams.jobLevelId = selectedJobLevelId;
+      if (stringIsEmpty(selectedBranchId) === false) previousParams.branchId = selectedBranchId;
+      if (stringIsEmpty(selectedJobId) === false) previousParams.jobId = selectedJobId;
 
       const [response, previousResponse] = await Promise.all([
         axiosClient.get("/Dashboard/admin-stats", { params }),
@@ -282,7 +325,10 @@ export function useAdminDashboard() {
 
   useEffect(() => {
     fetchStats();
-  }, [selectedCategoryId, selectedDateRange]);
+    const refreshOnRecruitmentEvent = () => { fetchStats(); };
+    window.addEventListener("recruitment:dashboard-refresh", refreshOnRecruitmentEvent);
+    return () => window.removeEventListener("recruitment:dashboard-refresh", refreshOnRecruitmentEvent);
+  }, [selectedCategoryId, selectedPositionId, selectedJobLevelId, selectedBranchId, selectedJobId, selectedDateRange]);
 
   const categorySelectOptions = useMemo(() => {
     return stats.categoryOptions.map((category) => ({
@@ -290,6 +336,78 @@ export function useAdminDashboard() {
       value: category.categoryId,
     }));
   }, [stats.categoryOptions]);
+
+  const categoryScopeIds = useMemo(() => {
+    if (!selectedCategoryId) return null;
+    const values = new Set<string>([selectedCategoryId]);
+    let changed = true;
+    while (changed) {
+      changed = false;
+      stats.categoryOptions.forEach((category) => {
+        if (category.parentId && values.has(category.parentId) && !values.has(category.categoryId)) {
+          values.add(category.categoryId);
+          changed = true;
+        }
+      });
+    }
+    return values;
+  }, [selectedCategoryId, stats.categoryOptions]);
+
+  const categoryJobs = useMemo(
+    () => stats.jobOptions.filter((job) => !categoryScopeIds || (!!job.categoryId && categoryScopeIds.has(job.categoryId))),
+    [stats.jobOptions, categoryScopeIds]
+  );
+  const positionOptions = useMemo(() => {
+    const ids = new Set(categoryJobs
+      .filter((job) => (!selectedJobLevelId || job.jobLevelId === selectedJobLevelId)
+        && (!selectedBranchId || job.branchId === selectedBranchId))
+      .map((job) => job.positionId));
+    return stats.positionOptions.filter((item) => ids.has(item.id));
+  }, [categoryJobs, selectedJobLevelId, selectedBranchId, stats.positionOptions]);
+  const jobLevelOptions = useMemo(() => {
+    const ids = new Set(categoryJobs
+      .filter((job) => (!selectedPositionId || job.positionId === selectedPositionId)
+        && (!selectedBranchId || job.branchId === selectedBranchId))
+      .map((job) => job.jobLevelId));
+    return stats.jobLevelOptions.filter((item) => ids.has(item.id));
+  }, [categoryJobs, selectedPositionId, selectedBranchId, stats.jobLevelOptions]);
+  const branchOptions = useMemo(() => {
+    const ids = new Set(categoryJobs
+      .filter((job) => (!selectedPositionId || job.positionId === selectedPositionId)
+        && (!selectedJobLevelId || job.jobLevelId === selectedJobLevelId))
+      .map((job) => job.branchId));
+    return stats.branchOptions.filter((item) => ids.has(item.id));
+  }, [categoryJobs, selectedPositionId, selectedJobLevelId, stats.branchOptions]);
+  const jobOptions = useMemo(() => categoryJobs.filter((job) =>
+    (!selectedPositionId || job.positionId === selectedPositionId)
+    && (!selectedJobLevelId || job.jobLevelId === selectedJobLevelId)
+    && (!selectedBranchId || job.branchId === selectedBranchId)
+  ), [categoryJobs, selectedPositionId, selectedJobLevelId, selectedBranchId]);
+
+  useEffect(() => {
+    if (selectedPositionId && !positionOptions.some((item) => item.id === selectedPositionId)) setSelectedPositionId(undefined);
+    if (selectedJobLevelId && !jobLevelOptions.some((item) => item.id === selectedJobLevelId)) setSelectedJobLevelId(undefined);
+    if (selectedBranchId && !branchOptions.some((item) => item.id === selectedBranchId)) setSelectedBranchId(undefined);
+    if (selectedJobId && !jobOptions.some((item) => item.jobId === selectedJobId)) setSelectedJobId(undefined);
+  }, [positionOptions, jobLevelOptions, branchOptions, jobOptions, selectedPositionId, selectedJobLevelId, selectedBranchId, selectedJobId]);
+
+  const handleCategoryChange = (value?: string) => {
+    setSelectedCategoryId(value);
+    setSelectedPositionId(undefined);
+    setSelectedJobLevelId(undefined);
+    setSelectedBranchId(undefined);
+    setSelectedJobId(undefined);
+  };
+  const handleJobChange = (value?: string) => {
+    setSelectedJobId(value);
+    if (!value) return;
+    const job = stats.jobOptions.find((item) => item.jobId === value);
+    if (!job) return;
+    setSelectedCategoryId(job.categoryId);
+    setSelectedPositionId(job.positionId);
+    setSelectedJobLevelId(job.jobLevelId);
+    setSelectedBranchId(job.branchId);
+  };
 
   const aiStatusColor = getStatusColor(stats.quickMetrics.aiServerStatus);
   const averageProcessingSeconds = stats.quickMetrics.averageProcessingSeconds;
@@ -312,10 +430,22 @@ export function useAdminDashboard() {
     stats,
     trends,
     selectedCategoryId,
-    setSelectedCategoryId,
+    setSelectedCategoryId: handleCategoryChange,
+    selectedPositionId,
+    setSelectedPositionId,
+    selectedJobLevelId,
+    setSelectedJobLevelId,
+    selectedBranchId,
+    setSelectedBranchId,
+    selectedJobId,
+    setSelectedJobId: handleJobChange,
     selectedDateRange,
     setSelectedDateRange,
     categorySelectOptions,
+    positionOptions,
+    jobLevelOptions,
+    branchOptions,
+    jobOptions,
     aiStatusColor,
     averageProcessingText,
   };

@@ -15,6 +15,7 @@ import {
 } from "@ant-design/icons";
 import AppPagination from "../../../../../components/common/AppPagination";
 import EmptyState from "../../../../../components/common/EmptyState";
+import { resolveJobLifecycle } from "../../../../../utils/jobLifecycle";
 
 const { Text, Title } = Typography;
 
@@ -107,9 +108,17 @@ export function JobGridView({
                     {item.title}
                   </Title>
 
-                  {item.raw.status === "Published" ? (
+                  {resolveJobLifecycle(item.raw) === "Expired" ? (
+                    <Tag color="error" style={{ borderRadius: 6, fontWeight: 700 }}>
+                      Đã duyệt · Hết hạn
+                    </Tag>
+                  ) : resolveJobLifecycle(item.raw) === "Scheduled" ? (
+                    <Tag color="processing" style={{ borderRadius: 6, fontWeight: 700 }}>
+                      Đã duyệt · Sắp mở
+                    </Tag>
+                  ) : resolveJobLifecycle(item.raw) === "Recruiting" ? (
                     <Tag color="success" style={{ borderRadius: 6, fontWeight: 700 }}>
-                      Đang chạy
+                      Đang tuyển
                     </Tag>
                   ) : item.raw.status === "Closed" ? (
                     <Tag color="default" style={{ borderRadius: 6 }}>
@@ -194,7 +203,7 @@ export function JobGridView({
                   </Space>
                 ) : (
                   <Space size={8}>
-                    {(item.raw.status === "Published" || item.raw.status === "Closed") && (
+                    {(item.raw.status === "Published" || item.raw.status === "Closed") && resolveJobLifecycle(item.raw) !== "Expired" && (
                       <Popconfirm title={item.raw.status === "Published" ? "Tạm ẩn tin này?" : "Mở lại tin này?"} onConfirm={() => onToggleStatus(item)} okText="Đồng ý" cancelText="Hủy">
                         <Button icon={item.raw.status === "Published" ? <LockOutlined /> : <UnlockOutlined />} danger={item.raw.status === "Published"}>
                           {item.raw.status === "Published" ? "Tạm ẩn" : "Mở lại"}

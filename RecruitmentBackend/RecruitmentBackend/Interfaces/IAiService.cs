@@ -10,8 +10,15 @@ namespace RecruitmentBackend.Interfaces
         Task<AiMatchingResponse> GetMatchingScoreAsync(IFormFile cvFile, string jobDescription, string criteriaJson);
         Task<AiMatchingResponse> GetMatchingScoreFromTextAsync(string cvText, string jobDescription, string criteriaJson);
         Task<(bool IsValid, string Message)> ValidateCvAsync(byte[] fileBytes, string fileName, string contentType);
+        Task<CvExtractionResponse> ExtractCvAsync(byte[] fileBytes, string fileName, string contentType);
         Task<bool> SyncSkillsToAiAsync(List<string> skills);
-        Task<bool> TrainAprioriAsync(List<List<string>> transactions);
+        Task<bool> TrainAprioriAsync(
+            List<List<string>> transactions,
+            string? domain = null,
+            string? datasetId = null,
+            List<string>? taxonomySkills = null,
+            Dictionary<string, string>? taxonomyAliases = null,
+            bool resetModels = false);
         Task<List<string>> RecommendSkillsAsync(List<string> currentSkills, int topN = 5);
         Task<string> GetAssociationRulesJsonAsync();
         Task<bool> TrainHuimAsync(object payload);

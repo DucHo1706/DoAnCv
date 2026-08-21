@@ -1,0 +1,471 @@
+{
+  "schema_version": 3,
+  "dataset_kind": "synthetic_offline_benchmark",
+  "notice": "Dữ liệu hư cấu chỉ dùng để kiểm thử độ bao phủ và tính nhất quán của thuật toán; không đại diện cho phân bố thị trường lao động.",
+  "reference_date": "2026-08-21",
+  "levels": [
+    {"code": "junior", "name": "Junior", "experience_months": 18, "minimum_months": 12},
+    {"code": "middle", "name": "Middle", "experience_months": 42, "minimum_months": 36},
+    {"code": "senior", "name": "Senior", "experience_months": 72, "minimum_months": 60}
+  ],
+  "domains": [
+    {
+      "code": "information-technology",
+      "name": "Công nghệ thông tin",
+      "cv_variants_per_job": 15,
+      "description": "Phát triển, vận hành và bảo đảm chất lượng các hệ thống phần mềm phục vụ hoạt động kinh doanh.",
+      "common_skills": ["git", "agile", "phân tích yêu cầu"],
+      "degrees": ["Công nghệ thông tin", "Kỹ thuật phần mềm", "Khoa học máy tính"],
+      "roles": [
+        {
+          "code": "backend-developer", "title": "Lập trình viên Backend",
+          "required_skills": ["c#", "asp.net core", "sql server", "rest api", "entity framework core"],
+          "preferred_skills": ["docker", "redis", "unit testing"],
+          "primary_output": "dịch vụ API ổn định, có kiểm thử và tài liệu tích hợp",
+          "responsibilities": ["phân tích yêu cầu nghiệp vụ và thiết kế API", "tối ưu truy vấn và giao dịch dữ liệu", "viết kiểm thử tự động cho các luồng quan trọng", "phối hợp xử lý lỗi trên môi trường kiểm thử"]
+        },
+        {
+          "code": "frontend-developer", "title": "Lập trình viên Frontend",
+          "required_skills": ["javascript", "typescript", "react", "html", "css"],
+          "preferred_skills": ["redux", "vite", "frontend testing"],
+          "primary_output": "giao diện web dễ sử dụng, tương thích thiết bị và kết nối API tin cậy",
+          "responsibilities": ["chuyển thiết kế thành thành phần giao diện tái sử dụng", "quản lý trạng thái và dữ liệu bất đồng bộ", "kiểm tra khả năng truy cập và responsive", "phối hợp backend xử lý hợp đồng API"]
+        },
+        {
+          "code": "devops-engineer", "title": "Kỹ sư DevOps",
+          "required_skills": ["linux", "docker", "kubernetes", "ci/cd", "nginx"],
+          "preferred_skills": ["terraform", "prometheus", "grafana"],
+          "primary_output": "pipeline triển khai lặp lại được và hệ thống có khả năng quan sát",
+          "responsibilities": ["xây dựng pipeline tích hợp và triển khai liên tục", "đóng gói dịch vụ bằng container", "theo dõi tài nguyên và cảnh báo sự cố", "chuẩn hóa cấu hình môi trường và quy trình rollback"]
+        },
+        {
+          "code": "data-engineer", "title": "Kỹ sư Dữ liệu",
+          "required_skills": ["python", "sql", "etl", "data warehouse", "apache spark"],
+          "preferred_skills": ["airflow", "kafka", "data quality"],
+          "primary_output": "pipeline dữ liệu có kiểm soát chất lượng và truy vết nguồn",
+          "responsibilities": ["thiết kế luồng thu thập và chuyển đổi dữ liệu", "xây dựng mô hình dữ liệu phân tích", "giám sát chất lượng và độ trễ dữ liệu", "tối ưu chi phí xử lý theo khối lượng"]
+        },
+        {
+          "code": "qa-automation", "title": "Kỹ sư Kiểm thử Tự động",
+          "required_skills": ["test automation", "selenium", "api testing", "test case", "regression testing"],
+          "preferred_skills": ["playwright", "postman", "performance testing"],
+          "primary_output": "bộ kiểm thử hồi quy có thể chạy lặp lại và báo cáo lỗi rõ ràng",
+          "responsibilities": ["phân tích rủi ro và xây dựng chiến lược kiểm thử", "tự động hóa luồng web và API quan trọng", "quản lý dữ liệu kiểm thử độc lập", "phân tích lỗi và phối hợp xác nhận bản sửa"]
+        },
+        {
+          "code": "ui-ux-designer", "title": "Chuyên viên Thiết kế UI/UX",
+          "required_skills": ["figma", "user research", "wireframe", "prototype", "design system"],
+          "preferred_skills": ["usability testing", "information architecture", "accessibility"],
+          "primary_output": "luồng trải nghiệm có bằng chứng nghiên cứu và thiết kế nhất quán",
+          "responsibilities": ["nghiên cứu nhu cầu và hành vi người dùng", "xây dựng wireframe và prototype", "duy trì thư viện thành phần thiết kế", "đánh giá khả dụng và bàn giao cho đội phát triển"]
+        },
+        {
+          "code": "mobile-developer", "title": "Lập trình viên Mobile",
+          "required_skills": ["kotlin", "android", "jetpack compose", "rest api", "mobile architecture"],
+          "preferred_skills": ["flutter", "mobile testing", "firebase"],
+          "primary_output": "ứng dụng di động ổn định, có kiến trúc rõ và trải nghiệm nhất quán",
+          "responsibilities": ["phát triển chức năng ứng dụng Android theo thiết kế", "tích hợp API và quản lý trạng thái ngoại tuyến", "tối ưu hiệu năng và khả năng tương thích thiết bị", "viết kiểm thử và theo dõi lỗi sau phát hành"]
+        },
+        {
+          "code": "cybersecurity-analyst", "title": "Chuyên viên An toàn Thông tin",
+          "required_skills": ["siem", "incident response", "vulnerability assessment", "network security", "security monitoring"],
+          "preferred_skills": ["owasp", "threat hunting", "iso 27001"],
+          "primary_output": "sự kiện an ninh được phát hiện, phân loại và xử lý theo quy trình có truy vết",
+          "responsibilities": ["giám sát cảnh báo và phân loại mức độ sự cố", "điều tra dấu vết và khoanh vùng ảnh hưởng", "đánh giá lỗ hổng và theo dõi khắc phục", "cập nhật kịch bản phát hiện và báo cáo rủi ro"]
+        },
+        {
+          "code": "machine-learning-engineer", "title": "Kỹ sư Machine Learning",
+          "required_skills": ["python", "machine learning", "scikit-learn", "model evaluation", "feature engineering"],
+          "preferred_skills": ["tensorflow", "mlops", "natural language processing"],
+          "primary_output": "mô hình học máy có dữ liệu, phép đo, phiên bản và giới hạn sử dụng rõ ràng",
+          "responsibilities": ["chuẩn bị dữ liệu và xây dựng đặc trưng", "huấn luyện so sánh và đánh giá mô hình", "đóng gói pipeline suy luận có phiên bản", "theo dõi sai lệch dữ liệu và chất lượng mô hình"]
+        },
+        {
+          "code": "database-administrator", "title": "Quản trị viên Cơ sở dữ liệu",
+          "required_skills": ["sql server", "backup recovery", "database performance", "high availability", "database security"],
+          "preferred_skills": ["replication", "database monitoring", "powershell"],
+          "primary_output": "cơ sở dữ liệu sẵn sàng, có phương án phục hồi và kiểm soát truy cập",
+          "responsibilities": ["quản trị cấu hình và quyền truy cập dữ liệu", "giám sát hiệu năng và tối ưu truy vấn", "thực hiện sao lưu cùng diễn tập phục hồi", "thiết kế tính sẵn sàng cao và xử lý sự cố"]
+        },
+        {
+          "code": "business-analyst-it", "title": "Chuyên viên Phân tích Nghiệp vụ CNTT",
+          "required_skills": ["requirement elicitation", "bpmn", "user story", "acceptance criteria", "sql"],
+          "preferred_skills": ["uml", "prototyping", "user acceptance testing"],
+          "primary_output": "yêu cầu nghiệp vụ nhất quán, kiểm thử được và truy vết tới giá trị sử dụng",
+          "responsibilities": ["khảo sát quy trình và các bên liên quan", "mô hình hóa nghiệp vụ và làm rõ quy tắc", "viết user story cùng tiêu chí chấp nhận", "hỗ trợ UAT và quản lý thay đổi yêu cầu"]
+        },
+        {
+          "code": "cloud-engineer", "title": "Kỹ sư Điện toán Đám mây",
+          "required_skills": ["cloud computing", "aws", "identity access management", "virtual network", "infrastructure as code"],
+          "preferred_skills": ["azure", "terraform", "cloud cost optimization"],
+          "primary_output": "hạ tầng đám mây có thể tái tạo, bảo mật và kiểm soát chi phí",
+          "responsibilities": ["thiết kế tài nguyên và mạng trên đám mây", "quản lý danh tính và quyền tối thiểu", "tự động hóa hạ tầng bằng mã", "theo dõi tính sẵn sàng bảo mật và chi phí"]
+        }
+      ]
+    },
+    {
+      "code": "marketing",
+      "name": "Marketing",
+      "cv_variants_per_job": 5,
+      "description": "Nghiên cứu thị trường, xây dựng thương hiệu và vận hành hoạt động tiếp thị đa kênh có đo lường.",
+      "common_skills": ["nghiên cứu thị trường", "lập kế hoạch", "phân tích dữ liệu"],
+      "degrees": ["Marketing", "Truyền thông", "Quản trị kinh doanh"],
+      "roles": [
+        {
+          "code": "digital-marketing", "title": "Chuyên viên Digital Marketing",
+          "required_skills": ["digital marketing", "google analytics", "content planning", "campaign management", "conversion rate"],
+          "preferred_skills": ["google ads", "meta ads", "marketing automation"],
+          "primary_output": "chiến dịch số có mục tiêu, ngân sách và chỉ số chuyển đổi rõ ràng",
+          "responsibilities": ["lập kế hoạch kênh theo hành trình khách hàng", "theo dõi ngân sách và hiệu suất chiến dịch", "thực hiện thử nghiệm nội dung và tệp đối tượng", "tổng hợp báo cáo và đề xuất tối ưu"]
+        },
+        {
+          "code": "content-marketing", "title": "Chuyên viên Content Marketing",
+          "required_skills": ["content strategy", "copywriting", "editorial calendar", "storytelling", "content optimization"],
+          "preferred_skills": ["video script", "email marketing", "content management system"],
+          "primary_output": "hệ thống nội dung nhất quán với định vị và mục tiêu chuyển đổi",
+          "responsibilities": ["xây dựng trụ cột và lịch nội dung", "viết và biên tập nội dung đa định dạng", "phối hợp thiết kế và sản xuất video", "đo hiệu quả nội dung theo từng kênh"]
+        },
+        {
+          "code": "seo-specialist", "title": "Chuyên viên SEO",
+          "required_skills": ["seo", "keyword research", "technical seo", "on-page seo", "google search console"],
+          "preferred_skills": ["link building", "schema markup", "seo audit"],
+          "primary_output": "tăng trưởng tìm kiếm tự nhiên bền vững và có thể truy nguyên",
+          "responsibilities": ["nghiên cứu cụm từ khóa theo ý định", "kiểm tra kỹ thuật và cấu trúc website", "tối ưu nội dung và liên kết nội bộ", "theo dõi thứ hạng lưu lượng và chuyển đổi"]
+        },
+        {
+          "code": "performance-marketing", "title": "Chuyên viên Performance Marketing",
+          "required_skills": ["performance marketing", "media buying", "attribution", "a/b testing", "roas"],
+          "preferred_skills": ["google tag manager", "lookalike audience", "landing page optimization"],
+          "primary_output": "tăng trưởng trả phí với chi phí chuyển đổi và hiệu quả doanh thu được kiểm soát",
+          "responsibilities": ["phân bổ ngân sách theo mục tiêu kinh doanh", "thiết lập đo lường và mô hình phân bổ", "thử nghiệm quảng cáo và trang đích", "cảnh báo biến động chi phí và tối ưu hàng tuần"]
+        },
+        {
+          "code": "brand-executive", "title": "Chuyên viên Thương hiệu",
+          "required_skills": ["brand strategy", "brand guideline", "consumer insight", "integrated marketing", "brand tracking"],
+          "preferred_skills": ["event management", "public relations", "agency management"],
+          "primary_output": "nhận diện và thông điệp thương hiệu nhất quán trên các điểm chạm",
+          "responsibilities": ["phân tích người tiêu dùng và đối thủ", "quản lý kế hoạch truyền thông tích hợp", "kiểm soát tiêu chuẩn nhận diện", "đánh giá sức khỏe thương hiệu định kỳ"]
+        },
+        {
+          "code": "social-media", "title": "Chuyên viên Social Media",
+          "required_skills": ["social media", "community management", "social listening", "short-form video", "engagement analysis"],
+          "preferred_skills": ["influencer marketing", "livestream", "crisis communication"],
+          "primary_output": "cộng đồng trực tuyến tăng trưởng lành mạnh và phản hồi thương hiệu kịp thời",
+          "responsibilities": ["lập lịch xuất bản theo nền tảng", "quản trị bình luận và hội thoại cộng đồng", "theo dõi xu hướng và tín hiệu khủng hoảng", "phân tích tương tác và điều chỉnh định dạng"]
+        }
+      ]
+    },
+    {
+      "code": "human-resources-administration",
+      "name": "Nhân sự và Hành chính",
+      "cv_variants_per_job": 5,
+      "description": "Thu hút, phát triển và vận hành nguồn nhân lực đồng thời bảo đảm quy trình hành chính tuân thủ.",
+      "common_skills": ["giao tiếp", "lập kế hoạch", "tin học văn phòng"],
+      "degrees": ["Quản trị nhân lực", "Luật", "Quản trị kinh doanh"],
+      "roles": [
+        {
+          "code": "talent-acquisition", "title": "Chuyên viên Tuyển dụng",
+          "required_skills": ["talent acquisition", "candidate sourcing", "interview", "applicant tracking system", "recruitment reporting"],
+          "preferred_skills": ["employer branding", "boolean search", "competency framework"],
+          "primary_output": "nguồn ứng viên phù hợp và quy trình tuyển dụng có thời gian xử lý rõ ràng",
+          "responsibilities": ["tiếp nhận và làm rõ nhu cầu tuyển dụng", "tìm kiếm sàng lọc và phỏng vấn ứng viên", "quản lý trải nghiệm ứng viên", "báo cáo nguồn tuyển và thời gian tuyển"]
+        },
+        {
+          "code": "hr-generalist", "title": "Chuyên viên Nhân sự Tổng hợp",
+          "required_skills": ["hr operations", "employee relations", "labor law", "onboarding", "hr policy"],
+          "preferred_skills": ["hris", "performance management", "workforce planning"],
+          "primary_output": "quy trình nhân sự nhất quán và hồ sơ lao động được kiểm soát",
+          "responsibilities": ["vận hành vòng đời nhân viên", "giải đáp chính sách và quan hệ lao động", "cập nhật hồ sơ và dữ liệu nhân sự", "phối hợp đánh giá hiệu suất định kỳ"]
+        },
+        {
+          "code": "compensation-benefits", "title": "Chuyên viên C&B",
+          "required_skills": ["payroll", "personal income tax", "social insurance", "compensation", "attendance management"],
+          "preferred_skills": ["salary benchmarking", "advanced excel", "benefit administration"],
+          "primary_output": "bảng lương và quyền lợi chính xác, đúng hạn và tuân thủ",
+          "responsibilities": ["đối soát chấm công và tính lương", "thực hiện bảo hiểm và thuế thu nhập", "quản lý chế độ phúc lợi", "phân tích chi phí nhân sự và sai lệch"]
+        },
+        {
+          "code": "hr-operations", "title": "Chuyên viên Vận hành Nhân sự",
+          "required_skills": ["employee records", "hr process", "hris", "data privacy", "service desk"],
+          "preferred_skills": ["process mapping", "sla management", "hr analytics"],
+          "primary_output": "dịch vụ nhân sự có SLA, dữ liệu đầy đủ và quyền truy cập được kiểm soát",
+          "responsibilities": ["tiếp nhận yêu cầu dịch vụ nhân sự", "chuẩn hóa biểu mẫu và luồng phê duyệt", "duy trì dữ liệu trên HRIS", "theo dõi SLA và nguyên nhân yêu cầu lặp lại"]
+        },
+        {
+          "code": "administration-officer", "title": "Chuyên viên Hành chính Văn phòng",
+          "required_skills": ["office administration", "document management", "vendor management", "asset management", "event coordination"],
+          "preferred_skills": ["procurement", "facility management", "business correspondence"],
+          "primary_output": "văn phòng vận hành liên tục, chi phí và tài sản có hồ sơ kiểm soát",
+          "responsibilities": ["quản lý văn thư và hồ sơ hành chính", "theo dõi tài sản và văn phòng phẩm", "làm việc với nhà cung cấp", "điều phối cuộc họp sự kiện và hậu cần"]
+        },
+        {
+          "code": "learning-development", "title": "Chuyên viên Đào tạo và Phát triển",
+          "required_skills": ["training needs analysis", "learning design", "training facilitation", "learning management system", "training evaluation"],
+          "preferred_skills": ["competency model", "e-learning", "career development"],
+          "primary_output": "chương trình học gắn với khoảng trống năng lực và có đánh giá sau đào tạo",
+          "responsibilities": ["phân tích nhu cầu đào tạo theo vai trò", "thiết kế chương trình và tài liệu học", "điều phối giảng viên và lịch học", "đánh giá mức độ áp dụng sau đào tạo"]
+        }
+      ]
+    },
+    {
+      "code": "finance-accounting",
+      "name": "Tài chính và Kế toán",
+      "cv_variants_per_job": 5,
+      "description": "Ghi nhận, kiểm soát và phân tích thông tin tài chính phục vụ tuân thủ và ra quyết định.",
+      "common_skills": ["excel", "phân tích dữ liệu", "kiểm soát nội bộ"],
+      "degrees": ["Kế toán", "Tài chính doanh nghiệp", "Kiểm toán"],
+      "roles": [
+        {
+          "code": "general-accountant", "title": "Kế toán Tổng hợp",
+          "required_skills": ["general ledger", "financial statements", "account reconciliation", "accounting standards", "month-end closing"],
+          "preferred_skills": ["erp", "tax accounting", "management reporting"],
+          "primary_output": "sổ sách và báo cáo tài chính được đối chiếu, khóa sổ đúng hạn",
+          "responsibilities": ["hạch toán nghiệp vụ và kiểm tra chứng từ", "đối chiếu tài khoản và công nợ", "thực hiện khóa sổ cuối kỳ", "lập báo cáo tài chính và thuyết minh"]
+        },
+        {
+          "code": "financial-analyst", "title": "Chuyên viên Phân tích Tài chính",
+          "required_skills": ["financial modeling", "budgeting", "forecasting", "variance analysis", "management accounting"],
+          "preferred_skills": ["power bi", "valuation", "scenario analysis"],
+          "primary_output": "mô hình và dự báo tài chính hỗ trợ quyết định kinh doanh",
+          "responsibilities": ["xây dựng ngân sách và dự báo", "phân tích sai lệch doanh thu chi phí", "mô hình hóa các kịch bản đầu tư", "trình bày khuyến nghị cho đơn vị kinh doanh"]
+        },
+        {
+          "code": "internal-auditor", "title": "Kiểm toán viên Nội bộ",
+          "required_skills": ["internal audit", "risk assessment", "audit planning", "control testing", "audit report"],
+          "preferred_skills": ["fraud risk", "data analytics", "coso framework"],
+          "primary_output": "phát hiện kiểm soát yếu và kế hoạch khắc phục có theo dõi",
+          "responsibilities": ["đánh giá rủi ro và lập kế hoạch kiểm toán", "kiểm tra thiết kế và vận hành kiểm soát", "thu thập bằng chứng và phân tích nguyên nhân", "theo dõi tiến độ hành động khắc phục"]
+        },
+        {
+          "code": "tax-accountant", "title": "Kế toán Thuế",
+          "required_skills": ["tax compliance", "vat", "corporate income tax", "tax declaration", "tax reconciliation"],
+          "preferred_skills": ["transfer pricing", "e-invoice", "tax audit"],
+          "primary_output": "hồ sơ kê khai thuế đúng hạn và số liệu khớp với sổ kế toán",
+          "responsibilities": ["lập và nộp tờ khai thuế", "đối chiếu hóa đơn và nghĩa vụ thuế", "cập nhật thay đổi chính sách", "chuẩn bị hồ sơ giải trình khi thanh kiểm tra"]
+        },
+        {
+          "code": "accounts-payable-receivable", "title": "Kế toán Công nợ",
+          "required_skills": ["accounts payable", "accounts receivable", "invoice processing", "debt collection", "aging report"],
+          "preferred_skills": ["cash application", "vendor reconciliation", "credit control"],
+          "primary_output": "công nợ phải thu phải trả có tuổi nợ và đối chiếu đầy đủ",
+          "responsibilities": ["kiểm tra và ghi nhận hóa đơn", "đối chiếu nhà cung cấp khách hàng", "theo dõi hạn thanh toán và thu hồi nợ", "lập báo cáo tuổi nợ và cảnh báo quá hạn"]
+        },
+        {
+          "code": "treasury-specialist", "title": "Chuyên viên Nguồn vốn",
+          "required_skills": ["cash flow", "treasury", "bank reconciliation", "liquidity management", "payment control"],
+          "preferred_skills": ["foreign exchange", "working capital", "banking relationship"],
+          "primary_output": "dòng tiền đủ thanh khoản và giao dịch ngân hàng được kiểm soát",
+          "responsibilities": ["lập dự báo dòng tiền ngắn hạn", "kiểm soát lệnh thanh toán", "đối chiếu số dư ngân hàng", "theo dõi hạn mức và chi phí vốn"]
+        }
+      ]
+    },
+    {
+      "code": "sales-customer-success",
+      "name": "Kinh doanh và Chăm sóc khách hàng",
+      "cv_variants_per_job": 5,
+      "description": "Phát triển doanh thu, quản lý quan hệ khách hàng và bảo đảm giá trị sử dụng sau bán hàng.",
+      "common_skills": ["giao tiếp", "crm", "lập kế hoạch"],
+      "degrees": ["Quản trị kinh doanh", "Thương mại", "Marketing"],
+      "roles": [
+        {
+          "code": "b2b-sales", "title": "Chuyên viên Kinh doanh B2B",
+          "required_skills": ["b2b sales", "lead qualification", "sales pipeline", "negotiation", "proposal writing"],
+          "preferred_skills": ["solution selling", "cold outreach", "sales forecasting"],
+          "primary_output": "pipeline cơ hội có chất lượng và doanh thu mới theo mục tiêu",
+          "responsibilities": ["xác định và tiếp cận khách hàng mục tiêu", "khám phá nhu cầu và trình bày giải pháp", "soạn đề xuất và đàm phán điều khoản", "cập nhật pipeline và dự báo doanh thu"]
+        },
+        {
+          "code": "account-manager", "title": "Quản lý Khách hàng",
+          "required_skills": ["account management", "relationship management", "contract renewal", "upselling", "customer planning"],
+          "preferred_skills": ["stakeholder mapping", "commercial negotiation", "qbr"],
+          "primary_output": "tỷ lệ duy trì và tăng trưởng doanh thu trên danh mục khách hàng",
+          "responsibilities": ["xây dựng kế hoạch cho từng khách hàng", "duy trì quan hệ với bên ra quyết định", "xử lý rủi ro gia hạn", "xác định cơ hội bán thêm và bán chéo"]
+        },
+        {
+          "code": "sales-operations", "title": "Chuyên viên Vận hành Kinh doanh",
+          "required_skills": ["sales operations", "crm administration", "pipeline analytics", "sales reporting", "commission calculation"],
+          "preferred_skills": ["process improvement", "dashboard design", "data governance"],
+          "primary_output": "dữ liệu bán hàng đáng tin cậy và quy trình hỗ trợ đội kinh doanh hiệu quả",
+          "responsibilities": ["chuẩn hóa quy trình cập nhật CRM", "lập dashboard và báo cáo pipeline", "đối soát chỉ tiêu và hoa hồng", "phân tích điểm nghẽn trong chu kỳ bán hàng"]
+        },
+        {
+          "code": "business-development", "title": "Chuyên viên Phát triển Kinh doanh",
+          "required_skills": ["business development", "market mapping", "partnership", "business case", "go-to-market"],
+          "preferred_skills": ["deal structuring", "competitive analysis", "channel development"],
+          "primary_output": "cơ hội thị trường và quan hệ đối tác có luận chứng kinh doanh",
+          "responsibilities": ["lập bản đồ thị trường và đối tác", "xây dựng business case cho cơ hội mới", "đàm phán mô hình hợp tác", "theo dõi thử nghiệm và kế hoạch mở rộng"]
+        },
+        {
+          "code": "customer-success", "title": "Chuyên viên Customer Success",
+          "required_skills": ["customer success", "customer onboarding", "product adoption", "churn prevention", "customer health score"],
+          "preferred_skills": ["customer education", "renewal management", "voice of customer"],
+          "primary_output": "khách hàng đạt giá trị sử dụng, duy trì hợp đồng và giảm nguy cơ rời bỏ",
+          "responsibilities": ["hướng dẫn khách hàng triển khai sản phẩm", "theo dõi mức độ sử dụng và sức khỏe tài khoản", "xử lý rào cản phối hợp với đội sản phẩm", "chuẩn bị kế hoạch gia hạn và mở rộng"]
+        },
+        {
+          "code": "retail-sales", "title": "Chuyên viên Kinh doanh Bán lẻ",
+          "required_skills": ["retail sales", "product consulting", "point of sale", "sales target", "customer service"],
+          "preferred_skills": ["visual merchandising", "inventory awareness", "complaint handling"],
+          "primary_output": "trải nghiệm tại điểm bán tốt và mục tiêu doanh số được theo dõi",
+          "responsibilities": ["tư vấn sản phẩm theo nhu cầu", "thực hiện giao dịch tại quầy", "theo dõi chỉ tiêu cá nhân và cửa hàng", "tiếp nhận phản hồi và phối hợp xử lý khiếu nại"]
+        }
+      ]
+    },
+    {
+      "code": "logistics-supply-chain",
+      "name": "Logistics và Chuỗi cung ứng",
+      "cv_variants_per_job": 5,
+      "description": "Lập kế hoạch và kiểm soát dòng hàng, tồn kho, nhà cung cấp và hoạt động giao nhận.",
+      "common_skills": ["excel", "lập kế hoạch", "phân tích dữ liệu"],
+      "degrees": ["Logistics", "Kinh doanh quốc tế", "Quản trị chuỗi cung ứng"],
+      "roles": [
+        {
+          "code": "logistics-coordinator", "title": "Điều phối viên Logistics",
+          "required_skills": ["logistics coordination", "shipment tracking", "carrier management", "delivery planning", "shipping documents"],
+          "preferred_skills": ["transport management system", "route optimization", "freight costing"],
+          "primary_output": "lô hàng được theo dõi đúng lịch với hồ sơ giao nhận đầy đủ",
+          "responsibilities": ["lập kế hoạch giao nhận theo đơn hàng", "làm việc với hãng vận chuyển", "theo dõi mốc giao hàng và xử lý ngoại lệ", "đối chiếu chứng từ và chi phí vận tải"]
+        },
+        {
+          "code": "supply-planner", "title": "Chuyên viên Kế hoạch Cung ứng",
+          "required_skills": ["supply planning", "material planning", "inventory planning", "mrp", "capacity planning"],
+          "preferred_skills": ["sap", "safety stock", "scenario planning"],
+          "primary_output": "kế hoạch cung ứng cân bằng nhu cầu, năng lực và tồn kho",
+          "responsibilities": ["chuyển dự báo thành kế hoạch cung ứng", "kiểm tra năng lực và nguyên vật liệu", "theo dõi thiếu hụt và tồn kho", "điều chỉnh kế hoạch theo biến động thực tế"]
+        },
+        {
+          "code": "procurement-specialist", "title": "Chuyên viên Thu mua",
+          "required_skills": ["procurement", "supplier sourcing", "request for quotation", "contract negotiation", "purchase order"],
+          "preferred_skills": ["spend analysis", "supplier evaluation", "cost breakdown"],
+          "primary_output": "nguồn cung đáp ứng chất lượng, chi phí và thời gian cam kết",
+          "responsibilities": ["tìm kiếm và đánh giá nhà cung cấp", "tổ chức báo giá và so sánh phương án", "đàm phán điều khoản thương mại", "theo dõi đơn mua và hiệu suất nhà cung cấp"]
+        },
+        {
+          "code": "warehouse-supervisor", "title": "Giám sát Kho vận",
+          "required_skills": ["warehouse operations", "inventory control", "warehouse management system", "cycle count", "safety management"],
+          "preferred_skills": ["lean warehouse", "labor planning", "root cause analysis"],
+          "primary_output": "tồn kho chính xác và hoạt động nhập xuất an toàn đúng năng suất",
+          "responsibilities": ["phân công ca và khu vực kho", "kiểm soát nhập xuất và vị trí lưu trữ", "tổ chức kiểm kê chu kỳ", "điều tra chênh lệch và sự cố an toàn"]
+        },
+        {
+          "code": "import-export", "title": "Chuyên viên Xuất nhập khẩu",
+          "required_skills": ["import export", "customs declaration", "incoterms", "letter of credit", "trade documents"],
+          "preferred_skills": ["hs code", "certificate of origin", "trade compliance"],
+          "primary_output": "lô hàng thông quan đúng quy định với bộ chứng từ nhất quán",
+          "responsibilities": ["chuẩn bị và kiểm tra chứng từ ngoại thương", "phối hợp khai báo hải quan", "kiểm tra điều kiện giao hàng và thanh toán", "xử lý sai lệch chứng từ và lưu hồ sơ"]
+        },
+        {
+          "code": "demand-planner", "title": "Chuyên viên Hoạch định Nhu cầu",
+          "required_skills": ["demand planning", "forecasting", "forecast accuracy", "sales and operations planning", "demand sensing"],
+          "preferred_skills": ["statistical forecasting", "promotion planning", "bias analysis"],
+          "primary_output": "dự báo nhu cầu có sai số và giả định được theo dõi",
+          "responsibilities": ["tổng hợp lịch sử bán hàng và yếu tố thị trường", "xây dựng dự báo cơ sở", "phối hợp kinh doanh thống nhất giả định", "phân tích sai số và độ lệch để cải tiến"]
+        }
+      ]
+    },
+    {
+      "code": "healthcare-pharmacy",
+      "name": "Y tế và Dược",
+      "cv_variants_per_job": 5,
+      "description": "Cung cấp, hỗ trợ và vận hành dịch vụ chăm sóc sức khỏe theo quy trình chuyên môn và an toàn.",
+      "common_skills": ["giao tiếp", "quản lý hồ sơ", "tuân thủ quy trình"],
+      "degrees": ["Điều dưỡng", "Dược học", "Kỹ thuật xét nghiệm y học"],
+      "roles": [
+        {
+          "code": "registered-nurse", "title": "Điều dưỡng viên",
+          "required_skills": ["patient care", "vital signs", "medication administration", "nursing documentation", "infection control"],
+          "preferred_skills": ["patient education", "emergency response", "care planning"],
+          "primary_output": "chăm sóc người bệnh an toàn và hồ sơ điều dưỡng đầy đủ",
+          "responsibilities": ["đánh giá tình trạng và theo dõi dấu hiệu sinh tồn", "thực hiện y lệnh đúng quy trình", "ghi chép diễn biến và bàn giao ca", "hướng dẫn người bệnh và phòng ngừa nhiễm khuẩn"]
+        },
+        {
+          "code": "medical-representative", "title": "Trình dược viên",
+          "required_skills": ["medical detailing", "territory management", "product knowledge", "healthcare compliance", "sales reporting"],
+          "preferred_skills": ["doctor engagement", "pharmacy channel", "market intelligence"],
+          "primary_output": "độ phủ địa bàn và trao đổi sản phẩm đúng quy định chuyên ngành",
+          "responsibilities": ["lập kế hoạch viếng thăm theo địa bàn", "trình bày thông tin sản phẩm đã được phê duyệt", "ghi nhận phản hồi thị trường", "báo cáo hoạt động và tuân thủ quy tắc ngành"]
+        },
+        {
+          "code": "lab-technician", "title": "Kỹ thuật viên Xét nghiệm",
+          "required_skills": ["laboratory testing", "sample handling", "quality control", "laboratory information system", "biosafety"],
+          "preferred_skills": ["method validation", "calibration", "nonconformity handling"],
+          "primary_output": "kết quả xét nghiệm có kiểm soát chất lượng và truy vết mẫu",
+          "responsibilities": ["tiếp nhận và xử lý mẫu", "vận hành thiết bị theo hướng dẫn", "thực hiện nội kiểm và ghi nhận kết quả", "xử lý mẫu không phù hợp và an toàn sinh học"]
+        },
+        {
+          "code": "clinic-operations", "title": "Chuyên viên Vận hành Phòng khám",
+          "required_skills": ["clinic operations", "appointment scheduling", "patient flow", "service quality", "medical records"],
+          "preferred_skills": ["healthcare kpi", "complaint resolution", "resource scheduling"],
+          "primary_output": "luồng người bệnh thông suốt và chất lượng dịch vụ được theo dõi",
+          "responsibilities": ["điều phối lịch khám và nguồn lực", "theo dõi thời gian chờ và công suất", "kiểm soát hồ sơ dịch vụ", "tiếp nhận phản hồi và triển khai cải tiến"]
+        },
+        {
+          "code": "pharmacist", "title": "Dược sĩ",
+          "required_skills": ["dispensing", "prescription review", "drug interaction", "inventory control", "pharmacy regulation"],
+          "preferred_skills": ["patient counseling", "pharmacovigilance", "cold chain"],
+          "primary_output": "cấp phát thuốc chính xác, tư vấn phù hợp và tồn kho tuân thủ",
+          "responsibilities": ["kiểm tra đơn và chống chỉ định", "cấp phát và hướng dẫn sử dụng", "theo dõi điều kiện bảo quản", "quản lý thuốc kiểm soát và hồ sơ theo quy định"]
+        },
+        {
+          "code": "medical-coder", "title": "Chuyên viên Mã hóa Y tế",
+          "required_skills": ["medical coding", "icd-10", "clinical documentation", "claim review", "coding audit"],
+          "preferred_skills": ["medical terminology", "insurance billing", "data privacy"],
+          "primary_output": "mã bệnh và hồ sơ yêu cầu thanh toán chính xác, có căn cứ tài liệu",
+          "responsibilities": ["đọc hồ sơ lâm sàng và xác định mã phù hợp", "kiểm tra tính đầy đủ của tài liệu", "đối soát lỗi yêu cầu thanh toán", "tham gia kiểm tra chất lượng mã hóa"]
+        }
+      ]
+    },
+    {
+      "code": "education-training",
+      "name": "Giáo dục và Đào tạo",
+      "cv_variants_per_job": 5,
+      "description": "Thiết kế, tổ chức và đánh giá hoạt động học tập cùng các dịch vụ hỗ trợ người học.",
+      "common_skills": ["giao tiếp", "lập kế hoạch", "đánh giá kết quả"],
+      "degrees": ["Sư phạm", "Quản lý giáo dục", "Ngôn ngữ Anh"],
+      "roles": [
+        {
+          "code": "english-teacher", "title": "Giáo viên Tiếng Anh",
+          "required_skills": ["lesson planning", "classroom management", "english teaching", "learner assessment", "feedback"],
+          "preferred_skills": ["ielts", "blended learning", "curriculum adaptation"],
+          "primary_output": "bài học có mục tiêu, hoạt động phù hợp và tiến bộ người học được ghi nhận",
+          "responsibilities": ["lập kế hoạch bài học theo chuẩn đầu ra", "tổ chức hoạt động tương tác", "đánh giá năng lực và phản hồi", "điều chỉnh tài liệu theo khác biệt người học"]
+        },
+        {
+          "code": "academic-coordinator", "title": "Điều phối viên Học thuật",
+          "required_skills": ["academic operations", "class scheduling", "teacher coordination", "quality assurance", "student progress"],
+          "preferred_skills": ["academic reporting", "observation", "parent communication"],
+          "primary_output": "lịch học ổn định và chất lượng giảng dạy được theo dõi",
+          "responsibilities": ["xếp lớp và điều phối lịch giảng", "hỗ trợ giáo viên về chương trình", "theo dõi tiến độ người học", "tổng hợp phản hồi và xử lý thay đổi lịch"]
+        },
+        {
+          "code": "instructional-designer", "title": "Chuyên viên Thiết kế Học liệu",
+          "required_skills": ["instructional design", "learning objectives", "storyboard", "e-learning authoring", "learning assessment"],
+          "preferred_skills": ["scorm", "multimedia learning", "learning analytics"],
+          "primary_output": "học liệu số có cấu trúc, tương tác và tiêu chí đánh giá rõ ràng",
+          "responsibilities": ["phân tích người học và mục tiêu năng lực", "thiết kế cấu trúc khóa học và storyboard", "phối hợp sản xuất nội dung đa phương tiện", "thử nghiệm học liệu và cải tiến theo dữ liệu"]
+        },
+        {
+          "code": "student-affairs", "title": "Chuyên viên Công tác Sinh viên",
+          "required_skills": ["student support", "case management", "student engagement", "event coordination", "student records"],
+          "preferred_skills": ["counseling", "club management", "survey design"],
+          "primary_output": "yêu cầu người học được hỗ trợ và hoạt động gắn kết có theo dõi",
+          "responsibilities": ["tiếp nhận và phân loại yêu cầu sinh viên", "theo dõi trường hợp cần phối hợp", "tổ chức hoạt động cộng đồng", "quản lý hồ sơ và tổng hợp phản hồi"]
+        },
+        {
+          "code": "admissions-counselor", "title": "Chuyên viên Tư vấn Tuyển sinh",
+          "required_skills": ["admissions counseling", "lead follow-up", "program consulting", "enrollment process", "admissions crm"],
+          "preferred_skills": ["school outreach", "webinar", "conversion analysis"],
+          "primary_output": "người học được tư vấn đúng nhu cầu và hồ sơ nhập học hoàn tất đúng quy trình",
+          "responsibilities": ["tìm hiểu mục tiêu học tập của khách hàng", "tư vấn chương trình và điều kiện đầu vào", "theo dõi hồ sơ và lịch hẹn", "phân tích tỷ lệ chuyển đổi theo nguồn"]
+        },
+        {
+          "code": "corporate-trainer", "title": "Chuyên viên Đào tạo Doanh nghiệp",
+          "required_skills": ["training facilitation", "training needs analysis", "adult learning", "workshop design", "training evaluation"],
+          "preferred_skills": ["coaching", "virtual training", "competency assessment"],
+          "primary_output": "chương trình đào tạo gắn với công việc và được đánh giá sau triển khai",
+          "responsibilities": ["khảo sát nhu cầu theo đơn vị", "thiết kế workshop và bài tập thực hành", "đứng lớp trực tiếp hoặc trực tuyến", "đo phản hồi và mức độ áp dụng tại công việc"]
+        }
+      ]
+    }
+  ]
+}

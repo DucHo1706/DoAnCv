@@ -28,6 +28,7 @@ export interface GenerateCandidateEmailResponse {
   message: string;
   subject: string;
   body: string;
+  source?: "ai" | "template";
 }
 
 export interface CriteriaResultDto {

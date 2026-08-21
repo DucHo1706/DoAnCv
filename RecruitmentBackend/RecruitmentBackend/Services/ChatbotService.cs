@@ -47,12 +47,15 @@ namespace RecruitmentBackend.Services
 
             // TÍCH HỢP DỮ LIỆU TỪ DATABASE VÀO AI
             // Lấy tự động tối đa 10 công việc đang tuyển dụng trên hệ thống
+            DateTime todayVietnam = JobLifecyclePolicy.TodayVietnam;
             var publishedJobs = await (from j in _context.JobPostings
                                        join p in _context.Positions on j.PositionID equals p.PositionID into pj
                                        from p in pj.DefaultIfEmpty()
                                        join b in _context.Branches on j.BranchID equals b.BranchID into bj
                                        from b in bj.DefaultIfEmpty()
                                        where j.Status == "Published"
+                                             && (!j.StartDate.HasValue || j.StartDate.Value.Date <= todayVietnam)
+                                             && j.Deadline.Date >= todayVietnam
                                        orderby j.CreatedAt descending
                                        select new
                                        {

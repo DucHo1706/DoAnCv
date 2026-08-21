@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using RecruitmentBackend.DTOs.Requests;
 using RecruitmentBackend.Interfaces;
 using System.Threading.Tasks;
+using RecruitmentBackend.Services;
 
 namespace RecruitmentBackend.Controllers
 {
@@ -10,10 +11,12 @@ namespace RecruitmentBackend.Controllers
     public class JobPositionsController : ControllerBase
     {
         private readonly IJobPositionService _jobPositionService;
+        private readonly IMetadataChangeNotifier _notifier;
 
-        public JobPositionsController(IJobPositionService jobPositionService)
+        public JobPositionsController(IJobPositionService jobPositionService, IMetadataChangeNotifier notifier)
         {
             _jobPositionService = jobPositionService;
+            _notifier = notifier;
         }
 
         [HttpGet]
@@ -33,6 +36,7 @@ namespace RecruitmentBackend.Controllers
             var result = await _jobPositionService.CreateJobPositionAsync(request);
             if (!result.IsSuccess) return BadRequest(result.Message);
             
+            await _notifier.NotifyAsync("job-positions", "created");
             return Ok(result.Data);
         }
 
@@ -50,6 +54,7 @@ namespace RecruitmentBackend.Controllers
                 return BadRequest(result.Message);
             }
             
+            await _notifier.NotifyAsync("job-positions", "updated");
             return Ok(result.Data);
         }
 
@@ -60,6 +65,7 @@ namespace RecruitmentBackend.Controllers
             var result = await _jobPositionService.TogglePositionStatusAsync(id);
             if (!result.IsSuccess) return NotFound(result.Message);
             
+            await _notifier.NotifyAsync("job-positions", "status-changed");
             return Ok(result.Data);
         }
     }

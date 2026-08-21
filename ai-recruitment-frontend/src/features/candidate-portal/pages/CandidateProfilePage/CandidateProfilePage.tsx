@@ -45,6 +45,7 @@ function CandidateProfilePage() {
   const [profile, setProfile] = useState<any>(null);
   const [profileLoading, setProfileLoading] = useState(false);
   const [submittingProfile, setSubmittingProfile] = useState(false);
+  const [discoverySaving, setDiscoverySaving] = useState(false);
   const [selectedAppForReport, setSelectedAppForReport] = useState<any>(null);
   const [form] = Form.useForm();
   
@@ -101,6 +102,74 @@ function CandidateProfilePage() {
     }
   };
 
+  const updateRecruiterDiscovery = async (enabled: boolean) => {
+    try {
+      setDiscoverySaving(true);
+      const response = await axiosClient.put("/profile/recruiter-discovery", {
+        enabled,
+        contactAllowed: enabled ? Boolean(profile?.recruiterContactAllowed) : false,
+        cvAllowed: enabled ? Boolean(profile?.recruiterCvAllowed) : false,
+        expiresAt: enabled ? dayjs().add(90, "day").toISOString() : null,
+      });
+      setProfile((current: any) => ({
+        ...current,
+        recruiterDiscoveryEnabled: response.data?.data?.enabled ?? enabled,
+        recruiterContactAllowed: response.data?.data?.contactAllowed ?? false,
+        recruiterCvAllowed: response.data?.data?.cvAllowed ?? false,
+        recruiterDiscoveryExpiresAt: response.data?.data?.expiresAt ?? null,
+      }));
+      message.success(enabled ? "Đã bật cho phép HR tìm kiếm hồ sơ." : "Đã tắt cho phép HR tìm kiếm hồ sơ.");
+    } catch (error: any) {
+      message.error(error?.response?.data?.message || "Không thể cập nhật quyền tìm kiếm hồ sơ.");
+    } finally {
+      setDiscoverySaving(false);
+    }
+  };
+
+  const updateRecruiterContact = async (contactAllowed: boolean) => {
+    if (!profile?.recruiterDiscoveryEnabled) return;
+    try {
+      setDiscoverySaving(true);
+      const response = await axiosClient.put("/profile/recruiter-discovery", {
+        enabled: true,
+        contactAllowed,
+        cvAllowed: Boolean(profile.recruiterCvAllowed),
+        expiresAt: profile.recruiterDiscoveryExpiresAt || dayjs().add(90, "day").toISOString(),
+      });
+      setProfile((current: any) => ({
+        ...current,
+        recruiterContactAllowed: response.data?.data?.contactAllowed ?? contactAllowed,
+      }));
+      message.success(contactAllowed ? "Đã cho phép HR gửi lời mời liên hệ." : "Đã tắt quyền liên hệ từ HR.");
+    } catch (error: any) {
+      message.error(error?.response?.data?.message || "Không thể cập nhật quyền liên hệ.");
+    } finally {
+      setDiscoverySaving(false);
+    }
+  };
+
+  const updateRecruiterCv = async (cvAllowed: boolean) => {
+    if (!profile?.recruiterDiscoveryEnabled) return;
+    try {
+      setDiscoverySaving(true);
+      const response = await axiosClient.put("/profile/recruiter-discovery", {
+        enabled: true,
+        contactAllowed: Boolean(profile.recruiterContactAllowed),
+        cvAllowed,
+        expiresAt: profile.recruiterDiscoveryExpiresAt || dayjs().add(90, "day").toISOString(),
+      });
+      setProfile((current: any) => ({
+        ...current,
+        recruiterCvAllowed: response.data?.data?.cvAllowed ?? cvAllowed,
+      }));
+      message.success(cvAllowed ? "Đã cho phép HR xem CV." : "Đã tắt quyền xem CV từ HR.");
+    } catch (error: any) {
+      message.error(error?.response?.data?.message || "Không thể cập nhật quyền xem CV.");
+    } finally {
+      setDiscoverySaving(false);
+    }
+  };
+
   useEffect(() => {
     fetchMyApplications();
     fetchProfile();
@@ -119,7 +188,7 @@ function CandidateProfilePage() {
         const apiBase = import.meta.env.VITE_API_URL || "/api";
         const hubUrl = apiBase.replace(/\/api\/?$/, "") + "/hubs/ai-evaluation";
         connection = new signalR.HubConnectionBuilder()
-          .withUrl(hubUrl)
+          .withUrl(hubUrl, { accessTokenFactory: () => localStorage.getItem("token") || "" })
           .withAutomaticReconnect()
           .build();
 
@@ -479,7 +548,13 @@ function CandidateProfilePage() {
               )}
 
               {activeNavKey === "5" && (
-                <AccountSecurityTab />
+                <AccountSecurityTab
+                  profile={profile}
+                  discoverySaving={discoverySaving}
+                  onDiscoveryChange={updateRecruiterDiscovery}
+                  onContactChange={updateRecruiterContact}
+                  onCvChange={updateRecruiterCv}
+                />
               )}
             </Card>
           )}

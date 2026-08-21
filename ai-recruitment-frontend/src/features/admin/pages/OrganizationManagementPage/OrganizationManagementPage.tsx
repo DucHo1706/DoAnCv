@@ -9,6 +9,7 @@ import {
   Modal,
   Form,
   Input,
+  InputNumber,
   message,
   Typography,
   Popconfirm,
@@ -142,10 +143,121 @@ export default function OrganizationManagementPage() {
               ),
               children: <BranchTab />,
             },
+            {
+              key: "criterion-groups",
+              label: (
+                <Space size={8}>
+                  <ApartmentOutlined style={{ color: appTheme.colors.warning }} />
+                  <span>Nhóm tiêu chí</span>
+                </Space>
+              ),
+              children: <CriterionGroupTab />,
+            },
           ]}
         />
       </Card>
     </PageContainer>
+  );
+}
+
+function CriterionGroupTab() {
+  const [items, setItems] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [editingItem, setEditingItem] = useState<any>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [form] = Form.useForm();
+
+  const fetchItems = async () => {
+    setLoading(true);
+    try {
+      const response = await axiosClient.get("/CriterionGroups");
+      setItems(Array.isArray(response.data) ? response.data : response.data?.$values || []);
+    } catch (error) {
+      message.error(getApiErrorMessage(error, "Không tải được nhóm tiêu chí."));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { fetchItems(); }, []);
+
+  const openCreate = () => {
+    setEditingItem(null);
+    form.resetFields();
+    form.setFieldsValue({ evaluationMode: "CUSTOM", displayOrder: items.length * 10 + 10 });
+    setIsModalOpen(true);
+  };
+
+  const openEdit = (item: any) => {
+    setEditingItem(item);
+    form.setFieldsValue(item);
+    setIsModalOpen(true);
+  };
+
+  const save = async () => {
+    try {
+      const values = await form.validateFields();
+      setSaving(true);
+      if (editingItem) await axiosClient.put(`/CriterionGroups/${editingItem.id}`, values);
+      else await axiosClient.post("/CriterionGroups", values);
+      message.success(editingItem ? "Đã cập nhật nhóm tiêu chí." : "Đã thêm nhóm tiêu chí.");
+      setIsModalOpen(false);
+      await fetchItems();
+    } catch (error: any) {
+      if (error?.errorFields) return;
+      message.error(getApiErrorMessage(error));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const toggleStatus = async (item: any) => {
+    try {
+      await axiosClient.put(`/CriterionGroups/${item.id}/toggle-status`);
+      message.success(item.isActive ? "Đã ẩn nhóm tiêu chí." : "Đã kích hoạt nhóm tiêu chí.");
+      await fetchItems();
+    } catch (error) {
+      message.error(getApiErrorMessage(error));
+    }
+  };
+
+  const modeLabels: Record<string, string> = {
+    SKILL: "Kỹ năng", TOTAL_EXPERIENCE: "Tổng kinh nghiệm",
+    SKILL_EXPERIENCE: "Kinh nghiệm theo kỹ năng", EDUCATION: "Học vấn",
+    CERTIFICATION: "Chứng chỉ", LANGUAGE: "Ngoại ngữ",
+    LOCATION_WORK_MODE: "Địa điểm / hình thức làm việc", CUSTOM: "Đánh giá theo bằng chứng",
+  };
+
+  return (
+    <>
+      <Space style={{ width: "100%", justifyContent: "flex-end", marginBottom: 16 }}>
+        <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>Thêm nhóm tiêu chí</Button>
+      </Space>
+      <Table
+        rowKey="id"
+        loading={loading}
+        dataSource={items}
+        pagination={false}
+        columns={[
+          { title: "Tên nhóm", dataIndex: "name" },
+          { title: "Cách hệ thống đánh giá", dataIndex: "evaluationMode", render: (value) => modeLabels[value] || value },
+          { title: "Mô tả", dataIndex: "description", render: (value) => value || "—" },
+          { title: "Trạng thái", dataIndex: "isActive", render: (value) => <Tag color={value ? "success" : "default"}>{value ? "Đang dùng" : "Đã ẩn"}</Tag> },
+          { title: "Thao tác", render: (_, item: any) => <Space><Button icon={<EditOutlined />} onClick={() => openEdit(item)}>Sửa</Button><Button onClick={() => toggleStatus(item)}>{item.isActive ? "Ẩn" : "Kích hoạt"}</Button></Space> },
+        ]}
+      />
+      <Modal title={editingItem ? "Sửa nhóm tiêu chí" : "Thêm nhóm tiêu chí"} open={isModalOpen} onOk={save} confirmLoading={saving} onCancel={() => setIsModalOpen(false)} okText="Lưu" cancelText="Hủy">
+        <Form form={form} layout="vertical">
+          <Form.Item name="name" label="Tên nhóm" rules={[{ required: true, whitespace: true, message: "Nhập tên nhóm tiêu chí" }]}><Input placeholder="Ví dụ: Kinh nghiệm quản lý dự án" /></Form.Item>
+          <Form.Item name="evaluationMode" label="Cách hệ thống đánh giá" rules={[{ required: true }]}>
+            <Select options={Object.entries(modeLabels).map(([value, label]) => ({ value, label }))} />
+          </Form.Item>
+          <Form.Item name="description" label="Mô tả cho HR"><Input.TextArea rows={3} placeholder="Giải thích khi nào nên chọn nhóm này" /></Form.Item>
+          <Form.Item name="displayOrder" label="Thứ tự hiển thị"><InputNumber min={0} style={{ width: "100%" }} /></Form.Item>
+        </Form>
+      </Modal>
+    </>
   );
 }
 

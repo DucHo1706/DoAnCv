@@ -12,5 +12,7 @@ namespace RecruitmentBackend.Models
         public string Name { get; set; } 
 
         public bool IsApproved { get; set; } = true;
+
+        public ICollection<SkillAlias> Aliases { get; set; } = new List<SkillAlias>();
     }
 }

@@ -144,6 +144,31 @@ namespace RecruitmentBackend.Services
             return (isValid, message);
         }
 
+        public async Task<CvExtractionResponse> ExtractCvAsync(byte[] fileBytes, string fileName, string contentType)
+        {
+            using var content = new MultipartFormDataContent();
+            using var fileContent = new ByteArrayContent(fileBytes);
+            if (!string.IsNullOrWhiteSpace(contentType))
+            {
+                fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(contentType);
+            }
+            content.Add(fileContent, "file", fileName);
+
+            using var response = await _httpClient.PostAsync("extract-cv", content);
+            var responseBody = await response.Content.ReadAsStringAsync();
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new HttpRequestException($"Dịch vụ trích xuất CV trả về {response.StatusCode}.");
+            }
+            var result = JsonSerializer.Deserialize<CvExtractionResponse>(responseBody, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true,
+                PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
+            });
+            if (result == null) throw new InvalidDataException("Phản hồi trích xuất CV không hợp lệ.");
+            return result;
+        }
+
         public async Task<bool> SyncSkillsToAiAsync(List<string> skills)
         {
             try
@@ -164,7 +189,13 @@ namespace RecruitmentBackend.Services
             }
         }
 
-        public async Task<bool> TrainAprioriAsync(List<List<string>> transactions)
+        public async Task<bool> TrainAprioriAsync(
+            List<List<string>> transactions,
+            string? domain = null,
+            string? datasetId = null,
+            List<string>? taxonomySkills = null,
+            Dictionary<string, string>? taxonomyAliases = null,
+            bool resetModels = false)
         {
             try
             {
@@ -172,12 +203,18 @@ namespace RecruitmentBackend.Services
                 { 
                     transactions = transactions,
                     min_support = 0.05,
-                    min_confidence = 0.3
+                    min_confidence = 0.3,
+                    domain = domain,
+                    dataset_id = datasetId,
+                    taxonomy_skills = taxonomySkills,
+                    taxonomy_aliases = taxonomyAliases,
+                    min_support_count = 2,
+                    reset_models = resetModels
                 };
                 var jsonContent = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
 
                 var response = await _httpClient.PostAsync("train-apriori", jsonContent);
-                return response.IsSuccessStatusCode;
+                return await IsSuccessfulMiningResponseAsync(response);
             }
             catch (Exception ex)
             {
@@ -248,11 +285,27 @@ namespace RecruitmentBackend.Services
             {
                 var jsonContent = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
                 var response = await _httpClient.PostAsync("train-huim", jsonContent);
-                return response.IsSuccessStatusCode;
+                return await IsSuccessfulMiningResponseAsync(response);
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"[AiService] TrainHuim error: {ex.Message}");
+                return false;
+            }
+        }
+
+        private static async Task<bool> IsSuccessfulMiningResponseAsync(HttpResponseMessage response)
+        {
+            if (!response.IsSuccessStatusCode) return false;
+            try
+            {
+                var responseBody = await response.Content.ReadAsStringAsync();
+                using var document = JsonDocument.Parse(responseBody);
+                return document.RootElement.TryGetProperty("status", out var status)
+                    && string.Equals(status.GetString(), "success", StringComparison.OrdinalIgnoreCase);
+            }
+            catch
+            {
                 return false;
             }
         }

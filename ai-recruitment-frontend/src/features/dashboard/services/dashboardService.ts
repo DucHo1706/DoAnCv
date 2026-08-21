@@ -8,6 +8,16 @@ export interface JobOption {
   deadline?: string;
   categoryName?: string;
   unreadCount?: number;
+  positionId?: string | null;
+  jobLevelId?: string | null;
+  branchId?: string | null;
+  categoryId?: string | null;
+}
+
+export interface DashboardFilterOption {
+  id: string;
+  name: string;
+  parentId?: string | null;
 }
 
 export interface QuickMetrics {
@@ -18,6 +28,8 @@ export interface QuickMetrics {
   totalViews?: number;
   applicationRate?: number;
   avgTimeToHireDays?: number;
+  applicationsToday: number;
+  statusChangesToday: number;
 }
 
 export interface FunnelData {
@@ -70,8 +82,15 @@ export interface HrDashboardStats {
   isSuccess: boolean;
   message: string;
   selectedJobId?: string | null;
+  selectedCategoryId?: string | null;
+  selectedPositionId?: string | null;
+  selectedJobLevelId?: string | null;
+  selectedBranchId?: string | null;
 
   jobOptions: JobOption[];
+  positionOptions: DashboardFilterOption[];
+  jobLevelOptions: DashboardFilterOption[];
+  branchOptions: DashboardFilterOption[];
   quickMetrics: QuickMetrics;
 
   totalJobs: number;
@@ -94,6 +113,10 @@ export interface HrDashboardStats {
 }
 
 export interface HrDashboardStatsParams {
+  categoryId?: string | null;
+  positionId?: string | null;
+  jobLevelId?: string | null;
+  branchId?: string | null;
   jobId?: string | null;
   timeRange?: string | null;
 }
@@ -106,6 +129,8 @@ const emptyQuickMetrics: QuickMetrics = {
   totalViews: 0,
   applicationRate: 0,
   avgTimeToHireDays: 0,
+  applicationsToday: 0,
+  statusChangesToday: 0,
 };
 
 export const emptyHrDashboardStats: HrDashboardStats = {
@@ -114,6 +139,9 @@ export const emptyHrDashboardStats: HrDashboardStats = {
   selectedJobId: null,
 
   jobOptions: [],
+  positionOptions: [],
+  jobLevelOptions: [],
+  branchOptions: [],
   quickMetrics: emptyQuickMetrics,
 
   totalJobs: 0,
@@ -144,14 +172,23 @@ const normalizeHrDashboardStats = (data: any): HrDashboardStats => {
     totalViews: data?.quickMetrics?.totalViews ?? data?.totalViews ?? 0,
     applicationRate: data?.quickMetrics?.applicationRate ?? data?.applicationRate ?? 0,
     avgTimeToHireDays: data?.quickMetrics?.avgTimeToHireDays ?? data?.avgTimeToHireDays ?? 0,
+    applicationsToday: data?.quickMetrics?.applicationsToday ?? 0,
+    statusChangesToday: data?.quickMetrics?.statusChangesToday ?? 0,
   };
 
   return {
     isSuccess: data?.isSuccess ?? true,
     message: data?.message ?? "",
     selectedJobId: data?.selectedJobId ?? null,
+    selectedCategoryId: data?.selectedCategoryId ?? null,
+    selectedPositionId: data?.selectedPositionId ?? null,
+    selectedJobLevelId: data?.selectedJobLevelId ?? null,
+    selectedBranchId: data?.selectedBranchId ?? null,
 
     jobOptions: data?.jobOptions ?? [],
+    positionOptions: data?.positionOptions ?? [],
+    jobLevelOptions: data?.jobLevelOptions ?? [],
+    branchOptions: data?.branchOptions ?? [],
     quickMetrics,
 
     totalJobs: data?.totalJobs ?? quickMetrics.totalJobs,
@@ -196,6 +233,10 @@ export const dashboardService = {
   async getHrDashboardStats(params?: HrDashboardStatsParams): Promise<HrDashboardStats> {
     const requestParams: Record<string, string> = {};
 
+    if (params?.categoryId) requestParams.categoryId = params.categoryId;
+    if (params?.positionId) requestParams.positionId = params.positionId;
+    if (params?.jobLevelId) requestParams.jobLevelId = params.jobLevelId;
+    if (params?.branchId) requestParams.branchId = params.branchId;
     if (params?.jobId) {
       requestParams.jobId = params.jobId;
     }

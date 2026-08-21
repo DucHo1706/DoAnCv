@@ -89,6 +89,24 @@ namespace RecruitmentBackend.DTOs.Responses
         [JsonPropertyName("comment")]
         public string Comment { get; set; }
 
+        [JsonPropertyName("match_level")]
+        public string? MatchLevel { get; set; }
+
+        [JsonPropertyName("confidence")]
+        public double? Confidence { get; set; }
+
+        [JsonPropertyName("evidence_text")]
+        public string? EvidenceText { get; set; }
+
+        [JsonPropertyName("evidence_section")]
+        public string? EvidenceSection { get; set; }
+
+        [JsonPropertyName("extracted_value")]
+        public string? ExtractedValue { get; set; }
+
+        [JsonPropertyName("needs_verification")]
+        public bool NeedsVerification { get; set; }
+
     }
 
 }

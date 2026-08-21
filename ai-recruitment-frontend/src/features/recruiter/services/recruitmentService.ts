@@ -28,6 +28,7 @@ export interface GenerateCandidateEmailResponse {
   message: string;
   subject: string;
   body: string;
+  source?: "ai" | "template";
 }
 
 export interface CriteriaResultDto {
@@ -39,6 +40,17 @@ export interface CriteriaResultDto {
   maxScore?: number;
   comment: string;
   hasData?: boolean;
+  match_level?: "FULL" | "PARTIAL" | "NOT_FOUND" | "INSUFFICIENT_DATA";
+  matchLevel?: "FULL" | "PARTIAL" | "NOT_FOUND" | "INSUFFICIENT_DATA";
+  confidence?: number | null;
+  evidence_text?: string;
+  evidenceText?: string;
+  evidence_section?: string;
+  evidenceSection?: string;
+  extracted_value?: string;
+  extractedValue?: string;
+  needs_verification?: boolean;
+  needsVerification?: boolean;
 }
 
 export interface ApplicationDto {
@@ -153,6 +165,16 @@ export const recruitmentService = {
 
   async getMyApplications() {
     const response = await axiosClient.get("/Recruitment/my-applications");
+    return response.data;
+  },
+
+  async retryMyApplicationAi(applicationId: string) {
+    const response = await axiosClient.post(`/Recruitment/applications/${applicationId}/retry-ai`);
+    return response.data;
+  },
+
+  async withdrawMyApplication(applicationId: string) {
+    const response = await axiosClient.delete(`/Recruitment/applications/${applicationId}/withdraw`);
     return response.data;
   },
 

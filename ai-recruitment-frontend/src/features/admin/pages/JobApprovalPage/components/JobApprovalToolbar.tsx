@@ -36,7 +36,7 @@ interface JobApprovalToolbarProps {
   uniqueRecruiters: { name: string; email: string }[];
   uniqueBranches: string[];
   categories: any[];
-  counts: { pending: number; active: number; closed: number; archived: number; all: number };
+  counts: { pending: number; active: number; expired: number; closed: number; archived: number; all: number };
   onExportCsv: () => void;
 }
 
@@ -78,6 +78,7 @@ export function JobApprovalToolbar({
           options={[
             { label: `Chờ phê duyệt (${counts.pending})`, value: "pending" },
             { label: `Đang hoạt động (${counts.active})`, value: "active" },
+            { label: `Đã hết hạn (${counts.expired})`, value: "expired" },
             { label: `Đã đóng (${counts.closed})`, value: "closed" },
             { label: `Đã lưu trữ (${counts.archived})`, value: "archived" },
             { label: `Tất cả tin (${counts.all})`, value: "all" },

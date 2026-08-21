@@ -29,6 +29,20 @@ import dayjs from "dayjs";
 
 const { Text } = Typography;
 
+const sanitizeEmailHtml = (html: string): string => {
+  if (typeof window === "undefined") return "";
+  const documentNode = new DOMParser().parseFromString(html || "", "text/html");
+  const allowedTags = new Set(["P", "STRONG", "UL", "LI", "BR"]);
+  Array.from(documentNode.body.querySelectorAll("*")).forEach((element) => {
+    if (!allowedTags.has(element.tagName)) {
+      element.replaceWith(documentNode.createTextNode(element.textContent || ""));
+      return;
+    }
+    Array.from(element.attributes).forEach((attribute) => element.removeAttribute(attribute.name));
+  });
+  return documentNode.body.innerHTML;
+};
+
 interface EmailLogDto {
   emailLogID: string;
   candidateID?: string;
@@ -351,7 +365,7 @@ export default function EmailLogsPage() {
                 fontSize: 14,
                 color: "#334155",
               }}
-              dangerouslySetInnerHTML={{ __html: selectedLog.body }}
+              dangerouslySetInnerHTML={{ __html: sanitizeEmailHtml(selectedLog.body) }}
             />
           </div>
         )}

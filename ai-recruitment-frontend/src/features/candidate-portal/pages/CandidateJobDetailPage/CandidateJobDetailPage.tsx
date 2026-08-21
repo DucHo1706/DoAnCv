@@ -18,6 +18,7 @@ export default function CandidateJobDetailPage() {
     isAiPreviewModalOpen,
     setIsAiPreviewModalOpen,
     handleApplyWithAI,
+    handleViewAppliedAiEvaluation,
     showApplyModal,
     handleCancelApplyModal,
     handleDirectApply,
@@ -79,6 +80,7 @@ export default function CandidateJobDetailPage() {
           appliedApplication={appliedApplication}
           showApplyModal={showApplyModal}
           handleApplyWithAI={handleApplyWithAI}
+          handleViewAppliedAiEvaluation={handleViewAppliedAiEvaluation}
           relatedJobs={relatedJobs}
         />
 
@@ -106,6 +108,10 @@ export default function CandidateJobDetailPage() {
         <ApplySuccessModal
           open={isApplySuccessModalOpen}
           onCancel={() => setIsApplySuccessModalOpen(false)}
+          onContinueBrowsing={() => {
+            setIsApplySuccessModalOpen(false);
+            navigate("/jobs");
+          }}
         />
 
         {/* 4. AI CV Analysis & Preview Modal */}

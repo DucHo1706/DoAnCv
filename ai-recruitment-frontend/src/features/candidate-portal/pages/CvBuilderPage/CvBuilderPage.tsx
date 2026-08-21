@@ -8,6 +8,12 @@ import {
   PlusOutlined,
   SaveOutlined,
   StarOutlined,
+  AppstoreOutlined,
+  EnvironmentOutlined,
+  LinkOutlined,
+  MailOutlined,
+  PhoneOutlined,
+  PictureOutlined,
 } from "@ant-design/icons";
 import {
   Button,
@@ -16,15 +22,17 @@ import {
   ColorPicker,
   Form,
   Input,
+  Modal,
   Popconfirm,
   Progress,
-  Radio,
   Row,
   Segmented,
   Select,
   Slider,
   Space,
+  Switch,
   Typography,
+  Upload,
   message,
 } from "antd";
 import { appTheme } from "../../../../constants/theme";
@@ -34,7 +42,20 @@ const { Text, Title } = Typography;
 const { TextArea } = Input;
 const STORAGE_KEY = "recruitinsight_cv_builder_draft_v2";
 
-type TemplateName = "standard" | "modern" | "elegant";
+export type TemplateName =
+  | "standard"
+  | "modern"
+  | "elegant"
+  | "minimal"
+  | "compact"
+  | "corporate"
+  | "technical"
+  | "timeline"
+  | "executive"
+  | "graduate"
+  | "academic"
+  | "creative"
+  | "custom";
 type SectionKey = "summary" | "experience" | "education" | "projects" | "skills" | "certificates";
 type EditorStep = "personal" | "experience" | "education" | "projects" | "certificates";
 
@@ -44,6 +65,7 @@ interface ProjectItem { name?: string; role?: string; description?: string; link
 interface CertificateItem { name?: string; issuer?: string; year?: string }
 
 export interface CvBuilderValues {
+  avatarDataUrl?: string;
   fullName?: string;
   professionalTitle?: string;
   email?: string;
@@ -69,6 +91,14 @@ export interface BuilderSettings {
   frameStyle: "none" | "thin" | "accent";
   zoom: number;
   sectionOrder: SectionKey[];
+  customLayout: "single" | "columns" | "sidebar";
+  customSidebarWidth: number;
+  customSidebarSections: SectionKey[];
+  avatarSize: number;
+  avatarShape: "circle" | "rounded" | "square";
+  avatarPosition: "left" | "right";
+  showContactIcons: boolean;
+  hiddenSections: SectionKey[];
 }
 
 const emptyValues: CvBuilderValues = {
@@ -130,7 +160,44 @@ export const defaultSettings: BuilderSettings = {
   frameStyle: "thin",
   zoom: 100,
   sectionOrder: ["summary", "experience", "education", "projects", "skills", "certificates"],
+  customLayout: "single",
+  customSidebarWidth: 34,
+  customSidebarSections: ["skills", "education", "certificates"],
+  avatarSize: 92,
+  avatarShape: "circle",
+  avatarPosition: "right",
+  showContactIcons: true,
+  hiddenSections: [],
 };
+
+const templateOptions: Array<{
+  value: TemplateName;
+  name: string;
+  description: string;
+  group: "Phổ biến" | "Theo nghề nghiệp" | "Đặc biệt";
+  layout: "single" | "sidebar" | "columns" | "timeline";
+}> = [
+  { value: "standard", name: "Tiêu chuẩn", description: "Rõ ràng, phù hợp nhiều vị trí", group: "Phổ biến", layout: "single" },
+  { value: "modern", name: "Hiện đại", description: "Thanh bên nổi bật kỹ năng", group: "Phổ biến", layout: "sidebar" },
+  { value: "elegant", name: "Thanh lịch", description: "Cân đối, tiêu đề căn giữa", group: "Phổ biến", layout: "single" },
+  { value: "minimal", name: "Tối giản", description: "Ít trang trí, dễ đọc nhanh", group: "Phổ biến", layout: "single" },
+  { value: "corporate", name: "Doanh nghiệp", description: "Trang trọng cho tài chính, HR", group: "Theo nghề nghiệp", layout: "columns" },
+  { value: "technical", name: "Công nghệ", description: "Nhấn mạnh kỹ năng và dự án", group: "Theo nghề nghiệp", layout: "sidebar" },
+  { value: "executive", name: "Quản lý", description: "Ưu tiên thành tựu và kinh nghiệm", group: "Theo nghề nghiệp", layout: "single" },
+  { value: "academic", name: "Học thuật", description: "Phù hợp nghiên cứu, giáo dục", group: "Theo nghề nghiệp", layout: "single" },
+  { value: "graduate", name: "Sinh viên", description: "Ưu tiên học vấn và dự án", group: "Theo nghề nghiệp", layout: "columns" },
+  { value: "compact", name: "Gọn một trang", description: "Mật độ cao, tiết kiệm không gian", group: "Đặc biệt", layout: "columns" },
+  { value: "timeline", name: "Dòng thời gian", description: "Làm rõ quá trình làm việc", group: "Đặc biệt", layout: "timeline" },
+  { value: "creative", name: "Sáng tạo", description: "Bố cục mạnh cho marketing", group: "Đặc biệt", layout: "sidebar" },
+  { value: "custom", name: "Tùy chỉnh bố cục", description: "Tự chọn cột và phân bổ nội dung", group: "Đặc biệt", layout: "columns" },
+];
+
+const fullBleedTemplates = new Set<TemplateName>(["modern", "technical", "creative"]);
+
+export function getCvPagePadding(template: TemplateName): string | number {
+  if (fullBleedTemplates.has(template)) return 0;
+  return template === "compact" ? "30px 36px" : "44px 48px";
+}
 
 export function normalizeCvValues(source?: CvBuilderValues): CvBuilderValues {
   const stored = source || {};
@@ -171,6 +238,7 @@ export default function CvBuilderPage() {
   const [exportingPdf, setExportingPdf] = useState(false);
   const [editorStep, setEditorStep] = useState<EditorStep>("personal");
   const [starterDismissed, setStarterDismissed] = useState(false);
+  const [templateModalOpen, setTemplateModalOpen] = useState(false);
 
   useEffect(() => {
     form.setFieldsValue(initialDraft.values);
@@ -220,6 +288,26 @@ export default function CvBuilderPage() {
     setStarterDismissed(true);
     setEditorStep("personal");
     message.success("Đã điền nội dung mẫu. Hãy thay bằng thông tin thật của bạn.");
+  };
+
+  const handleAvatarFile = async (file: File) => {
+    if (!file.type.startsWith("image/")) {
+      message.error("Vui lòng chọn tệp ảnh JPG, PNG hoặc WebP.");
+      return false;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      message.error("Ảnh đại diện không được vượt quá 5 MB.");
+      return false;
+    }
+    try {
+      const dataUrl = await resizeImage(file, 512, 0.86);
+      const nextValues = { ...form.getFieldsValue(true), avatarDataUrl: dataUrl };
+      form.setFieldsValue(nextValues);
+      setValues(nextValues);
+    } catch {
+      message.error("Không thể xử lý ảnh này. Vui lòng thử ảnh khác.");
+    }
+    return false;
   };
 
   const moveEditorStep = (direction: -1 | 1) => {
@@ -334,6 +422,14 @@ export default function CvBuilderPage() {
     setSettings((old) => ({ ...old, sectionOrder }));
   };
 
+  const reorderSection = (from: number, to: number) => {
+    if (from === to || from < 0 || to < 0) return;
+    const sectionOrder = [...settings.sectionOrder];
+    const [moved] = sectionOrder.splice(from, 1);
+    sectionOrder.splice(to, 0, moved);
+    setSettings((old) => ({ ...old, sectionOrder }));
+  };
+
   const printPdf = async () => {
     try {
       await form.validateFields();
@@ -414,12 +510,13 @@ export default function CvBuilderPage() {
     color: settings.textColor,
     fontFamily: settings.fontFamily,
     fontSize: settings.fontSize,
-    padding: settings.template === "modern" ? 0 : "44px 48px",
+    padding: getCvPagePadding(settings.template),
     overflow: "hidden",
     outline: settings.frameStyle === "none" ? "none" : settings.frameStyle === "accent" ? `3px solid ${settings.accentColor}` : "1px solid #CBD5E1",
     transform: `scale(${settings.zoom / 100})`,
     transformOrigin: "top center",
   };
+  const currentTemplate = templateOptions.find((template) => template.value === settings.template) || templateOptions[0];
 
   return (
     <div style={{ maxWidth: 1500, margin: "0 auto", padding: "24px 20px 56px" }}>
@@ -460,15 +557,14 @@ export default function CvBuilderPage() {
           </Col>
           <Col xs={24} lg={8}>
             <Text strong>Mẫu CV</Text>
-            <Radio.Group
-              value={settings.template}
-              onChange={(event) => setSettings((old) => ({ ...old, template: event.target.value }))}
-              style={{ display: "flex", marginTop: 8 }}
-            >
-              <Radio.Button value="standard">Tiêu chuẩn</Radio.Button>
-              <Radio.Button value="modern">Hiện đại</Radio.Button>
-              <Radio.Button value="elegant">Thanh lịch</Radio.Button>
-            </Radio.Group>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 8, padding: 10, border: "1px solid #E2E8F0", borderRadius: 10, background: "#F8FAFC" }}>
+              <div style={{ width: 76, flex: "0 0 76px" }}><TemplateThumbnail layout={currentTemplate.layout} color={settings.accentColor} /></div>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <Text strong style={{ display: "block" }}>{currentTemplate.name}</Text>
+                <Text type="secondary" style={{ display: "block", fontSize: 11 }}>{currentTemplate.description}</Text>
+              </div>
+              <Button icon={<AppstoreOutlined />} onClick={() => setTemplateModalOpen(true)}>Đổi mẫu</Button>
+            </div>
           </Col>
           <Col xs={12} md={8} lg={5}>
             <Text strong>Màu chủ đạo</Text>
@@ -529,11 +625,91 @@ export default function CvBuilderPage() {
             <Text strong>Thu phóng bản xem trước</Text>
             <Slider min={70} max={110} step={5} value={settings.zoom} tooltip={{ formatter: (value) => `${value}%` }} onChange={(zoom) => setSettings((old) => ({ ...old, zoom }))} />
           </Col>
+          <Col xs={24} md={8} lg={5}>
+            <Text strong>Bố cục tự thiết kế</Text>
+            <Select
+              value={settings.customLayout}
+              style={{ width: "100%", marginTop: 8 }}
+              options={[
+                { value: "single", label: "Một cột" },
+                { value: "columns", label: "Hai cột nền sáng" },
+                { value: "sidebar", label: "Thanh bên có màu" },
+              ]}
+              onChange={(customLayout) => setSettings((old) => ({ ...old, template: "custom", customLayout }))}
+            />
+          </Col>
+          {settings.template === "custom" && settings.customLayout !== "single" ? (
+            <>
+              <Col xs={24} md={8} lg={5}>
+                <Text strong>Độ rộng cột phụ</Text>
+                <Slider min={25} max={45} value={settings.customSidebarWidth} tooltip={{ formatter: (value) => `${value}%` }} onChange={(customSidebarWidth) => setSettings((old) => ({ ...old, customSidebarWidth }))} />
+              </Col>
+              <Col xs={24} lg={10}>
+                <Text strong>Nội dung đặt ở cột phụ</Text>
+                <Select
+                  mode="multiple"
+                  value={settings.customSidebarSections}
+                  style={{ width: "100%", marginTop: 8 }}
+                  options={Object.entries(sectionLabels).map(([value, label]) => ({ value, label }))}
+                  onChange={(customSidebarSections) => setSettings((old) => ({ ...old, customSidebarSections }))}
+                />
+              </Col>
+            </>
+          ) : null}
+          <Col xs={24} md={12} lg={8}>
+            <Text strong>Ảnh đại diện</Text>
+            <Space wrap style={{ display: "flex", marginTop: 8 }}>
+              <Upload accept="image/png,image/jpeg,image/webp" showUploadList={false} beforeUpload={handleAvatarFile}>
+                <Button icon={<PictureOutlined />}>{values.avatarDataUrl ? "Đổi ảnh" : "Chọn ảnh"}</Button>
+              </Upload>
+              {values.avatarDataUrl ? <Button danger onClick={() => { const next = { ...form.getFieldsValue(true), avatarDataUrl: "" }; form.setFieldsValue(next); setValues(next); }}>Xóa ảnh</Button> : null}
+            </Space>
+          </Col>
+          {values.avatarDataUrl ? (
+            <>
+              <Col xs={12} md={6} lg={4}>
+                <Text strong>Kích thước ảnh</Text>
+                <Slider min={56} max={150} value={settings.avatarSize} tooltip={{ formatter: (value) => `${value}px` }} onChange={(avatarSize) => setSettings((old) => ({ ...old, avatarSize }))} />
+              </Col>
+              <Col xs={12} md={6} lg={4}>
+                <Text strong>Kiểu ảnh</Text>
+                <Select value={settings.avatarShape} style={{ width: "100%", marginTop: 8 }} options={[{ value: "circle", label: "Hình tròn" }, { value: "rounded", label: "Bo góc" }, { value: "square", label: "Hình vuông" }]} onChange={(avatarShape) => setSettings((old) => ({ ...old, avatarShape }))} />
+              </Col>
+              <Col xs={12} md={6} lg={4}>
+                <Text strong>Vị trí ảnh</Text>
+                <Select value={settings.avatarPosition} style={{ width: "100%", marginTop: 8 }} options={[{ value: "left", label: "Bên trái" }, { value: "right", label: "Bên phải" }]} onChange={(avatarPosition) => setSettings((old) => ({ ...old, avatarPosition }))} />
+              </Col>
+            </>
+          ) : null}
+          <Col xs={12} md={6} lg={4}>
+            <Text strong style={{ display: "block", marginBottom: 10 }}>Icon thông tin liên hệ</Text>
+            <Switch checked={settings.showContactIcons} checkedChildren="Hiện" unCheckedChildren="Ẩn" onChange={(showContactIcons) => setSettings((old) => ({ ...old, showContactIcons }))} />
+          </Col>
+          <Col xs={24} lg={8}>
+            <Text strong>Ẩn/hiện mục</Text>
+            <Select
+              mode="multiple"
+              allowClear
+              placeholder="Tất cả mục đang hiển thị"
+              value={settings.hiddenSections}
+              style={{ width: "100%", marginTop: 8 }}
+              options={Object.entries(sectionLabels).map(([value, label]) => ({ value, label: `Ẩn ${label.toLowerCase()}` }))}
+              onChange={(hiddenSections) => setSettings((old) => ({ ...old, hiddenSections }))}
+            />
+          </Col>
           <Col xs={24} lg={8}>
             <Text strong>Thứ tự các mục</Text>
             <Space wrap size={4} style={{ marginTop: 8 }}>
               {settings.sectionOrder.map((section, index) => (
-                <span key={section} style={{ display: "inline-flex", alignItems: "center", border: "1px solid #E2E8F0", borderRadius: 6, paddingLeft: 8, background: "#FFFFFF" }}>
+                <span
+                  key={section}
+                  draggable
+                  title="Giữ và kéo để đổi vị trí"
+                  onDragStart={(event) => event.dataTransfer.setData("text/cv-section-index", String(index))}
+                  onDragOver={(event) => event.preventDefault()}
+                  onDrop={(event) => { event.preventDefault(); reorderSection(Number(event.dataTransfer.getData("text/cv-section-index")), index); }}
+                  style={{ display: "inline-flex", alignItems: "center", border: "1px solid #E2E8F0", borderRadius: 6, paddingLeft: 8, background: "#FFFFFF", cursor: "grab" }}
+                >
                   <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 20, height: 20, marginRight: 6, borderRadius: 5, background: "#EFF6FF", color: "#1D4ED8", fontSize: 11, fontWeight: 700 }}>
                     {index + 1}
                   </span>
@@ -546,6 +722,34 @@ export default function CvBuilderPage() {
           </Col>
         </Row>
       </Card>
+
+      <Modal
+        title="Chọn mẫu CV"
+        open={templateModalOpen}
+        onCancel={() => setTemplateModalOpen(false)}
+        footer={null}
+        width={900}
+      >
+        {(["Phổ biến", "Theo nghề nghiệp", "Đặc biệt"] as const).map((group) => (
+          <div key={group} style={{ marginTop: 18 }}>
+            <Text strong>{group}</Text>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(170px, 1fr))", gap: 12, marginTop: 10 }}>
+              {templateOptions.filter((template) => template.group === group).map((template) => (
+                <TemplateCard
+                  key={template.value}
+                  template={template}
+                  selected={settings.template === template.value}
+                  color={settings.accentColor}
+                  onSelect={() => {
+                    setSettings((old) => ({ ...old, template: template.value }));
+                    setTemplateModalOpen(false);
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+        ))}
+      </Modal>
 
       <Row gutter={[24, 24]} align="top">
         <Col xs={24} xl={11} className="cv-builder-editor">
@@ -687,47 +891,144 @@ function RepeatableSection({ title, name, addLabel, emptyValue, render }: {
 
 export function CvPreview({ values, skills, settings }: { values: CvBuilderValues; skills: string[]; settings: BuilderSettings }) {
   const content = <PreviewContent values={values} skills={skills} settings={settings} />;
-  if (settings.template === "modern") {
+
+  if (settings.template === "custom") {
+    const asideSections = settings.customSidebarSections || defaultSettings.customSidebarSections;
+    const mainSections = settings.sectionOrder.filter((section) => !asideSections.includes(section));
+    const sidebarWidth = Math.min(45, Math.max(25, settings.customSidebarWidth || 34));
+    const customHeader = (
+      <header style={{ display: "flex", flexDirection: settings.avatarPosition === "left" ? "row" : "row-reverse", alignItems: "center", gap: 22, borderBottom: `3px solid ${settings.accentColor}`, paddingBottom: 18, marginBottom: 24 }}>
+        {values.avatarDataUrl ? <AvatarImage values={values} settings={settings} /> : null}
+        <div style={{ flex: 1 }}><h1 style={{ margin: 0, fontSize: 32 }}>{values.fullName || "HỌ VÀ TÊN"}</h1>
+        <div style={{ color: settings.accentColor, fontSize: 17, fontWeight: 700, marginTop: 5 }}>{values.professionalTitle || "Vị trí chuyên môn"}</div>
+        <ContactDetails values={values} settings={settings} /></div>
+      </header>
+    );
+    if (settings.customLayout === "single") return <>{customHeader}{content}</>;
     return (
-      <div style={{ display: "grid", gridTemplateColumns: "34% 66%", minHeight: 980 }}>
-        <aside style={{ background: settings.accentColor, color: "white", padding: "44px 28px" }}>
+      <>
+        {customHeader}
+        <div style={{ display: "grid", gridTemplateColumns: `${sidebarWidth}% ${100 - sidebarWidth}%`, gap: 26 }}>
+          <aside style={{ padding: settings.customLayout === "sidebar" ? 18 : "0 18px 0 0", marginLeft: settings.customLayout === "sidebar" ? -18 : 0, color: settings.textColor, background: settings.customLayout === "sidebar" ? `${settings.accentColor}10` : "transparent", borderRight: settings.customLayout === "columns" ? "1px solid #E2E8F0" : "none" }}>
+            <PreviewContent values={values} skills={skills} settings={settings} include={asideSections} />
+          </aside>
+          <main><PreviewContent values={values} skills={skills} settings={settings} include={mainSections} /></main>
+        </div>
+      </>
+    );
+  }
+
+  if (fullBleedTemplates.has(settings.template)) {
+    const isTechnical = settings.template === "technical";
+    const isCreative = settings.template === "creative";
+    const sidebarColor = isTechnical ? "#172033" : isCreative ? settings.accentColor : settings.accentColor;
+    return (
+      <div style={{ display: "grid", gridTemplateColumns: isTechnical ? "38% 62%" : "34% 66%", minHeight: 980 }}>
+        <aside style={{ background: sidebarColor, color: "white", padding: isCreative ? "54px 30px" : "44px 28px", borderRight: isTechnical ? `7px solid ${settings.accentColor}` : "none" }}>
+          {values.avatarDataUrl ? <AvatarImage values={values} settings={settings} inverted /> : null}
+          {isCreative && <div style={{ width: 42, height: 7, background: "white", marginBottom: 24 }} />}
           <h1 style={{ fontSize: 29, lineHeight: 1.12, margin: 0 }}>{values.fullName || "HỌ VÀ TÊN"}</h1>
           <div style={{ marginTop: 10, fontWeight: 700 }}>{values.professionalTitle || "Vị trí chuyên môn"}</div>
-          <div style={{ marginTop: 30, fontSize: 12, lineHeight: 1.9 }}>{[values.email, values.phone, values.address, values.website].filter(Boolean).map((item) => <div key={item}>{item}</div>)}</div>
-          {skills.length > 0 && <SideSection title="KỸ NĂNG">{skills.map((skill) => <div key={skill} style={{ marginBottom: 8 }}>{skill}</div>)}</SideSection>}
-          {(values.certificates || []).some((item) => item.name) && <SideSection title="CHỨNG CHỈ">{values.certificates?.filter((item) => item.name).map((item, index) => <div key={index} style={{ marginBottom: 10 }}><strong>{item.name}</strong><div style={{ opacity: 0.85 }}>{[item.issuer, item.year].filter(Boolean).join(" · ")}</div></div>)}</SideSection>}
+          <ContactDetails values={values} settings={settings} stacked inverted />
+          {!settings.hiddenSections?.includes("skills") && skills.length > 0 && <SideSection title="KỸ NĂNG">{skills.map((skill) => <div key={skill} style={{ marginBottom: 8 }}>{skill}</div>)}</SideSection>}
+          {!settings.hiddenSections?.includes("certificates") && (values.certificates || []).some((item) => item.name) && <SideSection title="CHỨNG CHỈ">{values.certificates?.filter((item) => item.name).map((item, index) => <div key={index} style={{ marginBottom: 10 }}><strong>{item.name}</strong><div style={{ opacity: 0.85 }}>{[item.issuer, item.year].filter(Boolean).join(" · ")}</div></div>)}</SideSection>}
         </aside>
-        <main style={{ padding: "44px 38px", color: settings.textColor }}>{content}</main>
+        <main style={{ padding: isTechnical ? "44px 34px" : "44px 38px", color: settings.textColor }}>
+          {isTechnical && <div style={{ color: settings.accentColor, fontSize: 11, fontWeight: 800, letterSpacing: ".12em", marginBottom: 22 }}>HỒ SƠ NĂNG LỰC</div>}
+          {content}
+        </main>
       </div>
     );
   }
+
+  if (["corporate", "graduate", "compact"].includes(settings.template)) {
+    const asideSections: SectionKey[] = settings.template === "graduate" ? ["education", "skills", "certificates"] : ["skills", "education", "certificates"];
+    const mainSections: SectionKey[] = settings.sectionOrder.filter((section) => !asideSections.includes(section));
+    return (
+      <>
+        <header style={{ background: settings.template === "corporate" ? settings.accentColor : `${settings.accentColor}12`, color: settings.template === "corporate" ? "white" : settings.textColor, margin: settings.template === "compact" ? "-30px -36px 24px" : "-44px -48px 30px", padding: settings.template === "compact" ? "24px 36px" : "30px 48px" }}>
+          {values.avatarDataUrl ? <AvatarImage values={values} settings={settings} inverted={settings.template === "corporate"} /> : null}
+          <h1 style={{ margin: 0, fontSize: settings.template === "compact" ? 27 : 31 }}>{values.fullName || "HỌ VÀ TÊN"}</h1>
+          <div style={{ marginTop: 5, fontSize: 16, fontWeight: 700 }}>{values.professionalTitle || "Vị trí chuyên môn"}</div>
+          <ContactDetails values={values} settings={settings} inverted={settings.template === "corporate"} />
+        </header>
+        <div style={{ display: "grid", gridTemplateColumns: settings.template === "compact" ? "31% 69%" : "34% 66%", gap: settings.template === "compact" ? 22 : 30 }}>
+          <aside style={{ paddingRight: 20, borderRight: "1px solid #E2E8F0" }}><PreviewContent values={values} skills={skills} settings={settings} include={asideSections} /></aside>
+          <main><PreviewContent values={values} skills={skills} settings={settings} include={mainSections} /></main>
+        </div>
+      </>
+    );
+  }
+
+  if (settings.template === "timeline") {
+    return (
+      <>
+        <header style={{ borderLeft: `8px solid ${settings.accentColor}`, paddingLeft: 22, marginBottom: 30 }}>
+          <h1 style={{ margin: 0, fontSize: 33 }}>{values.fullName || "HỌ VÀ TÊN"}</h1>
+          <div style={{ color: settings.accentColor, fontSize: 17, fontWeight: 700, marginTop: 5 }}>{values.professionalTitle || "Vị trí chuyên môn"}</div>
+          <ContactDetails values={values} settings={settings} />
+        </header>
+        <div style={{ borderLeft: `2px solid ${settings.accentColor}55`, paddingLeft: 24 }}>{content}</div>
+      </>
+    );
+  }
+
+  if (settings.template === "executive") {
+    return (
+      <>
+        <header style={{ borderTop: `8px solid ${settings.accentColor}`, borderBottom: "1px solid #CBD5E1", padding: "24px 0 20px", marginBottom: 28 }}>
+          <h1 style={{ margin: 0, fontFamily: "Georgia, serif", fontSize: 34 }}>{values.fullName || "HỌ VÀ TÊN"}</h1>
+          <div style={{ fontSize: 17, marginTop: 5 }}>{values.professionalTitle || "Vị trí quản lý"}</div>
+          <ContactDetails values={values} settings={settings} />
+        </header>
+        {content}
+      </>
+    );
+  }
+
+  if (settings.template === "academic") {
+    return (
+      <>
+        <header style={{ textAlign: "center", borderBottom: "2px double #94A3B8", paddingBottom: 18, marginBottom: 26 }}>
+          <h1 style={{ margin: 0, fontFamily: "Georgia, serif", fontSize: 30, letterSpacing: ".03em" }}>{values.fullName || "HỌ VÀ TÊN"}</h1>
+          <div style={{ marginTop: 6, fontFamily: "Georgia, serif", fontSize: 15 }}>{values.professionalTitle || "Lĩnh vực chuyên môn"}</div>
+          <ContactDetails values={values} settings={settings} />
+        </header>
+        {content}
+      </>
+    );
+  }
+
   return (
     <>
-      <header style={{ borderBottom: settings.template === "elegant" ? `1px solid ${settings.accentColor}` : `3px solid ${settings.accentColor}`, textAlign: settings.template === "elegant" ? "center" : "left", paddingBottom: 20, marginBottom: settings.density + 10 }}>
+      <header style={{ borderBottom: settings.template === "elegant" ? `1px solid ${settings.accentColor}` : settings.template === "minimal" ? "1px solid #CBD5E1" : `3px solid ${settings.accentColor}`, textAlign: settings.template === "elegant" ? "center" : "left", paddingBottom: 20, marginBottom: settings.density + 10 }}>
+        {values.avatarDataUrl ? <AvatarImage values={values} settings={settings} /> : null}
         <h1 style={{ margin: 0, fontSize: 32, letterSpacing: "-0.03em" }}>{values.fullName || "HỌ VÀ TÊN"}</h1>
         <div style={{ color: settings.accentColor, fontSize: 17, fontWeight: 700, marginTop: 6 }}>{values.professionalTitle || "Vị trí chuyên môn"}</div>
-        <div style={{ marginTop: 12, color: settings.textColor, opacity: 0.72, fontSize: 12 }}>{[values.email, values.phone, values.address, values.website].filter(Boolean).join("  •  ") || "Email  •  Số điện thoại  •  Địa chỉ"}</div>
+        <ContactDetails values={values} settings={settings} />
       </header>
       {content}
     </>
   );
 }
 
-export function PreviewContent({ values, skills, settings }: { values: CvBuilderValues; skills: string[]; settings: BuilderSettings }) {
+export function PreviewContent({ values, skills, settings, include }: { values: CvBuilderValues; skills: string[]; settings: BuilderSettings; include?: SectionKey[] }) {
   const paragraphStyle: CSSProperties = { whiteSpace: "pre-line", lineHeight: 1.55, color: settings.textColor, margin: "6px 0 0", fontSize: settings.fontSize };
   const sections: Record<SectionKey, ReactNode> = {
     summary: values.summary ? <CvSection title="MỤC TIÊU NGHỀ NGHIỆP" settings={settings}><p style={paragraphStyle}>{values.summary}</p></CvSection> : null,
     experience: (values.experience || []).some((item) => item.company || item.position || item.description) ? <CvSection title="KINH NGHIỆM LÀM VIỆC" settings={settings}>{values.experience?.filter((item) => item.company || item.position || item.description).map((item, index) => <PreviewEntry key={index} title={item.position || "Vị trí công việc"} subtitle={item.company} period={item.period} description={item.description} settings={settings} />)}</CvSection> : null,
     education: (values.education || []).some((item) => item.school || item.major) ? <CvSection title="HỌC VẤN" settings={settings}>{values.education?.filter((item) => item.school || item.major).map((item, index) => <PreviewEntry key={index} title={item.school || "Trường / Cơ sở đào tạo"} subtitle={item.major} period={item.period} settings={settings} />)}</CvSection> : null,
     projects: (values.projects || []).some((item) => item.name || item.description) ? <CvSection title="DỰ ÁN" settings={settings}>{values.projects?.filter((item) => item.name || item.description).map((item, index) => <PreviewEntry key={index} title={item.name || "Tên dự án"} subtitle={[item.role, item.link].filter(Boolean).join(" · ")} description={item.description} settings={settings} />)}</CvSection> : null,
-    skills: settings.template !== "modern" && skills.length > 0 ? <CvSection title="KỸ NĂNG" settings={settings}><div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>{skills.map((skill) => <span key={skill} style={{ padding: "4px 9px", borderRadius: 5, background: `${settings.accentColor}12`, color: settings.accentColor, fontSize: settings.fontSize - 1, fontWeight: 700 }}>{skill}</span>)}</div></CvSection> : null,
-    certificates: settings.template !== "modern" && (values.certificates || []).some((item) => item.name) ? <CvSection title="CHỨNG CHỈ" settings={settings}>{values.certificates?.filter((item) => item.name).map((item, index) => <PreviewEntry key={index} title={item.name || ""} subtitle={item.issuer} period={item.year} settings={settings} />)}</CvSection> : null,
+    skills: !fullBleedTemplates.has(settings.template) && skills.length > 0 ? <CvSection title="KỸ NĂNG" settings={settings}><div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>{skills.map((skill) => <span key={skill} style={{ padding: "4px 9px", borderRadius: 5, background: `${settings.accentColor}12`, color: settings.accentColor, fontSize: settings.fontSize - 1, fontWeight: 700 }}>{skill}</span>)}</div></CvSection> : null,
+    certificates: !fullBleedTemplates.has(settings.template) && (values.certificates || []).some((item) => item.name) ? <CvSection title="CHỨNG CHỈ" settings={settings}>{values.certificates?.filter((item) => item.name).map((item, index) => <PreviewEntry key={index} title={item.name || ""} subtitle={item.issuer} period={item.year} settings={settings} />)}</CvSection> : null,
   };
-  return <>{settings.sectionOrder.map((section) => <div key={section}>{sections[section]}</div>)}</>;
+  const hiddenSections = settings.hiddenSections || [];
+  const visibleSections = (include || settings.sectionOrder).filter((section) => !hiddenSections.includes(section));
+  return <>{visibleSections.map((section) => <div key={section}>{sections[section]}</div>)}</>;
 }
 
 function PreviewEntry({ title, subtitle, period, description, settings }: { title: string; subtitle?: string; period?: string; description?: string; settings: BuilderSettings }) {
-  return <div style={{ marginBottom: 15, color: settings.textColor }}><div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}><strong style={{ fontSize: settings.fontSize + 0.5 }}>{title}</strong><span style={{ color: settings.textColor, opacity: 0.7, fontSize: settings.fontSize - 1, whiteSpace: "nowrap" }}>{period}</span></div>{subtitle && <div style={{ color: settings.accentColor, fontWeight: 600, fontSize: settings.fontSize - 0.5, marginTop: 2 }}>{subtitle}</div>}{description && <p style={{ whiteSpace: "pre-line", lineHeight: 1.55, color: settings.textColor, fontSize: settings.fontSize, margin: "5px 0 0" }}>{description}</p>}</div>;
+  return <div style={{ marginBottom: 15, color: settings.textColor, breakInside: "avoid", pageBreakInside: "avoid" }}><div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}><strong style={{ fontSize: settings.fontSize + 0.5 }}>{title}</strong><span style={{ color: settings.textColor, opacity: 0.7, fontSize: settings.fontSize - 1, whiteSpace: "nowrap" }}>{period}</span></div>{subtitle && <div style={{ color: settings.accentColor, fontWeight: 600, fontSize: settings.fontSize - 0.5, marginTop: 2 }}>{subtitle}</div>}{description && <p style={{ whiteSpace: "pre-line", lineHeight: 1.55, color: settings.textColor, fontSize: settings.fontSize, margin: "5px 0 0" }}>{description}</p>}</div>;
 }
 
 function CvSection({ title, settings, children }: { title: string; settings: BuilderSettings; children: ReactNode }) {
@@ -736,6 +1037,86 @@ function CvSection({ title, settings, children }: { title: string; settings: Bui
 
 function SideSection({ title, children }: { title: string; children: ReactNode }) {
   return <section style={{ marginTop: 30, fontSize: 12 }}><h2 style={{ fontSize: 12, letterSpacing: "0.09em", borderBottom: "1px solid rgba(255,255,255,.45)", paddingBottom: 7 }}>{title}</h2>{children}</section>;
+}
+
+function AvatarImage({ values, settings, inverted = false }: { values: CvBuilderValues; settings: BuilderSettings; inverted?: boolean }) {
+  if (!values.avatarDataUrl) return null;
+  const radius = settings.avatarShape === "circle" ? "50%" : settings.avatarShape === "rounded" ? 14 : 0;
+  return <img src={values.avatarDataUrl} alt="Ảnh đại diện" style={{ display: "block", width: settings.avatarSize, height: settings.avatarSize, objectFit: "cover", borderRadius: radius, margin: settings.avatarPosition === "left" ? "0 auto 18px 0" : "0 0 18px auto", border: `3px solid ${inverted ? "rgba(255,255,255,.72)" : `${settings.accentColor}33`}` }} />;
+}
+
+function ContactDetails({ values, settings, stacked = false, inverted = false }: { values: CvBuilderValues; settings: BuilderSettings; stacked?: boolean; inverted?: boolean }) {
+  const contacts = [
+    { value: values.email, icon: <MailOutlined /> },
+    { value: values.phone, icon: <PhoneOutlined /> },
+    { value: values.address, icon: <EnvironmentOutlined /> },
+    { value: values.website, icon: <LinkOutlined /> },
+  ].filter((item) => item.value);
+  if (!contacts.length) return <div style={{ marginTop: 10, opacity: .65, fontSize: 12 }}>Email • Số điện thoại • Địa chỉ</div>;
+  return (
+    <div style={{ display: "flex", flexDirection: stacked ? "column" : "row", flexWrap: "wrap", gap: stacked ? 7 : "6px 14px", marginTop: stacked ? 28 : 10, color: inverted ? "white" : settings.textColor, opacity: inverted ? .9 : .72, fontSize: 11.5, lineHeight: 1.5 }}>
+      {contacts.map((item) => <span key={item.value} style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>{settings.showContactIcons ? item.icon : null}<span>{item.value}</span></span>)}
+    </div>
+  );
+}
+
+async function resizeImage(file: File, maxSize: number, quality: number): Promise<string> {
+  const source = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+  const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const element = new Image();
+    element.onload = () => resolve(element);
+    element.onerror = reject;
+    element.src = source;
+  });
+  const ratio = Math.min(1, maxSize / Math.max(image.width, image.height));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(image.width * ratio));
+  canvas.height = Math.max(1, Math.round(image.height * ratio));
+  canvas.getContext("2d")?.drawImage(image, 0, 0, canvas.width, canvas.height);
+  return canvas.toDataURL("image/jpeg", quality);
+}
+
+function TemplateThumbnail({ layout, color }: { layout: "single" | "sidebar" | "columns" | "timeline"; color: string }) {
+  const line = (width: string, key: string) => <span key={key} style={{ display: "block", width, height: 2, marginBottom: 4, borderRadius: 2, background: "#CBD5E1" }} />;
+  return (
+    <span style={{ display: "block", height: 72, padding: 10, background: "#F8FAFC", borderBottom: "1px solid #E2E8F0" }}>
+      <span style={{ display: "grid", gridTemplateColumns: layout === "sidebar" ? "31% 69%" : layout === "columns" ? "42% 58%" : "1fr", height: "100%", gap: layout === "single" || layout === "timeline" ? 0 : 6, background: "#FFFFFF", border: "1px solid #E2E8F0", padding: layout === "sidebar" ? 0 : 6 }}>
+        {layout === "sidebar" && <span style={{ display: "block", background: color, opacity: .9 }} />}
+        {layout === "timeline" && <span style={{ position: "absolute", width: 2, height: 38, margin: "8px 0 0 4px", background: color }} />}
+        <span style={{ display: "block", padding: layout === "sidebar" ? 6 : 0 }}>
+          <span style={{ display: "block", width: "58%", height: 4, marginBottom: 6, borderRadius: 2, background: color }} />
+          {line("92%", "a")}{line("75%", "b")}{line("88%", "c")}{line("62%", "d")}
+        </span>
+      </span>
+    </span>
+  );
+}
+
+function TemplateCard({ template, selected, color, onSelect }: {
+  template: (typeof templateOptions)[number];
+  selected: boolean;
+  color: string;
+  onSelect: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={selected}
+      onClick={onSelect}
+      style={{ padding: 0, overflow: "hidden", textAlign: "left", cursor: "pointer", background: "#FFFFFF", border: selected ? `2px solid ${color}` : "1px solid #E2E8F0", borderRadius: 12, boxShadow: selected ? `0 0 0 3px ${color}14` : "none" }}
+    >
+      <TemplateThumbnail layout={template.layout} color={selected ? color : "#94A3B8"} />
+      <span style={{ display: "block", padding: "10px 12px" }}>
+        <span style={{ display: "block", color: "#0F172A", fontSize: 13, fontWeight: 700 }}>{template.name}</span>
+        <span style={{ display: "block", color: "#64748B", fontSize: 11, lineHeight: 1.4, marginTop: 3 }}>{template.description}</span>
+      </span>
+    </button>
+  );
 }
 
 const sectionLabels: Record<SectionKey, string> = {

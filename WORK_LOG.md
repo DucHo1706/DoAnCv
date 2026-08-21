@@ -1,0 +1,934 @@
+﻿# Nhật ký thực hiện RecruitInsightAI
+
+File này là nhật ký nối tiếp, không chứa credential hoặc dữ liệu cá nhân thật. Mục mới được thêm ngay dưới tiêu đề `Nhật ký thực hiện`, theo thứ tự mới nhất trước.
+
+## Trạng thái môi trường
+
+| Môi trường | Trạng thái xác nhận gần nhất | Commit | Ghi chú |
+|---|---|---|---|
+| Local | Unit/build/migration script đạt lúc 2026-08-22 01:05 +07:00 | Chưa commit | 72 Python test, backend và frontend build đạt; migration alias chưa áp; chưa E2E theo role |
+| Git remote | Chưa kiểm tra trong phiên khởi tạo nhật ký | Chưa ghi nhận | Push không đồng nghĩa deploy |
+| VPS | Chưa kiểm tra trong phiên khởi tạo nhật ký | Chưa ghi nhận | Không dùng thông tin cũ để kết luận |
+
+## Nhật ký thực hiện
+
+### 2026-08-22 01:31 +07:00 — P2-02/P3-01/P3-03-PREDEPLOY — Khép kín scheduler và tách benchmark nội dung/layout
+
+- Trạng thái: `ĐÃ XONG` code/unit/build/benchmark local; `ĐANG LÀM` deploy VPS và E2E theo vai trò.
+- Mục tiêu/phạm vi: sửa khe hở alias mới không tự kích hoạt mining/reload; thay bằng chứng CV đơn giản cùng template bằng hai phép thử độc lập: đối sánh nội dung chi tiết và parser tài liệu đa bố cục.
+- Scheduler: fingerprint backend thêm toàn bộ `SkillAliases`; Python đồng bộ taxonomy lúc startup và 02:00 giờ Việt Nam, ghi JSON atomically rồi reload `SKILL_DB/SKILL_ALIASES` trong tiến trình. Không thêm giao diện Admin; chỉ log/metadata kỹ thuật. CV mới không chờ train, vòng nền chỉ chạy khi input thay đổi và đủ ngưỡng.
+- Dữ liệu nội dung: generator schema 3 tạo 1.170 CV synthetic tối thiểu 1.791 từ, trung bình 1.876,7 từ, có hai dự án, số liệu/cách đo và bằng chứng riêng theo kỹ năng. Đã bỏ `case_type` và ground truth khỏi text CV để tránh thuật toán đọc nhãn; metadata ngoài input vẫn giữ năm trường hợp kiểm thử.
+- Dữ liệu layout: 15 CV dài trên PDF một/hai cột, nhiều trang, Việt/Anh/song ngữ, timeline overlap, heading tùy chỉnh, DOCX bảng/nhiều bảng, ảnh sạch/hai cột/nghiêng nhiễu, PDF scan và PDF dày; thêm 1 PDF không phải CV. Audit đạt 16/16, contact/role/skill đạt theo ngưỡng; OCR giữ đúng dấu tên 13/15 và nhận diện tên 15/15 sau chuẩn hóa dấu, nên không tuyên bố đã giải quyết hoàn toàn OCR.
+- File chính sửa: `MiningSchedulerService.cs`, `Python/main.py`, `skills_sync_service.py`, generator/runner/audit benchmark và test liên quan; dữ liệu/report synthetic được tái sinh. Không thay đổi UI và không thêm màn hình quản trị thuật toán.
+- Database/API/cấu hình: không thêm migration ngoài `20260822011500_AddSkillAliases` đã tạo ở task trước; EF Release nhận migration và sinh SQL create/index/seed hợp lệ. Scheduler đọc bảng alias sau khi migration được áp. Rollback alias là migrate về `20260821233000_AddJobRepostingLifecycle`; rollback scheduler/code không làm mất CV/JD.
+- Kiểm thử thực tế: Python toàn suite 75/75; benchmark offline đạt 1.170 CV/162 JD/3.510 cặp, skill fixture 100%, timeline 1.170/1.170, thứ tự nghiêm ngặt 1.164/1.170 và Apriori/HUIM đúng phép tính/tách 8 domain. Backend Release build đạt 0 lỗi (452 warning legacy ở clean output, incremental 0); frontend production build đạt, còn warning chunk lớn/SignalR như trước. Corpus parser đạt 16/16; raster/scan ở mức `partial` vì chưa có nguồn OCR độc lập trong lần audit offline.
+- Git/VPS: VPS trước deploy đang ở commit `9a4a64f`, ba container healthy nhưng source có 11 file sửa dở; đã lưu patch backup cả trên VPS và `.local` trước khi thay đổi. Chưa ghi database hoặc kích hoạt deploy tại thời điểm mục này.
+- Hạn chế/bước tiếp theo: tạo commit phát hành, backup/preserve source VPS, pull đúng commit, build/activate bằng script rollback, kiểm tra migration/container/health/API/HTTPS và ghi mục deploy riêng. E2E đăng nhập theo vai trò vẫn là bước nghiệm thu sau deploy; benchmark synthetic không phải accuracy thị trường.
+
+### 2026-08-22 01:05 +07:00 — P2-01-SKILL-ALIASES — Chuẩn hóa alias cho scoring, Apriori và Two-Phase HUIM
+
+- Trạng thái: `ĐÃ XONG` phần code/unit/build/migration script local; migration chưa áp database, chưa restart Python, chưa E2E hoặc deploy VPS.
+- Mục tiêu/phạm vi: sửa việc một kỹ năng có nhiều cách ghi bị bỏ sót hoặc bị tính thành nhiều item; tách toàn bộ kỹ năng trích xuất khỏi tập kỹ năng khớp job trên báo cáo; bảo đảm hai thuật toán khai phá dùng cùng canonical skill.
+- Quyết định nghiệp vụ: transaction Apriori/HUIM chỉ lấy skill trích từ CV và đã duyệt. Job ứng tuyển, Category và context Talent Pool do HR lưu xác định domain; note/tag/giai đoạn/scoring chủ quan của HR không tự biến thành skill hoặc bằng chứng. HUIM dùng thêm skill/lương quan sát từ JD cùng domain. Kết quả mining chỉ là context gợi ý, không tự cộng điểm hoặc tạo red flag.
+- Taxonomy/schema: thêm `SkillAliases` có FK cascade tới `Skills`, unique `NormalizedAlias`; migration seed 58 alias tham chiếu phổ biến và có `Down` xóa bảng. API `GET /api/skills` trả tên chuẩn cùng aliases; Admin có API thêm/xóa alias, kiểm tra xung đột với tên chuẩn/alias khác. Không hardcode alias trong thuật toán.
+- Chuẩn hóa: C#/Python dùng cùng quy tắc Unicode, dấu, hoa thường, khoảng trắng và ký hiệu `.`, `#`, `+`, `&`. Alias SQL được quy về canonical trước trích xuất CV/JD, phân loại domain, support/confidence Apriori, quantity/external utility HUIM và đầu vào gợi ý. Cụm dài thắng cụm con trên cùng occurrence để `C#` không sinh thêm `C` và `SQL Server` không sinh thêm `SQL`; occurrence độc lập vẫn được giữ.
+- UI: payload báo cáo lưu thêm `extracted_skills`; tab `Năng lực & Cảnh báo` có khối `Kỹ năng nhận diện trong CV`, tách khỏi `Năng lực tương thích tốt`/`Cần làm rõ`. Tiêu đề tóm tắt đổi thành trung tính `Tóm tắt đánh giá`. Giao diện theo style guide hiện hành, không thêm banner hoặc icon trang trí.
+- Gemini failover cùng phiên: deadline attempt mặc định 15 giây/tối thiểu 10 giây; chuyển model sau hai key/project transient để không lặp lỗi deadline 2 giây và không log model chưa thử là không khả dụng. Cấu hình tương ứng đã có trong `docker-compose.yml`.
+- File chính thêm: `SkillAlias.cs`, DTO alias/taxonomy, `SkillTaxonomyNormalizer.cs`, migration `20260822011500_AddSkillAliases.cs`, `test_skill_taxonomy_aliases.py`. File chính sửa: `SkillsController`, `AppDbContext`/snapshot, `AiService`/Apriori/HUIM/domain service, Python sync/NLP/mining guard/controller/DTO/service/timeline/report, ba component/trang frontend báo cáo, README/context/log.
+- API/database/config: thay đổi response `GET /api/skills` theo hướng tương thích mở rộng (giữ `id/name/isApproved`, thêm `aliases`); thêm `POST /api/skills/{skillId}/aliases` và `DELETE /api/skills/{skillId}/aliases/{aliasId}` cho Admin. Payload nội bộ `/train-apriori` và `/train-huim` thêm `taxonomy_aliases`. Migration chưa được chạy vào database cấu hình hiện tại; rollback là migrate về `20260821233000_AddJobRepostingLifecycle`, thao tác này xóa bảng alias nhưng không xóa Skills/CV/JD.
+- Kiểm thử thực tế: Python mục tiêu 36/36 rồi toàn suite 72/72 đạt; test alias xác nhận `Node.js/NodeJS/Node JS` thành một item và HUIM giữ đúng quantity/utility canonical; `compileall` đạt. Backend Debug build output riêng và cấu hình `AliasAudit` đều đạt `0 Error(s)` (451 warning legacy); EF nhận migration và sinh SQL nâng cấp thành công. Frontend production build đạt; còn warning chunk lớn/SignalR dependency như trước. `git diff --check` không có whitespace error, chỉ cảnh báo LF/CRLF.
+- Git/VPS/dữ liệu: giữ nguyên worktree bẩn nhiều task, chưa commit/push; chưa deploy/kiểm tra VPS; không kết nối hoặc ghi database trong task. Không ghi credential vào code/log/tài liệu.
+- Hạn chế/bước tiếp theo: restart backend để auto-migrate, sau đó restart Python để đồng bộ file taxonomy alias; phân tích lại hồ sơ cũ nếu muốn thay danh sách skill đã lưu trước cơ chế canonical mới. Chưa có màn hình Admin quản trị alias; API và schema đã sẵn sàng, UI quản trị taxonomy là task riêng nếu cần.
+
+### 2026-08-22 00:38 +07:00 — P1-02-UX-CLEANUP — Bỏ thông báo thừa trên form đăng lại
+
+- Trạng thái: `ĐÃ XONG` local; chưa commit/push/deploy VPS.
+- Mục tiêu/phạm vi: thực hiện đúng yêu cầu không hiển thị banner giải thích việc sao chép nội dung/vòng tuyển trên form đăng lại; HR chỉ cần thấy form đã điền sẵn để chỉnh sửa.
+- Frontend: xóa toàn bộ Alert `Tạo đợt ... từ tin ...`, mô tả hồ sơ đợt cũ, hai state chỉ phục vụ banner và import icon/component không còn dùng. Giữ tiêu đề `Đăng lại tin tuyển dụng`, dữ liệu form prefill, nút gửi duyệt và nghiệp vụ tạo vòng mới.
+- Style guide: loại trang trí/thông báo lặp, giữ nguyên Card và khoảng cách của form hiện có; không phát sinh khoảng trống hoặc style mới.
+- File sửa: `ai-recruitment-frontend/src/features/recruiter/pages/CreateJobPage/CreateJobPage.tsx`, `WORK_LOG.md`.
+- API/database/config: không thay đổi API, backend, schema, migration, dữ liệu hoặc cấu hình.
+- Kiểm thử: tìm lại toàn file không còn chuỗi banner/state/import liên quan; `npm.cmd run build` thành công. Còn warning chunk lớn và annotation SignalR của dependency như trước, không có TypeScript/build error.
+- Git/VPS/rollback: giữ nguyên worktree bẩn; chưa commit/push; chưa deploy/kiểm tra VPS. Rollback chỉ cần khôi phục khối Alert, không liên quan dữ liệu.
+- Bước tiếp theo: refresh frontend và mở lại `Đăng lại tin`; form phải bắt đầu trực tiếp bằng Card thông tin công việc, không còn banner giải thích.
+
+### 2026-08-22 00:30 +07:00 — OCR-CONSENSUS-GATE — Chặn lỗi trích xuất lan sang toàn bộ phân tích
+
+- Trạng thái: `ĐÃ XONG` phần code/unit/compile và smoke 15 PDF text; chưa đo accuracy trên CV scan thật đã gán nhãn, chưa commit/push/deploy VPS.
+- Mục tiêu/phạm vi: xử lý điểm mù khi OCR/PDF parser trả văn bản dài, có cấu trúc nhưng sai nội dung nên không kích hoạt fallback và làm sai NLP, kỹ năng, điểm, red flag, STAR và ngôn từ phía sau.
+- Quyết định kỹ thuật: thêm phép đồng thuận token không phụ thuộc dấu câu/thứ tự layout giữa PyPDF2, pdfplumber, Tesseract nhiều PSM và Gemini Vision; xếp hạng candidate dùng cả quality và hỗ trợ từ nguồn khác. OCR confidence thấp bị trừ điểm. PDF partial/có cảnh báo/thiếu đồng thuận tiếp tục qua OCR; PDF/ảnh chưa an toàn tiếp tục qua Vision.
+- Safety gate: nếu hai nguồn độc lập mâu thuẫn dưới ngưỡng hoặc raster không có mức đối chiếu tối thiểu, kết quả có `quality_level=insufficient`, `analysis_safe=false` và log `EXTRACTION_UNSAFE`. `/validate-cv`, `/extract-cv`, preview và score dừng trước bước nhận diện CV/NLP/chấm điểm; UI nhận thông điệp `Không đủ dữ liệu`, không diễn giải thành CV không phù hợp 0%. Kết quả validate được cache theo hash để score/preview cùng tệp không gọi OCR/Vision lần hai trong cùng tiến trình.
+- Giới hạn: đồng thuận không chứng minh văn bản đúng tuyệt đối vì nhiều engine vẫn có thể sai giống nhau. Ngưỡng hiện là chính sách an toàn có test hồi quy, chưa phải accuracy đã hiệu chỉnh trên dữ liệu thật; scan bị mờ có thể bị từ chối thận trọng.
+- File sửa: `Python/services/document_layout_service.py`, `Python/services/doc_parser_service.py`, `Python/services/cv_analysis_service.py`, `Python/controllers/analysis_controller.py`, `Python/tests/test_document_layout_service.py`, `Python/README.md`, `PROJECT_CONTEXT.md`, `WORK_LOG.md`.
+- API/database/config: response `extraction_quality` bổ sung `agreement_score`, `agreement_kind`, `analysis_safe`; không đổi route, schema database, migration hoặc credential. Tương thích cũ: `extract_text_from_file` vẫn tồn tại làm wrapper.
+- Kiểm thử: `venv/Scripts/python.exe -m compileall -q services controllers tests` đạt; toàn bộ unit test `65/65` đạt; test mới xác nhận bỏ ảnh hưởng dấu câu/layout, phát hiện hai extractor cùng trả text dài nhưng trái nội dung, dừng trước resume validation/NLP và tái sử dụng metadata cache. `benchmark_layout_extraction.py` đạt `15/15` PDF bình thường ở mức high, không gọi OCR/Vision thừa. Smoke local không gọi Vision trên bốn mẫu raster 10/11/12/13 lần lượt có agreement `1.00/0.92/1.00/1.00`, đều được giữ mức `partial`; đây chỉ là kiểm tra fallback Tesseract còn hoạt động, không chứng minh nội dung đúng. Còn warning tương thích phiên bản model spaCy `3.8.0` với runtime `3.7.4`, chưa gây test fail nhưng cần đồng bộ dependency/model ở task riêng.
+- Git/VPS/rollback: giữ nguyên worktree bẩn và thay đổi người dùng; chưa commit/push; không ghi database; chưa deploy/kiểm tra VPS. Rollback là bỏ metadata consensus/safety gate và trở lại chọn candidate theo quality, không cần rollback dữ liệu.
+- Bước tiếp theo: restart Python service để xóa cache text cũ, chạy lại các mẫu ảnh/PDF scan 11/13 và lưu ground truth từng trường; chỉ sau đó mới hiệu chỉnh ngưỡng agreement thay vì nới ngưỡng theo cảm tính.
+
+### 2026-08-22 00:22 +07:00 — P1-02-AI-EVIDENCE-KEY-FAILOVER — Form đăng lại đầy đủ, truy hồi bằng chứng và xoay project key
+
+- Trạng thái: `ĐÃ XONG` phần code/unit/build/config validation; vẫn `ĐANG LÀM` ở nghiệm thu E2E theo tài khoản HR/Admin và chưa deploy VPS.
+- Mục tiêu/phạm vi: xử lý cảnh báo bị loại dù câu có trong CV nhưng khác định dạng nhỏ; sửa 503 bỏ model ngay sau một key; đổi đăng lại từ popup thành form đầy đủ và thêm hành động trong trang chi tiết.
+- Bằng chứng red flag: thêm `resolve_grounded_evidence` chuẩn hóa Unicode/token, bỏ ảnh hưởng dấu câu/xuống dòng và cho phép tối đa sai khác ký tự nhỏ có ngưỡng cao. Kết quả luôn dùng đúng substring truy hồi từ CV; thay số, thay từ phủ định hoặc paraphrase vẫn bị loại. Cơ chế này thiên về chống false positive, không bảo đảm phát hiện mọi vấn đề trong CV.
+- Log red flag: gộp số mục bị loại thành `RED_FLAG_EVIDENCE_REJECTED`, nói rõ đây là cơ chế chống bịa bằng chứng; có `RED_FLAG_EVIDENCE_RECOVERED` khi phục hồi được đoạn nguồn. Không ghi nội dung CV vào log.
+- Prompt: yêu cầu `evidence_text` là chuỗi từ liên tiếp sao chép trực tiếp, không sửa dấu/chính tả, không thêm dấu ba chấm, không ghép đoạn hoặc diễn giải lại.
+- Failover key/model: bỏ random key; giữ thứ tự trong `GEMINI_API_KEY/GEMINI_API_KEYS` để project ưu tiên đặt trước. 503, 504 và timeout tạo cooldown theo cặp model-key rồi thử key kế tiếp trên cùng model; mặc định tối đa 3 key/model. Sau ít nhất hai project cùng lỗi mới cooldown model; tổng ngân sách một lần gọi mặc định 60 giây. 404 vẫn loại model, 429 vẫn cooldown riêng key.
+- Giới hạn tier: code không thể nhận biết key paid/free từ giá trị key. Người vận hành phải đặt key project paid trước key free; log chỉ dùng số thứ tự, không lộ key.
+- Docker: cập nhật model mặc định sang chuỗi Gemini 3.x và thêm biến cấu hình model-key cooldown, số key mỗi model, ngân sách request. `docker-compose config -q` đạt với toàn bộ giá trị kiểm tra giả; chỉ còn warning quyền đọc Docker config local, không phải lỗi compose.
+- Luồng đăng lại: bỏ modal khỏi danh sách. Nút ở danh sách và trang chi tiết mở route `/recruiter/jobs/:repostSourceId/repost`, tái sử dụng toàn bộ form tạo tin. Form clone category/position/level/branch/salary/description/requirements/max candidates/criteria; ngày mặc định hôm nay và +30 ngày; có draft riêng và cho chỉnh mọi trường trước khi gửi.
+- Backend đăng lại: `RepostJobRequest` dùng contract đầy đủ của `CreateJobRequest`; service kiểm tra danh mục, ngày và tổng trọng số, dùng nội dung HR đã chỉnh để tạo bản `Pending` mới, reset extracted skills, tăng vòng và giữ liên kết nguồn. Không thay đổi schema/migration trong bước này.
+- Style guide: giao diện dùng Card/Alert sáng, viền `#E2E8F0`/`#BFDBFE`, nút primary hiện có; không thêm modal, dark theme hay trang trí thừa.
+- File sửa chính: `scoring_service.py`, `scoring_prompts.py`, `gemini_service.py`, hai test evidence/failover, `docker-compose.yml`; `RepostJobRequest.cs`, `JobService.cs`; `CreateJobPage.tsx`, `JobManagementPage.tsx`, `RecruiterJobDetailPage.tsx`, route và job service type; tài liệu dự án.
+- Kiểm thử: test mục tiêu 18/18 đạt; toàn bộ Python `61/61` đạt; compileall đạt; backend Release build `0 Error(s)` và còn 451 warning legacy; frontend production build đạt, còn warning dependency/chunk lớn; compose config hợp lệ với biến giả.
+- Git/database/VPS/rollback: giữ nguyên worktree bẩn, chưa commit/push; không ghi/xóa database trong bước này; migration lifecycle đã áp từ bước trước; chưa kiểm tra/deploy VPS. Rollback code là trả lại contract repost rút gọn và modal cũ, không cần rollback schema.
+- Bước tiếp theo: khởi động lại Python/backend, đặt key project paid ở đầu danh sách cấu hình, thử một hồ sơ từng có evidence bị loại; sau đó đăng nhập HR, mở chi tiết một tin hết hạn → Đăng lại → chỉnh tiêu chí → gửi duyệt, rồi dùng Admin xác nhận vòng mới ở trạng thái chờ duyệt.
+
+### 2026-08-22 00:04 +07:00 — P1-02-P3-03-JOB-LIFECYCLE-GEMINI-LANGUAGE — Vòng tuyển, benchmark 15 CV/JD và hoàn tất lại tab ngôn từ
+
+- Trạng thái: `ĐÃ XONG` phần code/migration/build/unit/public smoke/Gemini smoke; P1-02 và P3-03 tổng thể vẫn `ĐANG LÀM` vì chưa E2E đăng lại bằng HR rồi duyệt bằng Admin, chưa đo tải đồng thời hoặc accuracy trên CV thật đã ẩn danh. Chưa commit, chưa deploy VPS.
+- Mục tiêu/phạm vi: sửa trạng thái tin duyệt nhưng hết hạn; bổ sung đăng lại thành vòng mới; mở rộng bằng chứng synthetic tối thiểu 15 CV cho mỗi JD; thay model Gemini 2.5 không còn khả dụng; sửa lỗi `mining_context` trong phân tích ngôn từ; phân biệt rõ kết quả Gemini với rà soát cục bộ.
+- Quyết định vòng đời: `Published` chỉ là đã duyệt. Tin đang tuyển phải đồng thời đã đến ngày bắt đầu và chưa qua hết hạn tuyển theo ngày Việt Nam. `JobLifecyclePolicy` được tái sử dụng ở public job, apply, dashboard, Admin/HR, campaign, chatbot và gợi ý Talent Pool.
+- Đăng lại tin: thêm `POST /api/jobs/{id}/repost`; chỉ HR sở hữu tin đã hết hạn được thao tác. Hệ thống sao chép JD/yêu cầu/kỹ năng/tiêu chí sang tin `Pending` mới, liên kết `RepostedFromJobID`/`CampaignGroupID`, tăng `RecruitmentRound`; không sửa tin cũ và không trộn application cũ.
+- Schema/database: migration `20260821233000_AddJobRepostingLifecycle` thêm ba cột vòng tuyển, self-FK và unique index vòng trong chiến dịch; `Down` xóa FK/index/cột. Migration đã áp thành công lên database đang được cấu hình. Không xóa hồ sơ/tin cũ.
+- Dữ liệu kiểm tra database theo ngày 2026-08-21: 88 tin tổng; 19 tin thực sự đang tuyển; 57 tin `Published` đã hết hạn; 8 tin `Closed` đã hết hạn; 2 tin `Closed` chưa hết hạn; 2 tin bị từ chối. Nguyên nhân số Admin/HR lệch là cách diễn giải trạng thái, không phải lệch múi giờ SQL. Public API trả đúng `totalCount=19`.
+- Dữ liệu mô tả: loại marker hiển thị `[TEST-DATA-IT-V3]` khỏi đúng 15 mô tả đã có trong database; kiểm tra còn 0 marker. Không xóa tin hoặc thay credential.
+- Gemini: mặc định chuyển sang `gemini-3.6-flash`, `gemini-3.7-flash`, `gemini-3.5-flash`, `gemini-3.5-flash-lite`, `gemini-3.1-flash-lite`; nâng `google-genai` lên 2.17.0. Thêm timeout/retry SDK, cache model 404, key cooldown cho 429 và model cooldown/chuyển ngay model khác khi 503.
+- Gemini smoke thật: cả năm model trả phản hồi `OK` trên tài khoản hiện có. Phép phân tích ngôn từ dài gặp 503 ở model đầu và failover thành công sang model tiếp theo, trả `analysis_mode=gemini`, `is_fallback=false`, điểm diễn đạt 78 và hai cụm cần cải thiện. Đây là kiểm tra tính khả dụng/contract, không phải phép đo accuracy.
+- Ngôn từ & Chân thực: xóa phép gán nhầm biến `mining_context` gây `NameError`; chuẩn hóa kết quả Gemini có trạng thái rõ. Kết quả cục bộ `is_fallback=true` không còn được backend/frontend coi là báo cáo chi tiết hoàn chỉnh; UI gắn nhãn ngắn `Rà soát cục bộ`, cho xem kết quả hiện có và có nút hoàn tất phân tích lại. Dữ liệu lịch sử không tự đổi, cần bấm chạy lại sau khi Python/backend dùng bản mới.
+- UI ngôn từ: bỏ banner fallback dài và câu khẳng định `Tuyệt vời! AI không phát hiện...`; giữ một giới hạn ngắn về việc không xác minh thật/giả hoặc tác giả. Bỏ subtitle lặp dưới tiêu đề báo cáo. Điểm diễn đạt là tham khảo riêng và không cộng vào điểm phù hợp job.
+- Chẩn đoán hồ sơ UI/UX bị 0: phép tính có đủ năm tiêu chí tổng 100%, nhưng CV trích xuất chỉ có kỹ năng backend/DevOps, 0 tháng kinh nghiệm UI/UX và không có bằng chứng user research/dự án thiết kế/tư duy thiết kế/phối hợp sản phẩm. Điểm 0 là tổng tiêu chí không đạt, không phải thiếu phép tính; điểm diễn đạt 59 của fallback cũ là thang độc lập.
+- Benchmark synthetic: automation sinh 8 ngành, 54 vị trí, 162 JD, 1.170 CV dài và 3.510 cặp; CNTT 540 CV (46,2%). Mỗi JD có 15–40 CV và đủ năm case; CV tối thiểu 1.169 từ, JD tối thiểu 993 từ. Thứ tự mạnh/thiếu một phần/trái ngành đạt 1.164/1.170; sáu ngoại lệ kỹ năng chuyển đổi được giữ, không ép thành 100% nhân tạo.
+- Kết quả thuật toán offline: timeline 1.170/1.170; kỹ năng fixture 100% trong taxonomy test; Apriori/HUIM đủ 8 domain và 0 lỗi phép tính/rò domain. Dữ liệu không đọc SQL/backend, không gọi Gemini và không được trình bày là dữ liệu thị trường.
+- File chính thêm/sửa: `JobLifecyclePolicy.cs`, `RepostJobRequest.cs`, model/context/service/controller job và migration lifecycle; các trang quản lý tin/campaign/Admin và `jobLifecycle.ts`; `gemini_service.py`, `scoring_service.py`, requirements/test failover; generator/runner/test/report benchmark; `LanguageReviewTab.tsx`, trang/hook lịch sử ứng tuyển; `Python/README.md`, `PROJECT_CONTEXT.md`, `WORK_LOG.md`.
+- Kiểm thử thực tế: Python unit `56/56` đạt; backend Release build `0 Error(s)` và còn 451 warning legacy; frontend production build đạt, còn cảnh báo dependency/chunk lớn. Backend tạm trên cổng riêng khởi động, migration báo up-to-date, `/health` và public jobs trả 200; tiến trình đã dừng.
+- Git/VPS/rollback: branch `feature/feature-based-refactor-vps`, HEAD trước task `9a4a64f`; giữ nguyên worktree bẩn nhiều task, chưa commit/push. Chưa kiểm tra/deploy VPS. Rollback schema dùng `dotnet ef database update` về migration trước `20260821233000`; việc xóa marker mô tả không có auto-rollback và chỉ ảnh hưởng chuỗi nhãn kỹ thuật.
+- Bước tiếp theo: người dùng khởi động lại Python và backend, mở hồ sơ cũ rồi chọn `Hoàn tất phân tích AI` để thay kết quả cục bộ bằng Gemini; sau đó E2E một vòng HR đăng lại tin hết hạn → Admin duyệt → ứng viên mới ứng tuyển, xác nhận hồ sơ vòng cũ/vòng mới tách biệt.
+
+### 2026-08-21 23:05 +07:00 — P3-03-OFFLINE-BENCHMARK-JOBLEVELS — Benchmark dài đa ngành và chuẩn hóa cấp bậc
+
+- Trạng thái: `ĐÃ XONG` phần benchmark offline, timeline và danh mục cấp bậc local/SQL cấu hình hiện tại; chưa commit, chưa deploy VPS. P3-03 tổng thể vẫn `ĐANG LÀM` vì chưa đo Gemini end-to-end/tải đồng thời hoặc accuracy trên CV thật đã ẩn danh.
+- Mục tiêu/phạm vi: thay việc tạo hàng loạt hồ sơ bằng backend/SQL bằng automation có thể tái tạo; dữ liệu phải dài, đủ section, nhiều vị trí/cấp bậc và tập trung sâu vào CNTT nhưng vẫn có ngành đối chứng. Đồng thời bổ sung JobLevel không trùng tên/đồng nghĩa.
+- Quyết định dữ liệu: dữ liệu là synthetic, không cần nhãn thủ công. Ba quan hệ `strong_same_role`, `partial_same_domain`, `negative_cross_domain` chỉ kiểm tra thứ tự điểm. Không gọi kết quả này là accuracy thị trường. CNTT được tăng lên 12 vị trí và ba biến thể CV cho mỗi vị trí–cấp bậc; bảy ngành khác có sáu vị trí/ngành làm đối chứng.
+- Dữ liệu sinh thực tế: 8 ngành, 54 vị trí, 3 cấp bậc benchmark, 162 JD, 234 CV và 702 cặp. CNTT có 108/234 CV (46,2%). CV ngắn nhất 1.077 từ; JD ngắn nhất 993 từ. Mỗi job có tiêu chí cấu trúc tổng đúng 100%.
+- Automation: `generate_offline_benchmark.py` sinh JSON; `run_offline_algorithm_benchmark.py` chạy section/timeline/kỹ năng/đối sánh tiêu chí, Apriori và Two-Phase HUIM trực tiếp trong Python rồi xuất JSON/CSV/Markdown. Runner không import client database/network, không đọc appsettings, không chạy backend và không gọi Gemini.
+- Lỗi tìm được và sửa: lần benchmark đầu timeline đúng 0/234 vì parser cộng cả ngày dự án/học vấn. `timeline_service` nay chỉ dùng section kinh nghiệm khi nhận diện được; fallback toàn văn chỉ dành cho CV không có heading. Thêm test chống cộng ngày dự án/học vấn.
+- Kết quả benchmark sau sửa: 234/234 CV có thứ tự điểm nghiêm ngặt `cùng vị trí > cùng ngành khác vị trí > trái ngành`; điểm trung bình lần lượt 100, 51,58 và 28,23. Timeline đúng 234/234; skill fixture được trích xuất 100% trong điều kiện taxonomy test; Apriori support/confidence và HUIM exact utility không có sai số trên tám domain, không lẫn item ngoài taxonomy ngành. Tổng thời gian local khoảng 21,5 giây; đây không phải phép đo tải đồng thời hay Gemini.
+- Cấp bậc: thêm catalog tự kiểm tra alias và seeder hợp nhất không xóa. Danh mục hoạt động gồm 5 nhóm và 14 cấp con từ Intern/Trainee/Fresher tới Director/VP/C-level; tách Director khỏi C-level, tách Senior Manager khỏi Head of Function. API Admin ngăn tạo/sửa tên đồng nghĩa và ngăn hierarchy sâu sai. UI ứng viên/Talent Pool chỉ cho chọn cấp con.
+- SQL/API thực tế: backend chạy với database đang cấu hình; không có migration mới cần áp. Seeder chuyển tham chiếu job về bản chuẩn, API trả 19 mục hoạt động = 5 nhóm + 14 cấp con, 0 tên hoạt động trùng; sáu alias legacy được giữ ở trạng thái `[Đã hợp nhất]`. `GET /health` trả 200. Tiến trình smoke test đã dừng.
+- Tác động scheduler khi startup: lần khởi động đầu cập nhật thêm phân loại domain cho 1 CV và chạy mining theo fingerprint hiện hành; lần khởi động thứ hai báo không có dữ liệu mới và bỏ qua huấn luyện. Benchmark offline không gây các thay đổi SQL này; đây là hành vi startup sẵn có của `MiningSchedulerService`.
+- File thêm: `Python/test_data/offline_benchmark/catalog.json`, dữ liệu trong `generated/`, báo cáo trong `results/`, `Python/tools/generate_offline_benchmark.py`, `run_offline_algorithm_benchmark.py`, `Python/tests/test_offline_benchmark.py`, `JobLevelCatalog.cs`.
+- File sửa chính: `timeline_service.py`, `test_timeline_service.py`, `JobLevelCatalogSeeder.cs`, `JobLevelService.cs`, ba trang frontend lọc cấp bậc, `Python/README.md`, `PROJECT_CONTEXT.md`, `WORK_LOG.md`.
+- Kiểm thử: benchmark command trả exit code 0; Python unit `51/51` đạt; backend build đạt 0 error (còn 434 warning legacy ở clean build, incremental cuối có thể 0 warning); frontend production build đạt, chỉ còn cảnh báo chunk lớn/annotation từ dependency; API health và danh mục đạt như trên.
+- Git/VPS/rollback: worktree vốn bẩn được giữ nguyên, chưa commit/push; chưa kiểm tra/deploy VPS. Bản ghi JobLevel cũ không bị xóa nên có thể phục hồi thủ công, nhưng seeder không có auto-rollback cho việc chuyển tham chiếu; cần sao lưu trước khi thay đổi thang cấp bậc lần nữa.
+- Bước tiếp theo: dùng báo cáo này làm bằng chứng synthetic; nếu giáo viên yêu cầu độ chính xác thực tế, cần tập CV thật đã ẩn danh và quy trình đánh giá độc lập. Tiếp tục test API theo role/E2E và đo Gemini/p95 riêng, không gộp với benchmark offline.
+
+### 2026-08-21 22:35 +07:00 — BUG-AI-LEGACY-CRITERIA — Sửa AI_ERROR dù Python trả HTTP 200
+
+- Trạng thái: `ĐÃ XONG` ở unit/build; chưa replay lại đúng hồ sơ qua HTTP sau khi người dùng dừng phép thử, chưa deploy VPS.
+- Nguyên nhân: 15 job legacy dùng `EXPERIENCE/PROJECT`, `CONTAINS_ANY/MIN_DURATION`; validator mới chỉ chấp nhận contract chuẩn nên trả payload `status=error` bên trong HTTP 200. Backend lưu `AI_ERROR` dù log chỉ thấy `/score-cv 200`.
+- Thay đổi: ánh xạ có kiểm soát `EXPERIENCE → TOTAL_EXPERIENCE`, `PROJECT → CUSTOM`, `CONTAINS_ANY → IN`, `MIN_DURATION → MINIMUM`; chấp nhận yêu cầu 0 tháng cho Fresher; timeline cho tiêu chí 0 tháng trả FULL mà không bịa kinh nghiệm. `/score-cv` và `/score-cv-text` trả 422 cho dữ liệu tiêu chí sai, 503 cho lỗi dịch vụ thay vì payload lỗi HTTP 200.
+- File sửa: `criterion_validation_service.py`, `scoring_service.py`, `analysis_controller.py`, test criterion/timeline.
+- Kiểm thử: test mục tiêu 20 case đạt; toàn bộ suite sau các thay đổi cùng phiên đạt 51/51. Chưa khẳng định lỗi UI của hồ sơ cũ tự biến mất vì bản ghi `AIEvaluation` cũ vẫn là lịch sử và cần phân tích lại nếu muốn cập nhật.
+- API/database/Git/VPS: không thay schema hoặc database trong sửa lỗi này; chưa commit, chưa deploy VPS.
+
+### 2026-08-21 22:24 +07:00 — BUG-MIGRATION-TALENTPOOL-OWNERSHIP — Sửa migration làm backend không khởi động
+
+- Trạng thái: `ĐÃ XONG` local/database cấu hình hiện tại; chưa commit, chưa deploy VPS.
+- Nguyên nhân: migration thêm `TalentPoolCandidates.RecruiterID` rồi tham chiếu cột mới trong cùng SQL batch, nên SQL Server kiểm tra tên cột trước khi chạy `ALTER TABLE` và báo `Invalid column name 'RecruiterID'`. Migration còn dùng nhầm `LastUpdated` thay vì cột thật `LastUpdatedAt`.
+- Thay đổi: tách bước thêm cột và bước backfill/tạo index thành hai `migrationBuilder.Sql` riêng; sửa tên cột sắp xếp thành `LastUpdatedAt`. Không xóa bản ghi và giữ nguyên rollback đã có.
+- File sửa: `RecruitmentBackend/RecruitmentBackend/Migrations/20260821213000_AddTalentPoolRecruiterOwnership.cs`.
+- Database/API/cấu hình: đã áp thành công `20260821213000_AddTalentPoolRecruiterOwnership` và `20260821220000_SeedReviewedSkillCatalog` vào database đang được `appsettings.Development.json` cấu hình; không thay đổi API hoặc credential.
+- Kiểm thử thực tế: backend build đầy đủ đạt `0 Error(s)` (còn 431 warning legacy); script EF sinh hai batch có `GO`; `dotnet ef database update --no-build` trả `Done`; lần khởi động kế tiếp báo database đã cập nhật; `GET http://localhost:5286/health` trả `200 Healthy`; scheduler startup hoàn tất Apriori/HUIM cho 4 ngành. Sau khi dừng hẳn tiến trình con, build incremental cuối đạt `0 Warning(s), 0 Error(s)`.
+- Trạng thái runtime/Git/VPS: đã dừng cả tiến trình host `dotnet run` và tiến trình con `RecruitmentBackend.exe` dùng cho smoke test; cổng 5286 và file build đã được giải phóng để người dùng chạy từ Visual Studio. Worktree vẫn chứa nhiều thay đổi từ các task trước, chưa commit; chưa kiểm tra/deploy VPS.
+- Hạn chế/bước tiếp theo: chưa smoke test đăng nhập và các API Talent Pool theo tài khoản HR trên trình duyệt; cần chạy backend bình thường rồi kiểm tra danh sách, chi tiết, lưu hồ sơ và gợi ý job.
+
+### 2026-08-21 — THESIS-DB-DEPLOYMENT-DECISION — Giữ database dùng chung và auto-migration
+
+- Trạng thái: `ĐÃ XONG` về quyết định phạm vi; không thay đổi code/cấu hình.
+- Quyết định của chủ đề tài: hệ thống phục vụ khóa luận, không hướng tới thương mại; tiếp tục dùng connection string database production trong `appsettings.Development.json` và giữ `Database.MigrateAsync()` lúc backend khởi động để cập nhật toàn bộ thay đổi nhanh.
+- Điều chỉnh backlog: loại hai đề xuất “tách database Development/production” và “bỏ auto-migrate trên production” khỏi công việc cần làm hiện tại.
+- Biện pháp giữ lại: `EnableTestJobSeed=false`; không tự chạy seeder dữ liệu job; migration mới phải bảo toàn dữ liệu cũ và có `Down`; theo dõi exception migration/startup sau mỗi lần chạy lại backend.
+- File cập nhật: `PROJECT_CONTEXT.md`, `WORK_LOG.md`.
+- Kiểm thử/Git/VPS: không cần build vì không sửa code; chưa commit, chưa deploy VPS.
+
+### 2026-08-21 22:07 +07:00 — AUDIT-REVIEWER-20260821 — Sửa luồng AI/mining, OCR, Talent Pool, dashboard và dữ liệu kiểm thử
+
+- Trạng thái: `ĐANG LÀM` local; các phần code/build/unit/corpus đã đạt, còn migration database và E2E theo vai trò. Chưa commit, chưa push, chưa deploy VPS.
+- Mục tiêu/phạm vi: kiểm tra lại phản biện về prompt/bằng chứng, OCR, điểm 100, dashboard/filter/realtime, nộp nhiều job, Talent Pool chủ động và Apriori/Two-Phase; sửa các lỗi có bằng chứng trong source thay vì dựa vào mô tả cũ.
+- Quyết định AI/bằng chứng: `analysis_confidence` không còn bị gọi nhầm là tỷ lệ đầy đủ bằng chứng; thêm `evidence_coverage`. Red flag/tiêu chí chỉ giữ khi có đoạn trích cục bộ; OCR/mất dấu không phải lỗi ứng viên. Kết quả mining chỉ là context gợi ý, không phải bằng chứng, không cộng điểm và không tạo cảnh báo.
+- Quyết định mining: bỏ `skills.json`, taxonomy IT mặc định, `KnownSkills` và bảng ánh xạ 5 domain khỏi runtime. Taxonomy lấy từ `Skills.IsApproved`; kỹ năng mới vào queue chờ duyệt. Domain lấy động từ Category/job/application/context HR. Apriori/HUIM chạy riêng từng domain đủ tối thiểu 5 CV, lưu nhiều model không ghi đè, reset model stale ở chu kỳ mới, skip bằng fingerprint nếu dữ liệu không đổi.
+- Scheduler/runtime: kiểm tra mining ngay lúc backend khởi động và tiếp tục lúc 02:00 giờ Việt Nam; state/model lưu ở volume runtime. Sửa lệch quantity HUIM khi transaction bị loại. API C# chỉ coi phản hồi Python `status=success` là thành công.
+- OCR/default CV: pipeline native PyPDF2/pdfplumber/layout → OCR Tesseract `vie+eng` → Gemini Vision chỉ khi local không đủ; điểm chất lượng phạt mojibake/mất dấu. Sửa gom dòng theo chiều cao chữ để tên tiếng Việt trên ảnh hai cột không bị đảo. Upload/đồng bộ CV mặc định dùng endpoint `/extract-cv`, không đọc byte PDF như UTF-8 và không gán skill cứng.
+- Tiêu chí/chấm điểm: thêm hậu kiểm deterministic cho SKILL, EDUCATION, CERTIFICATION, LANGUAGE và LOCATION_WORK_MODE theo đúng section/bằng chứng; mining context được cách ly khỏi score. UI `Năng lực & Cảnh báo` dùng coverage bằng chứng thực.
+- Talent Pool/privacy: thêm owner `RecruiterID`, scope toàn bộ list/detail/note/update/remove/suggestion theo HR hiện tại; migration backfill owner và giữ bản trùng cũ ở trạng thái chưa gán thay vì xóa. Gợi ý job hiển thị tỷ lệ bao phủ kỹ năng và matched/missing skills, không gọi là điểm phù hợp tổng thể. Form sourcing dùng metadata Category/Position/JobLevel chung.
+- Dashboard/filter: Admin filter Category gồm category con; time-to-hire lấy sự kiện Hired theo filter; top branch dùng snapshot đã lọc. HR/Admin tự xóa selection không tương thích khi đổi category/job; job option có trạng thái/hạn. Gỡ vùng Admin AI Insights rỗng.
+- Dữ liệu tham chiếu/test: migration `20260821220000_SeedReviewedSkillCatalog` bổ sung 140 skill đã duyệt bằng ID âm để rollback đúng dòng; đây không phải training data. Seeder job mặc định tắt, tạo 16 job IT theo nhiều vai trò/chi nhánh với trách nhiệm, yêu cầu và tiêu chí chi tiết; marker chỉ nằm ở mã nội bộ, mã công khai UI lấy từ GUID. Không chạy seeder hoặc ghi dữ liệu vào database production trong task này.
+- Corpus: tạo 15 hồ sơ hư cấu khác nhau (đa ngành, PDF/DOCX/ảnh, scan, hai cột, Việt/Anh, timeline overlap) và 1 PDF đối chứng không phải CV. Ground truth/audit kiểm tra validation, contact, tên, vai trò, skill, section và timeline.
+- File Python chính thêm/sửa: `services/runtime_paths.py`, `skill_mining_guard.py`, `mining_model_store.py`, `mining_context_service.py`, `document_layout_service.py`, `doc_parser_service.py`, `cv_analysis_service.py`, `scoring_service.py`, `apriori_service.py`, `huim_service.py`, `skills_sync_service.py`, `nlp_processor.py`, controller/DTO, `tools/generate_cv_layout_corpus.py`, `tools/audit_cv_layout_corpus.py`, `tests/*` và `test_data/cv_layout_corpus/*`.
+- File backend chính thêm/sửa: `CandidateCvDomainService.cs`, `SkillDiscoveryService.cs`, `MiningSchedulerService.cs`, `AprioriService.cs`, `HighUtilityService.cs`, `AiService.cs`, `ProfileService.cs`, `TalentPoolService.cs`, `DashboardService.cs`, các controller/interface/DTO/model liên quan, migration `20260821213000_AddTalentPoolRecruiterOwnership.cs`, `20260821220000_SeedReviewedSkillCatalog.cs` và snapshot.
+- File frontend chính sửa: `CompetencyTab.tsx`, dashboard Admin/HR và hooks, Candidate Search/Detail, Talent Pool/Detail, metadata hook dùng chung, `CandidateJobPage.tsx` và service/type liên quan. Cấu hình runtime sửa ở `.gitignore`, `docker-compose.yml`; dữ liệu test mô tả tại `TestData/README.md`.
+- Database/migration: migration ownership có `Down` xóa index/cột; trước khi tạo unique index, bản trùng cùng HR/ứng viên chỉ bỏ owner của bản cũ, không xóa record. Migration catalog dùng ID âm `-2601140..-2601001`; `Down` chỉ xóa đúng ID do migration tạo. Chưa áp hai migration này lên database đang chạy.
+- Kiểm thử thực tế: `python -m unittest discover -s tests -p 'test_*.py'` đạt `43/43`; `python -m compileall -q .` đạt; corpus audit đạt phân loại `16/16`, contact/tên/vai trò `15/15`, skill literal trung bình `98,3%`, thời gian OCR lớn nhất khoảng `2,93s` trên máy local. `dotnet build ... -o .tmp_audit_backend/bin -clp:ErrorsOnly` đạt `0 lỗi`, còn `431` cảnh báo nullable/legacy. `npm.cmd run build` đạt, còn cảnh báo chunk lớn/SignalR của thư viện. Build vào `bin/Debug` thất bại do backend đang khóa EXE/DLL, không phải lỗi biên dịch; build cấu hình riêng `Audit` đạt và `dotnet ef migrations list --no-connect` nhận đủ `20260821213000`/`20260821220000`; đã sinh script migration offline thành công, không kết nối DB. `git diff --check` không có whitespace error, chỉ cảnh báo quy đổi LF/CRLF.
+- Git/VPS: branch `feature/feature-based-refactor-vps`, HEAD trước task `9a4a64f`; worktree đã bẩn từ nhiều task trước và được giữ nguyên, chưa tạo commit. Không kiểm tra hoặc thay đổi VPS.
+- Hạn chế/bước tiếp theo: cần backup rồi restart backend để áp migration và smoke test Candidate/HR/Admin trên database hiện hữu; test API phân quyền và E2E trình duyệt; kiểm thử đồng thời/queue bền vững cho phân tích nhiều job; triển khai cohort khi đăng lại tin; đo p95/end-to-end và độ chính xác trên CV thật đã gán nhãn. Catalog 140 skill không thể bao phủ mọi kỹ năng; skill mới vẫn cần quy trình review. Utility HUIM là tín hiệu lương quan sát trong dataset, không chứng minh độ hiếm hoặc giá thị trường.
+
+### 2026-08-21 — REUSE-HR-METADATA — Dùng chung metadata với bộ lọc HR
+
+- Trạng thái: `ĐANG LÀM` local; chưa deploy VPS.
+- Quyết định: không tạo danh mục lĩnh vực/vị trí/cấp bậc riêng cho sourcing; dùng cùng API metadata mà HR đang dùng (`categories`, `jobpositions`, `joblevels`).
+- Frontend: thêm hook dùng chung `useRecruitmentMetadata`; form sourcing ở chi tiết Talent Pool và trang hồ sơ tìm ứng viên dùng cùng nguồn/options, vẫn cho phép giữ giá trị cũ nếu API metadata tạm lỗi.
+- File sửa: `src/features/recruiter/hooks/useRecruitmentMetadata.ts`, `features/recruiter/services/jobService.ts`, `TalentPoolDetailPage.tsx`, `CandidateSearchDetailPage.tsx`.
+- Kiểm thử: `npm.cmd run build` thành công; chưa E2E sau restart backend.
+- Ghi chú nghiệp vụ: `Giai đoạn` chỉ là tiến độ HR quản lý hồ sơ trong Talent Pool, không phải dữ liệu CV và không dùng để kết luận ứng viên phù hợp; có thể để mặc định `Đã lưu`.
+
+### 2026-08-21 — DATA-REUSE-SOURCING-CONTEXT — Tái sử dụng lĩnh vực/vị trí đã có trong hồ sơ
+
+- Trạng thái: `ĐANG LÀM` local; chưa deploy VPS.
+- Nguyên nhân: form sourcing chỉ đọc các cột context đã lưu ở `TalentPoolCandidates`, không tự lấy domain của CV, chuyên ngành hoặc vị trí từ các lần ứng tuyển.
+- Thay đổi backend: hồ sơ tìm kiếm chi tiết trả thêm `ProfileDomains` và `ProfilePositions`; nguồn gồm `CandidateCvDomains`, `CandidateCV.Major` và vị trí từ các application. Chi tiết Talent Pool/job suggestion tự suy luận context khi metadata sourcing còn rỗng, nhưng không ghi đè dữ liệu HR đã xác nhận.
+- Thay đổi frontend: form lưu hồ sơ công khai được điền sẵn domain/vị trí đã tồn tại để HR kiểm tra rồi lưu, thay vì nhập lại từ đầu.
+- File sửa: `CandidateDiscoverySearchResponse.cs`, `TalentPoolService.cs`, `talentPoolService.ts`, `CandidateSearchDetailPage.tsx`.
+- Kiểm thử: backend build output tạm đạt `0 Error(s)` (còn warning nullable cũ); frontend build trước thay đổi backend đã đạt thành công. Chưa E2E sau restart.
+- Hạn chế: domain suy luận từ CV là bằng chứng hệ thống, không phải xác nhận HR; HR vẫn có thể chỉnh trước khi lưu.
+
+### 2026-08-21 — UX-TALENTPOOL-WORKSPACE-SPLIT — Tách khu vực hồ sơ và đối sánh
+
+- Trạng thái: `ĐANG LÀM` local; chưa deploy VPS.
+- Quyết định: không dồn xem hồ sơ/sourcing và chọn job/gửi lời mời vào cùng một luồng hiển thị; dùng hai khu vực rõ ràng `Hồ sơ & sourcing` và `Đối sánh & mời`.
+- Frontend: thêm thanh chuyển khu vực trong chi tiết Talent Pool; phần chỉnh sửa sourcing tiếp tục được thu gọn; nhãn giai đoạn kèm giải thích để phân biệt với trạng thái ứng tuyển.
+- File sửa: `ai-recruitment-frontend/src/features/recruiter/pages/TalentPoolDetailPage/TalentPoolDetailPage.tsx`.
+- Kiểm thử: `npm.cmd run build` thành công; chưa E2E sau restart.
+- Bước tiếp theo: kiểm tra trực tiếp hai khu vực; nếu cần quản lý ghi chú/timeline độc lập, tách tiếp thành tab `Lịch sử` ở trang Talent Pool.
+
+### 2026-08-21 — UX-TALENTPOOL-STAGE-CONTEXT — Tách phần chỉnh sửa sourcing và làm rõ giai đoạn
+
+- Trạng thái: `ĐANG LÀM` local; chưa deploy VPS.
+- Nguyên nhân: toàn bộ trường sourcing và danh sách giai đoạn bị dồn vào màn hình chi tiết, gây khó hiểu dù đã dịch nhãn.
+- Frontend: phần chính chỉ giữ context/tag/trạng thái tóm tắt; các trường chỉnh sửa được thu gọn trong `Chỉnh sửa phân loại sourcing`; thêm giải thích rằng giai đoạn sourcing là tiến độ HR xử lý, không phải trạng thái ứng tuyển.
+- File sửa: `ai-recruitment-frontend/src/features/recruiter/pages/TalentPoolDetailPage/TalentPoolDetailPage.tsx`.
+- Kiểm thử: `npm.cmd run build` thành công; chưa E2E sau restart.
+- Bước tiếp theo: kiểm tra trực tiếp trang chi tiết và quyết định có tách tiếp thành tab `Tổng quan / Sourcing / Đối sánh / Lịch sử` hay không.
+
+### 2026-08-21 — UX-TALENTPOOL-VI-STAGE — Việt hóa nhãn giai đoạn sourcing
+
+- Trạng thái: `ĐANG LÀM` local; chưa deploy VPS.
+- Nguyên nhân: mã nghiệp vụ `Saved`, `ContactPlanned`, `NotSuitable` bị hiển thị trực tiếp trên giao diện, trái quy định tiếng Việt.
+- Thay đổi: thêm bộ ánh xạ nhãn sourcing dùng chung; giữ mã tiếng Anh ở API/database nhưng hiển thị `Đã lưu`, `Dự kiến liên hệ`, `Chưa phù hợp`… trong form, tag chi tiết và form lưu ứng viên.
+- Đồng thời: API `get-my-jobs` trả thêm `requirements`, `category.parentId`, tên cấp bậc để bộ lọc job phân biệt đúng nhóm ngành/lĩnh vực/cấp bậc; phần đối sánh hiển thị thêm cơ sở, context sourcing và tóm tắt yêu cầu job.
+- File sửa: `ai-recruitment-frontend/src/utils/statusLabels.ts`, `TalentPoolDetailPage.tsx`, `CandidateSearchDetailPage.tsx`, `useTalentPoolDetail.ts`, `features/jobs/services/jobService.ts`, `RecruitmentBackend/RecruitmentBackend/Services/JobService.cs`.
+- Kiểm thử: frontend build thành công; backend build output tạm đạt `0 Error(s)` (còn warning nullable cũ). Chưa chạy E2E sau restart backend.
+- Bước tiếp theo: restart backend/frontend rồi kiểm tra bộ lọc và giai đoạn trên trang Talent Pool.
+
+### 2026-08-21 — UX-ACTIVE-SOURCING-LIST-ACTION — Hiển thị thao tác lưu ngay trong danh sách tìm ứng viên
+
+- Trạng thái: `ĐANG LÀM` local; chưa deploy VPS.
+- Nguyên nhân: trước đây nút lưu chỉ có ở trang chi tiết hồ sơ nên HR không thấy chức năng trong danh sách tìm ứng viên.
+- Frontend: thêm nút `Lưu Talent Pool` tại từng dòng ứng viên chưa được lưu; mở form nhanh yêu cầu domain hoặc vị trí mục tiêu, gọi API lưu hiện có, cập nhật trạng thái dòng ngay sau thành công. Nút `Xem hồ sơ` vẫn giữ để nhập thêm stage/tag/priority/lương/ngày sẵn sàng.
+- File sửa: `ai-recruitment-frontend/src/features/recruiter/pages/CandidateSearchPage/CandidateSearchPage.tsx`.
+- API/database: dùng lại `POST /api/TalentPool/discoverable/{candidateId}/save`, không thay đổi schema.
+- Kiểm thử: `npm.cmd run build` thành công; chưa chạy E2E với tài khoản HR trên production.
+- Bước tiếp theo: restart frontend, vào `Tìm ứng viên`, kiểm tra nút lưu ở dòng chưa có Talent Pool và thử lại danh sách sau khi lưu.
+
+### 2026-08-21 — UX-TALENTPOOL-ICON-NEUTRAL — Đồng bộ biểu tượng với giao diện nghiệp vụ
+
+- Trạng thái: `ĐANG LÀM` local; chưa deploy VPS.
+- Quyết định: không dùng biểu tượng robot/màu xanh lá kiểu AI cho toàn bộ khối đối sánh; thay bằng biểu tượng biểu đồ trung tính và token màu giao diện hệ thống. Chỉ gọi là AI ở phần mô tả nguồn dữ liệu khi phù hợp.
+- Frontend: thay `RobotOutlined` bằng `BarChartOutlined`, bỏ nền xanh lá bão hòa, dùng surface trắng + viền slate; đổi nhãn `Báo cáo so khớp AI` thành `Kết quả đối sánh`.
+- File sửa: `ai-recruitment-frontend/src/features/recruiter/pages/TalentPoolDetailPage/TalentPoolDetailPage.tsx`.
+- Kiểm thử: `npm.cmd run build` thành công; cảnh báo còn lại là warning chunk lớn của Vite.
+- Hạn chế/bước tiếp theo: cần xem trực tiếp trang sau khi restart frontend để xác nhận các biểu tượng ở các tab khác vẫn đồng nhất; chưa deploy VPS.
+
+### 2026-08-21 — UX-TALENTPOOL-DETAIL-FILTER — Tách context sourcing, đối sánh và bộ lọc job
+
+- Trạng thái: `ĐANG LÀM` local; chưa deploy VPS.
+- Mục tiêu: làm rõ dữ liệu HR nhập, kết quả AI/thuật toán và thao tác chọn tin tuyển dụng; sửa lỗi lọc hiển thị danh mục không liên quan.
+- Quyết định: `Thông tin sourcing` là context do HR xác nhận; `Phân tích phù hợp` là kết quả kết hợp kỹ năng hồ sơ + yêu cầu job + luật đối sánh; `Chọn tin tuyển dụng khác` chỉ lấy tin Published còn hạn của HR hiện tại.
+- Backend: API invite-suggestions trả đầy đủ DomainJson, TargetPositionsJson, TagsJson, JobLevel, Stage, Priority, ExpectedSalary và AvailableFrom; tránh làm mất context khi frontend dùng bản candidate từ API gợi ý.
+- Frontend: thêm trạng thái `Chưa có context sourcing`, hiển thị chip context, đổi nhãn/giải thích để không gọi mọi kết quả là AI; danh mục nhóm ngành/lĩnh vực chỉ lấy từ các job đang mở, tìm kiếm thêm trong mô tả/kỹ năng/chi nhánh/cấp bậc, thêm bộ đếm và nút Xóa lọc.
+- File sửa: `RecruitmentBackend/RecruitmentBackend/Services/TalentPoolService.cs`, `ai-recruitment-frontend/src/features/recruiter/pages/TalentPoolDetailPage/TalentPoolDetailPage.tsx`, `.../hooks/useTalentPoolDetail.ts`.
+- Kiểm thử: `npm.cmd run build` thành công; backend build output tạm đạt `0 Error(s)` (còn warning nullable cũ). Chưa chạy E2E trên VPS.
+- Hạn chế/bước tiếp theo: cần mở trang chi tiết bằng tài khoản HR, kiểm tra 3 trường hợp không có context, có context và lọc ra 0 job; nếu dữ liệu production còn job thiếu category thì hiển thị nhóm ngành sẽ để trống đúng thay vì gán sai.
+
+### 2026-08-21 — BUG-TALENTPOOL-JOB-SUGGESTION-NULL — Sửa API job gợi ý
+
+- Trạng thái: `ĐANG LÀM` local; chưa deploy VPS.
+- Vị trí lỗi: `GET /api/TalentPool/{talentPoolCandidateId}/invite-suggestions`, không phải API tìm kiếm ứng viên.
+- Nguyên nhân phòng ngừa: `JobLevel` nullable trong database nhưng entity cũ bắt buộc; truy vấn job/CV/recruiter/kỹ năng còn materialize chuỗi legacy trực tiếp.
+- Thay đổi: `JobLevel` thành nullable; recruiter chỉ lấy ID; projection job/CV/kỹ năng dùng giá trị rỗng khi NULL; sửa interaction recruiter ID.
+- Kiểm thử: backend build đạt `0 Error(s)` (còn warning nullable cũ). Chưa gọi E2E endpoint sau restart.
+- Bước tiếp theo: restart backend bản mới rồi mở chi tiết Talent Pool; gọi lại “Job gợi ý”.
+
+### 2026-08-21 — P1-01-ACTIVE-SOURCING-SAVE — Lưu hồ sơ tìm kiếm có context cấu trúc
+
+- Trạng thái: `ĐANG LÀM` local; chưa deploy VPS.
+- Nghiên cứu nghiệp vụ: LinkedIn Recruiter tách thao tác tìm kiếm khỏi lưu vào project/pipeline; khi lưu có project, stage, tag và ghi chú. Áp dụng tương tự cho Talent Pool.
+- Backend: thêm `POST /api/TalentPool/discoverable/{candidateId}/save`; yêu cầu ít nhất một domain hoặc vị trí mục tiêu; lưu `RecruiterSaved`, domain, vị trí, cấp bậc, priority, stage, tag, lương và ngày sẵn sàng; thêm interaction sourcing; trả `queuedForMining=true`.
+- Frontend: trang chi tiết hồ sơ công khai có nút `Lưu vào Talent Pool` và form cấu trúc; sau khi lưu ứng viên xuất hiện trong Talent Pool để scheduler 02:00 đưa context vào vòng mining.
+- File sửa: `TalentPoolService.cs`, `ITalentPoolService.cs`, `TalentPoolController.cs`, `talentPoolService.ts`, `CandidateSearchDetailPage.tsx`.
+- Kiểm thử: backend build output tạm đạt `0 Error(s)`; `npm.cmd run build` đạt thành công (chỉ còn cảnh báo chunk lớn của frontend).
+- Hạn chế: chưa kiểm thử E2E với tài khoản HR trên production; migration không cần thêm vì dùng bảng/cột Talent Pool hiện có.
+
+### 2026-08-21 — P1-01-ACTIVE-SOURCING-INPUT — Xác định nguồn dữ liệu chủ động cho mining
+
+- Quyết định nghiệp vụ: thao tác tìm kiếm/chỉ xem hồ sơ không tự động đưa dữ liệu vào Apriori/HUIM vì đó chưa phải tín hiệu HR xác nhận phù hợp.
+- Luồng đúng: hồ sơ công khai → HR xem → HR chọn `Lưu vào Talent Pool`/đặt sourcing metadata → hồ sơ, kỹ năng, domain và vị trí mục tiêu trở thành input cho vòng mining lúc 02:00.
+- Trạng thái hiện tại: API tìm kiếm chỉ đọc hồ sơ công khai và chi tiết; giao diện chi tiết chưa có nút lưu ứng viên công khai vào Talent Pool. Đây là phần chức năng tiếp theo cần triển khai.
+- Bổ sung an toàn: truy vấn tìm kiếm đã đổi sang projection, tránh materialize toàn bộ Recruiter/Candidate/CV legacy có NULL; backend build kiểm tra đạt `0 Error(s)`.
+- Hạn chế: chưa thêm endpoint/action lưu từ kết quả tìm kiếm trong task này; không được tính lượt xem là dữ liệu huấn luyện.
+
+### 2026-08-21 — BUG-TALENTPOOL-JOBLEVEL-NULL — Chuẩn hóa JobLevel nullable
+
+- Trạng thái: `ĐANG LÀM` local; database production đã migration xong.
+- Nguyên nhân xác định: cột `TalentPoolCandidates.JobLevel` trong SQL là nullable nhưng property C# là chuỗi không nullable; projection vẫn đọc trực tiếp nên SqlDataReader có thể ném `Data is Null`.
+- Thay đổi: projection danh sách dùng `JobLevel = poolItem.JobLevel ?? string.Empty`.
+- Kiểm thử: build output tạm đạt `0 Error(s)`; build binary chính bị tiến trình backend đang chạy khóa file, nên cần restart để nạp code mới.
+- Lưu ý bảo mật: connection string production đã xuất hiện trong hội thoại; không chia sẻ lại và nên đổi password database sau khi hoàn tất kiểm thử.
+
+### 2026-08-21 — BUG-TALENTPOOL-PROJECTION — Projection chống NULL khi đọc danh sách
+
+- Trạng thái: `ĐANG LÀM` local; production migration/data đã hoàn tất.
+- Bằng chứng: API lỗi đúng tại bước `đọc Talent Pool Candidates`; truy vấn read-only production không thấy NULL ở các cột đã kiểm tra.
+- Thay đổi: thay materialization toàn bộ `TalentPoolCandidate` bằng projection các trường cần dùng, áp dụng `COALESCE` cho chuỗi và ép kiểu nullable cho `HighestAiScore`/`LastUpdatedAt`. Điều này bảo vệ API trước schema legacy không đồng nhất.
+- Kiểm thử: dừng binary cũ, rebuild backend đạt `0 Error(s)` (chỉ còn warning nullable cũ).
+- Bước tiếp theo: chạy binary mới với environment `Development` và gọi lại Talent Pool; thông báo lỗi hiện vẫn có nhãn bước để truy vết nếu còn vấn đề.
+
+### 2026-08-21 — BUG-TALENTPOOL-DIAGNOSTIC-STEP — Gắn bước lỗi cho API Talent Pool
+
+- Trạng thái: `ĐANG LÀM` local; production schema/data đã kiểm tra không còn NULL ở các bảng liên quan.
+- Thay đổi: `TalentPoolService.GetTalentPoolCandidatesAsync` ghi nhận bước hiện tại (recruiter, Talent Pool, CV, hồ sơ hoạt động, AI evaluation) và đưa tên bước vào thông báo lỗi; không trả stack trace.
+- Mục tiêu: phân biệt binary cũ/endpoint khác với lỗi truy vấn thực tế ở lần gọi tiếp theo.
+- Kiểm thử: build đạt `0 Error(s)`. Chưa gọi HTTP endpoint thành công do backend cần chạy đúng `ASPNETCORE_ENVIRONMENT=Development`.
+- Bước tiếp theo: restart backend từ source mới, gọi lại API; nếu còn lỗi, thông báo sẽ chỉ rõ bước gây lỗi để sửa chính xác.
+
+### 2026-08-21 — BUG-TALENTPOOL-NULL-QUERY — Loại NULL khi materialize các truy vấn liên quan
+
+- Trạng thái: `ĐANG LÀM` local; database production đã cập nhật migration.
+- Kiểm tra read-only production: các cột không nullable của `TalentPoolCandidates`, `CandidateCVs`, `AIEvaluations` và các trường chính của `Recruiters` đều có `NULL = 0`.
+- Nguyên nhân còn khả dĩ: endpoint materialize toàn bộ `Recruiter` dù chỉ cần kiểm tra tồn tại, và projection CV/AI đọc chuỗi có thể NULL theo dữ liệu cũ. Đã đổi truy vấn recruiter chỉ chọn `RecruiterID`; projection CV/AI dùng `COALESCE` về chuỗi rỗng.
+- File sửa: `RecruitmentBackend/RecruitmentBackend/Services/TalentPoolService.cs`.
+- Kiểm thử: build backend đạt `0 Error(s)`. Chưa gọi được HTTP endpoint trong phiên vì tiến trình chạy không đúng environment hoặc kết nối SQL từ app bị từ chối; cần chạy với `ASPNETCORE_ENVIRONMENT=Development`.
+- Bước tiếp theo: dừng binary cũ, chạy đúng lệnh Development, đăng nhập HR và tải Talent Pool. Nếu còn lỗi, lấy stack trace mới sau bản build này.
+
+### 2026-08-21 — PROD-TALENTPOOL-MIGRATION — Cập nhật database production qua EF migration
+
+- Trạng thái: `ĐÃ XONG` phần cập nhật database production; backend local cần khởi động lại.
+- Phát hiện: `appsettings.Development.json` đang dùng connection production. EF ban đầu không nhận migration thủ công vì thiếu designer; đã bổ sung designer cho ba migration.
+- Đã áp dụng thành công: `20260821113000_AddCandidateCvDomains`, `20260821114000_AddTalentPoolSourcingMetadata`, `20260821150000_RepairTalentPoolNullData`.
+- Migration sourcing được viết idempotent vì database đã có sẵn một phần cột; migration sửa NULL không xóa bản ghi, chỉ đặt giá trị mặc định cho các cột entity không nullable.
+- File sửa/thêm: ba migration và ba designer trong `RecruitmentBackend/RecruitmentBackend/Migrations/`; `Program.cs` không còn SQL tự sửa dữ liệu; thêm precision `ExpectedSalary` trong `Data/AppDbContext.cs`.
+- Kiểm thử thực tế: `dotnet ef database update --no-build` trả `Done`; kiểm tra lại `dotnet ef migrations list` cho thấy cả ba migration đã applied. Build đạt `0 Error(s)`.
+- Bước tiếp theo: khởi động lại backend, gọi API Talent Pool và xác nhận UI không còn lỗi `Data is Null`. Chưa kiểm tra endpoint HTTP sau khi restart.
+
+### 2026-08-21 — BUG-TALENTPOOL-NULL-REPAIR-REVISED — Tách sửa dữ liệu khỏi Program.cs
+
+- Trạng thái: `ĐANG LÀM` local; chưa deploy VPS.
+- Quyết định: không tự động cập nhật dữ liệu trong lúc backend khởi động. Đã xóa compatibility SQL khỏi `Program.cs` để luồng khởi động rõ ràng và tránh sửa dữ liệu ngoài ý muốn.
+- File thêm: `RecruitmentBackend/Database/RepairTalentPoolNulls.sql`. Script có transaction, báo số dòng NULL trước/sau, chỉ điền giá trị mặc định cho bản ghi Talent Pool cũ.
+- Kiểm thử: backend build đạt `0 Error(s)` sau khi loại bỏ block SQL khỏi `Program.cs` (còn warning nullable tồn tại từ trước).
+- Cách vận hành: chọn đúng database trong SSMS, chạy script một lần, kiểm tra kết quả sau cùng bằng các cột `Null...` đều bằng 0, rồi khởi động lại backend.
+- Hạn chế: chưa chạy trực tiếp trên database vì không có thông tin kết nối trong phiên này.
+
+### 2026-08-21 — BUG-TALENTPOOL-NULL-REPAIR — Sửa lỗi Data is Null khi tải Talent Pool
+
+- Trạng thái: `ĐANG LÀM` local; chưa deploy VPS.
+- Nguyên nhân: dữ liệu Talent Pool cũ có thể chứa `NULL` ở các cột metadata và các trường value-type (`HighestAiScore`, `LastUpdatedAt`, `IsActive`), trong khi entity C# khai báo không nullable; EF Core vì vậy lỗi khi materialize danh sách.
+- Thay đổi: bổ sung SQL compatibility repair idempotent sau `Database.MigrateAsync()` trong `RecruitmentBackend/RecruitmentBackend/Program.cs`. Bước này chỉ điền giá trị mặc định an toàn cho bản ghi cũ, không xóa dữ liệu và không thay thế migration.
+- Kiểm thử: `dotnet build RecruitmentBackend/RecruitmentBackend/RecruitmentBackend.csproj --no-restore -p:UseAppHost=false -o .tmp_backend_build_nullrepair` đạt `0 Error(s)` (còn warning nullable cũ).
+- Vận hành: cần dừng binary backend đang chạy, build/run lại để repair chạy một lần; sau đó gọi lại API danh sách Talent Pool. Chưa kiểm tra database/API thực tế trong phiên này.
+- Hạn chế/bước tiếp theo: nếu vẫn còn lỗi, lấy stack trace đầy đủ để xác định cột cụ thể; kiểm tra trực tiếp các cột nullable bằng truy vấn SQL read-only.
+
+### 2026-08-21 — P1-01-POOL-UNIFY — Gộp tìm kiếm chủ động vào Talent Pool
+
+- Trạng thái: `ĐANG LÀM` local; chưa deploy VPS.
+- Nguyên nhân lỗi: code đọc các cột sourcing mới nhưng backend/database đang chạy binary/schema cũ; bổ sung migration attributes để EF nhận đúng migration và yêu cầu restart áp dụng schema.
+- UX: Talent Pool hiện có hai tab `Ứng viên đã lưu` và `Tìm ứng viên`; không tách hai luồng thành hai màn hình nghiệp vụ độc lập. Trang tìm kiếm có thể render embedded trong Talent Pool.
+- Sourcing metadata: trang chi tiết có form cập nhật domain, vị trí, cấp bậc, ưu tiên, stage, tag, lương kỳ vọng; API `PUT /api/TalentPool/{id}/profile`.
+- File sửa: `RecruitmentBackend/RecruitmentBackend/Migrations/20260821113000_AddCandidateCvDomains.cs`, `20260821114000_AddTalentPoolSourcingMetadata.cs`, `AppDbContext.cs`, `TalentPoolCandidate.cs`, `TalentPoolService.cs`, DTO/interface/controller; `ai-recruitment-frontend/src/features/recruiter/pages/TalentPoolPage/TalentPoolPage.tsx`, `CandidateSearchPage.tsx`, `TalentPoolDetailPage.tsx`, `talentPoolService.ts`.
+- Kiểm thử: `dotnet build ... -o .tmp_backend_build9` và `npm.cmd run build` đạt.
+- Bước vận hành: dừng backend đang chạy, build lại và khởi động để `Database.MigrateAsync()` tạo bảng/cột; nếu database không truy cập được thì migration chưa thể áp dụng.
+
+### 2026-08-21 — P1-01-SOURCING-METADATA — Bổ sung metadata sourcing có cấu trúc
+
+- Trạng thái: `ĐANG LÀM` local; chưa deploy VPS.
+- Mục tiêu: Talent Pool trở thành nguồn chủ động có thể lọc, ghi context cho đề xuất job/Gemini và đưa dữ liệu có nguồn vào Apriori/HUIM.
+- Thay đổi: `TalentPoolCandidate` thêm DomainJson, TargetPositionsJson, JobLevel, SourcingPriority, SourcingStage, TagsJson, ExpectedSalary, AvailableFrom; thêm API `PUT /api/TalentPool/{id}/profile` với validation stage/priority; domain RecruiterSaved được ưu tiên confidence 0.95 khi suy luận CV.
+- Database: migration `20260821114000_AddTalentPoolSourcingMetadata`; snapshot cập nhật. Không thay đổi quyền CV của ứng viên.
+- Kiểm thử: `dotnet build ... -o .tmp_backend_build9` đạt.
+- Hạn chế/bước tiếp theo: UI Talent Pool chưa có form chỉnh metadata cấu trúc; cần nối form chi tiết, bộ lọc server-side và đưa metadata vào context Gemini/đề xuất job. Không nên dùng note tự do để thay thế các trường cấu trúc.
+- Bổ sung trong cùng task: API và form chi tiết Talent Pool đã cho HR lưu domain, vị trí mục tiêu, cấp bậc, ưu tiên, stage, tag và lương kỳ vọng; metadata của pool được dùng làm evidence `RecruiterSaved` khi phân loại CV.
+- Kiểm thử bổ sung: `npm.cmd run build` frontend đạt; backend build đạt ở `.tmp_backend_build9`.
+
+### 2026-08-21 — P2-01-AUTO-LOOP — Thu gom skill mới tự động trong scheduler
+
+- Trạng thái: `ĐANG LÀM` local; chưa deploy VPS.
+- Mục tiêu: biến pipeline skill thành vòng lặp nền có quan sát, không phụ thuộc HR/Admin bấm nút.
+- Thay đổi: scheduler 02:00 tự quét CV, chuẩn hóa và đếm skill mới; loại chuỗi nghi OCR; ghi hàng chờ `candidate_for_review` hoặc `quarantine` vào `App_Data/skill-discovery-queue.json`; sau đó mới suy luận domain và chạy Apriori/HUIM.
+- Quyết định an toàn: skill mới không tự động đưa vào taxonomy chỉ vì xuất hiện trong CV; cần đạt tần suất và bước chuẩn hóa/xác nhận riêng. Điều này tránh vòng lặp tự học lỗi OCR.
+- File thêm/sửa: `RecruitmentBackend/RecruitmentBackend/Interfaces/ISkillDiscoveryService.cs`, `RecruitmentBackend/RecruitmentBackend/Services/SkillDiscoveryService.cs`, `RecruitmentBackend/RecruitmentBackend/Services/MiningSchedulerService.cs`, `RecruitmentBackend/RecruitmentBackend/Program.cs`.
+- Kiểm thử: `dotnet build ... -o .tmp_backend_build8` đạt.
+- Hạn chế/bước tiếp theo: chưa có endpoint/dashboard đọc queue và chưa có LLM chuẩn hóa tự động; hiện queue là bằng chứng đầu vào cho bước taxonomy kế tiếp.
+
+### 2026-08-21 — P2-01-CV-DOMAIN — Phân loại domain theo từng CV, không ép Candidate một ngành
+
+- Trạng thái: `ĐANG LÀM` local; chưa deploy VPS.
+- Mục tiêu: xử lý CV chưa từng ứng tuyển và ứng viên có nhiều hướng nghề nghiệp mà không yêu cầu họ cập nhật profile.
+- Quyết định: domain lưu ở cấp CV, cho phép nhiều domain; domain từ job ứng tuyển có confidence 1.0/source `ApplicationJob`, domain suy luận từ skill có confidence và evidence/source `CVSkills`. Chỉ domain confidence từ 0.6 mới tham gia mining.
+- File thêm/sửa: `RecruitmentBackend/RecruitmentBackend/Models/CandidateCvDomain.cs`, `RecruitmentBackend/RecruitmentBackend/Interfaces/ICandidateCvDomainService.cs`, `RecruitmentBackend/RecruitmentBackend/Services/CandidateCvDomainService.cs`, `RecruitmentBackend/RecruitmentBackend/Data/AppDbContext.cs`, `RecruitmentBackend/RecruitmentBackend/Services/MiningSchedulerService.cs`, `RecruitmentBackend/RecruitmentBackend/Services/AprioriService.cs`, `RecruitmentBackend/RecruitmentBackend/Services/HighUtilityService.cs`, migration `20260821113000_AddCandidateCvDomains.cs` và snapshot.
+- API/database: thêm bảng `CandidateCvDomains` và index duy nhất `(CVID, Domain)`; không thay đổi API người dùng. Migration sẽ được áp dụng khi backend khởi động.
+- Kiểm thử: `dotnet build ... -o .tmp_backend_build7` đạt.
+- Hạn chế: bộ domain/skill hiện là taxonomy nền trong code, chưa có màn hình quản trị; nhận diện category ứng tuyển hiện ưu tiên Category trực tiếp, cần bổ sung chuẩn hóa Position/category và test dữ liệu nhiều ngành.
+
+### 2026-08-21 — P2-01-DOMAIN-SCOPE — Không trộn CV ngoài ngành vào dataset CNTT
+
+- Trạng thái: `ĐANG LÀM` local; chưa deploy VPS.
+- Mục tiêu: thay việc gắn nhãn toàn bộ CV là IT bằng phạm vi dữ liệu thực tế từ Category/Position của tin tuyển dụng.
+- Thay đổi: Apriori chỉ lấy CV có Application vào job thuộc Category “Công nghệ thông tin/Information Technology” hoặc Position thuộc các category đó; HUIM áp dụng cùng phạm vi cho CV và JD/utility.
+- File sửa: `RecruitmentBackend/RecruitmentBackend/Services/AprioriService.cs`, `RecruitmentBackend/RecruitmentBackend/Services/HighUtilityService.cs`, `PROJECT_CONTEXT.md`.
+- Database/API: không đổi schema; truy vấn dùng quan hệ JobPosting → Category/Position → Application → CandidateCV.
+- Kiểm thử: `dotnet build ... -o .tmp_backend_build4` đạt.
+- Hạn chế/bước tiếp theo: CV chưa từng ứng tuyển vào job có ngành sẽ chưa tham gia dataset; cần bổ sung domain metadata cho CV/talent pool nếu muốn khai phá cả hồ sơ chưa ứng tuyển. Tên category hiện nhận diện theo chuỗi, nên cần taxonomy ngành chuẩn hóa sau.
+
+### 2026-08-21 — P2-02-UI-SCHEDULED — Gỡ thao tác train skill khỏi Admin
+
+- Trạng thái: `ĐÃ XONG` local; chưa deploy VPS.
+- Mục tiêu: giao diện không hiển thị nút/permission huấn luyện Apriori/HUIM; cập nhật ngầm theo scheduler 02:00.
+- Thay đổi: gỡ hai section Apriori/HUIM khỏi Admin Dashboard và gỡ quyền `train_ai_models` khỏi trang phân quyền; thông báo API chỉ còn mô tả lịch tự động, không nhắc HR/Admin.
+- File sửa: `ai-recruitment-frontend/src/features/admin/pages/AdminDashboardPage/AdminDashboardPage.tsx`, `ai-recruitment-frontend/src/features/admin/pages/RolePermissionPage/RolePermissionPage.tsx`, `RecruitmentBackend/RecruitmentBackend/Controllers/AprioriController.cs`, `RecruitmentBackend/RecruitmentBackend/Controllers/HighUtilityController.cs`.
+- Kiểm thử: `npm.cmd run build` frontend đạt; backend build output tạm đạt ở task scheduler trước đó.
+- Hạn chế: component cũ vẫn còn trong source nhưng không được import/render; có thể xóa sau khi xác nhận không còn route/tham chiếu ngoài dashboard.
+
+### 2026-08-21 — P2-01/P2-02-ALG-GUARD — Chặn skill chưa chuẩn hóa và công khai cơ sở rarity
+
+- Trạng thái: `ĐANG LÀM` local; chưa deploy VPS.
+- Mục tiêu/phạm vi: xử lý phản biện rằng Apriori nhận keyword lạ và HUIM chưa chứng minh được kỹ năng hiếm. Bổ sung lớp chuẩn hóa alias, taxonomy theo ngành, loại token nghi ngờ khỏi giao dịch khai phá, skip khi thiếu domain/taxonomy hoặc dữ liệu tối thiểu.
+- Quyết định: “hiếm” chỉ được gọi là hiếm trong dataset đã khai báo, dựa trên `support_rate`; không suy luận “ít được tuyển” từ CV. Utility HUIM phải có nguồn nghiệp vụ được khai báo, không dùng giá trị mặc định để kết luận thị trường.
+- File thêm/sửa: `Python/services/skill_mining_guard.py`, `Python/services/apriori_service.py`, `Python/services/huim_service.py`, `Python/controllers/skills_controller.py`, `Python/dtos/request_dtos.py`, `RecruitmentBackend/RecruitmentBackend/Interfaces/IAiService.cs`, `RecruitmentBackend/RecruitmentBackend/Services/AiService.cs`, `RecruitmentBackend/RecruitmentBackend/Services/AprioriService.cs`, `RecruitmentBackend/RecruitmentBackend/Services/HighUtilityService.cs`, `PROJECT_CONTEXT.md`.
+- API/database/cấu hình: request `/train-apriori` và `/train-huim` nhận thêm `domain`, `taxonomy_skills`, `dataset_id`, `min_support_count`; response có `metadata`. Không thay đổi database schema.
+- Kết quả: Apriori/HUIM lưu metadata sidecar, HUIM lưu `support_rate` và nhãn rarity; thiếu phạm vi hợp lệ trả `status=skipped` và không ghi đè kết quả cũ. Keyword như `keyword la`/chuỗi mojibake bị loại khỏi transaction; alias `nodejs` được chuẩn hóa thành `node.js`. Backend đã bỏ mock data và không còn suy diễn quantity theo độ dài chuỗi; thiếu CV/JD thật thì trả trạng thái chưa đủ dữ liệu.
+- Kiểm thử: `Python\\venv\\Scripts\\python.exe -m py_compile ...` đạt; smoke test guard và HUIM đạt trong thư mục tạm; `dotnet build ... -o .tmp_backend_build` đạt. Build trực tiếp bị khóa vì backend đang chạy nên đã dùng thư mục output tạm. Có cảnh báo encoding của logger Windows trong thông báo tiếng Việt hiện hữu, không làm fail thuật toán.
+- Git/VPS: worktree còn nhiều thay đổi người dùng chưa commit; chưa commit và chưa kiểm tra VPS.
+- Hạn chế/bước tiếp theo: taxonomy hiện có bộ mặc định cho IT; cần nối taxonomy được Admin duyệt và dataset JD để đo “ít được tuyển”, đồng thời thêm test endpoint và kiểm thử dữ liệu đa ngành.
+
+### 2026-08-21 — P2-01/P2-02-SCHEDULE — Đồng bộ và tái khai phá skill lúc 02:00
+
+- Trạng thái: `ĐANG LÀM` local; chưa deploy VPS.
+- Mục tiêu/phạm vi: bỏ train ngay khi backend khởi động/lặp 12 giờ; chuyển sang kiểm tra một lần lúc 02:00 theo giờ Việt Nam và chỉ chạy khi fingerprint danh mục skill, CV hoặc JD thay đổi.
+- Quyết định: restart chỉ khởi động scheduler; không tự reset/xóa dữ liệu. Trạng thái fingerprint lưu tại `App_Data/skill-mining-state.json`; nếu train không thành công thì không cập nhật fingerprint để lần sau thử lại.
+- File sửa: `RecruitmentBackend/RecruitmentBackend/Services/MiningSchedulerService.cs`, `RecruitmentBackend/RecruitmentBackend/Controllers/AprioriController.cs`, `RecruitmentBackend/RecruitmentBackend/Controllers/HighUtilityController.cs`, `RecruitmentBackend/RecruitmentBackend/Controllers/SkillsController.cs`.
+- Quyền/API: nút train thủ công Apriori/HUIM trả `409 scheduled_only`; HR/Admin không kích hoạt train. API skill nội bộ bị ẩn khỏi Swagger và chỉ trả skill đã duyệt cho bước đồng bộ.
+- Kiểm thử: `dotnet build ... -o .tmp_backend_build3` đạt; không tạo migration vì thay đổi chỉ ở scheduler/API, không đổi schema. Chưa chờ tới 02:00 để smoke test thực tế.
+- Git/VPS: worktree còn thay đổi trước đó của người dùng; chưa commit, chưa deploy VPS.
+- Hạn chế/bước tiếp theo: `SkillsController/sync` vẫn là endpoint nội bộ phục vụ đồng bộ cũ; cần chuyển hoàn toàn sang SkillCatalog có trạng thái/alias trong DB và thêm test timezone/fingerprint.
+
+### 2026-08-21 — P1-01-DATA-SOURCES2 — Bổ sung CV Builder chưa từng nộp
+
+- Trạng thái: `ĐÃ XONG` local; chưa smoke test sau restart backend.
+- Thay đổi: trang hồ sơ chi tiết không chỉ liệt kê `CandidateCV`; còn lấy `CvBuilderDocuments` chưa từng nộp, hiển thị nguồn “CV tạo trực tuyến”. Khi ứng viên cho phép xem CV, frontend dựng bản PDF từ `ContentJson/SettingsJson` để HR xem.
+- Bảo mật: nội dung CV Builder chỉ trả về khi `RecruiterCvAllowed = true`; CV chưa được cấp quyền chỉ hiển thị trạng thái ẩn.
+- Kiểm thử: backend Release build 0 lỗi; frontend build production thành công.
+- Hạn chế: quyền xem hiện vẫn ở cấp hồ sơ, chưa cho ứng viên bật/tắt từng CV riêng lẻ; đây là bước nâng cấp tiếp theo để kiểm soát chi tiết hơn.
+
+### 2026-08-21 — P1-01-DATA-SOURCES — Hiển thị toàn bộ nguồn CV công khai
+
+- Trạng thái: `ĐÃ XONG` local; chưa smoke test sau migration.
+- Nguyên nhân: UI/endpoint chi tiết trước đây chỉ chọn CV mới nhất nên không thể hiện CV upload, CV đã lưu, CV Builder và snapshot ứng tuyển.
+- Thay đổi: endpoint chi tiết trả `PublicCvs` gồm mã CV, tên tệp, nguồn, thời điểm, cờ snapshot ứng tuyển và URL chỉ khi quyền xem CV được cấp. Trang chi tiết hiển thị từng CV riêng, không gộp thành một bản duy nhất.
+- API: `GET /api/TalentPool/discoverable/{candidateId}` trả danh sách CV công khai theo quyền ứng viên.
+- Kiểm thử: backend Release build 0 lỗi; frontend build production thành công.
+- Hạn chế: quyền hiện đang bật/tắt ở cấp hồ sơ ứng viên nên khi bật xem CV, toàn bộ CV đã lưu được trả về; bước tiếp theo nên cho ứng viên chọn từng CV công khai riêng.
+
+### 2026-08-21 — P1-01-UX4 — Chuyển hồ sơ discoverable sang trang chi tiết
+
+- Trạng thái: `ĐÃ XONG` local; chưa smoke test sau restart backend.
+- Thay đổi: bỏ modal chi tiết; “Xem hồ sơ” điều hướng tới `/recruiter/candidate-search/:candidateId`, có URL riêng, nút quay lại, thông tin được cấp quyền, trạng thái liên hệ và nút xem CV khi được phép.
+- API: thêm `GET /api/TalentPool/discoverable/{candidateId}`; endpoint kiểm tra recruiter, quyền hiển thị và thời hạn trước khi trả dữ liệu.
+- File: `CandidateSearchDetailPage.tsx`, `CandidateSearchPage.tsx`, `talentPoolService.ts`, `TalentPoolController.cs`, `TalentPoolService.cs`, `ITalentPoolService.cs`, `App.tsx`.
+- Kiểm thử: backend Release build 0 lỗi; frontend build production thành công.
+
+### 2026-08-21 — P1-01-UX3 — Tải kết quả mặc định và xem hồ sơ/CV theo quyền
+
+- Trạng thái: `ĐÃ XONG` local; chưa deploy.
+- Thay đổi: trang Tìm ứng viên tự gọi API khi mở, không còn hiển thị 0 hồ sơ trước khi HR bấm nút; thêm nút “Xem hồ sơ” và modal chi tiết. CV chỉ có nút xem khi `CvAllowed` và URL CV được backend trả về.
+- API/model: kết quả discoverable thêm `CvAllowed`, `LatestCvUrl`; Candidate thêm quyền `RecruiterCvAllowed`; migration `20260820181449_AddCandidateRecruiterCvPermission`.
+- Kiểm thử: frontend build production đạt; backend Release build 0 lỗi. Chưa smoke test sau khi người dùng restart backend và áp database migration.
+
+### 2026-08-21 — P1-01-DATA-FIX2 — Sửa migration rỗng gây thiếu cột quyền xem CV
+
+- Trạng thái: `ĐANG LÀM`; đã sửa code và migration, chờ restart backend local.
+- Nguyên nhân: migration đầu tiên được tạo với `--no-build`, nên EF lấy model binary cũ và sinh migration rỗng. Database đã chạy code mới nhưng không có `Candidates.RecruiterCvAllowed`, gây `Invalid column name` ngay khi tải profile.
+- Cách sửa: gỡ migration rỗng `20260820181108_AddCandidateRecruiterCvPermission`, build Release trước, tạo lại migration `20260820181449_AddCandidateRecruiterCvPermission` có `AddColumn` đúng.
+- Kiểm thử: xác nhận migration mới chứa `AddColumn<bool>("RecruiterCvAllowed")`; backend build Release 0 lỗi; frontend build thành công.
+- Hành động cần làm: dừng tiến trình backend cũ và chạy lại từ thư mục project để `Database.MigrateAsync()` áp migration mới; không xóa dữ liệu nghiệp vụ.
+
+### 2026-08-21 — P1-01-DATA-FIX — Bổ sung quyền xem CV và xác định lỗi schema local
+
+- Trạng thái: `ĐANG LÀM`; code đã build, database local cần restart backend để áp migration.
+- Phạm vi: thêm quyền `RecruiterCvAllowed`, trả trạng thái/URL CV chỉ khi ứng viên cho phép, thêm công tắc “Cho phép HR xem CV đầy đủ” trong Cài đặt tài khoản.
+- Migration: `AddCandidateRecruiterCvPermission` thêm cột `Candidates.RecruiterCvAllowed`, mặc định `false`.
+- Kiểm thử: backend Release build 0 lỗi; frontend Vite build thành công. Log runtime xác nhận database hiện tại chưa có cột `RecruiterCvAllowed` (`Invalid column name`), nên phiên backend cũ chưa áp migration và có thể làm trang hồ sơ/tìm kiếm trả rỗng hoặc lỗi.
+- Cách khắc phục: dừng backend đang chạy, chạy lại từ `D:\KhoaLuan\RecruitmentBackend\RecruitmentBackend` để `Database.MigrateAsync()` áp migration, sau đó bật lại quyền tìm kiếm và quyền xem CV ở tài khoản ứng viên.
+- Hạn chế: chưa smoke test được sau migration vì backend đang chạy bản cũ; chưa commit/deploy VPS.
+
+### 2026-08-21 — P1-01-UX2 — Tách trang tìm ứng viên và đưa quyền riêng tư vào Cài đặt
+
+- Trạng thái: `ĐÃ XONG` local; chưa commit/push/deploy VPS.
+- Thay đổi: tạo route/trang `/recruiter/candidate-search`; Talent Pool chỉ điều hướng tới trang này, không còn modal. Đổi nhãn thành “Tìm ứng viên”, bỏ chú thích lặp trong giao diện. Các quyền “cho phép HR tìm kiếm/cho phép liên hệ” được chuyển vào tab “Cài đặt tài khoản” của ứng viên, cạnh đổi mật khẩu.
+- File: `CandidateSearchPage.tsx`, `App.tsx`, `SideNav.tsx`, `MainLayout.tsx`, `TalentPoolPage.tsx`, `CandidateProfilePage.tsx`, `AccountSecurityTab.tsx`.
+- Kiểm thử: `npm.cmd run build` đạt TypeScript/Vite production build; chỉ còn cảnh báo chunk lớn và annotation SignalR.
+- Hạn chế: điểm AI trên trang tìm kiếm hiện là điểm cao nhất từng lưu từ các lần phân tích trước, chưa phải điểm so khớp lại theo một tin được chọn; đã đổi nhãn để tránh hiểu nhầm.
+
+### 2026-08-21 — P1-01-UX — Giảm cảnh báo lặp trong modal tìm ứng viên
+
+- Trạng thái: `ĐÃ XONG` local.
+- Thay đổi: bỏ banner thông báo lớn xuất hiện mỗi lần mở modal; chuyển thành chú thích nhỏ dưới bộ lọc, giữ nguyên nội dung bảo vệ quyền riêng tư.
+- File: `ai-recruitment-frontend/src/features/recruiter/pages/TalentPoolPage/TalentPoolPage.tsx`.
+- Kiểm thử: `npm.cmd run build` đạt TypeScript/Vite production build; chỉ còn cảnh báo chunk lớn/annotation thư viện.
+- Git/VPS: chưa commit, chưa push, chưa deploy.
+
+### 2026-08-21 — P1-01 — HR chủ động tìm ứng viên theo hồ sơ đã cho phép
+
+- Trạng thái: `ĐANG LÀM` local; chưa commit/push/deploy VPS.
+- Mục tiêu/phạm vi: cho ứng viên bật/tắt quyền để HR tìm kiếm hồ sơ; tách quyền hiển thị khỏi quyền cho phép liên hệ; cung cấp bộ lọc chủ động trong Talent Pool.
+- Quyết định nghiệp vụ/kỹ thuật: mặc định riêng tư; quyền tìm kiếm có thời hạn; kết quả tìm kiếm không trả email, số điện thoại hoặc URL CV; khi chưa cho phép liên hệ chỉ hiển thị tên ẩn danh và địa điểm cấp tỉnh/thành phố. Bộ lọc MVP gồm từ khóa, kỹ năng, số năm kinh nghiệm và điểm AI; `JobId` hiện chỉ kiểm tra quyền sở hữu, chưa chấm lại theo tiêu chí tin.
+- File đã thêm/sửa: `Models/Candidate.cs`, `Migrations/20260820174950_AddCandidateRecruiterDiscovery.*`, `DTOs/Requests/CandidateDiscoverySearchRequest.cs`, `DTOs/Responses/CandidateDiscoverySearchResponse.cs`, `Interfaces/IProfileService.cs`, `Interfaces/ITalentPoolService.cs`, `Services/ProfileService.cs`, `Services/TalentPoolService.cs`, `Controllers/ProfileController.cs`, `Controllers/TalentPoolController.cs`, `CandidateProfilePage.tsx`, `talentPoolService.ts`, `TalentPoolPage.tsx`, `PROJECT_CONTEXT.md`.
+- API/database/config: thêm `PUT /api/profile/recruiter-discovery`, `GET /api/TalentPool/search`; migration thêm bốn cột quyền/thời hạn trên `Candidates`; backend tự áp migration khi khởi động theo cấu hình hiện tại.
+- Kiểm thử: `dotnet build RecruitmentBackend/RecruitmentBackend/RecruitmentBackend.csproj --configuration Release --no-restore` đạt 0 lỗi (416 cảnh báo nullable/legacy); `npm.cmd run build` đạt TypeScript/Vite production build, chỉ còn cảnh báo chunk lớn và annotation SignalR.
+- Git/VPS: worktree có nhiều thay đổi từ các task trước và task này; chưa commit, chưa push, chưa kiểm tra VPS.
+- Hạn chế/lỗi còn lại: chưa smoke test endpoint bằng tài khoản Candidate/Recruiter trên database đang chạy; chưa có luồng gửi lời mời hai chiều hoặc nút đưa hồ sơ discoverable vào Talent Pool; cần bổ sung contract/integration test.
+- Bước tiếp theo: restart backend để áp migration, bật quyền ở tài khoản ứng viên, dùng tài khoản HR mở “Tìm ứng viên chủ động”, sau đó bổ sung luồng mời/liên hệ có audit và kiểm tra quyền.
+
+### 2026-08-21 — TEST-DATA-OFF-001 — Tắt seeder và chuẩn bị dọn dữ liệu giả
+
+- Trạng thái: `ĐANG LÀM`; seeder đã tắt trong `appsettings.Development.json`.
+- File thêm: `TestData/cleanup_test_jobs.sql` — chỉ xóa job có marker `[TEST-DATA-IT...]` không có Application; job có hồ sơ được giữ và đóng.
+- An toàn: chưa chạy SQL vì cần xác nhận database local, tránh thao tác nhầm database ngoài workspace.
+- Bước tiếp theo: chạy script cleanup một lần trên DB local, restart backend để xác nhận seeder không chạy lại.
+- Định hướng tiếp theo: nâng cấp Talent Pool thành chức năng HR chủ động tìm kiếm/ghép ứng viên theo kỹ năng, kinh nghiệm, vị trí, cấp bậc, chi nhánh, điểm phù hợp và trạng thái liên hệ.
+
+### 2026-08-21 — BRANCH-NORMALIZE-FIX-001 — Sửa lỗi khóa chính khi gộp chi nhánh
+
+- Trạng thái: `ĐANG LÀM`; đã sửa và build Debug thành công.
+- Nguyên nhân: `RecruiterBranch.BranchID` thuộc khóa chính kép, EF không cho cập nhật trực tiếp sang branch chuẩn.
+- Cách sửa: xóa các liên kết branch trùng, lưu trước, sau đó tạo lại liên kết với branch chuẩn; tránh chỉnh sửa khóa chính đang được tracking.
+- Kiểm thử: `dotnet build ... --configuration Debug --no-restore` — 0 lỗi, 411 cảnh báo cũ.
+- Bước tiếp theo: chạy lại backend Development; xác nhận không còn exception tại `BranchCatalogSeeder`, sau đó kiểm tra seeder job và dropdown chi nhánh.
+
+### 2026-08-21 — TEST-DATA-STARTUP-001 — Cô lập bước dọn fixture khỏi startup thường
+
+- Trạng thái: `ĐANG LÀM`; đã chỉnh code, chưa xác định lỗi runtime vì chưa có log terminal.
+- Điều chỉnh: `BranchCatalogSeeder` và `TestJobPostingSeeder` chỉ chạy khi `EnableTestJobSeed=true`; startup thông thường không thực hiện gộp/xóa dữ liệu test.
+- Kiểm thử: chưa chạy lại backend; cần lấy exception thực tế nếu vẫn không khởi động.
+- Cách bypass an toàn tạm thời: đặt `EnableTestJobSeed=false` trong cùng terminal để kiểm tra backend có chạy bình thường không.
+
+### 2026-08-21 — TEST-DATA-CLEANUP-001 — Dọn fixture IT cũ trước khi tạo bộ mới
+
+- Trạng thái: `ĐANG LÀM`; đã build backend, chưa restart để thực hiện thao tác DB.
+- Phạm vi xóa: chỉ `JobPostings.JobDescription` bắt đầu bằng `[TEST-DATA-IT`; xóa cả `JobCriteria` của job test chưa có Application. Job test đã có hồ sơ không xóa, chỉ chuyển `Closed`.
+- Mục tiêu: loại bản ghi V3/fixture cũ lặp và tạo lại bộ 16 tin IT duy nhất, đầy đủ nội dung/tiêu chí, tập trung TP. Hồ Chí Minh.
+- An toàn: job thật không có marker không bị tác động; không xóa ứng viên/hồ sơ.
+- Kiểm thử: `dotnet build ... --configuration Release --no-restore` — 0 lỗi, 411 cảnh báo cũ.
+- Bước tiếp theo: restart backend Development, kiểm tra log số job dọn/tạo, rồi Admin duyệt các tin Pending.
+
+### 2026-08-21 — JOB-MANAGEMENT-STATUS-001 — Phân biệt trạng thái duyệt và hạn tuyển dụng
+
+- Trạng thái: `ĐANG LÀM`; frontend/backend build đã đạt, chưa smoke test bằng tài khoản HR.
+- Frontend: `Trạng thái duyệt` hiển thị rõ `Đã duyệt · Đang hiển thị`, `Đã duyệt · Tạm ẩn`, `Chờ duyệt`, `Bị từ chối`, `Đã lưu trữ`; `Hạn tuyển dụng` hiển thị ngày hạn và trạng thái hoạt động riêng.
+- Quy tắc: chỉ tin `Published` trước deadline mới là `Đang tuyển`; Pending là `Chưa mở tuyển`; Closed/Archived/Rejected là `Đã đóng`; deadline quá hạn chỉ tính cho tin đã duyệt.
+- Bộ lọc hạn tuyển dụng được sửa để không đưa tin Pending/Rejected vào nhóm đang tuyển.
+- Kiểm thử: `npm.cmd run build` — thành công; cảnh báo chunk/Rollup cũ còn nguyên.
+- Bước tiếp theo: restart backend để chuẩn hóa branch và dọn fixture test, sau đó kiểm tra lại số tin HR.
+
+### 2026-08-21 — BRANCH-NORMALIZE-001 — Gộp chi nhánh Hồ Chí Minh bị trùng
+
+- Trạng thái: `ĐANG LÀM`; code đã build, chưa restart backend để cập nhật DB.
+- Mục tiêu: chỉ còn một bản ghi chi nhánh chuẩn `TP. Hồ Chí Minh` trong dropdown và dữ liệu liên quan.
+- File thêm/sửa: `RecruitmentBackend/RecruitmentBackend/Services/BranchCatalogSeeder.cs`, `Program.cs`.
+- Xử lý: chọn một bản ghi chuẩn, chuyển `JobPostings.BranchID` và liên kết `RecruiterBranches` từ các bản ghi tên Hồ Chí Minh trùng, loại liên kết HR trùng và xóa bản ghi branch dư. Phạm vi chỉ các tên có chứa Hồ Chí Minh/Ho Chi Minh.
+- Kiểm thử: `dotnet build ... --configuration Release --no-restore` — 0 lỗi, 411 cảnh báo cũ.
+- Hạn chế: thao tác gộp/xóa branch sẽ chạy khi backend khởi động; cần backup/kiểm tra DB local trước khi restart.
+
+### 2026-08-21 — TEST-DATA-IT-006 — Bộ tin IT không lặp, tập trung TP. Hồ Chí Minh
+
+- Trạng thái: `ĐANG LÀM`; backend build thành công, chưa restart để ghi dữ liệu.
+- Quyết định dữ liệu: bộ V3 tạo 16 vị trí IT khác nhau, mỗi vị trí một tin; cấp bậc được phân bổ khác nhau; tất cả tin mới dùng chi nhánh `TP. Hồ Chí Minh` và trạng thái `Pending`.
+- Tương thích fixture cũ: các tin marker `[TEST-DATA-IT]` được chuyển `Closed` để không còn là bộ tin đang mở; không xóa bản ghi.
+- Nội dung/tiêu chí: mỗi tin có phần mô tả chi tiết và bộ 5 tiêu chí theo nhóm vai trò, tổng trọng số 100%.
+- Kiểm thử: `dotnet build ... --configuration Release --no-restore` — 0 lỗi, 411 cảnh báo cũ.
+- Bước tiếp theo: restart backend Development; kiểm tra 16 tin V3 tại Admin, sau đó duyệt từng tin cần dùng.
+
+### 2026-08-21 — TEST-DATA-IT-005 — Mở rộng mô tả và đa dạng tiêu chí tin IT
+
+- Trạng thái: `ĐANG LÀM`; backend build thành công, chưa chạy seeder trên DB.
+- Mục tiêu: tin kiểm thử có nội dung đủ để kiểm tra phân tích CV, không chỉ phục vụ lọc dashboard.
+- Nội dung: bổ sung trách nhiệm chính, yêu cầu chi tiết, quyền lợi, cách làm việc và mức lương; tiêu chí thay đổi theo nhóm Software/DevOps/Cloud/Data/QA/Security/BA/Product/UI-UX.
+- Tiêu chí: 5 tiêu chí/job, trọng số 35/20/20/15/10 = 100%, có loại, mức ưu tiên, target và nguồn bằng chứng.
+- Tương thích dữ liệu cũ: seeder nâng cấp tin marker `[TEST-DATA-IT]` có mô tả ngắn hoặc dưới 5 tiêu chí, không tạo bản ghi trùng.
+- Kiểm thử: `dotnet build ... --configuration Release --no-restore` — 0 lỗi, 411 cảnh báo cũ.
+- Bước tiếp theo: restart backend Development; kiểm tra một tin có nội dung đầy đủ và Admin duyệt thử.
+
+### 2026-08-21 — TEST-DATA-IT-004 — Tự bật seeder trong Development
+
+- Trạng thái: `ĐANG LÀM`; đã cấu hình, chưa khởi động backend để ghi dữ liệu.
+- Điều chỉnh: thêm `EnableTestJobSeed=true` vào `appsettings.Development.json`; môi trường production không nhận cấu hình này.
+- Mục tiêu: người dùng chỉ cần restart backend, không phải sửa code hoặc đặt biến môi trường thủ công.
+- Kiểm tra: JSON cấu hình hợp lệ; backend seeder đã build 0 lỗi ở lượt trước.
+- Hạn chế: nếu backend không chạy profile `Development`, cần bật profile Development; nếu marker đã tồn tại, seeder sẽ không tạo trùng.
+
+### 2026-08-21 — TEST-DATA-IT-003 — Đưa tin kiểm thử về đúng trạng thái chờ Admin duyệt
+
+- Trạng thái: `ĐANG LÀM`; đã chỉnh code, chưa chạy ghi dữ liệu.
+- Quyết định nghiệp vụ: mọi tin do HR active sở hữu, có đủ 3 tiêu chí tổng 100% và khởi tạo `Pending`; không seed sẵn `Published`, `ApprovedBy` hoặc `ApprovedAt`. Admin sẽ tự duyệt bằng giao diện.
+- File đã sửa: `RecruitmentBackend/RecruitmentBackend/Services/TestJobPostingSeeder.cs`, `TestData/README.md`.
+- Kiểm thử: chưa chạy lại backend sau chỉnh sửa; cần build trước khi bật seeder.
+- Bước tiếp theo: build/restart backend với `EnableTestJobSeed=true`, kiểm tra danh sách chờ duyệt bằng Admin rồi duyệt thử một vài tin.
+
+### 2026-08-21 — TEST-DATA-IT-002 — Gán đúng tin kiểm thử cho tài khoản HR/Admin hiện có
+
+- Trạng thái: `ĐANG LÀM`; đã sửa và build backend thành công.
+- Điều chỉnh: seeder lấy `RecruiterID` từ các tài khoản có role `Recruiter` và trạng thái `Active`; không nhầm với `AccountID`. Tin `Published` dùng `AccountID` của Admin active/đầu tiên làm `ApprovedBy`.
+- Phân quyền: HR chỉ thấy các tin được gán cho recruiter tương ứng; Admin thấy toàn bộ tin theo quyền hiện có. Không tạo tài khoản mới và không sử dụng mật khẩu/token.
+- Kiểm thử: `dotnet build ... --configuration Release --no-restore` — 0 lỗi, 411 cảnh báo cũ.
+- Hạn chế: chưa bật seeder và chưa ghi dữ liệu vào DB; cần chạy local theo `TestData/README.md`.
+
+### 2026-08-21 — TEST-DATA-IT-001 — Seeder dữ liệu tin tuyển dụng IT cho local
+
+- Trạng thái: `ĐANG LÀM`; code đã build, chưa bật hoặc chạy trên cơ sở dữ liệu hiện tại.
+- Mục tiêu/phạm vi: tạo dữ liệu kiểm thử tin tuyển dụng IT đa dạng cho Admin/HR, gồm vị trí, cấp bậc, chi nhánh, mức lương, deadline, trạng thái và tiêu chí có cấu trúc.
+- Quyết định kỹ thuật: seeder chỉ chạy khi `EnableTestJobSeed=true`; marker `[TEST-DATA-IT]`; chạy lại idempotent, không tạo trùng; không tự chạy production.
+- File thêm/sửa: `RecruitmentBackend/RecruitmentBackend/Services/TestJobPostingSeeder.cs`, `RecruitmentBackend/RecruitmentBackend/Program.cs`, `TestData/README.md`.
+- Dữ liệu: 16 nhóm vị trí × các cấp bậc active hiện có, 4 chi nhánh, trạng thái Pending/Published/Closed/Rejected; mỗi tin có 3 tiêu chí tổng trọng số 100%.
+- Kiểm thử: `dotnet build ... --configuration Release --no-restore` — 0 lỗi, 411 cảnh báo cũ.
+- Git/VPS: chưa commit; chưa chạy seeder, chưa thay đổi dữ liệu DB và chưa deploy VPS.
+- Bước tiếp theo: kiểm tra connection string local, bật biến môi trường theo `TestData/README.md`, chạy một lần, rồi kiểm tra bộ lọc Admin/HR và số lượng bản ghi marker.
+
+### 2026-08-21 — DASHBOARD-FILTERS-UX-002 — Lọc liên động vị trí theo lĩnh vực
+
+- Trạng thái: `ĐANG LÀM`; đã build frontend thành công.
+- Mục tiêu: khi HR chọn lĩnh vực như Công nghệ thông tin, danh sách vị trí/cấp bậc/chi nhánh chỉ còn các lựa chọn có tin tuyển dụng phù hợp.
+- File đã sửa: `ai-recruitment-frontend/src/features/recruiter/pages/RecruiterDashboardPage/RecruiterDashboardPage.tsx`.
+- Quyết định kỹ thuật: option vị trí loại theo lĩnh vực + cấp bậc + chi nhánh; option cấp bậc loại theo lĩnh vực + vị trí + chi nhánh; option chi nhánh loại theo lĩnh vực + vị trí + cấp bậc. Tin tuyển dụng tiếp tục lọc theo toàn bộ điều kiện.
+- Kiểm thử: `npm.cmd run build` — thành công; chỉ còn cảnh báo chunk/Rollup.
+- Hạn chế/bước tiếp theo: reload frontend và kiểm tra với lĩnh vực không có vị trí; nếu backend chưa restart, cần restart để danh sách metadata mới được trả về.
+
+### 2026-08-21 — DASHBOARD-FILTERS-DIAG-001 — Hiển thị nguyên nhân lỗi tải Tổng quan tuyển dụng
+
+- Trạng thái: `ĐANG LÀM`; đã build frontend, cần người dùng tải lại trang sau khi backend chạy đúng bản mới.
+- Mục tiêu/phạm vi: không che lỗi API bằng thông báo chung; giữ số liệu hiện tại khi lần đổi bộ lọc thất bại.
+- File đã sửa: `ai-recruitment-frontend/src/features/recruiter/pages/RecruiterDashboardPage/hooks/useRecruiterDashboard.ts`.
+- Quyết định kỹ thuật: log lỗi có mã HTTP và message backend ở console; toast hiển thị message an toàn từ API; không tự thay dashboard về dữ liệu rỗng.
+- Kiểm thử: `npm.cmd run build` — thành công; backend `dotnet build ... --configuration Release --no-restore` — 0 lỗi, 411 cảnh báo tồn tại.
+- Git/VPS: chưa commit; chưa kiểm tra/deploy VPS.
+- Bước tiếp theo: reload frontend, mở DevTools/terminal backend và gửi lại mã HTTP/message nếu vẫn lỗi; cần restart backend để áp dụng các thay đổi Dashboard.
+
+### 2026-08-21 — DASHBOARD-FILTERS-UX-001 — Liên kết bộ lọc HR và cho phép tra cứu tin đã đóng
+
+- Trạng thái: `ĐANG LÀM`; frontend đã build thành công, cần reload/restart dịch vụ để smoke test trên tài khoản HR.
+- Mục tiêu/phạm vi: giúp HR tìm đúng tập dữ liệu bằng bộ lọc lĩnh vực, vị trí, cấp bậc, chi nhánh, tin tuyển dụng và thời gian mà không tạo tổ hợp điều kiện mâu thuẫn.
+- Quyết định nghiệp vụ: các bộ lọc dùng AND; khi đổi một chiều làm tin đang chọn không còn phù hợp thì tự bỏ tin đó; khi chọn tin, các chiều được tự đồng bộ theo metadata của tin. Tin đã đóng vẫn hiển thị và chọn được để xem số liệu lịch sử.
+- File đã sửa: `ai-recruitment-frontend/src/features/recruiter/pages/RecruiterDashboardPage/RecruiterDashboardPage.tsx`, `.../components/DashboardFilterBar.tsx`.
+- API/database/config: không thay đổi contract hoặc schema trong lượt này; dùng các option và metadata đã bổ sung ở `DASHBOARD-FILTERS-001`.
+- Kiểm thử: `npm.cmd run build` tại `ai-recruitment-frontend` — thành công; chỉ còn cảnh báo chunk/Rollup đã tồn tại.
+- Git/VPS: chưa commit; chưa kiểm tra/deploy VPS.
+- Hạn chế/bước tiếp theo: restart backend để nhận seeder/API mới, sau đó kiểm tra HR với 1 tin đang mở, 1 tin đã đóng, từng preset thời gian và trường hợp không có dữ liệu; chi tiết ứng viên/trạng thái tiếp tục kiểm tra ở Quản lý chiến dịch tuyển dụng.
+
+### 2026-08-20 — DASHBOARD-FILTERS-001 — Mở rộng bộ lọc dashboard và danh mục cấp bậc
+
+- Trạng thái: `ĐANG LÀM`; code/build local đạt, cần khởi động lại backend và smoke test bằng tài khoản HR/Admin.
+- Mục tiêu/phạm vi: hỗ trợ lọc theo lĩnh vực/ngành, vị trí công việc, cấp bậc, chi nhánh và tin tuyển dụng; HR có thêm preset `Hôm nay`.
+- Backend: mở rộng `DashboardController`, `IDashboardService` và `DashboardService` với `categoryId`, `positionId`, `jobLevelId`, `branchId`, `jobId`; trả các danh sách option để frontend không lọc giả trên dữ liệu cục bộ.
+- Frontend: thêm các Select lọc vị trí/cấp bậc/chi nhánh cho HR và Admin; truyền filter xuống API; thêm preset `Hôm nay`.
+- Danh mục cấp bậc: thêm `JobLevelCatalogSeeder` idempotent, kích hoạt các cấp hiện có và bổ sung nhóm Intern/Trainee/Fresher, Junior/Middle/Senior/Expert, Team Leader/Manager/Senior Manager/CTO.
+- File đã sửa/thêm: `DashboardController.cs`, `IDashboardService.cs`, `DashboardService.cs`, `JobLevelCatalogSeeder.cs`, `Program.cs`, hook/UI dashboard HR/Admin và `dashboardService.ts`.
+- API/database/migration/config: không đổi schema; seeder cập nhật danh mục khi backend khởi động sau migration, không tạo bản ghi trùng.
+- Kiểm thử: backend Release build 0 lỗi; frontend production build thành công, chỉ còn cảnh báo chunk/Rollup cũ.
+- Hạn chế/bước tiếp theo: backend đang chạy binary cũ nên phải restart để áp dụng API filter và seeder; sau đó kiểm tra kết hợp filter, trạng thái rỗng và quyền HR/Admin.
+
+### 2026-08-20 — P0-03-SMOKE-001 — Kiểm tra contract dashboard và lịch sử trạng thái
+
+- Trạng thái: `ĐANG LÀM`; kiểm tra hạ tầng/contract local đạt, chưa có phiên HR/Admin để xác nhận số liệu thực tế.
+- Kiểm thử thực tế: backend `http://localhost:5286/swagger/v1/swagger.json` trả HTTP 200; `/api/Dashboard/admin-stats` và `/api/Dashboard/hr-stats` trả HTTP 401 khi chưa đăng nhập, đúng phân quyền; Python health trả HTTP 200.
+- Kiểm tra code: có `ApplicationStatusHistory`, ghi lịch sử ở các luồng nộp/đổi trạng thái/từ chối/lịch phỏng vấn; DashboardService dùng `VietnamTimeService.GetUtcDayRange()` cho số liệu hôm nay.
+- API/database/config: không thay đổi trong lượt kiểm tra; migration lịch sử trạng thái đã có trong workspace.
+- Hạn chế/bước tiếp theo: cần đăng nhập HR và Admin để đối chiếu `applicationsToday`, `statusChangesToday`, bộ lọc ngày và mốc qua 00:00 giờ Việt Nam; chưa đánh dấu hoàn tất P0-03.
+
+### 2026-08-20 — OCR-PIPELINE-001 — Bổ sung fallback Gemini Vision cho PDF scan
+
+- Trạng thái: `ĐANG LÀM` local; đã kiểm tra compile/unit, chưa smoke bằng PDF cần gọi Gemini thật.
+- Mục tiêu/phạm vi: thống nhất pipeline đọc tài liệu theo thứ tự PDF native (PyPDF2/pdfplumber/layout) → OCR local → Gemini Vision → `insufficient` an toàn.
+- Quyết định kỹ thuật: chỉ gọi Gemini khi kết quả local còn `insufficient`; render từng trang PDF thành PNG, yêu cầu chép nguyên văn, không suy đoán; nếu Gemini không có key/lỗi/quota thì giữ trạng thái thiếu dữ liệu.
+- File đã sửa: `Python/services/doc_parser_service.py`.
+- API/database/config: không đổi contract/schema; dùng lại `generate_vision_content_with_retry` và cache/quality gate hiện có.
+- Kiểm thử: compileall thành công; Python unit test `36/36` đạt.
+- Git/VPS: local, chưa commit/push/deploy.
+- Hạn chế/bước tiếp theo: cần smoke một PDF scan thật trong môi trường có Gemini key, kiểm tra chi phí/timeout và xác nhận đoạn trích Gemini không bị dùng như bằng chứng đã xác minh.
+
+### 2026-08-20 — OCR-VALIDATION-FIX-001 — Không từ chối CV hai cột chỉ vì tiêu đề OCR bị đảo
+
+- Trạng thái: `ĐANG LÀM`; mẫu hai cột đã chạy lại thành công, mẫu PDF scan vẫn cần xử lý OCR.
+- Nguyên nhân: `is_document_a_resume` chỉ đếm chuỗi tiêu đề chính xác; OCR có thể đảo/mất dấu tiêu đề dù `segment_cv_sections` đã nhận diện đủ section.
+- Quyết định kỹ thuật: chấp nhận CV khi có ít nhất 25 từ và ít nhất 2 section đã được bộ phân đoạn cấu trúc nhận diện; vẫn từ chối văn bản quá ngắn/không có cấu trúc.
+- File đã sửa: `Python/services/scoring_service.py`.
+- Kiểm thử: Python unit test `36/36`; `11_image_two_columns.png` chạy lại qua `/score-cv` thành công, trả 4 tiêu chí, điểm 55 và 2 mục cần xác minh. `13_pdf_scan_clean.pdf` vẫn trả lỗi trích xuất qua endpoint và chưa được nới ngưỡng mù quáng.
+- API/database/config: không đổi schema/API contract.
+- Git/VPS: local, chưa commit/push/deploy.
+- Bước tiếp theo: kiểm tra sự khác biệt runtime của OCR PDF scan và bổ sung test hồi quy trước khi xem P0-01 hoàn tất.
+
+### 2026-08-20 — P0-01-E2E-001 — Chạy 15 CV qua bộ tiêu chí có cấu trúc
+
+- Trạng thái: `ĐANG LÀM` — đã chạy local, còn 2 mẫu không đủ dữ liệu để chấm.
+- Mục tiêu/phạm vi: dùng cùng JD DevOps và bốn tiêu chí có tổng trọng số 100% (Docker 30, Linux 25, CI/CD 25, kinh nghiệm DevOps tối thiểu 24 tháng 20) để kiểm tra contract chấm điểm, kết quả tiêu chí và cờ xác minh.
+- File thêm: `Python/tools/run_structured_corpus_score.py`.
+- Kiểm thử thực tế: gọi `POST /score-cv` với 15 mẫu, giới hạn 3 request đồng thời; 13/15 trả `status=success`, mỗi kết quả thành công có 4 `criteria_results` và có `needs_verification` từ 3–4 mục; điểm trả về trong khoảng 32–59 theo dữ liệu mẫu.
+- Hai mẫu lỗi có nguyên nhân rõ: `11_image_two_columns.png` bị từ chối vì nội dung sau OCR quá ít/thiếu cấu trúc CV; `13_pdf_scan_clean.pdf` không trích xuất được đủ nội dung. Đây là lỗi chất lượng đầu vào/trích xuất, không được diễn giải là ứng viên không phù hợp.
+- API/database/config: không thay đổi schema; đã xác nhận endpoint nhận tiêu chí cấu trúc và trả kết quả nested trong `matching_result`.
+- Git/VPS: local, chưa commit/push/deploy VPS.
+- Hạn chế/bước tiếp theo: chưa có ground truth điểm cho 15 CV nên chưa thể kết luận độ chính xác; cần xem riêng hai mẫu lỗi và đối chiếu từng `evidence_text` trước khi đánh dấu P0-01 hoàn tất.
+
+### 2026-08-20 — P3-01-SMOKE-001 — Chạy corpus 15 CV đa định dạng
+
+- Trạng thái: `ĐÃ XONG` cho smoke test extraction local; chưa phải đánh giá độ chính xác AI end-to-end.
+- Mục tiêu/phạm vi: kiểm tra 15 mẫu PDF/DOCX/ảnh, hai cột, scan, tiếng Việt/Anh, bảng và timeline trước khi dùng để nghiệm thu tiêu chí có cấu trúc.
+- Kiểm thử thực tế: `tools/audit_cv_layout_corpus.py` xử lý 15/15 mẫu sử dụng được; nhận đúng email 15/15 và số điện thoại 15/15; không có mẫu thất bại theo ngưỡng smoke test. Unit test Python đạt 36/36.
+- Kết quả cần lưu ý: `11_image_two_columns.png` ở mức `partial` và không nhận được timeline; thời gian OCR lớn nhất `3086.39 ms` ở `13_pdf_scan_clean.pdf`; các kết quả này là giới hạn trích xuất, không phải kết luận năng lực ứng viên.
+- File sinh/cập nhật: `Python/test_data/cv_layout_corpus/audit_results.json`, `Python/test_data/cv_layout_corpus/AUDIT_REPORT.md`.
+- API/database/config: không thay đổi; chưa gọi Gemini cho 15 mẫu để tránh biến smoke test thành kết quả AI không kiểm soát quota.
+- Git/VPS: thay đổi local, chưa commit/push/deploy VPS.
+- Bước tiếp theo: chạy 15 mẫu qua endpoint chấm điểm với một JD/tiêu chí cố định, lưu payload và kiểm tra evidence/needs_verification; mẫu ảnh hai cột cần xem riêng về thứ tự layout.
+
+### 2026-08-20 — AI-RED-FLAG-UI-001 — Hiển thị trạng thái cảnh báo cần làm rõ
+
+- Trạng thái: `ĐÃ XONG` local; chờ người dùng tải lại frontend để nghiệm thu giao diện.
+- Mục tiêu/phạm vi: không để mục “Thông tin cần làm rõ khi phỏng vấn” biến mất khi hậu kiểm đã loại cảnh báo AI thiếu đoạn trích CV.
+- Quyết định nghiệp vụ/kỹ thuật: chỉ hiển thị cảnh báo có bằng chứng nguyên văn; khi danh sách rỗng, hiển thị thông báo trung tính và hướng dẫn xem mục “Cần làm rõ / Cải thiện”. Không khôi phục red flag không có bằng chứng.
+- File đã sửa: `ai-recruitment-frontend/src/components/ai-report/CompetencyTab.tsx`.
+- API/database/config: không thay đổi.
+- Kiểm thử: `npm.cmd run build` thành công; chỉ còn cảnh báo chunk/Rollup đã tồn tại.
+- Git/VPS: thay đổi local, chưa commit/push/deploy VPS.
+- Hạn chế/bước tiếp theo: cần mở lại báo cáo CV trên frontend và xác nhận thông báo rỗng hiển thị đúng.
+
+### 2026-08-20 — LOCAL-SMOKE-001 — Kiểm tra dịch vụ local sau khi khởi động
+
+- Trạng thái: `ĐÃ XONG` local.
+- Mục tiêu/phạm vi: kiểm tra nhanh frontend, backend và Python AI đang phục vụ đúng sau các bản sửa realtime/concurrency.
+- Kiểm thử thực tế: frontend `http://localhost:5173/` trả HTTP 200; Python `http://localhost:8000/health` trả HTTP 200 với trạng thái healthy; backend Swagger và OpenAPI trả HTTP 200; API dashboard khi chưa xác thực trả HTTP 401 đúng yêu cầu phân quyền.
+- API/database/config: không thay đổi.
+- Git/VPS: không phát sinh commit; chỉ kiểm tra local, chưa kết luận VPS.
+- Hạn chế/bước tiếp theo: dữ liệu dashboard theo vai trò cần được kiểm tra trong phiên đăng nhập HR/Admin thực tế.
+
+### 2026-08-20 — REALTIME-VERIFY-001 — Smoke test dashboard cập nhật realtime
+
+- Trạng thái: `ĐÃ XONG` local cho luồng cập nhật dashboard đã kiểm tra.
+- Mục tiêu/phạm vi: xác nhận dashboard nhận dữ liệu mới mà không cần tải lại thủ công sau sự kiện tuyển dụng.
+- Quyết định kỹ thuật: giữ cơ chế thông báo SignalR và refresh dữ liệu dashboard qua sự kiện trình duyệt hiện có.
+- File/API/database: không phát sinh thay đổi mới; nghiệm thu luồng SignalR, `MainLayout` và hook dashboard HR/Admin.
+- Kiểm thử thực tế: người dùng xác nhận dashboard đã cập nhật realtime sau khi dịch vụ được khởi động lại.
+- Git/VPS: thay đổi vẫn ở local, chưa commit/push/deploy VPS.
+- Hạn chế/bước tiếp theo: cần kiểm tra thêm quyền group SignalR bằng tài khoản HR khác, ứng viên và trường hợp chưa đăng nhập; sau đó mới đóng toàn bộ `REALTIME-001`.
+
+### 2026-08-20 — AI-CONCURRENCY-VERIFY-001 — Smoke test xử lý hai hồ sơ đồng thời
+
+- Trạng thái: `ĐÃ XONG` local.
+- Mục tiêu/phạm vi: xác nhận bản sửa không còn buộc job thứ hai chờ job thứ nhất hoàn tất khi ứng viên nộp hai vị trí liên tiếp.
+- Quyết định nghiệp vụ/kỹ thuật: giữ xử lý từng job độc lập; không dùng kết quả hoặc trạng thái của job trước cho job sau.
+- File/API/database: không phát sinh thay đổi mới; nghiệm thu các endpoint `/score-cv`, `/score-cv-text` và `/update-skills` đã chuyển sang thread pool.
+- Kiểm thử thực tế: người dùng đã khởi động lại dịch vụ và nộp hai job liên tiếp; cả hai job chạy thành công, không còn hiện tượng job sau bị chặn.
+- Git/VPS: thay đổi vẫn ở local, chưa commit/push/deploy VPS.
+- Hạn chế/bước tiếp theo: cần smoke test dashboard realtime, SignalR phân quyền và lỗi tải thống kê trước khi đánh dấu các task realtime/dashboard hoàn tất.
+
+### 2026-08-20 — REALTIME-001 — Khóa SignalR và nối cập nhật dashboard
+
+- Trạng thái: `ĐANG LÀM`; đã sửa và build local, chưa smoke test hai trình duyệt/role trên môi trường chạy và chưa deploy VPS.
+- Mục tiêu/phạm vi: sửa nguyên nhân SignalR không xác thực token qua query string, ngăn tham gia group hồ sơ/tài khoản trái quyền, cho HR tham gia group AI đúng cách, và làm dashboard phản ứng với sự kiện thông báo tuyển dụng.
+- Quyết định kỹ thuật: JWT đọc `access_token` chỉ trên hai đường dẫn Hub; `NotificationHub` chỉ cho tài khoản tham gia group của chính mình; `AIEvaluationHub` kiểm tra ứng viên sở hữu hồ sơ hoặc HR sở hữu tin/chi nhánh trước khi tham gia; không mở quyền `Clients.All` rộng hơn.
+- File đã sửa: `Program.cs`, `Hubs/NotificationHub.cs`, `Hubs/AIEvaluationHub.cs`, hook SignalR HR/ứng viên, `MainLayout.tsx`, hook dashboard HR/Admin. Không đổi schema/migration.
+- Email: response tạo email bổ sung `source=ai|template`; fallback khi `EnableAiEmailDraft=false` được báo là mẫu chỉnh sửa được, không còn hiển thị như kết quả AI. Cập nhật DTO, controller, hai client frontend và thông báo Email Candidate.
+- Kiểm thử: backend Release build đạt 0 lỗi (411 cảnh báo nullable/legacy); frontend TypeScript + Vite production build đạt. Chưa có test tự động cho quyền Hub; cần smoke test kết nối bằng ứng viên, HR khác chủ tin và tài khoản không đăng nhập.
+- Git/VPS: thay đổi local, chưa commit/push/deploy; giữ nguyên thay đổi không liên quan.
+- Hạn chế còn lại: dashboard đang refresh qua sự kiện trình duyệt phát sinh từ notification, chưa có domain event riêng cho Admin; cần bổ sung event bus/SignalR dashboard nếu muốn cập nhật mọi sự kiện kể cả khi không tạo notification. `CandidateEmailAiService` vẫn còn nhiều trách nhiệm, mới sửa contract fallback; tách class là task refactor riêng.
+- Bước tiếp theo: khởi động backend mới, smoke test auth/group/reconnect và xác nhận dashboard HR/Admin cập nhật; sau đó mới đánh dấu hoàn tất.
+
+### 2026-08-20 — AI-CONCURRENCY-001 — Không chặn job AI thứ hai bởi job thứ nhất
+
+- Trạng thái: `ĐÃ XONG` local; chưa deploy VPS.
+- Bằng chứng nguyên nhân: log cho thấy `/score-cv` mất khoảng 43 giây, sau đó `/update-skills` mất gần 50 giây; các endpoint FastAPI khai báo `async` nhưng gọi hàm đồng bộ nặng trực tiếp, làm chặn event loop nên request job thứ hai chỉ được xử lý sau job đầu.
+- Quyết định kỹ thuật: chạy `score_resume_sync` của `/score-cv` và `/score-cv-text` bằng `run_in_threadpool`; chạy `reload_knowledge_base` của `/update-skills` bằng thread pool. Không chạy hai phép so khớp trong cùng một request và không dùng kết quả job này cho job khác.
+- File đã sửa: `Python/controllers/analysis_controller.py`, `Python/controllers/skills_controller.py`.
+- Kiểm thử: `venv/Scripts/python.exe -m compileall -q controllers services tests main.py` đạt; Python unittest `36/36` đạt.
+- Hạn chế: cần khởi động lại Python service mới để thay đổi có hiệu lực; Gemini API vẫn có giới hạn quota/độ trễ riêng, nên chạy song song không đảm bảo hai kết quả hoàn tất cùng lúc.
+
+### 2026-08-20 — P0-03 — Lịch sử trạng thái và thống kê trong ngày
+
+- Trạng thái: `ĐANG LÀM`; đã hoàn thành nền tảng, build local và áp dụng migration vào database phát triển; chưa nghiệm thu API/UI runtime.
+- Mục tiêu/phạm vi: lưu sự kiện chuyển trạng thái hồ sơ và làm cho số liệu “hôm nay” trên dashboard HR/Admin dựa trên sự kiện theo múi giờ Việt Nam, thay vì suy ra từ trạng thái cuối hoặc ngày của máy chủ.
+- Quyết định nghiệp vụ/kỹ thuật: sự kiện lưu `ChangedAtUtc`; ranh giới ngày được đổi từ `Asia/Ho_Chi_Minh`/`SE Asia Standard Time` sang UTC; không tính sự kiện tạo hồ sơ là một lần chuyển trạng thái; dữ liệu cũ chỉ backfill sự kiện `Applied` có thể chứng minh từ `AppliedAt`, không bịa lại các lần chuyển trạng thái đã mất.
+- File đã thêm/sửa: thêm model `ApplicationStatusHistory`, helper `VietnamTimeService`, migration `20260819200603_AddApplicationStatusHistory`; cập nhật `AppDbContext`, các luồng nộp hồ sơ/đổi trạng thái/từ chối/tạo-hủy lịch phỏng vấn, `DashboardService` và dashboard HR/Admin frontend.
+- API/database/migration/config: response `Dashboard/hr-stats` và Admin dashboard bổ sung `quickMetrics.applicationsToday`, `quickMetrics.statusChangesToday`; migration tạo bảng lịch sử cùng hai index phục vụ truy vấn theo hồ sơ/ngày/trạng thái và đã áp dụng thành công vào database phát triển.
+- Kiểm thử đã chạy và kết quả: backend Release build đạt 0 lỗi; frontend production build đạt; sinh migration SQL thành công tại file local bị Git ignore. Debug build ban đầu không thể ghi đè executable vì backend local đang chạy, không phải lỗi biên dịch.
+- Git/commit: thay đổi local, chưa commit/push; giữ nguyên các thay đổi không liên quan có sẵn.
+- VPS/deploy/smoke test: chưa deploy.
+- Hạn chế/lỗi còn lại: backend đang chạy là binary cũ nên chưa thể nghiệm thu API mới nếu chưa khởi động lại; chưa chạy testcase runtime để xác nhận sự kiện được ghi đúng trong giao dịch và số liệu qua mốc 00:00 giờ Việt Nam.
+- Bước tiếp theo: khởi động lại backend bằng code mới, test đủ bốn luồng trạng thái và dashboard theo quyền HR/Admin, sau đó mới đánh dấu `ĐÃ XONG`.
+- Điều chỉnh UX sau phản hồi: dashboard HR không còn xếp tám KPI ngang hàng. Bốn KPI tổng quan dùng lưới 4/2/1 cột tùy màn hình; bốn số hoạt động (CV hôm nay, chuyển trạng thái hôm nay, lượt xem, tỷ lệ ứng tuyển) được gom vào một khối phụ responsive để tránh tràn và giữ thứ bậc thông tin.
+- Bộ lọc HR bổ sung khoảng thời gian 7 ngày/30 ngày/3 tháng/12 tháng/toàn bộ, kết hợp với lĩnh vực và tin tuyển dụng; backend dùng thời gian Việt Nam khi tạo mốc lọc. Bộ lọc Admin bổ sung preset Hôm nay/7 ngày/30 ngày bên cạnh tuần/tháng/năm.
+- Đính chính chỉ số: bỏ fallback giả `12.5 ngày`; khi chưa có lịch phỏng vấn hiển thị 0 và đổi nhãn chính xác thành `Thời gian đến lịch phỏng vấn TB`, vì phép tính hiện tại chưa phải thời gian tuyển đến trạng thái Hired.
+- Kiểm thử sau điều chỉnh UX: frontend production build đạt; backend Release build đạt 0 lỗi. Cảnh báo chunk frontend và nullable backend là cảnh báo đã tồn tại.
+- Điều chỉnh bổ sung dashboard Admin: thay hai KPI hôm nay rời rạc bằng một khối `Hoạt động tuyển dụng hôm nay` gồm hai cột responsive; bộ lọc có hàng nút chọn nhanh Hôm nay/7 ngày/30 ngày/Tháng này/Toàn bộ luôn nhìn thấy, không buộc Admin phải mở popup lịch mới thấy preset. Frontend production build sau thay đổi đạt.
+- Đính chính UX bộ lọc Admin theo nghiệm thu: bỏ hàng nút chọn nhanh vì tạo thêm trạng thái chọn nhưng không cần thiết; Admin chỉ giữ `Lĩnh vực tuyển dụng` và `Khoảng thời gian`, các preset ngày vẫn nằm trong RangePicker. Bộ lọc HR giữ thêm `Tin tuyển dụng` và khoảng thời gian tương đối vì phạm vi nghiệp vụ HR khác Admin. Frontend production build đạt sau đính chính.
+- Sửa luồng ứng tuyển liên tiếp: xác nhận backend lưu Application rồi chạy AI nền, không có ràng buộc phải chờ job trước hoàn tất. Modal thành công phía ứng viên nay nói rõ AI tiếp tục chạy nền và cung cấp hai hành động `Ở lại trang này`/`Tiếp tục tìm việc`; nút thứ hai đóng modal và điều hướng thẳng về `/jobs` để ứng tuyển job khác. Frontend production build đạt.
+
+### 2026-08-20 — AI-PROMPT-001 — Chuẩn hóa giới hạn kết luận và bằng chứng CV
+
+- Trạng thái: `ĐÃ XONG` local; chưa deploy VPS.
+- Mục tiêu/phạm vi: audit và sửa toàn bộ prompt runtime liên quan đến chấm CV, phân tích sâu, ngôn từ, STAR, phỏng vấn, chatbot, email và OCR; loại cách diễn đạt ngụ ý hệ thống xác minh sự thật hoặc phát hiện CV do AI tạo.
+- Quyết định nghiệp vụ/kỹ thuật: đoạn trích chỉ chứng minh nội dung có trong CV và luôn là thông tin ứng viên tự khai; mọi mục cần HR làm rõ phải có đoạn trích tồn tại nguyên văn, `needs_verification=true`; không hiển thị phần trăm AI-generated; confidence tổng hợp được đổi nhãn thành mức độ đầy đủ của bằng chứng, không phải xác suất lời khai đúng.
+- An toàn prompt: coi CV/JD/lịch sử/bối cảnh là dữ liệu không đáng tin cậy; cấm thực hiện chỉ dẫn nằm trong dữ liệu; STAR và câu trả lời mẫu không được sáng tác số liệu; URL không chắc chắn không được tự tạo; OCR không sửa/dịch/bổ sung phần không nhìn thấy.
+- File đã thay đổi: toàn bộ file prompt trong `Python/prompts`, `Python/services/scoring_service.py`, `doc_parser_service.py`, `cv_analysis_service.py`, `timeline_service.py`, test Python, các tab/báo cáo CV liên quan và trang Email Logs.
+- API/database/migration/config: giữ contract cũ `ai_generation_risk` để tương thích dữ liệu nhưng luôn hậu kiểm về `detected=false`, `score=0`; không đổi schema hay migration.
+- Kiểm thử đã chạy và kết quả: Python unit test 33/33 đạt; `compileall` đạt; frontend `npm.cmd run build` đạt. Build chỉ còn cảnh báo chunk lớn/Rollup từ dependency đã tồn tại.
+- Bảo mật: HTML email khi xem log được giới hạn còn `p`, `strong`, `ul`, `li`, `br` và loại toàn bộ thuộc tính trước khi đưa vào `dangerouslySetInnerHTML`.
+- Git/commit: thay đổi local, chưa commit/push; không đụng các thay đổi không liên quan.
+- VPS/deploy/smoke test: chưa deploy VPS.
+- Hạn chế/lỗi còn lại: báo cáo cũ đã lưu có thể còn câu chữ cũ; cần phân tích lại CV để tạo payload mới. Việc xác minh sự thật cần nguồn bên ngoài và quyền nghiệp vụ riêng, không thể suy ra chỉ từ CV.
+- Bước tiếp theo: chạy lại đúng CV đã phát sinh cảnh báo sai và nghiệm thu UI trước khi deploy.
+- Đính chính theo phản hồi người dùng: giữ nguyên tên tính năng `Ngôn từ & Chân thực` trên UI/PDF; chỉ thay đổi giới hạn kết luận bên trong, không đổi tên sản phẩm.
+- Sửa phân loại OCR sau nghiệm thu: đoạn ký tự hỏng có tồn tại trong text extraction không phải bằng chứng về lỗi của ứng viên. Mọi cảnh báo font/OCR/mã hóa/quét tệp luôn bị loại khỏi red flag ứng viên; UI hiển thị cảnh báo kỹ thuật riêng và bỏ qua đánh giá ngôn từ khi nguồn là OCR/partial. Test hồi quy với chuỗi OCR lỗi đạt; tổng Python 34/34 và frontend production build đạt.
+- Đính chính lần 2 sau kiểm tra runtime: nguyên nhân OCR tiếng Việt local là Tesseract chỉ có `eng, osd`, thiếu `vie`; việc khóa tab cho mọi nguồn OCR là không đúng mục tiêu hệ thống. Đã cài `vie.traineddata` vào `.local/tessdata`, xác nhận runtime chọn `vie+eng`, bỏ fallback ngầm sang `eng`, khôi phục tab Ngôn từ cho OCR high/partial và chỉ hiện cảnh báo extraction khi thực sự partial/có warning. Unit test tăng lên 35/35; smoke ba ảnh corpus chạy bằng `vie+eng` thành công, nhưng bố cục hai cột/ảnh nghiêng vẫn có thể đảo thứ tự từ và tiếp tục cần cải thiện layout OCR.
+- Bổ sung nền tảng layout OCR: ước lượng deskew bằng projection profile, không xoay khi lệch dưới 1 độ; phát hiện khoảng chia cột từ bounding box và sắp khối theo từng cột. Test thứ tự hai cột đạt, tổng unit test 36/36. Smoke cho thấy ảnh nghiêng được hiệu chỉnh khoảng -2 độ và tiếng Việt tốt hơn, nhưng Tesseract vẫn có thể phân mảnh dòng trên ảnh hai cột; bước tiếp theo bắt buộc là OCR theo vùng/crop từng cột thay vì chỉ sắp lại block toàn trang.
+
+### 2026-08-20 — P0-02-FIX — Hậu kiểm cảnh báo mốc thời gian và lỗi OCR
+
+- Trạng thái: `ĐÃ XONG` local; chưa deploy VPS.
+- Mục tiêu/phạm vi: sửa cảnh báo sai khi CV có mốc năm 2026 trong lúc ngày phân tích là 20/08/2026; không để AI tự kết luận mốc tương lai hoặc lỗi font/OCR nghiêm trọng khi thiếu bằng chứng.
+- Quyết định nghiệp vụ/kỹ thuật: prompt nhận ngày hiện tại; chỉ tháng/năm cụ thể sau ngày phân tích mới là tương lai; mốc chỉ ghi năm hiện tại được quy đổi đến tháng hiện tại và gắn `needs_verification`; red flag AI được hậu kiểm bằng nội dung CV và `extraction_quality`.
+- File đã thay đổi: `Python/prompts/scoring_prompts.py`, `Python/services/timeline_service.py`, `Python/services/scoring_service.py`, `Python/services/cv_analysis_service.py`, hai file test, `PROJECT_CONTEXT.md`, `WORK_LOG.md`.
+- API/database/migration/config: không đổi URL API, DTO hay schema; không có migration.
+- Kiểm thử đã chạy và kết quả: `Python/venv/Scripts/python.exe -m unittest discover -s tests -v` đạt 31/31; có thêm test mốc `2022 - 2026` tại ngày 20/08/2026, cảnh báo kết hợp tương lai/OCR không bằng chứng và mốc tháng 10/2026 thực sự ở tương lai.
+- Git/commit: thay đổi local, chưa commit/push; giữ nguyên các thay đổi không liên quan đang có.
+- VPS/deploy/smoke test: chưa deploy VPS.
+- Hạn chế/lỗi còn lại: kết quả phân tích cũ đã lưu/cache không tự thay đổi; cần chạy phân tích lại CV để nhận báo cáo đã hậu kiểm.
+- Bước tiếp theo: nghiệm thu lại đúng CV phát sinh lỗi; sau đó deploy và smoke test nếu kết quả local đạt yêu cầu.
+
+### 2026-08-20 — P0-02 — Phân tích CV đa bố cục và chuẩn hóa timeline (giai đoạn nền tảng)
+
+- Trạng thái: `ĐÃ XONG` cho pipeline nền tảng local; chưa deploy VPS.
+- Mục tiêu: bỏ cách đọc phụ thuộc template; hỗ trợ PDF/DOCX/ảnh scan/CV Builder bằng nhiều chiến lược, giữ khối bố cục, đánh giá chất lượng và chuẩn hóa kinh nghiệm theo tháng.
+- Pipeline tài liệu: chạy PyPDF2, pdfplumber plain/layout/word blocks; DOCX đọc cả paragraph và table row; ảnh/PDF scan thử Tesseract PSM 4/6/11 có bounding box; chọn kết quả theo quality score và giữ phương án thay thế/cảnh báo.
+- CV Builder: tiếp tục dùng text có cấu trúc từ JSON với chất lượng 100%, không OCR ngược snapshot PDF.
+- Chuẩn hóa nội dung: nhận diện section Việt/Anh và tiêu đề nghề nghiệp custom; mục lạ được giữ dưới `other`, không bỏ dữ liệu.
+- Timeline: hỗ trợ tháng/năm, chỉ năm, tên tháng tiếng Anh, `nay/present`; loại khoảng chồng lặp; tính tổng tháng và tháng theo kỹ năng; gap từ 3 tháng chỉ là thông tin cần làm rõ.
+- Tiêu chí: `TOTAL_EXPERIENCE` và `SKILL_EXPERIENCE` lấy số tháng từ timeline cục bộ thay vì để LLM tự cộng; trả evidence, confidence, extracted value và tính lại điểm tổng.
+- UI: tab Năng lực hiển thị tổng kinh nghiệm không cộng trùng, thời lượng theo kỹ năng và gap với cảnh báo trung tính.
+- Phiên bản báo cáo nâng lên `analysis_version=4` để kết quả cũ được phép hoàn tất lại bằng pipeline mới.
+- File mới: `Python/services/document_layout_service.py`, `timeline_service.py`, `section_segmentation_service.py`, `benchmark_layout_extraction.py` và test tương ứng.
+- Kiểm thử: Python 25/25 test đạt; frontend production build đạt; backend build ra thư mục kiểm chứng đạt 0 lỗi.
+- Benchmark smoke: 15/15 PDF mock đọc được chất lượng cao và giữ 49–51 block/tệp; 6/6 DOCX demo đọc được chất lượng cao và giữ 22–33 logical block/tệp.
+- Hạn chế: benchmark hiện chứng minh extraction trên dữ liệu có sẵn, chưa phải độ chính xác có nhãn cho mọi CV infographic/scan xấu; cần xây corpus 20–50 CV biến thể đã ẩn danh và chấm ground truth theo từng trường.
+- Bước tiếp theo: nghiệm thu local bằng CV Quốc Bảo và một CV custom/scan; sau đó bổ sung dashboard kiểm thử extraction theo corpus và mở rộng quan hệ block cho infographic phức tạp.
+
+### 2026-08-20 — P0-01 — Tiêu chí đánh giá có cấu trúc (đang nghiệm thu giao diện)
+
+- Trạng thái: `ĐANG LÀM`.
+- Bổ sung nhóm tiêu chí động: bảng `CriterionGroups`, dữ liệu mặc định, API Admin thêm/sửa/ẩn và tab `Nhóm tiêu chí` trong `Danh mục tuyển dụng`.
+- Form tạo/sửa tin lấy nhóm tiêu chí từ database; danh mục được đồng bộ qua sự kiện SignalR `MetadataChanged` và tải lại khi cửa sổ được focus. Việc tải danh mục nền không gọi lại API chi tiết tin nên không ghi đè form.
+- Form tự lưu bản nháp vào `localStorage` sau 350 ms, phục hồi ngày tháng và toàn bộ danh sách tiêu chí sau F5, xóa bản nháp sau khi gửi tin thành công.
+- Khôi phục bản nháp chạy im lặng, không hiện toast làm gián đoạn HR. `JobCriterion.CriterionGroupId` lưu đúng nhóm Admin đã tạo thay vì chỉ lưu loại kỹ thuật chung.
+- Các CRUD lĩnh vực, vị trí, cấp bậc, chi nhánh và nhóm tiêu chí đều phát sự kiện thay đổi metadata.
+- Migration `20260819171808_AddCriterionGroups` đã được áp dụng vào database phát triển; script kiểm tra chỉ tạo bảng nhóm tiêu chí, không lặp lại các cột tiêu chí có cấu trúc.
+- Migration `20260819172253_AddCriterionGroupReference` đã được áp dụng vào database phát triển.
+- Kiểm tra: frontend production build thành công; backend Release build thành công; migration database thành công.
+- Tạo bộ nghiệm thu tin DevOps gồm hai CV DOCX hợp lệ: một hồ sơ DevOps trên 3 năm có Docker/CI-CD/Linux/AWS/Kubernetes và một hồ sơ thiết kế đồ họa không phù hợp. Kèm tài liệu hai tài khoản demo tại `TAI_LIEU_DEMO_PHAN_BIEN/05_TAI_KHOAN_VA_CV_DEMO_DEVOPS.txt`.
+- Phạm vi đã triển khai: entity/request/migration JobCriterion; form HR cơ bản và thiết lập nâng cao; contract backend → Python; kết quả tiêu chí có mức đáp ứng, confidence, bằng chứng và cờ HR xác minh.
+- Migration: `20260819164437_AddStructuredJobCriteria`; tiêu chí cũ được backfill `CUSTOM/PREFERRED/EXISTS`, nguồn bằng chứng mặc định, `IsActive=true`, `TargetValue=Name`.
+- Kiểm soát AI: prompt cấm sáng tác bằng chứng; Python chỉ giữ đoạn trích nếu tồn tại trong text CV, nếu không sẽ xóa bằng chứng và bật `needs_verification`.
+- Kiểm thử: .NET build 0 lỗi; React production build thành công; Python 10/10 test đạt trước lần bổ sung validation cấu trúc cuối, cần chạy lại toàn bộ sau khi người dùng nghiệm thu UI.
+- Môi trường đang chạy: frontend `http://localhost:5173`, backend `http://localhost:5286`, Python `http://127.0.0.1:8000`.
+- Lưu ý database: cấu hình Development trỏ tới SQL Server từ xa `db43261.public.databaseasp.net`, không phải LocalDB; backend startup đã xác nhận database này có migration mới. Chưa deploy container/VPS.
+- Bước tiếp theo: người dùng xem `/recruiter/jobs/create`; chỉnh UX theo phản hồi, chạy lại build/test và test create/edit API trước khi đánh dấu hoàn thành.
+- Phản hồi UI lần 1: đã xóa đoạn giải thích dài phía trên danh sách; đổi “Thiết lập đánh giá nâng cao” thành “Cấu hình cách chấm tiêu chí”; đổi nhãn `Giá trị yêu cầu` thành nhãn động theo loại (`Kỹ năng cần tìm`, `Chứng chỉ cần có`, `Nội dung AI cần tìm`...); bổ sung tooltip rằng có thể bỏ trống để dùng tên tiêu chí. React production build sau thay đổi thành công.
+- Phản hồi UI lần 2: nhận thấy các trường cấu hình AI vẫn quá kỹ thuật. Đã đổi `Loại tiêu chí` thành `Nhóm đánh giá`, `Điều kiện` thành `Yêu cầu đạt`; loại khỏi UI `Nội dung AI cần tìm` và `Tìm bằng chứng trong` vì hệ thống có thể suy ra từ tên/nhóm; đổi hướng dẫn thành `Mô tả tiêu chí (không bắt buộc)`. React production build tiếp tục thành công.
+
+### 2026-08-19 — P0-00 — Tổ chức module Python giai đoạn 1
+
+- Trạng thái: `ĐÃ XONG`.
+- Mục tiêu: giúp truy vết code khi vấn đáp và tạo nền an toàn trước khi mở rộng tiêu chí ở `P0-01`.
+- Khảo sát: xác định toàn bộ FastAPI router, hàm/service, import nội bộ và 11 nhóm endpoint mà ASP.NET Core đang gọi; xác nhận `cv_analysis_service` và `scoring_service` đang gộp nhiều trách nhiệm.
+- Quyết định: chưa di chuyển hàng loạt code runtime; giữ nguyên URL API, tách phần validation lặp trước và lập tài liệu tra cứu đầy đủ.
+- File thay đổi: `Python/README.md`, `Python/controllers/analysis_controller.py`, `Python/services/cv_analysis_service.py`.
+- File thêm: `Python/services/criterion_validation_service.py`, `Python/tests/__init__.py`, `Python/tests/test_criterion_validation_service.py`.
+- Thay đổi hành vi: `/score-cv` và `/score-cv-text` dùng chung một validation; vẫn nhận tiêu chí cũ `name/weight`, đồng thời bảo toàn các trường cấu trúc mở rộng cho task tiếp theo.
+- Dọn code: loại import `pdf_extractor` không sử dụng; chưa xóa file cũ vì cần một task dọn legacy riêng sau contract test.
+- Kiểm thử: `python -m unittest discover -s tests -v` đạt 8/8; `python -m compileall -q controllers services tests main.py` thành công; import `main.app` thành công và đăng ký 25 route.
+- API/database/migration: không đổi URL, không đổi schema, không có migration.
+- Git/VPS: chưa commit, chưa push, chưa deploy.
+- Hạn chế: chưa có contract test cho response chấm CV/preview; chưa tách các service lớn; chưa chuẩn hóa vị trí JSON runtime. Khi import có cảnh báo model `en_core_web_sm 3.8.0` đang chạy với spaCy `3.7.4`, cần đồng bộ phiên bản trong task dependency riêng để tránh suy giảm NLP.
+- Bước tiếp theo: audit entity/DTO/form hiện tại và triển khai `P0-01` theo chiều database → backend → frontend → Python.
+
+### 2026-08-19 — CLEAN-001 — Dọn artefact và chuẩn hóa thư mục gốc
+
+- Trạng thái: `ĐÃ XONG`.
+- Mục tiêu: loại file tạm có thể tái tạo khỏi root nhưng bảo toàn source code, tài liệu khóa luận, UML, dữ liệu kiểm thử và các thay đổi chưa commit của người dùng.
+- Quyết định: giữ nguyên `SO_DO_UML_THAM_KHAO`, `TAI_LIEU_DEMO_PHAN_BIEN`, `TaiLieuBaoCao`, `TaiLieuThamKhao` và `tools` vì các script đang tham chiếu đường dẫn tương đối; không di chuyển tùy tiện.
+- Đã xóa: năm thư mục giải nén/audit Word, ba output build tạm ở root, output build lặp trong backend, sáu log local, log/kết quả JMeter lặp ở root và file `resume` rỗng.
+- Dung lượng artefact đã loại bỏ: xấp xỉ 187 MB, chưa tính log nhỏ.
+- File thay đổi: `.gitignore`, `WORK_LOG.md`; chuyển public deploy key vào `.local/ssh/`; script tạo CV demo được tổ chức lại vào `tools/`.
+- Bảo mật: `.local/` và `.codex_vps_deploy_*` đã được Git ignore. Private deploy key ở root bị ACL Windows từ chối di chuyển ngay cả với quyền nâng cao; không đổi ACL hoặc xóa cưỡng bức để tránh mất quyền triển khai.
+- API/database/config: không thay đổi runtime; `.gitignore` chỉ bổ sung mẫu artefact local.
+- Kiểm thử: xác nhận toàn bộ target xóa không còn tồn tại; kiểm tra lại root và Git status; các thay đổi source có sẵn không bị sửa.
+- Git/VPS: chưa commit, chưa push, chưa deploy.
+- Bước tiếp theo: khi không còn cần khóa deploy cũ, xóa hoặc chuyển nó bằng tài khoản Windows sở hữu file; tiếp tục `P0-01` sau khi người dùng yêu cầu.
+
+### 2026-08-19 — DOC-001 — Khởi tạo bộ nhớ dự án
+
+- Trạng thái: `ĐÃ XONG`.
+- Mục tiêu: tạo ngữ cảnh bền vững và quy tắc ghi nhận công việc giữa nhiều phiên chat.
+- Quyết định: dùng ba lớp tài liệu: `AGENTS.md` cho quy tắc, `PROJECT_CONTEXT.md` cho kiến trúc/backlog/quyết định, `WORK_LOG.md` cho bằng chứng thực thi.
+- File thêm: `AGENTS.md`, `PROJECT_CONTEXT.md`, `WORK_LOG.md`.
+- API/database/config: không thay đổi.
+- Kiểm thử: kiểm tra project trước đó chưa có ba file cùng tên; cần đọc lại nội dung và kiểm tra Git diff sau khi tạo.
+- Git/VPS: chưa commit, chưa push, chưa deploy.
+- Bảo mật: không sao chép credential đã xuất hiện trong lịch sử trò chuyện; mọi dữ liệu nhạy cảm phải được che.
+- Bước tiếp theo: khảo sát code/schema hiện tại cho `P0-01` và chốt migration tương thích ngược trước khi triển khai tiêu chí có cấu trúc.
+
+## Mẫu mục nhật ký mới
+
+### YYYY-MM-DD HH:mm — TASK-ID — Tên công việc
+
+- Trạng thái: `CHƯA LÀM | ĐANG LÀM | ĐÃ XONG | BỊ CHẶN | TẠM HOÃN`.
+- Mục tiêu/phạm vi:
+- Quyết định nghiệp vụ/kỹ thuật:
+- File đã thay đổi:
+- API/database/migration/config:
+- Kiểm thử đã chạy và kết quả:
+- Git/commit:
+- VPS/deploy/smoke test:
+- Hạn chế/lỗi còn lại:
+- Bước tiếp theo:
+### 2026-08-20 — CV Builder — Mở rộng thư viện mẫu CV
+
+- Trạng thái: `ĐÃ XONG` local; chưa deploy VPS.
+- Nâng số mẫu CV trực tuyến từ 3 lên 12: Tiêu chuẩn, Hiện đại, Thanh lịch, Tối giản, Doanh nghiệp, Công nghệ, Quản lý, Học thuật, Sinh viên, Gọn một trang, Dòng thời gian và Sáng tạo.
+- Bộ chọn mẫu đổi thành thư viện thẻ có hình mô phỏng bố cục và mô tả mục đích sử dụng.
+- Các nhóm bố cục được triển khai riêng: một cột, thanh bên, hai cột, timeline, quản lý và học thuật; vẫn hỗ trợ đổi màu, font, cỡ chữ, thứ tự mục và khung.
+- Việc lưu tài khoản không cần migration vì mã mẫu nằm trong JSON `Settings`. Luồng tải PDF và tạo snapshot ứng tuyển dùng cùng component xem trước nên giữ đúng mẫu đã chọn.
+- Kiểm tra: `npm.cmd run build` thành công (TypeScript và Vite production build).
+- Điều chỉnh sau nghiệm thu: thư viện mẫu được chuyển vào modal `Đổi mẫu`, trang chính chỉ hiển thị mẫu đang dùng.
+- Bổ sung mẫu `Tự thiết kế`: chọn một cột/hai cột/thanh bên, chỉnh tỷ lệ cột và chọn các mục đặt ở cột phụ. Cấu hình vẫn được lưu trong JSON Settings.
+- Các mục kinh nghiệm/dự án/học vấn được đặt quy tắc tránh ngắt giữa một mục khi PDF tự phân trang; nội dung dài có thể tạo nhiều trang A4.
+- Bổ sung tùy chỉnh trình bày: ảnh đại diện được kiểm tra định dạng/kích thước và nén tối đa 512 px, chỉnh kích thước/kiểu/vị trí ảnh, bật tắt icon liên hệ, ẩn hiện mục và kéo thả thứ tự mục.
+- Ảnh được giữ trong JSON nội dung CV để dựng và xuất PDF snapshot; chưa dùng Cloudinary cho ảnh CV Builder. SQL dùng `nvarchar(max)` và controller giới hạn tổng nội dung 500.000 ký tự.
+- Bảo vệ pipeline AI: frontend chỉ dựng structured text từ trường nghiệp vụ; backend `ApplicationService.BuildCvBuilderText` bỏ qua `avatarDataUrl`/`imageDataUrl`, không gửi base64 hoặc dữ liệu trình bày sang Python.
+- Kiểm tra sau thay đổi: frontend production build thành công; backend build thành công với 0 lỗi (các cảnh báo nullable/migration đã tồn tại từ trước).
+### 2026-08-20 — P0-02 — Kiểm thử corpus CV đa bố cục
+
+- Trạng thái: `ĐÃ XONG` local; chưa deploy VPS.
+- Tạo corpus có ground truth gồm 15 mẫu tại `Python/test_data/cv_layout_corpus`: PDF một/hai cột, nhiều trang, Việt/Anh/song ngữ, timeline chồng lắp, heading custom, DOCX một/nhiều bảng, ảnh rõ/hai cột/nghiêng-nhiễu, PDF scan và PDF dày nội dung.
+- Kết quả corpus: 15/15 trích xuất sử dụng được; email đúng 14/15; số điện thoại đúng 15/15; trung vị 66,01 ms; lớn nhất 1.923,59 ms (PDF scan OCR). Ảnh nghiêng/nhiễu được giữ mức `partial`, không tự đoán sửa email.
+- Kiểm thử tải riêng 1.000 PDF synthetic: 1.000/1.000 usable/high; p50 55,29 ms; p95 81,21 ms; max 182,75 ms; tổng 57,88 giây. Đây chỉ là trích xuất cục bộ, không gồm Gemini.
+- Bug đã sửa trong quá trình kiểm thử:
+  - Tesseract tự phát hiện language pack và fallback `eng` khi máy thiếu `vie`, thay vì ép `vie+eng` rồi lỗi toàn bộ ảnh.
+  - PDF scan fallback sang `pypdfium2` khi máy thiếu Poppler/pdftoppm.
+  - Log Unicode không còn làm chết request trên console Windows cp1258.
+  - Section parser hiểu dòng bảng DOCX dạng `TIÊU ĐỀ | nội dung`.
+  - Timeline nhận cặp `MM/YYYY MM/YYYY` nghiêm ngặt khi OCR làm mất dấu phân cách.
+- Regression: 28/28 unit test Python đạt; compileall đạt.
+- Báo cáo chi tiết: `Python/test_data/cv_layout_corpus/AUDIT_REPORT.md`; dữ liệu máy đọc: `audit_results.json`.

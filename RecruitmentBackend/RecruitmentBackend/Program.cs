@@ -132,11 +132,14 @@ builder.Services.AddScoped<IEmailSenderService, EmailSenderService>();
 builder.Services.AddScoped<ITalentPoolService, TalentPoolService>();
 builder.Services.AddScoped<IAprioriService, AprioriService>();
 builder.Services.AddScoped<IHighUtilityService, HighUtilityService>();
+builder.Services.AddScoped<ICandidateCvDomainService, CandidateCvDomainService>();
+builder.Services.AddScoped<ISkillDiscoveryService, SkillDiscoveryService>();
 builder.Services.AddHostedService<MiningSchedulerService>();
 builder.Services.AddScoped<ICandidateComparisonService, CandidateComparisonService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<IAuditLogService, AuditLogService>();
 builder.Services.AddScoped<IProfileService, ProfileService>();
+builder.Services.AddScoped<IMetadataChangeNotifier, MetadataChangeNotifier>();
 
 // 4. Cấu hình Rate Limiting toàn cục cho Backend (Giới hạn 100 requests / 1 phút per IP)
 builder.Services.AddRateLimiter(options =>
@@ -193,6 +196,20 @@ builder.Services.AddAuthentication(options =>
         ValidateLifetime = true,
         ClockSkew = TimeSpan.Zero
     };
+    options.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = context =>
+        {
+            string? accessToken = context.Request.Query["access_token"];
+            PathString path = context.HttpContext.Request.Path;
+            if (!string.IsNullOrWhiteSpace(accessToken) &&
+                (path.StartsWithSegments("/hubs/notifications") || path.StartsWithSegments("/hubs/ai-evaluation")))
+            {
+                context.Token = accessToken;
+            }
+            return Task.CompletedTask;
+        }
+    };
 });
 
 
@@ -233,6 +250,12 @@ using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     await context.Database.MigrateAsync();
+    await JobLevelCatalogSeeder.SeedAsync(context);
+    if (builder.Configuration.GetValue<bool>("EnableTestJobSeed"))
+    {
+        await BranchCatalogSeeder.NormalizeAsync(context);
+        await TestJobPostingSeeder.SeedAsync(context);
+    }
     var passwordHasher = new Microsoft.AspNetCore.Identity.PasswordHasher<Account>();
     var accounts = await context.Accounts.ToListAsync();
     bool updatedAny = false;

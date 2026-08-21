@@ -1,5 +1,5 @@
 import React from "react";
-import { Card, Col, Row, Skeleton, Tabs } from "antd";
+import { Alert, Card, Col, Row, Skeleton, Tabs } from "antd";
 import CompetencyTab from "./CompetencyTab";
 import StarOptimizationTab from "./StarOptimizationTab";
 import LanguageReviewTab from "./LanguageReviewTab";
@@ -7,6 +7,7 @@ import InterviewQuestionsTab from "./InterviewQuestionsTab";
 
 interface AiDetailedTabsProps {
   parsedAnalysis: any;
+  extractedSkills?: string[];
   onChange?: (activeKey: string) => void;
   tipsLoading?: boolean;
   langLoading?: boolean;
@@ -49,6 +50,7 @@ function AiTabSkeleton({ variant }: { variant: SkeletonVariant }) {
 
 const AiDetailedTabs: React.FC<AiDetailedTabsProps> = ({
   parsedAnalysis,
+  extractedSkills: extractedSkillsProp,
   onChange,
   tipsLoading = false,
   langLoading = false,
@@ -58,9 +60,19 @@ const AiDetailedTabs: React.FC<AiDetailedTabsProps> = ({
 }) => {
   const score = parsedAnalysis?.score_analysis || {};
   const criteriaResults = parsedAnalysis?.criteria_results || [];
+  const experienceTimeline = parsedAnalysis?.experience_timeline || {};
+  const extractedSkills = extractedSkillsProp
+    || parsedAnalysis?.extracted_skills
+    || parsedAnalysis?.candidate_info?.extracted_skills
+    || [];
   const tips = parsedAnalysis?.optimization_tips || [];
   const lang = parsedAnalysis?.language_review || {};
   const interviewQuestions = parsedAnalysis?.mock_interview || [];
+  const extractionQuality = parsedAnalysis?.extraction_quality || {};
+  const extractionMethod = String(extractionQuality?.method || "").toLowerCase();
+  const extractionWarnings = Array.isArray(extractionQuality?.warnings) ? extractionQuality.warnings : [];
+  const usesOcr = extractionMethod.includes("ocr") || extractionMethod.includes("tesseract");
+  const hasExtractionNotice = extractionQuality?.quality_level === "partial" || extractionWarnings.length > 0;
 
   const scrollContainerStyle = {
     maxHeight: "580px",
@@ -75,7 +87,13 @@ const AiDetailedTabs: React.FC<AiDetailedTabsProps> = ({
       label: "Năng lực & Cảnh báo",
       children: (
         <div className="custom-scrollbar" style={scrollContainerStyle}>
-          <CompetencyTab scoreAnalysis={score} criteriaResults={criteriaResults} loading={isInitialLoading} />
+          <CompetencyTab
+            scoreAnalysis={score}
+            extractedSkills={extractedSkills}
+            criteriaResults={criteriaResults}
+            experienceTimeline={experienceTimeline}
+            loading={isInitialLoading}
+          />
         </div>
       ),
     },
@@ -120,7 +138,24 @@ const AiDetailedTabs: React.FC<AiDetailedTabsProps> = ({
     },
   ].filter((item) => showLearningPath || item.key !== "4");
 
-  return <Tabs defaultActiveKey="1" items={tabItems} size="large" onChange={onChange} />;
+  return (
+    <div>
+      {hasExtractionNotice && (
+        <Alert
+          type="warning"
+          showIcon
+          message="Chất lượng đọc tài liệu cần lưu ý"
+          description={
+            usesOcr
+              ? "CV được hệ thống đọc qua OCR nên một số ký tự hoặc dấu tiếng Việt có thể chưa chính xác. Đây là giới hạn của bước trích xuất, không phải lỗi của ứng viên và không được dùng làm cảnh báo năng lực."
+              : "Một phần văn bản chưa được trích xuất ổn định. Hệ thống không quy lỗi ký tự hoặc định dạng này cho ứng viên."
+          }
+          style={{ marginBottom: 16, borderRadius: 12 }}
+        />
+      )}
+      <Tabs defaultActiveKey="1" items={tabItems} size="large" onChange={onChange} />
+    </div>
+  );
 };
 
 export default AiDetailedTabs;

@@ -3,6 +3,7 @@ import type { CvBuilderDocumentDetail } from "../services/cvBuilderService";
 import {
   CvPreview,
   defaultSettings,
+  getCvPagePadding,
   normalizeCvValues,
   type BuilderSettings,
   type CvBuilderValues,
@@ -33,7 +34,7 @@ export async function createCvBuilderPdf(
           color: settings.textColor,
           fontFamily: settings.fontFamily,
           fontSize: settings.fontSize,
-          padding: settings.template === "modern" ? 0 : "44px 48px",
+          padding: getCvPagePadding(settings.template),
           overflow: "visible",
         }}
       >

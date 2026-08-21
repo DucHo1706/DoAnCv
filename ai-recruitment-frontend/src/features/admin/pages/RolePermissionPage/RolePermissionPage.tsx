@@ -28,7 +28,6 @@ const allPermissions = [
   { value: "manage_users", label: "Quản lý người dùng" },
   { value: "approve_jobs", label: "Duyệt tin tuyển dụng" },
   { value: "publish_close_jobs", label: "Khóa/Mở hiển thị tin tuyển dụng" },
-  { value: "train_ai_models", label: "Huấn luyện AI (Apriori & HUIM)" },
   { value: "manage_roles", label: "Quản lý vai trò & phân quyền" },
   { value: "view_audit_logs", label: "Xem nhật ký hoạt động" },
   { value: "manage_branches", label: "Quản lý chi nhánh & danh mục" },

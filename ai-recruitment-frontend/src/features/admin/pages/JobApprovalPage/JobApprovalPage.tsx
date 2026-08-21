@@ -39,6 +39,7 @@ import { RejectModal } from "./components/RejectModal";
 import { JobGridView } from "./components/JobGridView";
 import { JobTableView } from "./components/JobTableView";
 import { JobApprovalToolbar } from "./components/JobApprovalToolbar";
+import { formatJobDate, resolveJobLifecycle } from "../../../../utils/jobLifecycle";
 
 const { Paragraph, Text, Title } = Typography;
 
@@ -55,12 +56,7 @@ type PendingJobTableItem = {
 };
 
 function formatDate(value?: string | null) {
-  if (!value) return "Chưa cập nhật";
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-
-  return date.toLocaleDateString("vi-VN");
+  return formatJobDate(value);
 }
 
 function JobApprovalPage() {
@@ -172,10 +168,10 @@ function JobApprovalPage() {
       const matchesStatus =
         selectedStatus === "all" ||
         (selectedStatus === "pending" && job.status === "Pending") ||
-        (selectedStatus === "active" && job.status === "Published") ||
+        (selectedStatus === "active" && resolveJobLifecycle(job) === "Recruiting") ||
+        (selectedStatus === "expired" && resolveJobLifecycle(job) === "Expired") ||
         (selectedStatus === "archived" && job.status === "Archived") ||
-        (selectedStatus === "closed" &&
-          (job.status === "Closed" || job.status === "Locked"));
+        (selectedStatus === "closed" && resolveJobLifecycle(job) === "Closed");
 
       const matchesRecruiter =
         selectedRecruiterEmail === "all" ||
@@ -384,8 +380,12 @@ function JobApprovalPage() {
       j.salaryRange || "Chưa cập nhật",
       j.recruiter?.name || "HR",
       j.recruiter?.email || "N/A",
-      j.status === "Published"
-        ? "Đang chạy"
+      resolveJobLifecycle(j) === "Recruiting"
+        ? "Đang tuyển"
+        : resolveJobLifecycle(j) === "Expired"
+        ? "Đã duyệt · Hết hạn"
+        : resolveJobLifecycle(j) === "Scheduled"
+        ? "Đã duyệt · Sắp mở"
         : j.status === "Pending"
         ? "Chờ duyệt"
         : j.status === "Rejected"
@@ -403,7 +403,8 @@ function JobApprovalPage() {
 
   const totalJobsCount = jobs.length;
   const pendingJobsCount = jobs.filter((j) => j.status === "Pending").length;
-  const publishedJobsCount = jobs.filter((j) => j.status === "Published").length;
+  const publishedJobsCount = jobs.filter((j) => resolveJobLifecycle(j) === "Recruiting").length;
+  const expiredJobsCount = jobs.filter((j) => resolveJobLifecycle(j) === "Expired").length;
   const rejectedJobsCount = jobs.filter((j) => j.status === "Rejected").length;
   const closedJobsCount = jobs.filter((j) => j.status === "Closed" || j.status === "Locked").length;
   const archivedJobsCount = jobs.filter((j) => j.status === "Archived").length;
@@ -477,10 +478,25 @@ function JobApprovalPage() {
       width: 150,
       render: (_: any, record: PendingJobTableItem) => {
         const st = record.raw.status;
-        if (st === "Published") {
+        const lifecycle = resolveJobLifecycle(record.raw);
+        if (lifecycle === "Expired") {
+          return (
+            <Tag color="error" style={{ borderRadius: 6, fontWeight: 700, padding: "3px 10px" }}>
+              Đã duyệt · Hết hạn
+            </Tag>
+          );
+        }
+        if (lifecycle === "Scheduled") {
+          return (
+            <Tag color="processing" style={{ borderRadius: 6, fontWeight: 700, padding: "3px 10px" }}>
+              Đã duyệt · Sắp mở
+            </Tag>
+          );
+        }
+        if (lifecycle === "Recruiting") {
           return (
             <Tag color="success" style={{ borderRadius: 6, fontWeight: 700, padding: "3px 10px" }}>
-              Đang chạy
+              Đang tuyển
             </Tag>
           );
         }
@@ -544,7 +560,7 @@ function JobApprovalPage() {
               </Button>
             </>
           )}
-          {(record.raw.status === "Published" || record.raw.status === "Closed") && (
+          {(record.raw.status === "Published" || record.raw.status === "Closed") && resolveJobLifecycle(record.raw) !== "Expired" && (
             <Popconfirm
               title={
                 record.raw.status === "Published"
@@ -659,8 +675,8 @@ function JobApprovalPage() {
                 <Text type="secondary" style={{ fontSize: 13, fontWeight: 600 }}>ĐANG CHẠY</Text>
                 <CheckCircleOutlined style={{ fontSize: 22, color: "#10B981" }} />
               </div>
-              <Title level={2} style={{ margin: 0, fontWeight: 800, color: "#0F172A" }}>{publishedJobsCount}</Title>
-              <Text type="secondary" style={{ fontSize: 12 }}>Đang công khai tuyển dụng</Text>
+          <Title level={2} style={{ margin: 0, fontWeight: 800, color: "#0F172A" }}>{publishedJobsCount}</Title>
+              <Text type="secondary" style={{ fontSize: 12 }}>Công khai và còn hạn tuyển dụng</Text>
             </Space>
           </Card>
         </Col>
@@ -708,6 +724,7 @@ function JobApprovalPage() {
         counts={{
           pending: pendingJobsCount,
           active: publishedJobsCount,
+          expired: expiredJobsCount,
           closed: closedJobsCount,
           archived: archivedJobsCount,
           all: totalJobsCount,

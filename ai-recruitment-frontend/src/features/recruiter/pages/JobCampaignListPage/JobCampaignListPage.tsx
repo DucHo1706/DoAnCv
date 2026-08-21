@@ -23,8 +23,21 @@ import PageContainer from "../../../../components/common/PageContainer";
 import EmptyState from "../../../../components/common/EmptyState";
 import AiCoreIcon from "../../../../components/common/AiCoreIcon";
 import { useJobCampaigns } from "./hooks/useJobCampaigns";
+import { formatJobDate } from "../../../../utils/jobLifecycle";
 
 const { Text, Title } = Typography;
+
+function getCampaignStatusMeta(status: string) {
+  if (status === "Recruiting") return { label: "Đang tuyển", color: "success" };
+  if (status === "Scheduled") return { label: "Sắp mở tuyển", color: "processing" };
+  if (status === "Expired") return { label: "Đã hết hạn", color: "error" };
+  if (status === "Pending") return { label: "Chờ duyệt", color: "gold" };
+  if (status === "Rejected") return { label: "Bị từ chối", color: "error" };
+  if (status === "Closed") return { label: "Đã tạm ẩn", color: "default" };
+  if (status === "Archived") return { label: "Đã lưu trữ", color: "default" };
+  if (status === "Flagged") return { label: "Đang kiểm duyệt", color: "warning" };
+  return { label: status || "Chưa xác định", color: "default" };
+}
 
 export default function JobCampaignListPage() {
   const navigate = useNavigate();
@@ -115,8 +128,12 @@ export default function JobCampaignListPage() {
                 setJobCurrentPage(1);
               }}
               options={[
-                { label: "Đang tuyển", value: "Published" },
+                { label: "Đang tuyển", value: "Recruiting" },
+                { label: "Đã hết hạn", value: "Expired" },
+                { label: "Sắp mở tuyển", value: "Scheduled" },
                 { label: "Chờ duyệt", value: "Pending" },
+                { label: "Đã tạm ẩn", value: "Closed" },
+                { label: "Bị từ chối", value: "Rejected" },
               ]}
             />
             {hasJobFilters && (
@@ -161,6 +178,7 @@ export default function JobCampaignListPage() {
           <Row gutter={[20, 20]} style={{ marginTop: 8 }}>
             {paginatedJobs.map((job: any) => {
               const stats = job.stats;
+              const statusMeta = getCampaignStatusMeta(job.lifecycleStatus);
               return (
                 <Col xs={24} md={12} xl={8} key={job.id}>
                   <Card
@@ -211,13 +229,18 @@ export default function JobCampaignListPage() {
                             ● {stats.newApps} CV mới chưa đọc
                           </Tag>
                         )}
-                        <Tag color={job.isApproved ? "success" : "gold"} style={{ borderRadius: 8, margin: 0 }}>
-                          {job.isApproved ? "Đang tuyển" : "Chờ duyệt"}
+                        <Tag color={statusMeta.color} style={{ borderRadius: 8, margin: 0 }}>
+                          {statusMeta.label}
                         </Tag>
                       </div>
                     </div>
 
                     <Divider style={{ margin: "16px 0" }} />
+
+                    <Text type="secondary" style={{ display: "block", marginBottom: 12, fontSize: 12 }}>
+                      Hạn nhận hồ sơ: {formatJobDate(job.deadline)}
+                      {job.recruitmentRound > 1 ? ` · Đợt ${job.recruitmentRound}` : ""}
+                    </Text>
 
                     <div
                       style={{

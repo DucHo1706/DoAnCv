@@ -38,6 +38,12 @@ class AprioriTrainRequest(BaseModel):
     transactions: List[List[str]]
     min_support: Optional[float] = 0.05
     min_confidence: Optional[float] = 0.3
+    domain: Optional[str] = None
+    taxonomy_skills: Optional[List[str]] = None
+    taxonomy_aliases: Optional[Dict[str, str]] = None
+    dataset_id: Optional[str] = None
+    min_support_count: Optional[int] = 2
+    reset_models: bool = False
 
 class SkillRecommendRequest(BaseModel):
     current_skills: List[str]
@@ -51,3 +57,9 @@ class HUIMTrainRequest(BaseModel):
     transactions: List[HUIMTransaction]
     external_utilities: Dict[str, float]
     min_utility: float
+    domain: Optional[str] = None
+    taxonomy_skills: Optional[List[str]] = None
+    taxonomy_aliases: Optional[Dict[str, str]] = None
+    dataset_id: Optional[str] = None
+    min_support_count: Optional[int] = 2
+    reset_models: bool = False

@@ -9,6 +9,7 @@ interface MockInterviewQuestion {
   intention: string;
   star_guide: string;
   best_answer: string;
+  is_fallback?: boolean;
 }
 
 interface InterviewQuestionsTabProps {
@@ -66,6 +67,16 @@ const InterviewQuestionsTab: React.FC<InterviewQuestionsTabProps> = ({ interview
           AI dựa trên CV và JD của vị trí tuyển dụng để tổng hợp các chủ đề ôn tập cốt lõi cùng các đường dẫn tài liệu tự học hữu ích trên internet.
         </Text>
       </div>
+
+      {interviewQuestions.some((item) => item.is_fallback) && (
+        <Alert
+          message="Đang hiển thị lộ trình cơ bản"
+          description="Các chủ đề được chọn từ kỹ năng trong CV và phần còn thiếu so với JD. Bạn có thể thử lại khi dịch vụ AI hoạt động để nhận lộ trình chuyên sâu hơn."
+          type="info"
+          showIcon
+          style={{ borderRadius: 12 }}
+        />
+      )}
 
       {interviewQuestions.length > 0 ? (
         <Card

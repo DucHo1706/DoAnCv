@@ -46,7 +46,9 @@ namespace RecruitmentBackend.Services
         {
             string normalizedName = request.Name.Trim();
 
-            var existingLevel = await _context.JobLevels.FirstOrDefaultAsync(l => l.Name.ToLower() == normalizedName.ToLower() && l.ParentId == request.ParentId);
+            var levels = await _context.JobLevels.ToListAsync();
+            var existingLevel = levels.FirstOrDefault(level =>
+                JobLevelCatalog.AreEquivalent(level.Name, normalizedName));
             if (existingLevel != null)
             {
                 return (false, "Tên này đã tồn tại trong cùng một cấp", null);
@@ -55,9 +57,13 @@ namespace RecruitmentBackend.Services
             if (string.IsNullOrEmpty(request.ParentId) == false)
             {
                 var parentLevel = await _context.JobLevels.FindAsync(request.ParentId);
-                if (parentLevel == null) 
+                if (parentLevel == null || !parentLevel.IsActive)
                 {
-                    return (false, "Cấp bậc cha không tồn tại", null);
+                    return (false, "Nhóm cấp bậc cha không tồn tại hoặc đã bị khóa", null);
+                }
+                if (parentLevel.ParentId != null)
+                {
+                    return (false, "Chỉ nhóm cấp bậc gốc mới có thể chứa cấp bậc con", null);
                 }
             }
 
@@ -90,7 +96,10 @@ namespace RecruitmentBackend.Services
 
             string normalizedName = request.Name.Trim();
 
-            var existingLevel = await _context.JobLevels.FirstOrDefaultAsync(l => l.JobLevelID != id && l.Name.ToLower() == normalizedName.ToLower() && l.ParentId == request.ParentId);
+            var levels = await _context.JobLevels.ToListAsync();
+            var existingLevel = levels.FirstOrDefault(level =>
+                level.JobLevelID != id
+                && JobLevelCatalog.AreEquivalent(level.Name, normalizedName));
             if (existingLevel != null)
             {
                 return (false, "Tên này đã tồn tại trong cùng một cấp", null);
@@ -104,9 +113,17 @@ namespace RecruitmentBackend.Services
                 }
 
                 var parentLevel = await _context.JobLevels.FindAsync(request.ParentId);
-                if (parentLevel == null) 
+                if (parentLevel == null || !parentLevel.IsActive)
                 {
-                    return (false, "Cấp bậc cha không tồn tại", null);
+                    return (false, "Nhóm cấp bậc cha không tồn tại hoặc đã bị khóa", null);
+                }
+                if (parentLevel.ParentId != null)
+                {
+                    return (false, "Chỉ nhóm cấp bậc gốc mới có thể chứa cấp bậc con", null);
+                }
+                if (jobLevel.SubLevels.Any())
+                {
+                    return (false, "Nhóm đang có cấp bậc con nên không thể chuyển thành cấp con", null);
                 }
             }
 

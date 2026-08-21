@@ -14,30 +14,43 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 # Nap cac bien moi truong tu .env truoc khi nap cac services
 load_dotenv()
 
-from services.skills_sync_service import fetch_skills_from_db_on_startup
+from services.skills_sync_service import fetch_skills_from_db_on_startup, seconds_until_next_sync
 from controllers.analysis_controller import router as analysis_router
 from controllers.chat_controller import router as chat_router
 from controllers.skills_controller import router as skills_router
 from controllers.search_controller import router as search_router
 from utils.logger import logger
 
-async def sync_skills_with_retry():
-    """Synchronize after startup without blocking the AI service health endpoint."""
+async def sync_skills_with_retry() -> bool:
+    """Đồng bộ mà không chặn health endpoint của AI service."""
     for attempt in range(1, 7):
         if attempt > 1:
             await asyncio.sleep(10)
 
         success = await asyncio.to_thread(fetch_skills_from_db_on_startup)
         if success:
-            return
+            return True
 
         logger.warning("Skill synchronization attempt %s/6 failed; retrying.", attempt)
 
     logger.error("Skill synchronization could not reach the backend after 6 attempts.")
+    return False
+
+
+async def run_taxonomy_sync_scheduler():
+    await sync_skills_with_retry()
+    while True:
+        delay_seconds = seconds_until_next_sync()
+        logger.info(
+            "Taxonomy scheduler will check SQL data again at 02:00 Vietnam time (in %.0f seconds).",
+            delay_seconds,
+        )
+        await asyncio.sleep(delay_seconds)
+        await sync_skills_with_retry()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    sync_task = asyncio.create_task(sync_skills_with_retry())
+    sync_task = asyncio.create_task(run_taxonomy_sync_scheduler())
     try:
         yield
     finally:

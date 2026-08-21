@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { message } from "antd";
 import dayjs from "dayjs";
@@ -19,6 +19,7 @@ export function useCampaignApplications() {
   const { jobId } = useParams<{ jobId: string }>();
 
   const [applications, setApplications] = useState<ApplicationDto[]>([]);
+  const applicationsRef = useRef<ApplicationDto[]>([]);
   const [jobs, setJobs] = useState<JobDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -44,6 +45,10 @@ export function useCampaignApplications() {
   const [rankingCandidates, setRankingCandidates] = useState<CandidateRankingItem[]>([]);
   const [rankingLoading, setRankingLoading] = useState(false);
   const [rankingError, setRankingError] = useState("");
+
+  useEffect(() => {
+    applicationsRef.current = applications;
+  }, [applications]);
 
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedApplicationIds, setSelectedApplicationIds] = useState<string[]>([]);
@@ -126,7 +131,7 @@ export function useCampaignApplications() {
         const apiBase = import.meta.env.VITE_API_URL || "/api";
         const hubUrl = apiBase.replace(/\/api\/?$/, "") + "/hubs/ai-evaluation";
         connection = new signalR.HubConnectionBuilder()
-          .withUrl(hubUrl)
+          .withUrl(hubUrl, { accessTokenFactory: () => localStorage.getItem("token") || "" })
           .withAutomaticReconnect()
           .build();
 
@@ -150,6 +155,18 @@ export function useCampaignApplications() {
         });
 
         await connection.start();
+
+        const currentApplications = applicationsRef.current;
+        for (const application of currentApplications) {
+          const applicationId = application.id;
+          if (applicationId) {
+            try {
+              await connection.invoke("JoinApplicationGroup", applicationId);
+            } catch (joinError) {
+              console.warn("Không thể tham gia kênh cập nhật AI của hồ sơ:", joinError);
+            }
+          }
+        }
       } catch (err: any) {
         console.warn("[SignalR] Kết nối SignalR thất bại, sử dụng fallback.", err);
       }
@@ -163,7 +180,7 @@ export function useCampaignApplications() {
         connection.stop().catch((err: any) => console.error("[SignalR] Stop error", err));
       }
     };
-  }, []);
+  }, [applications.length]);
 
   // Fetch Rankings for current jobId
   useEffect(() => {
@@ -449,6 +466,11 @@ export function useCampaignApplications() {
   const handleStatusChange = async (record: ApplicationDto, newStatus: string) => {
     if (newStatus === "Rejected") {
       openRejectModal(record);
+      return;
+    }
+
+    if (newStatus === "Interview") {
+      openScheduleModal(record);
       return;
     }
 

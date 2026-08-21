@@ -14,6 +14,7 @@ import {
   EditOutlined,
   InboxOutlined,
   UndoOutlined,
+  CopyOutlined,
 } from "@ant-design/icons";
 import {
   Button,
@@ -40,6 +41,7 @@ import type {
   JobDto,
 } from "../../services/jobService";
 import { appTheme } from "../../../../constants/theme";
+import { formatJobDate, resolveJobLifecycle, type JobLifecycleStatus } from "../../../../utils/jobLifecycle";
 
 const { Text } = Typography;
 type JobStatus = "approved" | "pending" | "closed" | "rejected" | "archived" | "flagged";
@@ -55,15 +57,24 @@ type JobTableItem = {
   location: string;
   status: JobStatus;
   isExpired: boolean;
+  activityState: "active" | "expired" | "not-open" | "closed";
+  lifecycleStatus: JobLifecycleStatus;
+  deadline?: string | null;
   raw: JobDtoExtended;
 };
 
-function getStatusMeta(status: JobStatus) {
+function getStatusMeta(status: JobStatus, lifecycleStatus: JobLifecycleStatus) {
+  if (lifecycleStatus === "Expired") {
+    return { label: "Đã duyệt · Hết hạn", color: "error" as const, icon: <ClockCircleFilled /> };
+  }
+  if (lifecycleStatus === "Scheduled") {
+    return { label: "Đã duyệt · Sắp mở", color: "processing" as const, icon: <ClockCircleFilled /> };
+  }
   if (status === "approved") {
-    return { label: "Đang hiển thị", color: "success" as const, icon: <CheckCircleFilled /> };
+    return { label: "Đã duyệt · Đang tuyển", color: "success" as const, icon: <CheckCircleFilled /> };
   }
   if (status === "closed") {
-    return { label: "Tạm ẩn", color: "default" as const, icon: <LockFilled /> };
+    return { label: "Đã duyệt · Tạm ẩn", color: "default" as const, icon: <LockFilled /> };
   }
   if (status === "rejected") {
     return { label: "Bị từ chối", color: "error" as const, icon: <CloseCircleFilled /> };
@@ -127,7 +138,16 @@ function JobManagementPage() {
       status = "flagged";
     }
     const categoryNames = job.category?.name || "Chưa cập nhật";
-    const isExpired = job.deadline ? new Date(job.deadline) < new Date() : false;
+    const lifecycleStatus = resolveJobLifecycle(job);
+    const isExpired = lifecycleStatus === "Expired";
+    const activityState: JobTableItem["activityState"] =
+      isExpired
+        ? "expired"
+        : lifecycleStatus === "Recruiting"
+          ? "active"
+          : status === "closed" || status === "archived" || status === "rejected"
+            ? "closed"
+            : "not-open";
 
     return {
       id: job.id,
@@ -136,14 +156,17 @@ function JobManagementPage() {
       location: job.branch?.name || "Toàn quốc",
       status,
       isExpired,
+      activityState,
+      lifecycleStatus,
+      deadline: job.deadline,
       raw: job,
     };
   });
 
-  const approvedJobs = tableData.filter((j) => j.status === "approved" && !j.isExpired).length;
+  const approvedJobs = tableData.filter((j) => j.lifecycleStatus === "Recruiting").length;
   const pendingJobs = tableData.filter((j) => j.status === "pending").length;
   const rejectedJobs = tableData.filter((j) => j.status === "rejected").length;
-  const expiredJobs = tableData.filter((j) => j.isExpired).length;
+  const expiredJobs = tableData.filter((j) => j.activityState === "expired").length;
 
   const hasActiveFilters = searchQuery !== "" || filterStatus !== undefined || filterCategory !== undefined || filterActivity !== undefined;
 
@@ -161,9 +184,11 @@ function JobManagementPage() {
     
     let matchesActivity = true;
     if (filterActivity === "active") {
-      matchesActivity = !item.isExpired;
+      matchesActivity = item.activityState === "active";
     } else if (filterActivity === "expired") {
-      matchesActivity = item.isExpired;
+      matchesActivity = item.activityState === "expired";
+    } else if (filterActivity === "not-open") {
+      matchesActivity = item.activityState === "not-open" || item.activityState === "closed";
     }
 
     return matchesSearch && matchesStatus && matchesCategory && matchesActivity;
@@ -239,7 +264,7 @@ function JobManagementPage() {
       key: "status",
       width: 170,
       render: (value: JobStatus, record: JobTableItem) => {
-        const meta = getStatusMeta(value);
+        const meta = getStatusMeta(value, record.lifecycleStatus);
         const tag = (
           <Tag color={meta.color} icon={meta.icon} style={{ borderRadius: 6, fontWeight: 500 }}>
             {meta.label}
@@ -260,14 +285,19 @@ function JobManagementPage() {
       key: "activity",
       width: 160,
       render: (_: unknown, record: JobTableItem) => {
-        return record.isExpired ? (
+        const deadlineText = record.deadline ? formatJobDate(record.deadline) : "Chưa đặt hạn";
+        if (record.activityState === "not-open") {
+          return <><Text type="secondary" style={{ display: "block", fontSize: 12 }}>{deadlineText}</Text><Tag color="warning" icon={<ClockCircleOutlined />} style={{ borderRadius: 6 }}>Chưa mở tuyển</Tag></>;
+        }
+        if (record.activityState === "closed") {
+          return <><Text type="secondary" style={{ display: "block", fontSize: 12 }}>{deadlineText}</Text><Tag color="default" icon={<LockOutlined />} style={{ borderRadius: 6 }}>Đã đóng</Tag></>;
+        }
+        return record.activityState === "expired" ? (
           <Tag color="error" icon={<ClockCircleOutlined />} style={{ borderRadius: 6 }}>
-            Hết hạn
+            <Text delete style={{ color: "inherit" }}>{deadlineText}</Text> · Hết hạn
           </Tag>
         ) : (
-          <Tag color="success" icon={<CheckCircleOutlined />} style={{ borderRadius: 6 }}>
-            Đang tuyển
-          </Tag>
+          <><Text type="secondary" style={{ display: "block", fontSize: 12 }}>{deadlineText}</Text><Tag color="success" icon={<CheckCircleOutlined />} style={{ borderRadius: 6 }}>Đang tuyển</Tag></>
         );
       },
     },
@@ -286,7 +316,7 @@ function JobManagementPage() {
           >
             Chi tiết
           </Button>
-          {record.status !== "archived" && record.raw.status !== "Flagged" && (
+          {record.status !== "archived" && record.raw.status !== "Flagged" && !record.isExpired && (
             <Button
               size="small"
               icon={<EditOutlined />}
@@ -296,7 +326,7 @@ function JobManagementPage() {
               Sửa
             </Button>
           )}
-          {(record.status === "approved" || record.status === "closed") && (
+          {(record.status === "approved" || record.status === "closed") && !record.isExpired && (
             <Popconfirm
               title={
                 record.status === "approved"
@@ -317,6 +347,17 @@ function JobManagementPage() {
                 {record.status === "approved" ? "Tạm ẩn" : "Hiển thị"}
               </Button>
             </Popconfirm>
+          )}
+          {record.isExpired && (
+            <Button
+              size="small"
+              type="primary"
+              icon={<CopyOutlined />}
+              onClick={() => navigate(`/recruiter/jobs/${record.id}/repost`)}
+              style={{ borderRadius: 6 }}
+            >
+              Đăng lại
+            </Button>
           )}
           {record.raw.status !== "Flagged" && (record.status === "archived" ? (
             <Popconfirm
@@ -366,7 +407,7 @@ function JobManagementPage() {
     >
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
         <Col xs={12} sm={6}>
-          <StatCard title="Tin đang hiển thị" value={approvedJobs} subtitle="Đã duyệt & Đang tuyển" accent="success" index={0} />
+          <StatCard title="Tin đang tuyển" value={approvedJobs} subtitle="Đã duyệt và còn hạn nhận CV" accent="success" index={0} />
         </Col>
         <Col xs={12} sm={6}>
           <StatCard title="Tin chờ duyệt" value={pendingJobs} subtitle="Đang chờ quản trị viên duyệt" accent="warning" index={1} />
@@ -412,7 +453,7 @@ function JobManagementPage() {
                 value={filterStatus}
                 onChange={setFilterStatus}
                 options={[
-                  { label: "Đang hiển thị", value: "approved" },
+                  { label: "Đã duyệt", value: "approved" },
                   { label: "Tạm ẩn", value: "closed" },
                   { label: "Chờ duyệt", value: "pending" },
                   { label: "Bị từ chối", value: "rejected" },
@@ -429,6 +470,7 @@ function JobManagementPage() {
                 options={[
                   { label: "Đang tuyển", value: "active" },
                   { label: "Hết hạn", value: "expired" },
+                  { label: "Chưa mở / đã đóng", value: "not-open" },
                 ]}
               />
 
@@ -454,6 +496,7 @@ function JobManagementPage() {
           style={{ marginTop: 8 }}
         />
       </Card>
+
     </PageContainer>
   );
 }

@@ -21,6 +21,14 @@ namespace RecruitmentBackend.DTOs.Responses
 
         public int MatchScore { get; set; }
 
+        public List<string> MatchedSkills { get; set; } = new();
+
+        public List<string> MissingSkills { get; set; } = new();
+
+        public int JobSkillCount { get; set; }
+
+        public string ScoreMethod { get; set; } = "JOB_SKILL_COVERAGE";
+
         public string Reason { get; set; }
 
         public string SalaryRange { get; set; }

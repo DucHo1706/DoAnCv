@@ -47,6 +47,7 @@ import PageContainer from "../../../../components/common/PageContainer";
 import axiosClient from "../../../../services/axiosClient";
 import { authService } from "../../../../services/authService";
 import { appTheme } from "../../../../constants/theme";
+import { resolveJobLifecycle } from "../../../../utils/jobLifecycle";
 
 const { Text, Title, Paragraph } = Typography;
 
@@ -201,10 +202,14 @@ export default function RecruiterProfilePage() {
     return Math.min(score, 100);
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "Published":
+  const getStatusBadge = (job: { status: string; deadline?: string | null }) => {
+    switch (resolveJobLifecycle(job)) {
+      case "Recruiting":
         return <Tag icon={<CheckCircleFilled />} color="success">Đang tuyển</Tag>;
+      case "Scheduled":
+        return <Tag icon={<ClockCircleFilled />} color="processing">Sắp mở tuyển</Tag>;
+      case "Expired":
+        return <Tag icon={<ClockCircleFilled />} color="error">Đã hết hạn</Tag>;
       case "Pending":
         return <Tag icon={<ClockCircleFilled />} color="warning">Chờ duyệt</Tag>;
       case "Rejected":
@@ -236,7 +241,7 @@ export default function RecruiterProfilePage() {
       title: "Trạng thái",
       dataIndex: "status",
       key: "status",
-      render: (status: string) => getStatusBadge(status),
+      render: (_status: string, record: any) => getStatusBadge(record),
     },
     {
       title: "Lượt xem",

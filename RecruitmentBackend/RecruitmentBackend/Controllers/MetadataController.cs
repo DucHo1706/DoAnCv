@@ -65,5 +65,24 @@ namespace RecruitmentBackend.Controllers
 
             return Ok(branches);
         }
+
+        [HttpGet("criterion-groups")]
+        public async Task<IActionResult> GetCriterionGroups()
+        {
+            var groups = await _context.CriterionGroups
+                .Where(group => group.IsActive)
+                .OrderBy(group => group.DisplayOrder)
+                .ThenBy(group => group.Name)
+                .Select(group => new
+                {
+                    id = group.CriterionGroupID,
+                    name = group.Name,
+                    evaluationMode = group.EvaluationMode,
+                    description = group.Description
+                })
+                .ToListAsync();
+
+            return Ok(groups);
+        }
     }
 }

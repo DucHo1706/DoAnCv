@@ -27,6 +27,21 @@ obj/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Local Codex/runtime artifacts and deployment keys
+.local/
+.codex_vps_deploy_*
+.new_report_audit/
+.report_audit/
+.report_audit_final/
+.report_full_audit/
+.report_xml_check/
+_cv_backend_build/
+_cv_frontend_build/
+_pptx_build/
+RecruitmentBackend/_cv_backend_build/
+*.jtl
+resume
 # Upload folder (optional)
 Uploads/
 
@@ -68,3 +83,5 @@ Python/generate_visual_guide.py
 
 # Temporary test PDF files
 test*.pdf
+Python/runtime-data/
+RecruitmentBackend/RecruitmentBackend/App_Data/

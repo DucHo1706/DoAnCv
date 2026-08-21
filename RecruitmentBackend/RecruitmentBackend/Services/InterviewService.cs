@@ -69,7 +69,20 @@ namespace RecruitmentBackend.Services
                 }
 
                 // Cập nhật trạng thái sang "Interview"
+                string previousStatus = application.Status;
                 application.Status = ApplicationStatuses.Interview;
+                if (!string.Equals(previousStatus, ApplicationStatuses.Interview, StringComparison.Ordinal))
+                {
+                    _context.ApplicationStatusHistories.Add(new ApplicationStatusHistory
+                    {
+                        ApplicationID = application.ApplicationID,
+                        FromStatus = previousStatus,
+                        ToStatus = ApplicationStatuses.Interview,
+                        ChangedAtUtc = DateTime.UtcNow,
+                        ChangedByAccountID = accountId,
+                        Source = "InterviewScheduled"
+                    });
+                }
 
                 // Tạo hoặc cập nhật lịch phỏng vấn
                 var schedule = await _context.InterviewSchedules
@@ -141,7 +154,7 @@ namespace RecruitmentBackend.Services
                     }
                 };
 
-                return (true, "Lập lịch phỏng vấn và gửi email thành công.", dataToReturn);
+                return (true, "Lập lịch phỏng vấn và tạo thông báo thành công. Vui lòng gửi email mời ở bước tiếp theo.", dataToReturn);
             }
             catch (Exception ex)
             {
@@ -297,7 +310,20 @@ namespace RecruitmentBackend.Services
                 }
 
                 _context.InterviewSchedules.Remove(schedule);
+                string previousStatus = application.Status;
                 application.Status = ApplicationStatuses.Reviewing;
+                if (!string.Equals(previousStatus, ApplicationStatuses.Reviewing, StringComparison.Ordinal))
+                {
+                    _context.ApplicationStatusHistories.Add(new ApplicationStatusHistory
+                    {
+                        ApplicationID = application.ApplicationID,
+                        FromStatus = previousStatus,
+                        ToStatus = ApplicationStatuses.Reviewing,
+                        ChangedAtUtc = DateTime.UtcNow,
+                        ChangedByAccountID = accountId,
+                        Source = "InterviewCancelled"
+                    });
+                }
 
                 await _context.SaveChangesAsync();
 

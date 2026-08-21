@@ -7,11 +7,13 @@ const { Title, Text } = Typography;
 interface ApplySuccessModalProps {
   open: boolean;
   onCancel: () => void;
+  onContinueBrowsing: () => void;
 }
 
 const ApplySuccessModal: React.FC<ApplySuccessModalProps> = ({
   open,
   onCancel,
+  onContinueBrowsing,
 }) => {
   return (
     <Modal open={open} onCancel={onCancel} footer={null} centered width={520}>
@@ -37,12 +39,15 @@ const ApplySuccessModal: React.FC<ApplySuccessModalProps> = ({
         </Title>
 
         <Text type="secondary" style={{ fontSize: "15px", display: "block", marginBottom: 32 }}>
-          Chúc mừng! Tuyển Dụng AI đã nhận được CV của bạn và sẽ gửi đến nhà tuyển dụng xem xét trong thời gian sớm nhất.
+          Hồ sơ đã được ghi nhận. AI sẽ tiếp tục phân tích trong nền; bạn có thể ứng tuyển công việc khác ngay mà không cần chờ kết quả.
         </Text>
 
-        <div style={{ display: "flex", justifyContent: "center" }}>
-          <Button type="primary" size="large" onClick={onCancel} style={{ padding: "0 40px", borderRadius: 8 }}>
-            Xác nhận & Đóng
+        <div style={{ display: "flex", justifyContent: "center", gap: 12, flexWrap: "wrap" }}>
+          <Button size="large" onClick={onCancel} style={{ borderRadius: 8 }}>
+            Ở lại trang này
+          </Button>
+          <Button type="primary" size="large" onClick={onContinueBrowsing} style={{ borderRadius: 8, background: "#2563EB" }}>
+            Tiếp tục tìm việc
           </Button>
         </div>
       </div>

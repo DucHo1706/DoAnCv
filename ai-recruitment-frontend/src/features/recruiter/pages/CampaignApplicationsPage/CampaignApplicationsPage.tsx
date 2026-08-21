@@ -41,8 +41,20 @@ import { useCampaignApplications } from "./hooks/useCampaignApplications";
 import { KanbanBoard } from "./components/KanbanBoard";
 import { AiReportDrawer } from "./components/AiReportDrawer";
 import { ScheduleModalContent } from "./components/ScheduleModalContent";
+import { formatJobDate, resolveJobLifecycle } from "../../../../utils/jobLifecycle";
 
 const { Text, Title, Paragraph } = Typography;
+
+function getCampaignLifecycleTag(status: string) {
+  if (status === "Recruiting") return <Tag color="success" style={{ borderRadius: 6 }}>Đang tuyển</Tag>;
+  if (status === "Scheduled") return <Tag color="processing" style={{ borderRadius: 6 }}>Sắp mở tuyển</Tag>;
+  if (status === "Expired") return <Tag color="error" style={{ borderRadius: 6 }}>Đã duyệt · Hết hạn</Tag>;
+  if (status === "Closed") return <Tag color="default" style={{ borderRadius: 6 }}>Đã duyệt · Tạm ẩn</Tag>;
+  if (status === "Rejected") return <Tag color="error" style={{ borderRadius: 6 }}>Bị từ chối</Tag>;
+  if (status === "Archived") return <Tag color="default" style={{ borderRadius: 6 }}>Đã lưu trữ</Tag>;
+  if (status === "Flagged") return <Tag color="warning" style={{ borderRadius: 6 }}>Đang kiểm duyệt</Tag>;
+  return <Tag color="gold" style={{ borderRadius: 6 }}>Chờ duyệt</Tag>;
+}
 
 function renderAiDataStatusTag(application: ApplicationDto) {
   let color = "default";
@@ -313,7 +325,7 @@ export default function CampaignApplicationsPage() {
     {
       title: "Thao tác",
       key: "action",
-      width: 390,
+      width: 510,
       align: "center" as const,
       render: (_: any, record: ApplicationDto) => (
         <Space size="small" wrap={false}>
@@ -327,6 +339,15 @@ export default function CampaignApplicationsPage() {
             style={{ borderRadius: 8 }}
           >
             Email
+          </Button>
+
+          <Button
+            icon={<CalendarOutlined />}
+            disabled={record.status === "Rejected"}
+            onClick={() => openScheduleModal(record)}
+            style={{ borderRadius: 8, color: "#2563EB", borderColor: "#2563EB" }}
+          >
+            {record.status === "Interview" ? "Sửa lịch" : "Tạo lịch"}
           </Button>
 
           <Button
@@ -410,11 +431,10 @@ export default function CampaignApplicationsPage() {
     }
   }
 
-  const deadlineDate = currentJob?.deadline ? new Date(currentJob.deadline) : null;
-  const isExpired = deadlineDate ? deadlineDate < new Date() : false;
+  const lifecycleStatus = currentJob ? resolveJobLifecycle(currentJob) : "";
   const formatDate = (d: string | null | undefined) => {
     if (!d) return "Không giới hạn";
-    return new Date(d).toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" });
+    return formatJobDate(d);
   };
 
   return (
@@ -471,16 +491,7 @@ export default function CampaignApplicationsPage() {
                 <Title level={5} style={{ margin: 0, color: "#0F172A", fontSize: 16 }}>
                   Chiến dịch: {currentJob.position?.name}
                 </Title>
-                {currentJob.status === "Published" ? (
-                  <Tag color="success" style={{ borderRadius: 6 }}>
-                    Đang tuyển
-                  </Tag>
-                ) : (
-                  <Tag color="warning" style={{ borderRadius: 6 }}>
-                    Chờ duyệt
-                  </Tag>
-                )}
-                {isExpired && <Tag color="error" style={{ borderRadius: 6 }}>Hết hạn</Tag>}
+                {getCampaignLifecycleTag(lifecycleStatus)}
               </div>
 
               <Space size={16} wrap style={{ color: "#64748B", fontSize: 13, marginBottom: 12 }}>

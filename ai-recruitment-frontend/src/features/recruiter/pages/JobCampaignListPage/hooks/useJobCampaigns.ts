@@ -4,6 +4,7 @@ import type { JobDto } from "../../../../jobs/services/jobService";
 import { recruitmentService } from "../../../services/recruitmentService";
 import type { ApplicationDto } from "../../../services/recruitmentService";
 import { removeVietnameseTones } from "../../../../../utils/exportUtils";
+import { resolveJobLifecycle } from "../../../../../utils/jobLifecycle";
 
 export function useJobCampaigns() {
   const [jobs, setJobs] = useState<JobDto[]>([]);
@@ -46,6 +47,7 @@ export function useJobCampaigns() {
       const jobApps = applications.filter((app) => app.jobId === job.id);
       return {
         ...job,
+        lifecycleStatus: resolveJobLifecycle(job),
         stats: {
           total: jobApps.length,
           newApps: jobApps.filter((app) => app.status === "Applied").length,
@@ -75,11 +77,7 @@ export function useJobCampaigns() {
       const matchesSearch =
         query === "" || title.includes(query) || cat.includes(query) || branch.includes(query);
       const matchesCategory = jobCategoryFilter ? job.category?.name === jobCategoryFilter : true;
-      const matchesStatus = jobStatusFilter
-        ? jobStatusFilter === "Published"
-          ? job.isApproved
-          : !job.isApproved
-        : true;
+      const matchesStatus = jobStatusFilter ? job.lifecycleStatus === jobStatusFilter : true;
       return matchesSearch && matchesCategory && matchesStatus;
     });
 

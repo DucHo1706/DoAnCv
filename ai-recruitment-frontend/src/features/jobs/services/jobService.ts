@@ -6,21 +6,34 @@ export interface JobDto {
   requirements: string;
   position: JobPositionDto;
   branch: BranchDto;
-  category?: { id: string; name: string } | null;
+  category?: { id: string; name: string; parentId?: string | null } | null;
   recruiter?: { id: string; name: string; email: string } | null;
   salaryRange: string;
   isActive: boolean;
   status: string;
   isApproved: boolean;
+  isRecruiting?: boolean;
+  isExpired?: boolean;
+  lifecycleStatus?: string | null;
   createdAt: string;
   startDate?: string | null;
   deadline?: string | null;
   maxCandidates?: number | null;
   jobLevel?: { name: string } | null;
   rejectReason?: string | null;
+  repostedFromJobId?: string | null;
+  campaignGroupId?: string | null;
+  recruitmentRound?: number;
 }
 
 export interface CategoryDto {
+  id: string;
+  name: string;
+  parentId?: string | null;
+  isActive: boolean;
+}
+
+export interface JobLevelDto {
   id: string;
   name: string;
   parentId?: string | null;
@@ -103,6 +116,11 @@ export const jobService = {
 
   async getJobPositions() {
     const response = await axiosClient.get<JobPositionDto[]>("/jobpositions");
+    return response.data;
+  },
+
+  async getJobLevels() {
+    const response = await axiosClient.get<JobLevelDto[]>("/joblevels");
     return response.data;
   },
 

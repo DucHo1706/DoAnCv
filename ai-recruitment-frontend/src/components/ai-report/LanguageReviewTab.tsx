@@ -1,6 +1,6 @@
 import React from "react";
 import { Space, Typography, Card, Alert, Row, Col, Tag } from "antd";
-import { CheckCircleOutlined, WarningOutlined, CloseCircleOutlined } from "@ant-design/icons";
+import { CheckCircleOutlined, WarningOutlined, QuestionCircleOutlined } from "@ant-design/icons";
 
 const { Title, Text } = Typography;
 
@@ -43,16 +43,8 @@ const LanguageReviewTab: React.FC<LanguageReviewTabProps> = ({ languageReview })
   const effectiveLanguage = lang.effective_language || lang.good_action_verbs || [];
   const weakPhrasesList = lang.weak_phrases || [];
 
-  const uncertainStatements =
-    lang.uncertain_statements ||
-    (lang.ai_generation_risk && lang.ai_generation_risk.detected
-      ? [
-          {
-            title: `Nghi vấn sử dụng AI tại phần: ${lang.ai_generation_risk.section} (${lang.ai_generation_risk.score}%)`,
-            description: lang.ai_generation_risk.comment,
-          },
-        ]
-      : []);
+  const uncertainStatements = lang.uncertain_statements || [];
+  const isLocalFallback = lang.is_fallback === true && lang.insufficient_data !== true;
 
   const hasData = !!(summaryText || effectiveLanguage.length > 0 || weakPhrasesList.length > 0);
 
@@ -68,11 +60,16 @@ const LanguageReviewTab: React.FC<LanguageReviewTabProps> = ({ languageReview })
             fontWeight: 700,
           }}
         >
-          Phân tích Ngôn từ & Chân thực từ AI
+          Phân tích Ngôn từ & Chân thực
+          {isLocalFallback && (
+            <Tag color="gold" style={{ marginLeft: 10, verticalAlign: 2, fontWeight: 600 }}>
+              Rà soát cục bộ
+            </Tag>
+          )}
         </Title>
         <Text type="secondary" style={{ fontSize: 14 }}>
-          AI sẽ đánh giá các yếu tố liên quan đến cách bạn dùng ngôn ngữ trong CV, cũng như các điểm
-          có thể chưa được chân thực hoặc gây hiểu lầm.
+          Hệ thống rà soát cách diễn đạt và những nội dung nên làm rõ. Hệ thống không xác minh
+          lời khai đúng hay sai và không xác định CV có được viết bằng AI hay không.
         </Text>
       </div>
 
@@ -86,20 +83,14 @@ const LanguageReviewTab: React.FC<LanguageReviewTabProps> = ({ languageReview })
         />
       ) : hasData ? (
         <>
-          {summaryText && (
+          {lang.overall_language_score !== null && lang.overall_language_score !== undefined && (
             <Alert
               message={
                 <span style={{ fontWeight: 600, color: "#1E3A8A" }}>
-                  Tổng quan đánh giá ngôn từ & chân thực (Điểm: {lang.overall_language_score || 0}/100)
-                </span>
-              }
-              description={
-                <span style={{ fontSize: "13.5px", lineHeight: "1.6", color: "#1E40AF" }}>
-                  {summaryText}
+                  Điểm diễn đạt tham khảo: {lang.overall_language_score}/100
                 </span>
               }
               type="info"
-              showIcon
               style={{ borderRadius: 12, background: "#EFF6FF", border: "1px solid #BFDBFE" }}
             />
           )}
@@ -249,19 +240,19 @@ const LanguageReviewTab: React.FC<LanguageReviewTabProps> = ({ languageReview })
                 ))}
               </div>
             ) : (
-              <Text type="secondary" style={{ fontStyle: "italic", fontSize: 13.5, color: "#10B981" }}>
-                Tuyệt vời! AI không phát hiện từ ngữ sáo rỗng hoặc mơ hồ nào trong CV này. 🎉
+              <Text type="secondary" style={{ fontStyle: "italic", fontSize: 13.5 }}>
+                Không ghi nhận cụm từ mơ hồ trong phạm vi nội dung đã rà soát.
               </Text>
             )}
           </Card>
 
-          {/* SỰ THIẾU CHÂN THỰC / AI GENERATION RISK */}
+          {/* NỘI DUNG CẦN ỨNG VIÊN LÀM RÕ */}
           {uncertainStatements && uncertainStatements.length > 0 && (
             <div style={{ marginTop: 8 }}>
               <Text
                 strong
                 style={{
-                  color: "#EF4444",
+                  color: "#B45309",
                   display: "block",
                   marginBottom: 12,
                   textTransform: "uppercase",
@@ -269,7 +260,7 @@ const LanguageReviewTab: React.FC<LanguageReviewTabProps> = ({ languageReview })
                   letterSpacing: 0.5,
                 }}
               >
-                <CloseCircleOutlined style={{ marginRight: 6 }} /> Phát hiện nguy cơ & Đánh giá mức độ chân thực
+                <QuestionCircleOutlined style={{ marginRight: 6 }} /> Nội dung diễn đạt cần làm rõ
               </Text>
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                 {uncertainStatements.map((statement: any, idx: number) => (
@@ -280,12 +271,12 @@ const LanguageReviewTab: React.FC<LanguageReviewTabProps> = ({ languageReview })
                       borderRadius: 12,
                       background: "#FFFFFF",
                       border: "1px solid #E2E8F0",
-                      borderLeft: "4px solid #EF4444",
+                      borderLeft: "4px solid #F59E0B",
                     }}
                     bodyStyle={{ padding: "16px" }}
                   >
                     <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
-                      <WarningOutlined style={{ color: "#EF4444", fontSize: "16px", marginTop: "3px" }} />
+                      <WarningOutlined style={{ color: "#D97706", fontSize: "16px", marginTop: "3px" }} />
                       <div>
                         <Text strong style={{ color: "#0F172A", fontSize: "15px", display: "block", marginBottom: 4 }}>
                           {statement.title || "Nhận định cần làm rõ"}
@@ -293,6 +284,11 @@ const LanguageReviewTab: React.FC<LanguageReviewTabProps> = ({ languageReview })
                         <Text type="secondary" style={{ color: "#64748B", fontSize: "14px" }}>
                           {statement.description}
                         </Text>
+                        {statement.evidence_text && (
+                          <Text type="secondary" style={{ display: "block", marginTop: 6, fontSize: "13px" }}>
+                            Đoạn trích trong CV: “{statement.evidence_text}” — đây là thông tin tự khai, chưa được xác minh.
+                          </Text>
+                        )}
                       </div>
                     </div>
                   </Card>
@@ -303,7 +299,7 @@ const LanguageReviewTab: React.FC<LanguageReviewTabProps> = ({ languageReview })
         </>
       ) : (
         <Alert
-          message="AI không tìm thấy dữ liệu phân tích ngôn từ hoặc chân thực cho CV này."
+          message="Hệ thống không tìm thấy đủ dữ liệu để phân tích chất lượng ngôn từ của CV này."
           type="warning"
           showIcon
           style={{ borderRadius: 12 }}

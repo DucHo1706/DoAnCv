@@ -11,6 +11,7 @@ import {
   StarOutlined,
   UserOutlined,
   ClockCircleOutlined,
+  CopyOutlined,
 } from "@ant-design/icons";
 import {
   Button,
@@ -33,20 +34,22 @@ import PageContainer from "../../../../components/common/PageContainer";
 import { jobService } from "../../services/jobService";
 import type { JobReviewResponse } from "../../services/jobService";
 import { appTheme } from "../../../../constants/theme";
+import { formatJobDate, resolveJobLifecycle } from "../../../../utils/jobLifecycle";
 
 const { Paragraph, Text, Title } = Typography;
 
 function formatDate(value?: string | null) {
-  if (!value) return "Chưa cập nhật";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleDateString("vi-VN");
+  return formatJobDate(value);
 }
 
-function getStatusMeta(isApproved: boolean) {
-  if (isApproved) {
-    return { label: "Đã duyệt", color: "green" as const };
-  }
+function getStatusMeta(lifecycleStatus: string) {
+  if (lifecycleStatus === "Recruiting") return { label: "Đã duyệt · Đang tuyển", color: "green" as const };
+  if (lifecycleStatus === "Scheduled") return { label: "Đã duyệt · Sắp mở", color: "processing" as const };
+  if (lifecycleStatus === "Expired") return { label: "Đã duyệt · Hết hạn", color: "red" as const };
+  if (lifecycleStatus === "Closed") return { label: "Đã duyệt · Tạm ẩn", color: "default" as const };
+  if (lifecycleStatus === "Rejected") return { label: "Bị từ chối", color: "red" as const };
+  if (lifecycleStatus === "Archived") return { label: "Đã lưu trữ", color: "default" as const };
+  if (lifecycleStatus === "Flagged") return { label: "Đang kiểm duyệt", color: "orange" as const };
   return { label: "Chờ duyệt", color: "gold" as const };
 }
 
@@ -97,12 +100,22 @@ export default function RecruiterJobDetailPage() {
     );
   }
 
-  const isExpired = jobDetail.jobInfo.deadline ? new Date(jobDetail.jobInfo.deadline) < new Date() : false;
-  const statusMeta = getStatusMeta(jobDetail.jobInfo.isApproved);
+  const lifecycleStatus = resolveJobLifecycle(jobDetail.jobInfo);
+  const isExpired = lifecycleStatus === "Expired";
+  const statusMeta = getStatusMeta(lifecycleStatus);
 
   return (
     <PageContainer title="Chi tiết tin tuyển dụng">
-      <div style={{ marginBottom: 16 }}>
+      <div
+        style={{
+          marginBottom: 16,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 12,
+          flexWrap: "wrap",
+        }}
+      >
         <Button
           icon={<ArrowLeftOutlined />}
           onClick={() => navigate("/recruiter/jobs")}
@@ -110,6 +123,16 @@ export default function RecruiterJobDetailPage() {
         >
           Quay lại danh sách
         </Button>
+        {isExpired && id && (
+          <Button
+            type="primary"
+            icon={<CopyOutlined />}
+            onClick={() => navigate(`/recruiter/jobs/${id}/repost`)}
+            style={{ borderRadius: 8 }}
+          >
+            Đăng lại tin này
+          </Button>
+        )}
       </div>
       {/* Top Header Card */}
       {/* Top Header Card */}
@@ -186,9 +209,6 @@ export default function RecruiterJobDetailPage() {
               <Space>
                 <Tag color={statusMeta.color} style={{ borderRadius: 6, padding: "2px 8px" }}>
                   {statusMeta.label}
-                </Tag>
-                <Tag color={isExpired ? "error" : "success"} style={{ borderRadius: 6, padding: "2px 8px" }}>
-                  {isExpired ? "Hết hạn" : "Đang tuyển dụng"}
                 </Tag>
               </Space>
               <Text type="secondary" style={{ fontSize: 12, marginTop: 4 }}>

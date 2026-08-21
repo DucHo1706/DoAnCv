@@ -15,6 +15,7 @@ import {
   ApartmentOutlined,
   SecurityScanOutlined,
   SettingOutlined,
+  SearchOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
 } from "@ant-design/icons";
@@ -121,6 +122,11 @@ export function SideNav({
           key: "/recruiter/talent-pool",
           icon: <DatabaseOutlined style={{ color: "#8B5CF6", fontSize: 16 }} />,
           label: <Link to="/recruiter/talent-pool">Kho ứng viên tiềm năng</Link>,
+        },
+        {
+          key: "/recruiter/candidate-search",
+          icon: <SearchOutlined style={{ color: "#0EA5E9", fontSize: 16 }} />,
+          label: <Link to="/recruiter/candidate-search">Tìm ứng viên</Link>,
         },
         {
           key: "/recruiter/email-logs",

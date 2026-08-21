@@ -34,6 +34,8 @@ namespace RecruitmentBackend.Services
 
             var position = await _context.Positions.FindAsync(request.PositionId);
             if (position == null) throw new Exception("Vị trí không tồn tại");
+
+            var recruitmentDates = NormalizeRecruitmentDates(request.StartDate, request.Deadline);
             
             decimal minSal = 0, maxSal = 0;
             if (!string.IsNullOrWhiteSpace(request.SalaryRange))
@@ -70,9 +72,9 @@ namespace RecruitmentBackend.Services
                 JobRequirement = request.Requirements,
                 SalaryMin = minSal, 
                 SalaryMax = maxSal,
-                StartDate = request.StartDate,
+                StartDate = recruitmentDates.StartDate,
                 MaxCandidates = request.MaxCandidates,
-                Deadline = request.Deadline ?? DateTime.Now.AddDays(30),
+                Deadline = recruitmentDates.Deadline,
                 Status = "Pending",
                 RejectReason = "",
                 ApprovedBy = "",
@@ -96,15 +98,13 @@ namespace RecruitmentBackend.Services
                 throw new Exception("Tên tiêu chí đánh giá không được để trống.");
             }
 
+            ValidateStructuredCriteria(request.Criteria);
+
             _context.JobPostings.Add(newJob);
 
-            var criteriaEntities = request.Criteria.Select(c => new JobCriterion
-            {
-                CriterionID = Guid.NewGuid().ToString(),
-                JobID = newJob.JobID,
-                Name = c.Name.Trim(),
-                Weight = c.Weight
-            }).ToList();
+            var criteriaEntities = request.Criteria
+                .Select((criterion, index) => CreateCriterionEntity(criterion, newJob.JobID, index))
+                .ToList();
 
             _context.JobCriteria.AddRange(criteriaEntities);
             await _context.SaveChangesAsync();
@@ -131,6 +131,163 @@ namespace RecruitmentBackend.Services
             return newJob.JobID;
         }
 
+        public async Task<(bool Success, string Message, string? JobId, int? RecruitmentRound)> RepostJobAsync(
+            string sourceJobId,
+            RepostJobRequest request,
+            string accountId)
+        {
+            if (request == null)
+            {
+                return (false, "Dữ liệu đăng lại tin tuyển dụng không hợp lệ.", null, null);
+            }
+
+            var recruiter = await _context.Recruiters.FirstOrDefaultAsync(item => item.AccountID == accountId);
+            if (recruiter == null)
+            {
+                return (false, "Không tìm thấy thông tin HR.", null, null);
+            }
+
+            var sourceJob = await _context.JobPostings
+                .Include(job => job.Criteria)
+                .FirstOrDefaultAsync(job => job.JobID == sourceJobId);
+            if (sourceJob == null)
+            {
+                return (false, "Không tìm thấy tin tuyển dụng cần đăng lại.", null, null);
+            }
+
+            bool isAssignedToBranch = await _context.RecruiterBranches.AnyAsync(item =>
+                item.RecruiterID == recruiter.RecruiterID && item.BranchID == sourceJob.BranchID);
+            if (sourceJob.RecruiterID != recruiter.RecruiterID && !isAssignedToBranch)
+            {
+                return (false, "Bạn không có quyền đăng lại tin tuyển dụng này.", null, null);
+            }
+
+            if (!JobLifecyclePolicy.IsExpired(sourceJob))
+            {
+                return (false, "Chỉ có thể đăng lại tin đã hết hạn. Tin đang tuyển có thể được quản lý bằng chức năng tạm ẩn.", null, null);
+            }
+
+            if (request.Criteria == null || request.Criteria.Count == 0 || request.Criteria.Sum(item => item.Weight) != 100)
+            {
+                return (false, "Tin đăng lại phải có ít nhất một tiêu chí và tổng trọng số phải bằng 100%.", null, null);
+            }
+
+            try
+            {
+                ValidateStructuredCriteria(request.Criteria);
+            }
+            catch (Exception exception)
+            {
+                return (false, exception.Message, null, null);
+            }
+
+            bool positionExists = await _context.Positions.AnyAsync(item => item.PositionID == request.PositionId);
+            bool branchExists = await _context.Branches.AnyAsync(item => item.BranchID == request.BranchId);
+            if (!positionExists || !branchExists)
+            {
+                return (false, "Vị trí hoặc chi nhánh của đợt tuyển dụng mới không hợp lệ.", null, null);
+            }
+
+            (DateTime? startDate, DateTime deadline) recruitmentDates;
+            try
+            {
+                recruitmentDates = NormalizeRecruitmentDates(request.StartDate, request.Deadline);
+            }
+            catch (Exception exception)
+            {
+                return (false, exception.Message, null, null);
+            }
+
+            string campaignGroupId = string.IsNullOrWhiteSpace(sourceJob.CampaignGroupID)
+                ? sourceJob.JobID
+                : sourceJob.CampaignGroupID;
+            int maxExistingRound = await _context.JobPostings
+                .Where(job => job.CampaignGroupID == campaignGroupId)
+                .Select(job => (int?)job.RecruitmentRound)
+                .MaxAsync() ?? 1;
+            int newRound = Math.Max(sourceJob.RecruitmentRound, maxExistingRound) + 1;
+
+            decimal minSalary = 0;
+            decimal maxSalary = 0;
+            string salaryText = (request.SalaryRange ?? string.Empty).Replace(",", string.Empty).Replace(".", string.Empty);
+            var salaryMatches = System.Text.RegularExpressions.Regex.Matches(salaryText, @"\d+");
+            if (salaryMatches.Count >= 2)
+            {
+                decimal.TryParse(salaryMatches[0].Value, out minSalary);
+                decimal.TryParse(salaryMatches[1].Value, out maxSalary);
+                if (minSalary > maxSalary) (minSalary, maxSalary) = (maxSalary, minSalary);
+            }
+            else if (salaryMatches.Count == 1)
+            {
+                decimal.TryParse(salaryMatches[0].Value, out minSalary);
+            }
+            if (minSalary >= 1000) minSalary /= 1000000;
+            if (maxSalary >= 1000) maxSalary /= 1000000;
+
+            var repostedJob = new JobPosting
+            {
+                JobID = Guid.NewGuid().ToString(),
+                RecruiterID = recruiter.RecruiterID,
+                PositionID = request.PositionId,
+                BranchID = request.BranchId,
+                CategoryID = request.CategoryId,
+                JobLevelID = request.JobLevelId,
+                StartDate = recruitmentDates.startDate,
+                Deadline = recruitmentDates.deadline,
+                MaxCandidates = request.MaxCandidates,
+                SalaryMin = minSalary,
+                SalaryMax = maxSalary,
+                JobDescription = request.Description.Trim(),
+                JobRequirement = request.Requirements.Trim(),
+                JDExtractedSkills = "[]",
+                Status = "Pending",
+                RejectReason = string.Empty,
+                ApprovedBy = string.Empty,
+                ApprovedAt = null,
+                CreatedAt = VietnamTimeService.NowLocal,
+                ViewCount = 0,
+                RepostedFromJobID = sourceJob.JobID,
+                CampaignGroupID = campaignGroupId,
+                RecruitmentRound = newRound
+            };
+
+            _context.JobPostings.Add(repostedJob);
+            _context.JobCriteria.AddRange(request.Criteria.Select((criterion, index) =>
+                CreateCriterionEntity(criterion, repostedJob.JobID, index)));
+
+            await _context.SaveChangesAsync();
+
+            try
+            {
+                string positionName = await _context.Positions
+                    .Where(position => position.PositionID == repostedJob.PositionID)
+                    .Select(position => position.PositionName)
+                    .FirstOrDefaultAsync() ?? "Chưa cập nhật vị trí";
+                var adminIds = await _context.Accounts
+                    .Where(account => account.Role == "Admin")
+                    .Select(account => account.AccountID)
+                    .ToListAsync();
+                foreach (string adminId in adminIds)
+                {
+                    await _notificationService.CreateNotificationAsync(
+                        adminId,
+                        "Tin đăng lại chờ duyệt",
+                        $"Đợt {newRound} của tin {positionName} đang chờ phê duyệt.",
+                        "/admin/approval");
+                }
+            }
+            catch (Exception exception)
+            {
+                _logger.LogWarning(exception, "Không gửi được thông báo Admin cho tin đăng lại {JobId}.", repostedJob.JobID);
+            }
+
+            return (
+                true,
+                $"Đã tạo đợt tuyển dụng {newRound} và gửi quản trị viên duyệt. Hồ sơ của đợt cũ được giữ riêng.",
+                repostedJob.JobID,
+                newRound);
+        }
+
         public async Task<(bool Success, string Message)> UpdateRecruiterJobAsync(string jobId, CreateJobRequest request, string accountId)
         {
             var recruiter = await _context.Recruiters.FirstOrDefaultAsync(r => r.AccountID == accountId);
@@ -147,8 +304,20 @@ namespace RecruitmentBackend.Services
             if (job.Status == "Archived" || job.Status == "Flagged")
                 return (false, "Tin đang được lưu trữ hoặc kiểm duyệt nên chưa thể chỉnh sửa.");
 
+            if (JobLifecyclePolicy.IsExpired(job))
+                return (false, "Tin đã hết hạn và được giữ làm lịch sử. Vui lòng dùng chức năng Đăng lại để tạo đợt tuyển dụng mới.");
+
             if (request.Criteria == null || request.Criteria.Count == 0 || request.Criteria.Sum(c => c.Weight) != 100)
                 return (false, "Tin phải có ít nhất một tiêu chí và tổng trọng số phải bằng 100%.");
+
+            try
+            {
+                ValidateStructuredCriteria(request.Criteria);
+            }
+            catch (Exception exception)
+            {
+                return (false, exception.Message);
+            }
 
             var positionExists = await _context.Positions.AnyAsync(p => p.PositionID == request.PositionId);
             var branchExists = await _context.Branches.AnyAsync(b => b.BranchID == request.BranchId);
@@ -161,8 +330,8 @@ namespace RecruitmentBackend.Services
                 || job.JobDescription != request.Description
                 || job.JobRequirement != request.Requirements
                 || job.Criteria.Count != request.Criteria.Count
-                || job.Criteria.OrderBy(c => c.Name).Select(c => $"{c.Name}:{c.Weight}")
-                    .SequenceEqual(request.Criteria.OrderBy(c => c.Name).Select(c => $"{c.Name.Trim()}:{c.Weight}")) == false;
+                || job.Criteria.OrderBy(c => c.DisplayOrder).Select(BuildCriterionSignature)
+                    .SequenceEqual(request.Criteria.Select(BuildCriterionSignature)) == false;
 
             if (applicationCount > 0 && changesScoringContext)
                 return (false, "Tin đã có ứng viên. Không thể thay đổi vị trí, mô tả, yêu cầu hoặc tiêu chí vì sẽ làm sai lệch kết quả AI hiện có.");
@@ -188,19 +357,26 @@ namespace RecruitmentBackend.Services
             job.JobRequirement = request.Requirements.Trim();
             job.SalaryMin = minSal;
             job.SalaryMax = maxSal;
-            job.StartDate = request.StartDate;
-            job.Deadline = request.Deadline ?? job.Deadline;
+            (DateTime? StartDate, DateTime Deadline) recruitmentDates;
+            try
+            {
+                recruitmentDates = NormalizeRecruitmentDates(request.StartDate, request.Deadline ?? job.Deadline);
+            }
+            catch (Exception exception)
+            {
+                return (false, exception.Message);
+            }
+
+            job.StartDate = recruitmentDates.StartDate;
+            job.Deadline = recruitmentDates.Deadline;
             job.MaxCandidates = request.MaxCandidates;
             job.RejectReason = "";
 
             if (applicationCount == 0)
             {
                 _context.JobCriteria.RemoveRange(job.Criteria);
-                _context.JobCriteria.AddRange(request.Criteria.Select(c => new JobCriterion
-                {
-                    CriterionID = Guid.NewGuid().ToString(), JobID = job.JobID,
-                    Name = c.Name.Trim(), Weight = c.Weight
-                }));
+                _context.JobCriteria.AddRange(request.Criteria.Select((criterion, index) =>
+                    CreateCriterionEntity(criterion, job.JobID, index)));
             }
 
             // Mọi thay đổi trước khi có ứng viên đều phải được Admin duyệt lại.
@@ -250,6 +426,8 @@ namespace RecruitmentBackend.Services
             var recruiter = await _context.Recruiters.FirstOrDefaultAsync(r => r.AccountID == accountId);
             if (recruiter == null) return new List<object>();
 
+            DateTime today = JobLifecyclePolicy.TodayVietnam;
+
             var branchIds = await _context.RecruiterBranches
                 .Where(rb => rb.RecruiterID == recruiter.RecruiterID)
                 .Select(rb => rb.BranchID)
@@ -260,6 +438,8 @@ namespace RecruitmentBackend.Services
                           from p in pj.DefaultIfEmpty()
                           join c in _context.Categories on p.CategoryID equals c.CategoryID into cj
                           from c in cj.DefaultIfEmpty()
+                          join jl in _context.JobLevels on j.JobLevelID equals jl.JobLevelID into jlj
+                          from jl in jlj.DefaultIfEmpty()
                           join b in _context.Branches on j.BranchID equals b.BranchID into bj
                           from b in bj.DefaultIfEmpty()
                           where j.RecruiterID == recruiter.RecruiterID || string.IsNullOrEmpty(j.RecruiterID) || branchIds.Contains(j.BranchID)
@@ -267,24 +447,42 @@ namespace RecruitmentBackend.Services
                           select new {
                               id = j.JobID,
                               description = j.JobDescription,
+                              requirements = j.JobRequirement,
                               salaryRange = (j.SalaryMin == 0 && j.SalaryMax == 0) ? "Thỏa thuận" : (j.SalaryMax == 0 ? j.SalaryMin + " triệu" : j.SalaryMin + " - " + j.SalaryMax + " triệu"),
                               createdAt = j.CreatedAt,
                               deadline = j.Deadline,
                               startDate = j.StartDate,
                               maxCandidates = j.MaxCandidates,
-                              status = j.Status,
-                              rejectReason = j.RejectReason,
-                              isApproved = j.Status == "Published",
-                              position = p != null ? new { id = p.PositionID, name = p.PositionName } : null,
+                               status = j.Status,
+                               rejectReason = j.RejectReason,
+                               isApproved = j.Status == "Published",
+                               isExpired = (j.Status == "Published" || j.Status == "Closed") && j.Deadline.Date < today,
+                               isRecruiting = j.Status == "Published" &&
+                                   (!j.StartDate.HasValue || j.StartDate.Value.Date <= today) &&
+                                   j.Deadline.Date >= today,
+                               lifecycleStatus = j.Status == "Pending" ? JobLifecyclePolicy.Pending
+                                   : j.Status == "Rejected" ? JobLifecyclePolicy.Rejected
+                                   : j.Status == "Flagged" ? JobLifecyclePolicy.Flagged
+                                   : j.Status == "Archived" ? JobLifecyclePolicy.Archived
+                                   : (j.Status == "Published" || j.Status == "Closed") && j.Deadline.Date < today ? JobLifecyclePolicy.Expired
+                                   : (j.Status == "Closed" || j.Status == "Locked") ? JobLifecyclePolicy.Closed
+                                   : j.Status == "Published" && j.StartDate.HasValue && j.StartDate.Value.Date > today ? JobLifecyclePolicy.Scheduled
+                                   : j.Status == "Published" ? JobLifecyclePolicy.Recruiting
+                                   : j.Status,
+                               repostedFromJobId = j.RepostedFromJobID,
+                               campaignGroupId = j.CampaignGroupID,
+                               recruitmentRound = j.RecruitmentRound,
+                               position = p != null ? new { id = p.PositionID, name = p.PositionName } : null,
                               branch = b != null ? new { id = b.BranchID, name = b.BranchName } : null,
-                              category = c != null ? new { id = c.CategoryID, name = c.Name } : null,
-                              jobLevel = j.JobLevelID == null ? null : new { id = j.JobLevelID }
+                              category = c != null ? new { id = c.CategoryID, name = c.Name, parentId = c.ParentId } : null,
+                              jobLevel = jl != null ? new { id = jl.JobLevelID, name = jl.Name } : null
                           }).ToListAsync();
         }
 
         public async Task<IEnumerable<object>> GetAdminJobsAsync()
         {
             var defaultRecruiter = await _context.Recruiters.FirstOrDefaultAsync();
+            DateTime today = JobLifecyclePolicy.TodayVietnam;
 
             var rawJobs = await (from j in _context.JobPostings
                                  join p in _context.Positions on j.PositionID equals p.PositionID into pj
@@ -305,9 +503,26 @@ namespace RecruitmentBackend.Services
                                      deadline = j.Deadline,
                                      startDate = j.StartDate,
                                      maxCandidates = j.MaxCandidates,
-                                     status = j.Status,
-                                     rejectReason = j.RejectReason,
-                                     description = j.JobDescription,
+                                      status = j.Status,
+                                      rejectReason = j.RejectReason,
+                                      isApproved = j.Status == "Published",
+                                      isExpired = (j.Status == "Published" || j.Status == "Closed") && j.Deadline.Date < today,
+                                      isRecruiting = j.Status == "Published" &&
+                                          (!j.StartDate.HasValue || j.StartDate.Value.Date <= today) &&
+                                          j.Deadline.Date >= today,
+                                      lifecycleStatus = j.Status == "Pending" ? JobLifecyclePolicy.Pending
+                                          : j.Status == "Rejected" ? JobLifecyclePolicy.Rejected
+                                          : j.Status == "Flagged" ? JobLifecyclePolicy.Flagged
+                                          : j.Status == "Archived" ? JobLifecyclePolicy.Archived
+                                          : (j.Status == "Published" || j.Status == "Closed") && j.Deadline.Date < today ? JobLifecyclePolicy.Expired
+                                          : (j.Status == "Closed" || j.Status == "Locked") ? JobLifecyclePolicy.Closed
+                                          : j.Status == "Published" && j.StartDate.HasValue && j.StartDate.Value.Date > today ? JobLifecyclePolicy.Scheduled
+                                          : j.Status == "Published" ? JobLifecyclePolicy.Recruiting
+                                          : j.Status,
+                                      repostedFromJobId = j.RepostedFromJobID,
+                                      campaignGroupId = j.CampaignGroupID,
+                                      recruitmentRound = j.RecruitmentRound,
+                                      description = j.JobDescription,
                                      requirements = j.JobRequirement,
                                      position = p != null ? new { id = p.PositionID, name = p.PositionName, categoryId = p.CategoryID } : null,
                                      branch = b != null ? new { id = b.BranchID, name = b.BranchName } : null,
@@ -325,6 +540,8 @@ namespace RecruitmentBackend.Services
             var job = await _context.JobPostings.FindAsync(jobId);
             if (job == null || (job.Status != "Published" && job.Status != "Closed")) return false;
 
+            if (JobLifecyclePolicy.IsExpired(job)) return false;
+
             // Nếu đang mở thì khóa, nếu đang khóa thì mở lại
             job.Status = job.Status == "Published" ? "Closed" : "Published";
             await _context.SaveChangesAsync();
@@ -339,6 +556,8 @@ namespace RecruitmentBackend.Services
             var job = await _context.JobPostings.FindAsync(jobId);
             if (job == null || (job.Status != "Published" && job.Status != "Closed")) return false;
 
+            if (JobLifecyclePolicy.IsExpired(job)) return false;
+
             var isDirectOwner = job.RecruiterID == recruiter.RecruiterID;
             var isAssignedToBranch = await _context.RecruiterBranches.AnyAsync(rb => 
                 rb.RecruiterID == recruiter.RecruiterID && rb.BranchID == job.BranchID);
@@ -352,6 +571,7 @@ namespace RecruitmentBackend.Services
 
         public async Task<object?> ReviewJobAsync(string jobId, string accountId, bool isAdmin)
         {
+            DateTime today = JobLifecyclePolicy.TodayVietnam;
             if (!isAdmin)
             {
                 var recruiter = await _context.Recruiters.FirstOrDefaultAsync(r => r.AccountID == accountId);
@@ -383,6 +603,22 @@ namespace RecruitmentBackend.Services
                             status = j.Status,
                             rejectReason = j.RejectReason,
                             isApproved = j.Status == "Published",
+                            isExpired = (j.Status == "Published" || j.Status == "Closed") && j.Deadline.Date < today,
+                            isRecruiting = j.Status == "Published" &&
+                                (!j.StartDate.HasValue || j.StartDate.Value.Date <= today) &&
+                                j.Deadline.Date >= today,
+                            lifecycleStatus = j.Status == "Pending" ? JobLifecyclePolicy.Pending
+                                : j.Status == "Rejected" ? JobLifecyclePolicy.Rejected
+                                : j.Status == "Flagged" ? JobLifecyclePolicy.Flagged
+                                : j.Status == "Archived" ? JobLifecyclePolicy.Archived
+                                : (j.Status == "Published" || j.Status == "Closed") && j.Deadline.Date < today ? JobLifecyclePolicy.Expired
+                                : (j.Status == "Closed" || j.Status == "Locked") ? JobLifecyclePolicy.Closed
+                                : j.Status == "Published" && j.StartDate.HasValue && j.StartDate.Value.Date > today ? JobLifecyclePolicy.Scheduled
+                                : j.Status == "Published" ? JobLifecyclePolicy.Recruiting
+                                : j.Status,
+                            repostedFromJobId = j.RepostedFromJobID,
+                            campaignGroupId = j.CampaignGroupID,
+                            recruitmentRound = j.RecruitmentRound,
                             position = p != null ? new { id = p.PositionID, name = p.PositionName } : null,
                             branch = b != null ? new { id = b.BranchID, name = b.BranchName } : null,
                             category = c != null ? new { id = c.CategoryID, name = c.Name } : null,
@@ -394,13 +630,23 @@ namespace RecruitmentBackend.Services
             if (jobInfo == null) return null;
 
             var criteria = await _context.JobCriteria
-                .Where(c => c.JobID == jobId)
-                .OrderByDescending(c => c.Weight)
+                .Where(c => c.JobID == jobId && c.IsActive)
+                .OrderBy(c => c.DisplayOrder)
                 .Select(c => new
                 {
                     id = c.CriterionID,
                     name = c.Name,
-                    weight = c.Weight
+                    weight = c.Weight,
+                    criterionType = c.CriterionType,
+                    criterionGroupId = c.CriterionGroupId,
+                    priorityLevel = c.PriorityLevel,
+                    @operator = c.Operator,
+                    targetValue = c.TargetValue,
+                    minDurationMonths = c.MinDurationMonths,
+                    evidenceSources = c.EvidenceSources,
+                    evaluationGuidance = c.EvaluationGuidance,
+                    displayOrder = c.DisplayOrder,
+                    isActive = c.IsActive
                 })
                 .ToListAsync();
 
@@ -423,6 +669,12 @@ namespace RecruitmentBackend.Services
                     jobInfo.status,
                     jobInfo.rejectReason,
                     jobInfo.isApproved,
+                    jobInfo.isExpired,
+                    jobInfo.isRecruiting,
+                    jobInfo.lifecycleStatus,
+                    jobInfo.repostedFromJobId,
+                    jobInfo.campaignGroupId,
+                    jobInfo.recruitmentRound,
                     jobInfo.position,
                     jobInfo.branch,
                     jobInfo.category,
@@ -445,6 +697,8 @@ namespace RecruitmentBackend.Services
         {
             var job = await _context.JobPostings.FindAsync(jobId);
             if (job == null || job.Status != "Pending") return false;
+
+            if (job.Deadline.Date < JobLifecyclePolicy.TodayVietnam) return false;
 
             job.Status = "Published";
             job.ApprovedAt = DateTime.Now;
@@ -558,12 +812,15 @@ namespace RecruitmentBackend.Services
 
         public async Task<IEnumerable<object>> GetAllJobsAsync()
         {
+            DateTime today = JobLifecyclePolicy.TodayVietnam;
             return await (from j in _context.JobPostings
                           join p in _context.Positions on j.PositionID equals p.PositionID into pj
                           from p in pj.DefaultIfEmpty()
                           join b in _context.Branches on j.BranchID equals b.BranchID into bj
                           from b in bj.DefaultIfEmpty()
                           where j.Status == "Published"
+                                && (!j.StartDate.HasValue || j.StartDate.Value.Date <= today)
+                                && j.Deadline.Date >= today
                           orderby j.CreatedAt descending
                           select new {
                               id = j.JobID,
@@ -600,6 +857,7 @@ namespace RecruitmentBackend.Services
 
         public async Task<PagedResult<JobSummaryDto>> GetPublishedJobsAsync(JobFilterRequest request)
         {
+            DateTime today = JobLifecyclePolicy.TodayVietnam;
             // 1. Sử dụng LINQ Join thay vì .Include()
             var query = from j in _context.JobPostings
                         join p in _context.Positions on j.PositionID equals p.PositionID into pj
@@ -607,6 +865,8 @@ namespace RecruitmentBackend.Services
                         join b in _context.Branches on j.BranchID equals b.BranchID into bj
                         from b in bj.DefaultIfEmpty()
                         where j.Status == "Published"
+                              && (!j.StartDate.HasValue || j.StartDate.Value.Date <= today)
+                              && j.Deadline.Date >= today
                         select new { j, p, b };
 
             // 2. Áp dụng các Bộ Lọc (Filter)
@@ -693,6 +953,8 @@ namespace RecruitmentBackend.Services
                                     join b in _context.Branches on j.BranchID equals b.BranchID into bj
                                     from b in bj.DefaultIfEmpty()
                                     where j.Status == "Published"
+                                          && (!j.StartDate.HasValue || j.StartDate.Value.Date <= today)
+                                          && j.Deadline.Date >= today
                                     orderby (j.SalaryMax > 0 ? (double)j.SalaryMax : 15.0) * j.ViewCount descending, j.CreatedAt descending
                                     select new { j, p, b };
 
@@ -800,6 +1062,8 @@ namespace RecruitmentBackend.Services
                                             join b in _context.Branches on j.BranchID equals b.BranchID into bj
                                             from b in bj.DefaultIfEmpty()
                                             where j.Status == "Published"
+                                                  && (!j.StartDate.HasValue || j.StartDate.Value.Date <= today)
+                                                  && j.Deadline.Date >= today
                                             orderby (j.SalaryMax > 0 ? (double)j.SalaryMax : 15.0) * j.ViewCount descending, j.CreatedAt descending
                                             select new { j, p, b };
 
@@ -899,8 +1163,9 @@ namespace RecruitmentBackend.Services
 
         public async Task<object?> GetPublishedJobByIdAsync(string jobId)
         {
+            DateTime today = JobLifecyclePolicy.TodayVietnam;
             var job = await _context.JobPostings.FindAsync(jobId);
-            if (job != null && job.Status == "Published")
+            if (job != null && JobLifecyclePolicy.IsRecruiting(job, today))
             {
                 job.ViewCount += 1;
                 await _context.SaveChangesAsync();
@@ -911,7 +1176,10 @@ namespace RecruitmentBackend.Services
                         from p in pj.DefaultIfEmpty()
                         join b in _context.Branches on j.BranchID equals b.BranchID into bj
                         from b in bj.DefaultIfEmpty()
-                        where j.JobID == jobId && j.Status == "Published"
+                        where j.JobID == jobId
+                              && j.Status == "Published"
+                              && (!j.StartDate.HasValue || j.StartDate.Value.Date <= today)
+                              && j.Deadline.Date >= today
                         select new {
                             id = j.JobID,
                             title = p != null ? p.PositionName : "Vị trí chưa cập nhật",
@@ -933,11 +1201,14 @@ namespace RecruitmentBackend.Services
 
         public async Task<IEnumerable<object>> GetTrendingCategoriesAsync(int limit = 8)
         {
+            DateTime today = JobLifecyclePolicy.TodayVietnam;
             // Gom nhóm các công việc đã duyệt theo Lĩnh vực (Category) và đếm số lượng
             var query = await (from j in _context.JobPostings
                                join p in _context.Positions on j.PositionID equals p.PositionID
                                join c in _context.Categories on p.CategoryID equals c.CategoryID
                                where j.Status == "Published"
+                                     && (!j.StartDate.HasValue || j.StartDate.Value.Date <= today)
+                                     && j.Deadline.Date >= today
                                group j by new { c.CategoryID, c.Name } into g
                                orderby g.Count() descending
                                select new {
@@ -950,12 +1221,15 @@ namespace RecruitmentBackend.Services
 
         public async Task<IEnumerable<JobSummaryDto>> GetTrendingJobsAsync(int limit = 6)
         {
+            DateTime today = JobLifecyclePolicy.TodayVietnam;
             var query = from j in _context.JobPostings
                         join p in _context.Positions on j.PositionID equals p.PositionID into pj
                         from p in pj.DefaultIfEmpty()
                         join b in _context.Branches on j.BranchID equals b.BranchID into bj
                         from b in bj.DefaultIfEmpty()
                         where j.Status == "Published"
+                              && (!j.StartDate.HasValue || j.StartDate.Value.Date <= today)
+                              && j.Deadline.Date >= today
                         orderby j.ViewCount descending, j.CreatedAt descending
                         select new { j, p, b };
 
@@ -984,13 +1258,17 @@ namespace RecruitmentBackend.Services
         {
             var targetJob = await _context.JobPostings.FindAsync(jobId);
             string? categoryId = targetJob?.CategoryID;
+            DateTime today = JobLifecyclePolicy.TodayVietnam;
 
             var query = from j in _context.JobPostings
                         join p in _context.Positions on j.PositionID equals p.PositionID into pj
                         from p in pj.DefaultIfEmpty()
                         join b in _context.Branches on j.BranchID equals b.BranchID into bj
                         from b in bj.DefaultIfEmpty()
-                        where j.Status == "Published" && j.JobID != jobId
+                        where j.Status == "Published"
+                              && (!j.StartDate.HasValue || j.StartDate.Value.Date <= today)
+                              && j.Deadline.Date >= today
+                              && j.JobID != jobId
                         select new { j, p, b };
 
             if (!string.IsNullOrEmpty(categoryId))
@@ -1028,6 +1306,9 @@ namespace RecruitmentBackend.Services
         {
             var candidate = await _context.Candidates.FirstOrDefaultAsync(c => c.AccountID == accountId);
             if (candidate == null) return false;
+
+            var job = await _context.JobPostings.FindAsync(jobId);
+            if (job == null || !JobLifecyclePolicy.IsRecruiting(job)) return false;
 
             var exists = await _context.SavedJobs.AnyAsync(sj => sj.CandidateID == candidate.CandidateID && sj.JobID == jobId);
             if (exists) return true; // Already saved
@@ -1085,6 +1366,137 @@ namespace RecruitmentBackend.Services
                               }).ToListAsync();
 
             return jobs;
+        }
+
+        private static readonly HashSet<string> AllowedCriterionTypes = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "SKILL", "TOTAL_EXPERIENCE", "SKILL_EXPERIENCE", "EDUCATION",
+            "CERTIFICATION", "LANGUAGE", "LOCATION_WORK_MODE", "CUSTOM"
+        };
+
+        private static readonly HashSet<string> AllowedPriorityLevels = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "REQUIRED", "PREFERRED", "BONUS"
+        };
+
+        private static readonly HashSet<string> AllowedOperators = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "EXISTS", "MINIMUM", "MAXIMUM", "EQUALS", "IN"
+        };
+
+        private static void ValidateStructuredCriteria(IReadOnlyCollection<JobCriterionRequest> criteria)
+        {
+            var duplicatedName = criteria
+                .GroupBy(criterion => criterion.Name.Trim(), StringComparer.OrdinalIgnoreCase)
+                .FirstOrDefault(group => group.Count() > 1)?.Key;
+            if (!string.IsNullOrWhiteSpace(duplicatedName))
+                throw new Exception($"Tiêu chí '{duplicatedName}' đang bị trùng lặp.");
+
+            foreach (var criterion in criteria)
+            {
+                var criterionType = NormalizeOption(criterion.CriterionType, "CUSTOM");
+                var priorityLevel = NormalizeOption(criterion.PriorityLevel, "PREFERRED");
+                var criterionOperator = NormalizeOption(criterion.Operator, "EXISTS");
+
+                if (!AllowedCriterionTypes.Contains(criterionType))
+                    throw new Exception($"Loại của tiêu chí '{criterion.Name}' không hợp lệ.");
+                if (!AllowedPriorityLevels.Contains(priorityLevel))
+                    throw new Exception($"Mức độ của tiêu chí '{criterion.Name}' không hợp lệ.");
+                if (!AllowedOperators.Contains(criterionOperator))
+                    throw new Exception($"Điều kiện của tiêu chí '{criterion.Name}' không hợp lệ.");
+                if (criterionOperator is "MINIMUM" or "MAXIMUM" or "EQUALS" or "IN"
+                    && string.IsNullOrWhiteSpace(criterion.TargetValue)
+                    && criterion.MinDurationMonths is null)
+                {
+                    throw new Exception($"Tiêu chí '{criterion.Name}' cần có giá trị yêu cầu hoặc thời lượng tối thiểu.");
+                }
+            }
+        }
+
+        private static JobCriterion CreateCriterionEntity(
+            JobCriterionRequest criterion,
+            string jobId,
+            int index)
+        {
+            return new JobCriterion
+            {
+                CriterionID = Guid.NewGuid().ToString(),
+                JobID = jobId,
+                Name = criterion.Name.Trim(),
+                Weight = criterion.Weight,
+                CriterionGroupId = NormalizeNullable(criterion.CriterionGroupId),
+                CriterionType = NormalizeOption(criterion.CriterionType, "CUSTOM"),
+                PriorityLevel = NormalizeOption(criterion.PriorityLevel, "PREFERRED"),
+                Operator = NormalizeOption(criterion.Operator, "EXISTS"),
+                TargetValue = NormalizeNullable(criterion.TargetValue) ?? criterion.Name.Trim(),
+                MinDurationMonths = criterion.MinDurationMonths,
+                EvidenceSources = NormalizeNullable(criterion.EvidenceSources)
+                    ?? "SKILLS,EXPERIENCE,PROJECTS",
+                EvaluationGuidance = NormalizeNullable(criterion.EvaluationGuidance),
+                DisplayOrder = criterion.DisplayOrder ?? index,
+                IsActive = true
+            };
+        }
+
+        private static string BuildCriterionSignature(JobCriterion criterion)
+        {
+            return string.Join('|',
+                criterion.Name.Trim(),
+                criterion.Weight,
+                NormalizeNullable(criterion.CriterionGroupId),
+                NormalizeOption(criterion.CriterionType, "CUSTOM"),
+                NormalizeOption(criterion.PriorityLevel, "PREFERRED"),
+                NormalizeOption(criterion.Operator, "EXISTS"),
+                NormalizeNullable(criterion.TargetValue) ?? criterion.Name.Trim(),
+                criterion.MinDurationMonths,
+                NormalizeNullable(criterion.EvidenceSources) ?? "SKILLS,EXPERIENCE,PROJECTS",
+                NormalizeNullable(criterion.EvaluationGuidance));
+        }
+
+        private static string BuildCriterionSignature(JobCriterionRequest criterion)
+        {
+            return string.Join('|',
+                criterion.Name.Trim(),
+                criterion.Weight,
+                NormalizeNullable(criterion.CriterionGroupId),
+                NormalizeOption(criterion.CriterionType, "CUSTOM"),
+                NormalizeOption(criterion.PriorityLevel, "PREFERRED"),
+                NormalizeOption(criterion.Operator, "EXISTS"),
+                NormalizeNullable(criterion.TargetValue) ?? criterion.Name.Trim(),
+                criterion.MinDurationMonths,
+                NormalizeNullable(criterion.EvidenceSources) ?? "SKILLS,EXPERIENCE,PROJECTS",
+                NormalizeNullable(criterion.EvaluationGuidance));
+        }
+
+        private static string NormalizeOption(string? value, string fallback)
+        {
+            return string.IsNullOrWhiteSpace(value) ? fallback : value.Trim().ToUpperInvariant();
+        }
+
+        private static string? NormalizeNullable(string? value)
+        {
+            return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+        }
+
+        private static (DateTime? StartDate, DateTime Deadline) NormalizeRecruitmentDates(
+            DateTime? requestedStartDate,
+            DateTime? requestedDeadline)
+        {
+            DateTime today = JobLifecyclePolicy.TodayVietnam;
+            DateTime? startDate = requestedStartDate?.Date;
+            DateTime deadline = (requestedDeadline ?? today.AddDays(30)).Date;
+
+            if (deadline < today)
+            {
+                throw new Exception("Hạn tuyển dụng không được nằm trước ngày hiện tại theo múi giờ Việt Nam.");
+            }
+
+            if (startDate.HasValue && deadline < startDate.Value)
+            {
+                throw new Exception("Hạn tuyển dụng phải bằng hoặc sau ngày bắt đầu tuyển.");
+            }
+
+            return (startDate, deadline);
         }
     }
 }

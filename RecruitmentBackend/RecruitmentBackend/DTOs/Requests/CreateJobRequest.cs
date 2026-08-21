@@ -23,6 +23,15 @@ namespace RecruitmentBackend.DTOs.Requests
     {
         [Required(ErrorMessage = "Vui lòng nhập tên tiêu chí")] public string Name { get; set; }
         [Range(1, 100, ErrorMessage = "Trọng số phải từ 1 đến 100")] public int Weight { get; set; }
-
+        [MaxLength(450)] public string? CriterionGroupId { get; set; }
+        [MaxLength(40)] public string? CriterionType { get; set; }
+        [MaxLength(20)] public string? PriorityLevel { get; set; }
+        [MaxLength(30)] public string? Operator { get; set; }
+        [MaxLength(500)] public string? TargetValue { get; set; }
+        [Range(1, 1200, ErrorMessage = "Thời lượng kinh nghiệm phải từ 1 đến 1200 tháng")]
+        public int? MinDurationMonths { get; set; }
+        [MaxLength(500)] public string? EvidenceSources { get; set; }
+        [MaxLength(1000)] public string? EvaluationGuidance { get; set; }
+        public int? DisplayOrder { get; set; }
     }
 }

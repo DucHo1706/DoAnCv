@@ -22,20 +22,17 @@ namespace RecruitmentBackend.Services
     {
         private readonly AppDbContext _context;
         private readonly IAiService _aiService;
-        private readonly IServiceScopeFactory _serviceScopeFactory;
         private readonly IHubContext<AIEvaluationHub> _hubContext;
         private readonly INotificationService _notificationService;
 
         public AiEvaluationService(
             AppDbContext context,
             IAiService aiService,
-            IServiceScopeFactory serviceScopeFactory,
             IHubContext<AIEvaluationHub> hubContext,
             INotificationService notificationService)
         {
             _context = context;
             _aiService = aiService;
-            _serviceScopeFactory = serviceScopeFactory;
             _hubContext = hubContext;
             _notificationService = notificationService;
         }
@@ -104,7 +101,8 @@ namespace RecruitmentBackend.Services
                 }
 
                 var jobCriteria = await _context.JobCriteria
-                    .Where(jobCriterion => jobCriterion.JobID == application.JobID)
+                    .Where(jobCriterion => jobCriterion.JobID == application.JobID && jobCriterion.IsActive)
+                    .OrderBy(jobCriterion => jobCriterion.DisplayOrder)
                     .ToListAsync();
 
                 if (jobCriteria == null || jobCriteria.Count == 0)
@@ -125,7 +123,14 @@ namespace RecruitmentBackend.Services
                     var criterionItem = new
                     {
                         name = criterion.Name,
-                        weight = criterion.Weight
+                        weight = criterion.Weight,
+                        criterionType = criterion.CriterionType,
+                        priorityLevel = criterion.PriorityLevel,
+                        @operator = criterion.Operator,
+                        targetValue = criterion.TargetValue,
+                        minDurationMonths = criterion.MinDurationMonths,
+                        evidenceSources = criterion.EvidenceSources,
+                        evaluationGuidance = criterion.EvaluationGuidance
                     };
 
                     criteriaForAi.Add(criterionItem);
@@ -301,24 +306,6 @@ namespace RecruitmentBackend.Services
                     Console.WriteLine("Lỗi gửi thông báo AI hoàn tất: " + ex.Message);
                 }
 
-                if (matchedSkills.Count > 0)
-                {
-                    _ = Task.Run(async () =>
-                    {
-                        try
-                        {
-                            using var scope = _serviceScopeFactory.CreateScope();
-                            var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-                            var aiService = scope.ServiceProvider.GetRequiredService<IAiService>();
-                            await SyncAllSkillsToAiAsync(dbContext, aiService);
-                        }
-                        catch (Exception syncEx)
-                        {
-                            Console.WriteLine("Loi khi sync skills background: " + syncEx.Message);
-                        }
-                    });
-                }
-
                 await SendProgressAsync(applicationId, 100, "COMPLETED", "Đã hoàn tất phân tích AI! 🎉");
                 await _hubContext.Clients.Group(applicationId).SendAsync("ReceiveResult", new { aiStatus = "Success" });
             }
@@ -375,46 +362,5 @@ namespace RecruitmentBackend.Services
             }
         }
 
-        private static async Task SyncAllSkillsToAiAsync(AppDbContext dbContext, IAiService aiService)
-        {
-            try
-            {
-                var allSkillsJson = await dbContext.CandidateCVs
-                    .Where(cv => !string.IsNullOrEmpty(cv.CVExtractedSkills) && cv.CVExtractedSkills != "[]")
-                    .Select(cv => cv.CVExtractedSkills)
-                    .ToListAsync();
-
-                var uniqueSkills = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-                foreach (var json in allSkillsJson)
-                {
-                    try
-                    {
-                        var skills = JsonSerializer.Deserialize<List<string>>(json);
-                        if (skills != null)
-                        {
-                            foreach (var skill in skills)
-                            {
-                                if (!string.IsNullOrWhiteSpace(skill))
-                                {
-                                    uniqueSkills.Add(skill.Trim().ToLower());
-                                }
-                            }
-                        }
-                    }
-                    catch { /* skip invalid JSON */ }
-                }
-
-                if (uniqueSkills.Count > 0)
-                {
-                    await aiService.SyncSkillsToAiAsync(uniqueSkills.ToList());
-                    Console.WriteLine($"[AUTO-SYNC] Synced {uniqueSkills.Count} unique skills to Python AI.");
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("Loi khi thuc hien SyncAllSkillsToAiAsync: " + ex.Message);
-            }
-        }
     }
 }

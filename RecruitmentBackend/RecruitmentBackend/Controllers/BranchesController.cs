@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using RecruitmentBackend.DTOs.Requests;
 using RecruitmentBackend.Interfaces;
 using System.Threading.Tasks;
+using RecruitmentBackend.Services;
 
 namespace RecruitmentBackend.Controllers
 {
@@ -10,10 +11,12 @@ namespace RecruitmentBackend.Controllers
     public class BranchesController : ControllerBase
     {
         private readonly IBranchService _branchService;
+        private readonly IMetadataChangeNotifier _notifier;
 
-        public BranchesController(IBranchService branchService)
+        public BranchesController(IBranchService branchService, IMetadataChangeNotifier notifier)
         {
             _branchService = branchService;
+            _notifier = notifier;
         }
 
         [HttpGet]
@@ -34,6 +37,7 @@ namespace RecruitmentBackend.Controllers
             
             if (result.IsSuccess == false) return BadRequest(result.Message);
             
+            await _notifier.NotifyAsync("branches", "created");
             return Ok(result.Data);
         }
 
@@ -52,6 +56,7 @@ namespace RecruitmentBackend.Controllers
                 return BadRequest(result.Message);
             }
             
+            await _notifier.NotifyAsync("branches", "updated");
             return Ok(result.Data);
         }
 
@@ -63,6 +68,7 @@ namespace RecruitmentBackend.Controllers
             
             if (result.IsSuccess == false) return NotFound(result.Message);
             
+            await _notifier.NotifyAsync("branches", "status-changed");
             return Ok(result.Data);
         }
     }

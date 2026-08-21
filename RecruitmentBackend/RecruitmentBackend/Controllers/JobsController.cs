@@ -66,6 +66,33 @@ namespace RecruitmentBackend.Controllers
             return Ok(new { message = result.Message });
         }
 
+        [HttpPost("{id}/repost")]
+        [Authorize(Roles = "Recruiter")]
+        public async Task<IActionResult> RepostJob(string id, [FromBody] RepostJobRequest request)
+        {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+
+            string accountId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? string.Empty;
+            var result = await _jobService.RepostJobAsync(id, request, accountId);
+            if (!result.Success)
+            {
+                return BadRequest(new { message = result.Message });
+            }
+
+            await _auditLogService.WriteLogAsync(
+                User.FindFirst(ClaimTypes.Email)?.Value ?? "HR",
+                "Đăng lại tin tuyển dụng",
+                $"Tin nguồn ID: {id}; tin mới ID: {result.JobId}; đợt: {result.RecruitmentRound}",
+                HttpContext.Connection.RemoteIpAddress?.ToString());
+
+            return Ok(new
+            {
+                message = result.Message,
+                id = result.JobId,
+                recruitmentRound = result.RecruitmentRound
+            });
+        }
+
         [HttpPut("{id}/archive")]
         [Authorize(Roles = "Recruiter,Admin")]
         public async Task<IActionResult> ArchiveJob(string id)

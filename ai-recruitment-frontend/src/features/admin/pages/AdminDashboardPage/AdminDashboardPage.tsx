@@ -1,13 +1,13 @@
 import {
   Card,
   Col,
-  Collapse,
   DatePicker,
   Row,
   Select,
   Space,
   Skeleton,
   Tag,
+  Statistic,
   Typography,
 } from "antd";
 import {
@@ -15,7 +15,6 @@ import {
   FileTextOutlined,
   RobotOutlined,
   TeamOutlined,
-  BulbOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import PageContainer from "../../../../components/common/PageContainer";
@@ -24,8 +23,6 @@ import ActivityTrendChart from "./components/ActivityTrendChart";
 import CategoryDonutChart from "./components/CategoryDonutChart";
 import ConversionFunnelChart from "./components/ConversionFunnelChart";
 import OcrErrorRateChart from "./components/OcrErrorRateChart";
-import AprioriRulesSection from "./components/AprioriRulesSection";
-import HUIMRulesSection from "./components/HUIMRulesSection";
 import { useAdminDashboard, getStatusTagColor, formatNumber } from "./hooks/useAdminDashboard";
 import { appTheme } from "../../../../constants/theme";
 
@@ -45,9 +42,21 @@ export default function AdminDashboardPage() {
     trends,
     selectedCategoryId,
     setSelectedCategoryId,
+    selectedPositionId,
+    setSelectedPositionId,
+    selectedJobLevelId,
+    setSelectedJobLevelId,
+    selectedBranchId,
+    setSelectedBranchId,
+    selectedJobId,
+    setSelectedJobId,
     selectedDateRange,
     setSelectedDateRange,
     categorySelectOptions,
+    positionOptions,
+    jobLevelOptions,
+    branchOptions,
+    jobOptions,
     aiStatusColor,
     averageProcessingText,
   } = useAdminDashboard();
@@ -77,6 +86,34 @@ export default function AdminDashboardPage() {
               onChange={(value) => setSelectedCategoryId(value)}
             />
           </Col>
+          <Col xs={24} md={12} lg={5}>
+            <Text type="secondary" style={{ display: "block", marginBottom: 6 }}>Ngành nghề / vị trí</Text>
+            <Select showSearch allowClear style={{ width: "100%" }} placeholder="Tất cả vị trí" value={selectedPositionId} options={positionOptions.map((item) => ({ value: item.id, label: item.name }))} optionFilterProp="label" onChange={(value) => { setSelectedPositionId(value); setSelectedJobId(undefined); }} />
+          </Col>
+          <Col xs={24} md={12} lg={5}>
+            <Text type="secondary" style={{ display: "block", marginBottom: 6 }}>Cấp bậc</Text>
+            <Select showSearch allowClear style={{ width: "100%" }} placeholder="Tất cả cấp bậc" value={selectedJobLevelId} options={jobLevelOptions.map((item) => ({ value: item.id, label: item.name }))} optionFilterProp="label" onChange={setSelectedJobLevelId} />
+          </Col>
+          <Col xs={24} md={12} lg={5}>
+            <Text type="secondary" style={{ display: "block", marginBottom: 6 }}>Chi nhánh làm việc</Text>
+            <Select showSearch allowClear style={{ width: "100%" }} placeholder="Tất cả chi nhánh" value={selectedBranchId} options={branchOptions.map((item) => ({ value: item.id, label: item.name }))} optionFilterProp="label" onChange={setSelectedBranchId} />
+          </Col>
+          <Col xs={24} md={12} lg={5}>
+            <Text type="secondary" style={{ display: "block", marginBottom: 6 }}>Tin tuyển dụng</Text>
+            <Select
+              showSearch
+              allowClear
+              style={{ width: "100%" }}
+              placeholder="Tất cả tin"
+              value={selectedJobId}
+              options={jobOptions.map((item) => ({
+                value: item.jobId,
+                label: `${item.jobTitle} · ${item.status === "Published" ? "Đang mở" : "Đã đóng"}${item.deadline ? ` · Hạn ${dayjs(item.deadline).format("DD/MM/YYYY")}` : ""}`,
+              }))}
+              optionFilterProp="label"
+              onChange={setSelectedJobId}
+            />
+          </Col>
           <Col xs={24} md={12} lg={10}>
             <Text type="secondary" style={{ display: "block", marginBottom: 6 }}>Khoảng thời gian</Text>
             <RangePicker
@@ -85,6 +122,9 @@ export default function AdminDashboardPage() {
               value={selectedDateRange}
               allowClear
               presets={[
+                { label: "Hôm nay", value: [dayjs().startOf("day"), dayjs().endOf("day")] },
+                { label: "7 ngày gần nhất", value: [dayjs().subtract(6, "day").startOf("day"), dayjs().endOf("day")] },
+                { label: "30 ngày gần nhất", value: [dayjs().subtract(29, "day").startOf("day"), dayjs().endOf("day")] },
                 { label: "Tuần này", value: [dayjs().startOf("week"), dayjs().endOf("week")] },
                 { label: "Tháng này", value: [dayjs().startOf("month"), dayjs().endOf("month")] },
                 { label: "Năm nay", value: [dayjs().startOf("year"), dayjs().endOf("year")] },
@@ -173,6 +213,25 @@ export default function AdminDashboardPage() {
             </Col>
           </Row>
 
+          <Card
+            bordered={false}
+            title="Hoạt động tuyển dụng hôm nay"
+            extra={<Text type="secondary">Theo múi giờ Việt Nam</Text>}
+            style={{ marginBottom: 24, ...cardShadowStyle }}
+            styles={{ body: { padding: 20 } }}
+          >
+            <Row gutter={[24, 16]}>
+              <Col xs={24} sm={12}>
+                <Statistic title="CV nhận hôm nay" value={stats.quickMetrics.applicationsToday} prefix={<FileTextOutlined style={{ color: appTheme.colors.primary }} />} />
+                <Text type="secondary">Dựa trên sự kiện nộp hồ sơ, không suy ra từ trạng thái hiện tại.</Text>
+              </Col>
+              <Col xs={24} sm={12}>
+                <Statistic title="Chuyển trạng thái hôm nay" value={stats.quickMetrics.statusChangesToday} prefix={<TeamOutlined style={{ color: appTheme.colors.success }} />} />
+                <Text type="secondary">Không tính lần tạo hồ sơ ban đầu.</Text>
+              </Col>
+            </Row>
+          </Card>
+
           {/* Biểu đồ xu hướng tăng trưởng */}
           <Row gutter={[24, 24]} style={{ marginBottom: 24 }}>
             <Col xs={24} xl={16}>
@@ -200,30 +259,6 @@ export default function AdminDashboardPage() {
               </Card>
             </Col>
           </Row>
-
-          {/* Khu vực chuyên sâu - thu gọn mặc định, tránh làm loãng dashboard chính */}
-          <Collapse
-            bordered={false}
-            style={{ background: "transparent" }}
-            items={[
-              {
-                key: "data-mining",
-                label: (
-                  <Space>
-                    <BulbOutlined style={{ color: appTheme.colors.primary }} />
-                    <Text strong style={{ fontSize: 15 }}>Phân tích Kỹ năng & Tri thức Tuyển dụng</Text>
-                  </Space>
-                ),
-                style: { ...cardShadowStyle, overflow: "hidden" },
-                children: (
-                  <div>
-                    <AprioriRulesSection />
-                    <HUIMRulesSection />
-                  </div>
-                ),
-              },
-            ]}
-          />
         </>
       )}
     </PageContainer>

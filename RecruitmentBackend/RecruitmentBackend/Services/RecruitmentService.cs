@@ -40,6 +40,16 @@ namespace RecruitmentBackend.Services
             return _applicationService.GetMyApplicationsAsync(user);
         }
 
+        public Task<(bool IsSuccess, string Message, object Data)> RetryAiEvaluationAsync(string applicationId, ClaimsPrincipal user)
+        {
+            return _applicationService.RetryAiEvaluationAsync(applicationId, user);
+        }
+
+        public Task<(bool IsSuccess, string Message, object Data)> WithdrawApplicationAsync(string applicationId, ClaimsPrincipal user)
+        {
+            return _applicationService.WithdrawApplicationAsync(applicationId, user);
+        }
+
         public Task<(bool IsSuccess, string Message, object Data)> UpdateApplicationStatusAsync(
             string applicationId,
             UpdateApplicationStatusRequest request,

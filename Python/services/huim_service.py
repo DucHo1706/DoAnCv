@@ -1,7 +1,16 @@
-import json
 import os
 from typing import List, Dict, Set, Tuple, Any
 from utils.logger import logger
+from services.skill_mining_guard import (
+    canonicalize_skill_values,
+    canonicalize_transactions_with_indices,
+    rarity_label,
+    write_metadata,
+)
+from services.runtime_paths import runtime_file
+from services.mining_model_store import flatten_results, save_domain_model
+
+LAST_TRAINING_METADATA: Dict[str, Any] = {}
 
 class TwoPhaseHUIM:
     def __init__(self, min_utility: float, max_itemset_size: int = 3):
@@ -112,38 +121,95 @@ class TwoPhaseHUIM:
         high_utility_itemsets.sort(key=lambda x: x["utility"], reverse=True)
         return high_utility_itemsets
 
-HUIM_FILE = "high_utility_itemsets.json"
+HUIM_FILE = runtime_file("high_utility_itemsets.json")
+HUIM_METADATA_FILE = runtime_file("high_utility_itemsets_metadata.json")
 
-def train_and_save_huim(transactions_input: List[Dict[str, Any]], external_utilities: Dict[str, float], min_utility: float) -> List[Dict[str, Any]]:
+def train_and_save_huim(transactions_input: List[Dict[str, Any]], external_utilities: Dict[str, float], min_utility: float,
+                        domain: str | None = None, taxonomy_skills: List[str] | None = None,
+                        taxonomy_aliases: Dict[str, str] | None = None,
+                        dataset_id: str | None = None, min_support_count: int = 2,
+                        reset_models: bool = False) -> List[Dict[str, Any]]:
     """
     Chạy thuật toán Two-Phase HUIM và lưu kết quả vào file JSON.
     """
     try:
-        transactions = []
+        global LAST_TRAINING_METADATA
+        if not domain and not taxonomy_skills:
+            LAST_TRAINING_METADATA = {"status": "skipped", "reason": "Thiếu domain hoặc taxonomy đã duyệt; không ghi đè kết quả cũ."}
+            write_metadata(HUIM_METADATA_FILE, LAST_TRAINING_METADATA)
+            logger.warning(LAST_TRAINING_METADATA["reason"])
+            return []
+        raw_items = []
+        raw_quantities = []
         for t in transactions_input:
             items_list = t.get("items", [])
             quantities_dict = t.get("quantities", {})
-            # Chuẩn hóa về chữ thường và cắt khoảng trắng
-            items_set = set(item.lower().strip() for item in items_list if item.strip())
-            quant_clean = {k.lower().strip(): v for k, v in quantities_dict.items()}
-            transactions.append({
-                "items": items_set,
-                "quantities": quant_clean
-            })
+            raw_items.append(items_list)
+            raw_quantities.append(quantities_dict)
 
-        ext_util_clean = {k.lower().strip(): v for k, v in external_utilities.items()}
+        clean_items, source_indices, metadata = canonicalize_transactions_with_indices(
+            raw_items, domain, taxonomy_skills, taxonomy_aliases
+        )
+        transactions = []
+        for items_set, source_index in zip(clean_items, source_indices):
+            quantities_dict = raw_quantities[source_index]
+            quant_clean = {}
+            for raw_skill, quantity in quantities_dict.items():
+                canonical = canonicalize_skill_values(
+                    [raw_skill], taxonomy_skills, taxonomy_aliases
+                )
+                if canonical:
+                    quant_clean[canonical[0]] = quantity
+            transactions.append({"items": items_set, "quantities": quant_clean})
+        metadata.update({"status": "success", "algorithm": "HUIM-Two-Phase", "dataset_id": dataset_id,
+                         "total_transactions": len(transactions), "min_utility": min_utility,
+                         "min_support_count": min_support_count,
+                         "utility_definition": "sum(quantity * external_utility); external_utility phải có nguồn nghiệp vụ"})
+        if len(transactions) < max(1, min_support_count):
+            metadata["status"] = "skipped"
+            metadata["reason"] = "Không đủ giao dịch sau khi chuẩn hóa taxonomy."
+            LAST_TRAINING_METADATA = metadata
+            write_metadata(HUIM_METADATA_FILE, metadata)
+            return []
+
+        ext_util_clean = {}
+        for raw_skill, utility in external_utilities.items():
+            canonical = canonicalize_skill_values(
+                [raw_skill], taxonomy_skills, taxonomy_aliases
+            )
+            if canonical:
+                ext_util_clean[canonical[0]] = utility
         
         huim = TwoPhaseHUIM(min_utility)
         results = huim.run(transactions, ext_util_clean)
 
-        with open(HUIM_FILE, "w", encoding="utf-8") as f:
-            json.dump(results, f, ensure_ascii=False, indent=2)
+        total = len(transactions)
+        filtered = []
+        for result in results:
+            count = int(result.get("support_count", 0))
+            if count < max(1, min_support_count):
+                continue
+            rate = count / total if total else 0.0
+            result["support_rate"] = round(rate, 4)
+            result["rarity_label"] = rarity_label(rate)
+            filtered.append(result)
+        results = filtered
+        metadata["itemsets_count"] = len(results)
+        LAST_TRAINING_METADATA = metadata
+        write_metadata(HUIM_METADATA_FILE, metadata)
+
+        save_domain_model(
+            HUIM_FILE, HUIM_METADATA_FILE, domain or "unknown", "itemsets", results, metadata, reset_models
+        )
 
         logger.info(f"Đã huấn luyện xong HUIM. Tìm được {len(results)} tập kỹ năng lợi ích cao.")
         return results
     except Exception as e:
         logger.error(f"Lỗi khi huấn luyện HUIM: {e}")
         return []
+
+def get_last_training_metadata() -> Dict[str, Any]:
+    return dict(LAST_TRAINING_METADATA)
 
 def get_recommended_huim_skills(current_skills: List[str], top_n: int = 5) -> List[Dict[str, Any]]:
     """
@@ -152,16 +218,16 @@ def get_recommended_huim_skills(current_skills: List[str], top_n: int = 5) -> Li
     if not current_skills:
         return []
         
-    current_skills_set = set(s.lower().strip() for s in current_skills)
+    import nlp_processor
+    current_skills_set = set(nlp_processor.canonicalize_skill_values(current_skills))
+    if not current_skills_set:
+        return []
     
     if not os.path.exists(HUIM_FILE):
         logger.warning("Không tìm thấy file kết quả HUIM. Hãy huấn luyện trước.")
         return []
-
     try:
-        with open(HUIM_FILE, "r", encoding="utf-8") as f:
-            itemsets = json.load(f)
-            
+        itemsets = flatten_results(HUIM_FILE, HUIM_METADATA_FILE, "itemsets")
         recommendations = {}
         for itemset_obj in itemsets:
             itemset = itemset_obj["itemset"]
@@ -187,3 +253,7 @@ def get_recommended_huim_skills(current_skills: List[str], top_n: int = 5) -> Li
     except Exception as e:
         logger.error(f"Lỗi khi gợi ý kỹ năng HUIM: {e}")
         return []
+
+
+def get_all_itemsets() -> List[Dict[str, Any]]:
+    return flatten_results(HUIM_FILE, HUIM_METADATA_FILE, "itemsets")

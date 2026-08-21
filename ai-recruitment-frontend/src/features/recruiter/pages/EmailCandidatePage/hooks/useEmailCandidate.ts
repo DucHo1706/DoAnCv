@@ -288,7 +288,9 @@ export function useEmailCandidate() {
 
       if (response.subject) setSubject(response.subject);
       if (response.body) setContent(response.body);
-      message.success("Đã tạo nội dung email.");
+      message.success(response.source === "template"
+        ? "Đã tạo mẫu email chỉnh sửa được (AI đang tắt)."
+        : "Đã tạo nội dung email bằng AI.");
     } catch (error: any) {
       const errorMessage =
         error?.response?.data?.message || "Chưa thể tạo nội dung email. Vui lòng thử lại.";

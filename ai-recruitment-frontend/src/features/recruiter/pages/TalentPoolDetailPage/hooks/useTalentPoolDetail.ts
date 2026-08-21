@@ -47,6 +47,14 @@ export function useTalentPoolDetail() {
     setFilterJobSector(null);
   };
 
+  const clearJobFilters = () => {
+    setSearchJobQuery("");
+    setFilterJobIndustry(null);
+    setFilterJobSector(null);
+    setFilterJobBranch(null);
+    setFilterJobLevel(null);
+  };
+
   const fetchDetail = async () => {
     if (!id) {
       message.error("Không tìm thấy mã ứng viên Talent Pool.");
@@ -223,7 +231,10 @@ export function useTalentPoolDetail() {
     }
   };
 
-  const candidate = inviteSuggestion?.candidate ?? detail?.candidate;
+  // Chi tiết Talent Pool là nguồn đầy đủ nhất (bao gồm context sourcing).
+  // Invite-suggestions chỉ là dữ liệu tính toán job nên không được phép ghi đè
+  // các trường phân loại khi API cũ trả về candidate rút gọn.
+  const candidate = detail?.candidate ?? inviteSuggestion?.candidate;
   const skills = parseSkills(candidate?.highlightSkillsJson);
 
   const visibleSuggestedJobs = useMemo(() => {
@@ -240,10 +251,19 @@ export function useTalentPoolDetail() {
     return openJobs.filter((job) => {
       const positionName = (job.position?.name || "").toLowerCase();
       const requirements = (job.requirements || "").toLowerCase();
+      const description = (job.description || "").toLowerCase();
+      const categoryName = (job.category?.name || "").toLowerCase();
+      const branchName = (job.branch?.name || "").toLowerCase();
+      const levelName = (job.jobLevel?.name || "").toLowerCase();
+      const normalizedQuery = searchJobQuery.trim().toLowerCase();
       
-      const matchQuery = searchJobQuery
-        ? positionName.includes(searchJobQuery.toLowerCase()) ||
-          requirements.includes(searchJobQuery.toLowerCase())
+      const matchQuery = normalizedQuery
+        ? positionName.includes(normalizedQuery) ||
+          requirements.includes(normalizedQuery) ||
+          description.includes(normalizedQuery) ||
+          categoryName.includes(normalizedQuery) ||
+          branchName.includes(normalizedQuery) ||
+          levelName.includes(normalizedQuery)
         : true;
 
       let matchIndustry = true;
@@ -252,7 +272,7 @@ export function useTalentPoolDetail() {
           matchIndustry = false;
         } else {
           const jobCat = categories.find((c) => c.id === job.category?.id);
-          const industryId = jobCat?.parentId || job.category?.id;
+          const industryId = job.category?.parentId || jobCat?.parentId || job.category?.id;
           matchIndustry = industryId === filterJobIndustry;
         }
       }
@@ -274,6 +294,11 @@ export function useTalentPoolDetail() {
       return matchQuery && matchIndustry && matchSector && matchBranch && matchLevel;
     });
   }, [openJobs, searchJobQuery, filterJobIndustry, filterJobSector, filterJobBranch, filterJobLevel, categories]);
+
+  const jobFilterCount = useMemo(() => ({
+    total: openJobs.length,
+    visible: filteredOpenJobs.length,
+  }), [openJobs.length, filteredOpenJobs.length]);
 
   // Extract distinct levels from open jobs
   const jobLevels = useMemo(() => {
@@ -432,5 +457,7 @@ export function useTalentPoolDetail() {
     filterJobLevel,
     setFilterJobLevel,
     handleSelectIndustry,
+    clearJobFilters,
+    jobFilterCount,
   };
 }

@@ -1,7 +1,11 @@
-import json
 import os
 from typing import List, Dict, Set, Tuple, Any
 from utils.logger import logger
+from services.skill_mining_guard import canonicalize_transactions, write_metadata
+from services.runtime_paths import runtime_file
+from services.mining_model_store import flatten_results, save_domain_model
+
+LAST_TRAINING_METADATA: Dict[str, Any] = {}
 
 class AprioriAlgorithm:
     def __init__(self, min_support: float = 0.05, min_confidence: float = 0.3):
@@ -131,28 +135,58 @@ class AprioriAlgorithm:
         return frequent_itemsets, unique_rules
 
 # Thư mục lưu trữ kết quả luật kết hợp
-RULES_FILE = "association_rules.json"
+RULES_FILE = runtime_file("association_rules.json")
+RULES_METADATA_FILE = runtime_file("association_rules_metadata.json")
 
-def train_and_save_rules(transactions_list: List[List[str]], min_support: float = 0.05, min_confidence: float = 0.3) -> List[Dict[str, Any]]:
+def train_and_save_rules(transactions_list: List[List[str]], min_support: float = 0.05, min_confidence: float = 0.3,
+                         domain: str | None = None, taxonomy_skills: List[str] | None = None,
+                         taxonomy_aliases: Dict[str, str] | None = None,
+                         dataset_id: str | None = None, min_support_count: int = 2,
+                         reset_models: bool = False) -> List[Dict[str, Any]]:
     """
     Huấn luyện thuật toán Apriori và lưu kết quả vào file JSON.
     """
     try:
-        transactions = [set(t) for t in transactions_list if t]
+        global LAST_TRAINING_METADATA
+        if not domain and not taxonomy_skills:
+            LAST_TRAINING_METADATA = {"status": "skipped", "reason": "Thiếu domain hoặc taxonomy đã duyệt; không ghi đè kết quả cũ."}
+            write_metadata(RULES_METADATA_FILE, LAST_TRAINING_METADATA)
+            logger.warning(LAST_TRAINING_METADATA["reason"])
+            return []
+        transactions, metadata = canonicalize_transactions(
+            transactions_list, domain, taxonomy_skills, taxonomy_aliases
+        )
+        metadata.update({"status": "success", "algorithm": "Apriori", "dataset_id": dataset_id,
+                         "total_transactions": len(transactions), "min_support": min_support,
+                         "min_confidence": min_confidence, "min_support_count": min_support_count})
+        if len(transactions) < max(1, min_support_count):
+            metadata["status"] = "skipped"
+            metadata["reason"] = "Không đủ giao dịch sau khi chuẩn hóa taxonomy."
+            LAST_TRAINING_METADATA = metadata
+            write_metadata(RULES_METADATA_FILE, metadata)
+            return []
         apriori = AprioriAlgorithm(min_support, min_confidence)
         _, rules = apriori.run(transactions)
+        rules = [r for r in rules if round(r["support"] * len(transactions)) >= max(1, min_support_count)]
+        metadata["rules_count"] = len(rules)
+        LAST_TRAINING_METADATA = metadata
+        write_metadata(RULES_METADATA_FILE, metadata)
         
         # Sắp xếp luật theo độ tin cậy (Confidence) giảm dần
         rules.sort(key=lambda x: x["confidence"], reverse=True)
         
-        with open(RULES_FILE, "w", encoding="utf-8") as f:
-            json.dump(rules, f, ensure_ascii=False, indent=2)
+        save_domain_model(
+            RULES_FILE, RULES_METADATA_FILE, domain or "unknown", "rules", rules, metadata, reset_models
+        )
             
         logger.info(f"Đã huấn luyện xong Apriori. Khai phá được {len(rules)} luật kết hợp và lưu vào file.")
         return rules
     except Exception as e:
         logger.error(f"Lỗi khi chạy huấn luyện Apriori: {e}")
         return []
+
+def get_last_training_metadata() -> Dict[str, Any]:
+    return dict(LAST_TRAINING_METADATA)
 
 def get_recommended_skills(current_skills: List[str], top_n: int = 5) -> List[str]:
     """
@@ -161,16 +195,16 @@ def get_recommended_skills(current_skills: List[str], top_n: int = 5) -> List[st
     if not current_skills:
         return []
         
-    current_skills_set = set(s.lower().strip() for s in current_skills)
+    import nlp_processor
+    current_skills_set = set(nlp_processor.canonicalize_skill_values(current_skills))
+    if not current_skills_set:
+        return []
     
     if not os.path.exists(RULES_FILE):
         logger.warning("Không tìm thấy file luật kết hợp. Hãy chạy huấn luyện trước.")
         return []
-        
     try:
-        with open(RULES_FILE, "r", encoding="utf-8") as f:
-            rules = json.load(f)
-            
+        rules = flatten_results(RULES_FILE, RULES_METADATA_FILE, "rules")
         recommendations = {}
         for rule in rules:
             antecedent = set(s.lower().strip() for s in rule["antecedent"])
@@ -193,3 +227,7 @@ def get_recommended_skills(current_skills: List[str], top_n: int = 5) -> List[st
     except Exception as e:
         logger.error(f"Lỗi gợi ý kỹ năng bằng Apriori: {e}")
         return []
+
+
+def get_all_rules() -> List[Dict[str, Any]]:
+    return flatten_results(RULES_FILE, RULES_METADATA_FILE, "rules")

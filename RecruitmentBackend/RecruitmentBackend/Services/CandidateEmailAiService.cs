@@ -61,7 +61,9 @@ namespace RecruitmentBackend.Services
 
             if (!_enableAiEmailDraft)
             {
-                return (true, "Đã tạo nội dung email thành công.", BuildEditableTemplate(request, emailType));
+                GenerateCandidateEmailResponse template = BuildEditableTemplate(request, emailType);
+                template.Source = "template";
+                return (true, "Đã tạo mẫu email chỉnh sửa được (AI đang tắt).", template);
             }
 
             object pythonRequest = new
@@ -122,7 +124,8 @@ namespace RecruitmentBackend.Services
                 GenerateCandidateEmailResponse result = new GenerateCandidateEmailResponse
                 {
                     Subject = pythonResponse.Subject ?? string.Empty,
-                    Body = pythonResponse.Body ?? string.Empty
+                    Body = pythonResponse.Body ?? string.Empty,
+                    Source = "ai"
                 };
 
                 if (string.IsNullOrWhiteSpace(result.Subject))

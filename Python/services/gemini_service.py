@@ -4,7 +4,6 @@ import os
 import time
 import requests
 import json
-import random
 import threading
 from dotenv import load_dotenv
 from utils.logger import logger
@@ -12,6 +11,25 @@ from utils.logger import logger
 # Tai cau hinh tu env
 env_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env")
 load_dotenv(dotenv_path=env_path, override=True)
+
+MIN_REQUEST_TIMEOUT_MS = max(10000, int(os.getenv("GEMINI_MIN_REQUEST_TIMEOUT_MS", "10000")))
+DEFAULT_REQUEST_TIMEOUT_MS = max(
+    MIN_REQUEST_TIMEOUT_MS,
+    int(os.getenv("GEMINI_REQUEST_TIMEOUT_MS", "15000")),
+)
+
+
+def _create_client(api_key: str, timeout_ms: int = DEFAULT_REQUEST_TIMEOUT_MS):
+    """Tắt retry nội bộ để lớp xoay model/key kiểm soát thời gian chờ thống nhất."""
+    if hasattr(types, "HttpOptions") and hasattr(types, "HttpRetryOptions"):
+        return genai.Client(
+            api_key=api_key,
+            http_options=types.HttpOptions(
+                timeout=timeout_ms,
+                retry_options=types.HttpRetryOptions(attempts=1),
+            ),
+        )
+    return genai.Client(api_key=api_key)
 
 api_keys = []
 primary_key = os.getenv("GEMINI_API_KEY")
@@ -32,14 +50,14 @@ if not api_keys:
     clients = []
     client = None
 else:
-    clients = [genai.Client(api_key=key) for key in api_keys]
+    clients = [_create_client(key) for key in api_keys]
     client = clients[0] if clients else None
 
 DEFAULT_MODELS = [
     value.strip()
     for value in os.getenv(
         "GEMINI_MODELS",
-        "gemini-2.5-flash,gemini-2.5-flash-lite,gemini-3.6-flash,gemini-3.5-flash-lite,gemini-3.1-flash-lite",
+        "gemini-3.6-flash,gemini-3.7-flash,gemini-3.5-flash,gemini-3.5-flash-lite,gemini-3.1-flash-lite",
     ).split(",")
     if value.strip()
 ]
@@ -47,20 +65,44 @@ VISION_MODELS = [
     value.strip()
     for value in os.getenv(
         "GEMINI_VISION_MODELS",
-        "gemini-2.5-flash,gemini-2.5-flash-lite,gemini-3.6-flash,gemini-3.5-flash-lite,gemini-3.1-flash-lite",
+        "gemini-3.6-flash,gemini-3.7-flash,gemini-3.5-flash,gemini-3.5-flash-lite,gemini-3.1-flash-lite",
     ).split(",")
     if value.strip()
 ]
 KEY_COOLDOWN_SECONDS = max(10, int(os.getenv("GEMINI_KEY_COOLDOWN_SECONDS", "60")))
+NETWORK_COOLDOWN_SECONDS = max(10, int(os.getenv("GEMINI_NETWORK_COOLDOWN_SECONDS", "60")))
+MODEL_COOLDOWN_SECONDS = max(30, int(os.getenv("GEMINI_MODEL_COOLDOWN_SECONDS", "300")))
+MODEL_KEY_COOLDOWN_SECONDS = max(10, int(os.getenv("GEMINI_MODEL_KEY_COOLDOWN_SECONDS", "30")))
+MAX_KEYS_PER_MODEL = max(1, int(os.getenv("GEMINI_MAX_KEYS_PER_MODEL", "3")))
+TOTAL_REQUEST_BUDGET_MS = max(10000, int(os.getenv("GEMINI_TOTAL_REQUEST_BUDGET_MS", "60000")))
+TARGET_ATTEMPTS_PER_REQUEST = max(1, int(os.getenv("GEMINI_TARGET_ATTEMPTS_PER_REQUEST", "4")))
+TRANSIENT_KEYS_BEFORE_MODEL_FAILOVER = max(
+    1,
+    int(os.getenv("GEMINI_TRANSIENT_KEYS_BEFORE_MODEL_FAILOVER", "2")),
+)
 _key_cooldowns = {}
+_model_cooldowns = {}
+_model_key_cooldowns = {}
 _unavailable_models = set()
+_network_unavailable_until = 0.0
 _state_lock = threading.Lock()
 
 
-def _available_clients():
+def _available_clients(model_name: str | None = None):
     now = time.monotonic()
     with _state_lock:
-        available = [item for item in enumerate(clients) if _key_cooldowns.get(item[0], 0) <= now]
+        available = [
+            item
+            for item in enumerate(clients)
+            if _key_cooldowns.get(item[0], 0) <= now
+            and (
+                model_name is None
+                or _model_key_cooldowns.get((model_name, item[0]), 0) <= now
+            )
+        ]
+        # Giữ thứ tự key trong .env làm thứ tự ưu tiên. Không thể suy ra paid/free
+        # chỉ từ chuỗi API key, nên project paid cần được cấu hình trước project free.
+        available.sort(key=lambda item: item[0])
     # If every key is cooling down, fail quickly instead of multiplying slow
     # upstream calls for each concurrent CV analysis request.
     return available
@@ -69,6 +111,47 @@ def _available_clients():
 def _cool_down_key(client_idx: int):
     with _state_lock:
         _key_cooldowns[client_idx] = time.monotonic() + KEY_COOLDOWN_SECONDS
+
+
+def _cool_down_model_key(model_name: str, client_idx: int):
+    with _state_lock:
+        _model_key_cooldowns[(model_name, client_idx)] = (
+            time.monotonic() + MODEL_KEY_COOLDOWN_SECONDS
+        )
+
+
+def _network_is_cooling_down() -> bool:
+    with _state_lock:
+        return _network_unavailable_until > time.monotonic()
+
+
+def _cool_down_network():
+    global _network_unavailable_until
+    with _state_lock:
+        _network_unavailable_until = time.monotonic() + NETWORK_COOLDOWN_SECONDS
+
+
+def _is_network_error(error: Exception) -> bool:
+    """Do not multiply retries by every key/model when the network itself is down."""
+    message = str(error).lower()
+    markers = (
+        "winerror 10013", "connection refused", "connection aborted",
+        "connection reset", "failed to establish a new connection",
+        "max retries exceeded", "name resolution",
+        "temporary failure in name resolution", "nodename nor servname",
+        "network is unreachable",
+    )
+    return isinstance(error, requests.exceptions.ConnectionError) or any(
+        marker in message for marker in markers
+    )
+
+
+def _is_transient_model_error(error_text: str) -> bool:
+    markers = (
+        "503", "504", "unavailable", "high demand", "deadline_exceeded",
+        "deadline expired", "read operation timed out", "read timeout", "timed out",
+    )
+    return any(marker in error_text for marker in markers)
 
 def clean_json_text(text: str) -> str:
     """
@@ -131,6 +214,8 @@ def generate_content_with_retry(
     """
     if not clients:
         raise Exception("Khong cau hinh API keys truc tiep.")
+    if _network_is_cooling_down():
+        raise ConnectionError("Ket noi Gemini dang tam nghi; su dung ket qua du phong cuc bo.")
 
     models_to_try = models if models is not None else DEFAULT_MODELS
     config = types.GenerateContentConfig(
@@ -138,23 +223,66 @@ def generate_content_with_retry(
     )
 
     last_error = None
+    attempts_started = 0
+    budget_exhausted = False
+    request_deadline = time.monotonic() + (TOTAL_REQUEST_BUDGET_MS / 1000)
     for model_name in models_to_try:
+        remaining_before_model_ms = int((request_deadline - time.monotonic()) * 1000)
+        if remaining_before_model_ms < MIN_REQUEST_TIMEOUT_MS:
+            budget_exhausted = True
+            logger.warning(
+                f"Da het ngan sach Gemini truoc khi thu model {model_name}; "
+                "model/key con lai chua duoc goi, khong phai da xac dinh la hong hoac het quota."
+            )
+            break
         with _state_lock:
-            if model_name in _unavailable_models:
+            if (
+                model_name in _unavailable_models
+                or _model_cooldowns.get(model_name, 0) > time.monotonic()
+            ):
                 continue
-        # Xáo trộn danh sách clients kèm index gốc để chia đều tải ngẫu nhiên cho mỗi model
-        shuffled_clients = _available_clients()
-        random.shuffle(shuffled_clients)
+        # Thử nhiều project/key cho cùng model vì 503/504 có thể chỉ ảnh hưởng
+        # một project/tier. Giới hạn số key để request không kéo dài vô hạn.
+        clients_for_model = _available_clients(model_name)[:MAX_KEYS_PER_MODEL]
+        if not clients_for_model:
+            logger.warning(
+                f"Bo qua model {model_name} trong request nay vi cac key dang cooldown; "
+                "chua ket luan key khong kha dung."
+            )
+            continue
         
         is_model_not_found = False
-        for client_idx, active_client in shuffled_clients:
+        transient_failures = 0
+        attempted_clients = 0
+        for client_idx, active_client in clients_for_model:
+            remaining_ms = int((request_deadline - time.monotonic()) * 1000)
+            if remaining_ms < MIN_REQUEST_TIMEOUT_MS:
+                budget_exhausted = True
+                logger.warning(
+                    f"Khong thu them Key #{client_idx+1} cua model {model_name} vi chi con "
+                    f"{max(0, remaining_ms)}ms, thap hon deadline toi thieu {MIN_REQUEST_TIMEOUT_MS}ms."
+                )
+                break
+            attempted_clients += 1
+            attempts_started += 1
             request_client = active_client
             try:
-                if request_timeout_ms is not None:
-                    request_client = genai.Client(
-                        api_key=api_keys[client_idx],
-                        http_options=types.HttpOptions(timeout=request_timeout_ms)
-                    )
+                requested_timeout_ms = max(
+                    MIN_REQUEST_TIMEOUT_MS,
+                    request_timeout_ms or DEFAULT_REQUEST_TIMEOUT_MS,
+                )
+                target_slots_left = max(1, TARGET_ATTEMPTS_PER_REQUEST - attempts_started + 1)
+                fair_share_ms = max(MIN_REQUEST_TIMEOUT_MS, remaining_ms // target_slots_left)
+                attempt_timeout_ms = min(
+                    requested_timeout_ms,
+                    fair_share_ms,
+                    remaining_ms,
+                )
+                if (
+                    hasattr(types, "HttpOptions")
+                    and attempt_timeout_ms != DEFAULT_REQUEST_TIMEOUT_MS
+                ):
+                    request_client = _create_client(api_keys[client_idx], attempt_timeout_ms)
 
                 response = request_client.models.generate_content(
                     model=model_name,
@@ -171,6 +299,11 @@ def generate_content_with_retry(
             except Exception as e:
                 last_error = e
                 err_str = str(e).lower()
+                if _is_network_error(e):
+                    _cool_down_network()
+                    raise ConnectionError(
+                        "Khong the ket noi Gemini; chuyen ngay sang ket qua du phong cuc bo."
+                    ) from e
                 logger.warning(f"Loi goi model {model_name} voi Key #{client_idx+1}: {e}")
                 if "404" in err_str or "not_found" in err_str or "not found" in err_str:
                     logger.warning(f"Model {model_name} khong ton tai (404 NOT_FOUND). Bo qua model nay.")
@@ -178,18 +311,56 @@ def generate_content_with_retry(
                     with _state_lock:
                         _unavailable_models.add(model_name)
                     break
+                if _is_transient_model_error(err_str):
+                    logger.warning(
+                        f"Model {model_name} tam thoi qua tai/timeout tren Key #{client_idx+1}. "
+                        "Dang thu key project tiep theo."
+                    )
+                    transient_failures += 1
+                    _cool_down_model_key(model_name, client_idx)
+                    if transient_failures >= TRANSIENT_KEYS_BEFORE_MODEL_FAILOVER:
+                        logger.warning(
+                            f"Model {model_name} da timeout/qua tai tren {transient_failures} key/project; "
+                            "chuyen model de danh ngan sach cho failover."
+                        )
+                        break
+                    continue
                 if "429" in err_str or "resource_exhausted" in err_str or "quota" in err_str:
                     logger.warning(f"Model {model_name} Key #{client_idx+1} dat Quota/Rate Limit (429). Dang thu sang Key/Model khac...")
                     _cool_down_key(client_idx)
+                    continue
+                if "400" in err_str or "invalid_argument" in err_str:
+                    raise ValueError(
+                        f"Gemini tu choi request cho model {model_name} do tham so/prompt khong hop le."
+                    ) from e
             finally:
                 if request_client is not active_client:
                     request_client.close()
 
         if is_model_not_found:
             continue
+
+        if transient_failures >= max(1, min(2, attempted_clients)):
+            with _state_lock:
+                _model_cooldowns[model_name] = time.monotonic() + MODEL_COOLDOWN_SECONDS
+            logger.warning(
+                f"Model {model_name} loi tam thoi tren {transient_failures} key/project. "
+                "Tam khoa model va chuyen model tiep theo."
+            )
+            continue
                 
-        logger.warning(f"Model {model_name} khong kha dung tren cac Keys hien co. Dang thu model tiep theo...")
+        if budget_exhausted:
+            break
+        logger.warning(
+            f"Model {model_name} chua tao duoc phan hoi sau {attempted_clients} lan thu. "
+            "Dang thu model tiep theo."
+        )
         
+    if budget_exhausted:
+        raise TimeoutError(
+            f"Da het ngan sach {TOTAL_REQUEST_BUDGET_MS}ms sau {attempts_started} lan goi Gemini; "
+            "cac model/key con lai chua duoc thu."
+        ) from last_error
     raise last_error or Exception("Khong the ket noi den Google Gemini API sau khi xoay vong cac keys va models.")
 
 
@@ -201,13 +372,13 @@ def embed_content_with_retry(texts: list) -> list:
     """
     if not clients:
         raise Exception("Khong cau hinh API keys.")
+    if _network_is_cooling_down():
+        raise ConnectionError("Ket noi Gemini dang tam nghi; su dung embedding du phong.")
         
     last_error = None
-    # Xáo trộn danh sách clients để chia đều tải ngẫu nhiên
-    shuffled_clients = _available_clients()
-    random.shuffle(shuffled_clients)
+    available_clients = _available_clients()
     
-    for client_idx, active_client in shuffled_clients:
+    for client_idx, active_client in available_clients:
         try:
             vectors = []
             for t in texts:
@@ -226,6 +397,9 @@ def embed_content_with_retry(texts: list) -> list:
             last_error = e
             logger.warning(f"Loi goi Embedding voi Key #{client_idx+1}: {e}")
             err_str = str(e).lower()
+            if _is_network_error(e):
+                _cool_down_network()
+                raise ConnectionError("Khong the ket noi Gemini Embedding.") from e
             if "429" in err_str or "resource_exhausted" in err_str or "quota" in err_str:
                 _cool_down_key(client_idx)
             
@@ -239,18 +413,26 @@ def generate_vision_content_with_retry(image_bytes: bytes, mime_type: str, promp
     """
     if not clients:
         return ""
+    if _network_is_cooling_down():
+        return ""
 
     models_to_try = VISION_MODELS
-
-    shuffled_clients = _available_clients()
-    random.shuffle(shuffled_clients)
 
     # Đảm bảo mime_type hợp lệ cho Gemini Part
     valid_mime = mime_type if mime_type in ["image/png", "image/jpeg", "image/webp"] else "image/jpeg"
     image_part = types.Part.from_bytes(data=image_bytes, mime_type=valid_mime)
 
     for model_name in models_to_try:
-        for client_idx, active_client in shuffled_clients:
+        with _state_lock:
+            if (
+                model_name in _unavailable_models
+                or _model_cooldowns.get(model_name, 0) > time.monotonic()
+            ):
+                continue
+        transient_failures = 0
+        attempted_clients = 0
+        for client_idx, active_client in _available_clients(model_name)[:MAX_KEYS_PER_MODEL]:
+            attempted_clients += 1
             try:
                 response = active_client.models.generate_content(
                     model=model_name,
@@ -262,12 +444,27 @@ def generate_vision_content_with_retry(image_bytes: bytes, mime_type: str, promp
             except Exception as e:
                 logger.warning(f"Loi Gemini Vision voi model {model_name} (Key #{client_idx+1}): {e}")
                 err_str = str(e).lower()
+                if _is_network_error(e):
+                    _cool_down_network()
+                    return ""
                 if "404" in err_str or "not_found" in err_str or "not found" in err_str:
                     with _state_lock:
                         _unavailable_models.add(model_name)
                     break
+                if _is_transient_model_error(err_str):
+                    transient_failures += 1
+                    _cool_down_model_key(model_name, client_idx)
+                    logger.warning(
+                        f"Gemini Vision {model_name} quá tải/timeout trên Key #{client_idx+1}. "
+                        "Đang thử key project tiếp theo."
+                    )
+                    continue
                 if "429" in err_str or "resource_exhausted" in err_str or "quota" in err_str:
                     _cool_down_key(client_idx)
+
+        if transient_failures >= max(1, min(2, attempted_clients)):
+            with _state_lock:
+                _model_cooldowns[model_name] = time.monotonic() + MODEL_COOLDOWN_SECONDS
 
     return ""
 

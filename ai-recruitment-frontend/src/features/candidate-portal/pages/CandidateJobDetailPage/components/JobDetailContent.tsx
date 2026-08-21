@@ -21,6 +21,7 @@ interface JobDetailContentProps {
   appliedApplication: any;
   showApplyModal: () => void;
   handleApplyWithAI: () => void;
+  handleViewAppliedAiEvaluation: () => void;
   relatedJobs?: any[];
 }
 
@@ -29,6 +30,7 @@ const JobDetailContent: React.FC<JobDetailContentProps> = ({
   appliedApplication,
   showApplyModal,
   handleApplyWithAI,
+  handleViewAppliedAiEvaluation,
   relatedJobs = [],
 }) => {
   return (
@@ -142,8 +144,7 @@ const JobDetailContent: React.FC<JobDetailContentProps> = ({
                 type={appliedApplication ? "default" : "primary"}
                 size="large"
                 icon={appliedApplication ? <CheckCircleOutlined /> : <SendOutlined />}
-                onClick={appliedApplication ? undefined : showApplyModal}
-                disabled={!!appliedApplication}
+                onClick={appliedApplication ? handleViewAppliedAiEvaluation : showApplyModal}
                 style={{
                   width: 220,
                   height: 44,
@@ -156,7 +157,7 @@ const JobDetailContent: React.FC<JobDetailContentProps> = ({
                   fontFamily: appTheme.font.family,
                 }}
               >
-                {appliedApplication ? "Đã ứng tuyển" : "Ứng tuyển ngay"}
+                {appliedApplication ? "Quản lý hồ sơ đã nộp" : "Ứng tuyển ngay"}
               </Button>
               {!appliedApplication && (
                 <Button

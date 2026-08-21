@@ -2,12 +2,12 @@ import os
 import json
 import hashlib
 from typing import List, Tuple, Dict, Any
-import pdf_extractor
 import nlp_processor
 from . import doc_parser_service
 from . import scoring_service
 from . import interview_service
-from .skills_sync_service import sync_skills_to_db
+from .timeline_service import extract_experience_timeline
+from .section_segmentation_service import segment_cv_sections
 from utils.logger import logger
 
 # Cache luu tru cuc bo
@@ -15,8 +15,8 @@ TEXT_CACHE: Dict[str, Any] = {}
 SCORE_CACHE: Dict[Tuple[str, str, str], Any] = {}
 
 OCR_INSUFFICIENT_MESSAGE = (
-    "OCR không trích xuất đủ nội dung từ ảnh CV để thực hiện đối sánh. "
-    "Điểm tương thích được đặt về 0%; vui lòng tải ảnh rõ hơn hoặc sử dụng tệp PDF/DOCX."
+    "Hệ thống chưa đọc được nội dung CV với độ tin cậy đủ để phân tích. "
+    "Vui lòng dùng tệp rõ nét hơn hoặc PDF/DOCX có văn bản."
 )
 
 
@@ -33,7 +33,10 @@ def _has_sufficient_ocr_text(text: str) -> bool:
     return len(normalized_text) >= 200 and len(normalized_text.split()) >= 35
 
 
-def _build_insufficient_preview_result(cv_text: str = "") -> Dict[str, Any]:
+def _build_insufficient_preview_result(
+    cv_text: str = "",
+    extraction_quality: Dict[str, Any] | None = None,
+) -> Dict[str, Any]:
     return {
         "score_analysis": {
             "total_score": 0,
@@ -58,23 +61,38 @@ def _build_insufficient_preview_result(cv_text: str = "") -> Dict[str, Any]:
             "extracted_skills": []
         },
         "cv_text": cv_text or "",
+        "extraction_quality": extraction_quality or {
+            "quality_level": "insufficient",
+            "analysis_safe": False,
+            "warnings": [],
+        },
         "analysis_status": "insufficient",
         "message": OCR_INSUFFICIENT_MESSAGE
     }
 
 
-def _build_insufficient_score_response(criteria_list: List[Dict[str, Any]], cv_text: str = "") -> Dict[str, Any]:
+def _build_insufficient_score_response(
+    criteria_list: List[Dict[str, Any]],
+    cv_text: str = "",
+    extraction_quality: Dict[str, Any] | None = None,
+) -> Dict[str, Any]:
     criteria_results = [
         {
             "criterion_name": str(criterion.get("name", "Tiêu chí")),
             "weight": int(criterion.get("weight", 0)),
             "score": 0,
             "max_score": int(criterion.get("weight", 0)),
-            "comment": "Không đủ dữ liệu OCR để chấm tiêu chí này."
+            "comment": "Không đủ dữ liệu OCR để chấm tiêu chí này.",
+            "match_level": "INSUFFICIENT_DATA",
+            "confidence": 0.0,
+            "evidence_text": "",
+            "evidence_section": "",
+            "extracted_value": "",
+            "needs_verification": True
         }
         for criterion in criteria_list
     ]
-    analysis = _build_insufficient_preview_result(cv_text)
+    analysis = _build_insufficient_preview_result(cv_text, extraction_quality)
     matching_result = {
         "total_score": 0,
         "classification": "Không đủ dữ liệu",
@@ -126,6 +144,30 @@ def clean_cache_if_large():
         first_key = next(iter(SCORE_CACHE))
         SCORE_CACHE.pop(first_key, None)
 
+
+def serialize_extraction_quality(extraction_result: Any) -> Dict[str, Any]:
+    return {
+        "method": extraction_result.method,
+        "quality_score": extraction_result.quality_score,
+        "quality_level": extraction_result.quality_level,
+        "warnings": extraction_result.warnings,
+        "block_count": len(extraction_result.blocks),
+        "alternatives": extraction_result.alternatives,
+        "agreement_score": extraction_result.agreement_score,
+        "agreement_kind": extraction_result.agreement_kind,
+        "analysis_safe": extraction_result.analysis_safe,
+    }
+
+
+def cache_document_extraction(file_bytes: bytes, extraction_result: Any) -> str:
+    """Dùng lại kết quả validate cho score/preview, đặc biệt tránh OCR/Vision hai lần cho cùng tệp."""
+    cv_hash = get_bytes_hash(file_bytes)
+    entry = TEXT_CACHE.setdefault(cv_hash, {})
+    entry["cv_text"] = extraction_result.text or ""
+    entry["extraction_quality"] = serialize_extraction_quality(extraction_result)
+    clean_cache_if_large()
+    return cv_hash
+
 def score_resume_sync(
     file_bytes: bytes,
     filename: str,
@@ -150,6 +192,13 @@ def score_resume_sync(
         return SCORE_CACHE[score_key]
 
     # 2. Trich xuat noi dung (Kiem tra Cache cap 1)
+    extraction_quality = {
+        "method": "structured_cv_builder" if cv_text_override is not None else "cache",
+        "quality_score": 100.0 if cv_text_override is not None else 0.0,
+        "quality_level": "high" if cv_text_override is not None else "unknown",
+        "warnings": [],
+        "analysis_safe": cv_text_override is not None,
+    }
     if cv_text_override is not None:
         cv_text = cv_text_override.strip()
         if cv_hash not in TEXT_CACHE:
@@ -158,21 +207,33 @@ def score_resume_sync(
     elif cv_hash in TEXT_CACHE and "cv_text" in TEXT_CACHE[cv_hash]:
         logger.info(f"Lay van ban CV tu cache: {cv_hash}")
         cv_text = TEXT_CACHE[cv_hash]["cv_text"]
+        extraction_quality = TEXT_CACHE[cv_hash].get("extraction_quality", extraction_quality)
     else:
-        cv_text = doc_parser_service.extract_text_from_file(
+        extraction_result = doc_parser_service.extract_document_from_file(
             file_bytes,
             filename,
             content_type
         )
+        cv_text = extraction_result.text
+        extraction_quality = serialize_extraction_quality(extraction_result)
         if cv_text:
             if cv_hash not in TEXT_CACHE:
                 TEXT_CACHE[cv_hash] = {}
             TEXT_CACHE[cv_hash]["cv_text"] = cv_text
+            TEXT_CACHE[cv_hash]["extraction_quality"] = extraction_quality
             clean_cache_if_large()
 
-    if cv_text_override is None and _is_image_upload(filename, content_type) and not _has_sufficient_ocr_text(cv_text):
-        logger.warning("OCR ảnh CV không đủ dữ liệu; trả kết quả 0% thay vì suy diễn điểm.")
-        response_data = _build_insufficient_score_response(criteria_list, cv_text)
+    extraction_is_unsafe = (
+        cv_text_override is None
+        and (
+            extraction_quality.get("analysis_safe") is False
+            or str(extraction_quality.get("quality_level", "")).casefold() == "insufficient"
+            or (_is_image_upload(filename, content_type) and not _has_sufficient_ocr_text(cv_text))
+        )
+    )
+    if extraction_is_unsafe:
+        logger.warning("EXTRACTION_UNSAFE: Dừng phân tích CV vì kết quả đọc tài liệu chưa đủ tin cậy.")
+        response_data = _build_insufficient_score_response(criteria_list, cv_text, extraction_quality)
         SCORE_CACHE[score_key] = response_data
         clean_cache_if_large()
         return response_data
@@ -200,6 +261,8 @@ def score_resume_sync(
 
     jd_info = nlp_processor.extract_information(job_description)
     jd_skills = jd_info["skills"]
+    experience_timeline = extract_experience_timeline(cv_text, cv_skills)
+    normalized_sections = segment_cv_sections(cv_text)
 
     # Tinh diem khop va tao bao cao
     scoring_result = scoring_service.calculate_resume_score(
@@ -209,8 +272,15 @@ def score_resume_sync(
         jd_skills=jd_skills,
         criteria_list=criteria_list
     )
+    scoring_result = scoring_service.reconcile_timeline_criteria(
+        scoring_result, criteria_list, experience_timeline
+    )
+    scoring_result = scoring_service.reconcile_structured_criteria(
+        scoring_result, criteria_list, cv_text, cv_skills, normalized_sections
+    )
 
     # Chạy các tác vụ phân tích chuyên sâu
+    deep_res = {"skill_mining_context": {"status": "insufficient_data"}}
     try:
         deep_res = scoring_service.analyze_cv_deep(
             cv_text=cv_text,
@@ -221,7 +291,11 @@ def score_resume_sync(
         score_analysis = deep_res.get("score_analysis", {})
         strengths = score_analysis.get("strengths", [])
         weaknesses = score_analysis.get("weaknesses", [])
-        red_flags = score_analysis.get("red_flags", [])
+        red_flags = scoring_service.sanitize_red_flags(
+            score_analysis.get("red_flags", []),
+            cv_text,
+            extraction_quality,
+        )
     except Exception as e:
         logger.error(f"Loi khi phan tich chuyen sau CV: {e}")
         strengths, weaknesses, red_flags = [], [], []
@@ -238,10 +312,22 @@ def score_resume_sync(
         star_tips = interview_service.get_fallback_star_tips(cv_skills, jd_skills)
 
     try:
-        language_review = scoring_service.generate_cv_language_review(
-            cv_text=cv_text,
-            jd_text=job_description
+        extraction_method = str(extraction_quality.get("method", "") or "").casefold()
+        extraction_level = str(extraction_quality.get("quality_level", "") or "").casefold()
+        extraction_warnings = " ".join(str(item) for item in extraction_quality.get("warnings", [])).casefold()
+        language_source_unreliable = (
+            extraction_level in {"low", "insufficient"}
+            or any(token in extraction_warnings for token in ("ký tự lỗi", "mã hóa", "encoding", "mất dấu", "nhận dạng sai"))
         )
+        if language_source_unreliable:
+            language_review = scoring_service.build_insufficient_language_review(
+                "Văn bản được đọc qua OCR hoặc có chất lượng trích xuất chưa ổn định; hệ thống không quy lỗi ký tự cho cách viết của ứng viên."
+            )
+        else:
+            language_review = scoring_service.generate_cv_language_review(
+                cv_text=cv_text,
+                jd_text=job_description
+            )
     except Exception as e:
         logger.error(f"Loi khi review ngon tu CV: {e}")
         language_review = scoring_service.build_insufficient_language_review(
@@ -259,11 +345,31 @@ def score_resume_sync(
         logger.error(f"Loi khi tao cau hoi phong van: {e}")
         mock_interview = interview_service.get_fallback_mock_interview(cv_skills, jd_skills)
 
+    criteria_results = scoring_result.get("criteria_results", [])
+    total_weight = sum(max(0, item.get("weight", 0) or 0) for item in criteria_results)
+    weighted_confidence = sum(
+        max(0, item.get("weight", 0) or 0) * max(0.0, min(1.0, item.get("confidence", 0) or 0))
+        for item in criteria_results
+    )
+    analysis_confidence = round((weighted_confidence / total_weight) * 100) if total_weight else 0
+    evidence_weight = sum(
+        max(0, item.get("weight", 0) or 0)
+        for item in criteria_results
+        if str(item.get("evidence_text", "") or "").strip()
+    )
+    evidence_coverage = round((evidence_weight / total_weight) * 100) if total_weight else 0
+    verification_count = sum(1 for item in criteria_results if item.get("needs_verification") is True)
+
     # Gom goi tat ca thong tin
     full_analysis_data = {
+        "analysis_version": 4,
+        "extracted_skills": cv_skills,
         "score_analysis": {
             "total_score": scoring_result.get("total_score", 0),
             "classification": scoring_result.get("classification", "Chưa phân loại"),
+            "analysis_confidence": analysis_confidence,
+            "evidence_coverage": evidence_coverage,
+            "verification_count": verification_count,
             "summary": scoring_result.get("summary", "Da hoan thanh phan tich CV."),
             "strengths": strengths,
             "weaknesses": weaknesses,
@@ -271,7 +377,11 @@ def score_resume_sync(
             "matched_skills": scoring_result.get("matched_skills", []),
             "missing_skills": scoring_result.get("missing_skills", [])
         },
-        "criteria_results": scoring_result.get("criteria_results", []),
+        "extraction_quality": extraction_quality,
+        "experience_timeline": experience_timeline,
+        "normalized_sections": normalized_sections,
+        "skill_mining_context": deep_res.get("skill_mining_context", {"status": "insufficient_data"}) if isinstance(deep_res, dict) else {"status": "insufficient_data"},
+        "criteria_results": criteria_results,
         "optimization_tips": star_tips,
         "language_review": language_review,
         "mock_interview": mock_interview
@@ -287,7 +397,9 @@ def score_resume_sync(
             "extracted_skills": cv_skills,
             "raw_text": cv_text,
             "ExtractedSkills": cv_skills,
-            "RawText": cv_text
+            "RawText": cv_text,
+            "extraction_quality": extraction_quality,
+            "experience_timeline": experience_timeline
         },
         "matching_result": scoring_result
     }
@@ -313,6 +425,13 @@ def preview_resume_sync(
     """
     cv_hash = get_bytes_hash(cv_text_override.encode("utf-8") if cv_text_override else file_bytes)
 
+    extraction_quality = {
+        "method": "structured_cv_builder" if cv_text_override else "cache",
+        "quality_score": 100.0 if cv_text_override else 0.0,
+        "quality_level": "high" if cv_text_override else "unknown",
+        "warnings": [],
+        "analysis_safe": bool(cv_text_override),
+    }
     # Kiem tra Cache text
     if cv_text_override:
         cv_text = cv_text_override
@@ -322,21 +441,33 @@ def preview_resume_sync(
     elif cv_hash in TEXT_CACHE and "cv_text" in TEXT_CACHE[cv_hash]:
         logger.info(f"Lay text CV tu cache trong preview: {cv_hash}")
         cv_text = TEXT_CACHE[cv_hash]["cv_text"]
+        extraction_quality = TEXT_CACHE[cv_hash].get("extraction_quality", extraction_quality)
     else:
-        cv_text = doc_parser_service.extract_text_from_file(
+        extraction_result = doc_parser_service.extract_document_from_file(
             file_bytes,
             filename,
             content_type
         )
+        cv_text = extraction_result.text
+        extraction_quality = serialize_extraction_quality(extraction_result)
         if cv_text:
             if cv_hash not in TEXT_CACHE:
                 TEXT_CACHE[cv_hash] = {}
             TEXT_CACHE[cv_hash]["cv_text"] = cv_text
+            TEXT_CACHE[cv_hash]["extraction_quality"] = extraction_quality
             clean_cache_if_large()
 
-    if _is_image_upload(filename, content_type) and not _has_sufficient_ocr_text(cv_text):
-        logger.warning("OCR ảnh CV không đủ dữ liệu trong chế độ xem trước; hiển thị 0%.")
-        return _build_insufficient_preview_result(cv_text)
+    extraction_is_unsafe = (
+        not cv_text_override
+        and (
+            extraction_quality.get("analysis_safe") is False
+            or str(extraction_quality.get("quality_level", "")).casefold() == "insufficient"
+            or (_is_image_upload(filename, content_type) and not _has_sufficient_ocr_text(cv_text))
+        )
+    )
+    if extraction_is_unsafe:
+        logger.warning("EXTRACTION_UNSAFE: Dừng xem trước vì kết quả đọc tài liệu chưa đủ tin cậy.")
+        return _build_insufficient_preview_result(cv_text, extraction_quality)
 
     if not cv_text or cv_text.strip() == "":
         raise ValueError("Không thể trích xuất nội dung từ CV. Vui lòng kiểm tra lại định dạng tệp.")
@@ -361,6 +492,8 @@ def preview_resume_sync(
 
     jd_info = nlp_processor.extract_information(job_description)
     jd_skills = jd_info.get("skills", [])
+    experience_timeline = extract_experience_timeline(cv_text, cv_skills)
+    normalized_sections = segment_cv_sections(cv_text)
 
     # Phan tich nhanh tab 1
     result = scoring_service.analyze_cv_deep(
@@ -377,38 +510,10 @@ def preview_resume_sync(
         "phone": cv_info.get("phone", ""),
         "extracted_skills": cv_skills
     }
+    result["extraction_quality"] = extraction_quality
+    result["experience_timeline"] = experience_timeline
+    result["normalized_sections"] = normalized_sections
     result["cv_text"] = cv_text
     result["job_description"] = job_description
-
-    # Hoc tu dong ky nang moi va dong bo sang C# SQL
-    try:
-        gemini_skills = []
-        score_analysis = result.get("score_analysis", {})
-        if isinstance(score_analysis, dict):
-            matched = score_analysis.get("matched_skills")
-            missing = score_analysis.get("missing_skills")
-            if isinstance(matched, list):
-                gemini_skills.extend(matched)
-            if isinstance(missing, list):
-                gemini_skills.extend(missing)
-        
-        if gemini_skills:
-            existing_skills = set()
-            if os.path.exists("skills.json"):
-                with open("skills.json", "r", encoding="utf-8") as f:
-                    data = json.load(f)
-                    if isinstance(data, list):
-                        existing_skills = set(s.lower().strip() for s in data if s.strip())
-            
-            new_skills = set(s.lower().strip() for s in gemini_skills if s.strip()) - existing_skills
-            if new_skills:
-                merged = sorted(existing_skills | new_skills)
-                with open("skills.json", "w", encoding="utf-8") as f:
-                    json.dump(merged, f, ensure_ascii=False, indent=2)
-                nlp_processor.reload_knowledge_base()
-                logger.info(f"Da tu dong hoc {len(new_skills)} ky nang moi")
-                sync_skills_to_db([s.strip() for s in gemini_skills if s.strip() and s.lower().strip() in new_skills])
-    except Exception as learn_err:
-        logger.error(f"Loi khi hoc ky nang tu dong: {learn_err}")
 
     return result

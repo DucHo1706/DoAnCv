@@ -12,13 +12,19 @@ export interface JobDto {
   isActive: boolean;
   status: string;
   isApproved: boolean;
+  isRecruiting?: boolean;
+  isExpired?: boolean;
+  lifecycleStatus?: string | null;
   createdAt: string;
   startDate?: string | null;
   deadline?: string | null;
   maxCandidates?: number | null;
   jobLevel?: { id?: string; name: string } | null;
   rejectReason?: string | null;
-  criteria?: Array<{ id?: string; name: string; weight: number }>;
+  repostedFromJobId?: string | null;
+  campaignGroupId?: string | null;
+  recruitmentRound?: number;
+  criteria?: JobCriterionDto[];
 }
 
 export interface CategoryDto {
@@ -43,6 +49,27 @@ export interface BranchDto {
 export interface JobCriterionPayload {
   name: string;
   weight: number;
+  criterionGroupId?: string | null;
+  criterionType?: string;
+  priorityLevel?: string;
+  operator?: string;
+  targetValue?: string | null;
+  minDurationMonths?: number | null;
+  evidenceSources?: string | null;
+  evaluationGuidance?: string | null;
+  displayOrder?: number;
+}
+
+export interface JobLevelDto {
+  id: string;
+  name: string;
+  parentId?: string | null;
+  isActive: boolean;
+}
+
+export interface JobCriterionDto extends JobCriterionPayload {
+  id?: string;
+  isActive?: boolean;
 }
 
 export interface CreateJobPayload {
@@ -57,6 +84,10 @@ export interface CreateJobPayload {
   categoryId?: string | null;
   jobLevelId?: string | null;
   criteria: JobCriterionPayload[];
+}
+
+export interface RepostJobPayload extends CreateJobPayload {
+  deadline: string;
 }
 
 export interface JobReviewResponse {
@@ -101,8 +132,18 @@ export const jobService = {
     return response.data;
   },
 
+  async getJobLevels() {
+    const response = await axiosClient.get<JobLevelDto[]>("/joblevels");
+    return response.data;
+  },
+
   async updateJob(id: string, payload: CreateJobPayload) {
     const response = await axiosClient.put(`/jobs/${id}`, payload);
+    return response.data;
+  },
+
+  async repostJob(id: string, payload: RepostJobPayload) {
+    const response = await axiosClient.post(`/jobs/${id}/repost`, payload);
     return response.data;
   },
 

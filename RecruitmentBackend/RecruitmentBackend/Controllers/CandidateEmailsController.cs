@@ -15,6 +15,7 @@ namespace RecruitmentBackend.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize(Roles = "Recruiter")]
     public class CandidateEmailsController : ControllerBase
     {
         private readonly IEmailSenderService _emailSenderService;
@@ -58,7 +59,8 @@ namespace RecruitmentBackend.Controllers
             {
                 message = message,
                 subject = data?.Subject,
-                body = data?.Body
+                body = data?.Body,
+                source = data?.Source
             });
         }
 

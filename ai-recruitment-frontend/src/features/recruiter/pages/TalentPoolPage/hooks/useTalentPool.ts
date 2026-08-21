@@ -222,5 +222,6 @@ export function useTalentPool() {
     readyCount,
     lockedCount,
     averageAiScore,
+    refreshTalentPool: fetchData,
   };
 }

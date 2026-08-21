@@ -25,6 +25,7 @@ import {
   CalendarOutlined,
   VideoCameraOutlined,
   DownloadOutlined,
+  ReloadOutlined,
 } from "@ant-design/icons";
 import { useApplicationStatus } from "./hooks/useApplicationStatus";
 import { getApplicationStatusLabel as translateApplicationStatus } from "../../../../utils/statusLabels";
@@ -178,7 +179,10 @@ export default function ApplicationStatusPage() {
     setStatusFilter,
     isAiReady,
     isAiError,
+    isAiIncomplete,
     handleViewDetail,
+    handleRetryAi,
+    handleWithdrawApplication,
     parsed,
   } = useApplicationStatus();
 
@@ -359,9 +363,6 @@ export default function ApplicationStatusPage() {
               <Title level={2} style={{ marginBottom: 8, color: "#0F172A", fontWeight: 700 }}>
                 Báo cáo phân tích chi tiết từ AI
               </Title>
-              <Text type="secondary" style={{ fontSize: 16 }}>
-                Phân tích năng lực, tối ưu hóa STAR, ngôn từ chân thực và gợi ý phỏng vấn chuyên sâu cho hồ sơ ứng tuyển của bạn.
-              </Text>
             </div>
             
             <Card 
@@ -417,7 +418,7 @@ export default function ApplicationStatusPage() {
                       <h3 style={{ margin: "0 0 12px", fontSize: "15px", fontWeight: 700, color: "#0F172A" }}>THÔNG TIN HỒ SƠ</h3>
                       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px 24px", fontSize: "14px" }}>
                         <div><strong>Vị trí ứng tuyển:</strong> {selectedApp?.jobTitle}</div>
-                        <div><strong>Điểm tương hợp AI:</strong> <span style={{ color: "#2563EB", fontWeight: 700 }}>{selectedApp?.aiScore} / 100</span></div>
+                        <div><strong>Mức đáp ứng tiêu chí:</strong> <span style={{ color: "#2563EB", fontWeight: 700 }}>{selectedApp?.aiScore} / 100</span></div>
                         <div><strong>Phân loại:</strong> {selectedApp?.classification || "Chờ xử lý"}</div>
                         <div><strong>Thời gian nộp:</strong> {selectedApp?.appliedAt ? new Date(selectedApp.appliedAt).toLocaleDateString("vi-VN") : ""}</div>
                       </div>
@@ -699,6 +700,7 @@ export default function ApplicationStatusPage() {
                 const recordId = record.id || record.applicationId;
                 const ready = isAiReady(record);
                 const error = isAiError(record);
+                const incomplete = isAiIncomplete(record);
 
                 return (
                   <div
@@ -851,6 +853,24 @@ export default function ApplicationStatusPage() {
                               <InfoCircleOutlined />
                               AI gặp lỗi
                             </span>
+                          ) : incomplete ? (
+                            <span
+                              style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 6,
+                                padding: "4px 10px",
+                                borderRadius: "8px",
+                                fontSize: "13px",
+                                fontWeight: 550,
+                                background: "rgba(245, 158, 11, 0.08)",
+                                color: "#B45309",
+                                border: "1px solid rgba(245, 158, 11, 0.18)",
+                              }}
+                            >
+                              <InfoCircleOutlined />
+                              Phân tích AI chưa đầy đủ
+                            </span>
                           ) : ready ? (
                             <span
                               style={{
@@ -959,7 +979,7 @@ export default function ApplicationStatusPage() {
                               type="secondary"
                               style={{ fontSize: "12px", marginTop: 4, fontWeight: 500, color: "#64748B" }}
                             >
-                              Điểm tương hợp
+                              Mức đáp ứng tiêu chí
                             </Text>
                           </div>
                         )}
@@ -969,8 +989,8 @@ export default function ApplicationStatusPage() {
                       <Button
                         type="primary"
                         className="app-card-btn"
-                        icon={<EyeOutlined />}
-                        onClick={() => handleViewDetail(record)}
+                        icon={error ? <ReloadOutlined /> : <EyeOutlined />}
+                        onClick={() => error ? handleRetryAi(record) : handleViewDetail(record)}
                         style={{
                           height: 44,
                           borderRadius: "12px",
@@ -981,8 +1001,32 @@ export default function ApplicationStatusPage() {
                           boxShadow: "0 4px 12px rgba(37, 99, 235, 0.12)",
                         }}
                       >
-                        {ready ? "Xem AI đánh giá" : "Theo dõi AI"}
+                        {error
+                          ? "Phân tích lại AI"
+                          : incomplete
+                          ? "Xem kết quả hiện có"
+                          : ready
+                          ? "Xem AI đánh giá"
+                          : "Theo dõi AI"}
                       </Button>
+                      {incomplete && !error && (
+                        <Button
+                          icon={<ReloadOutlined />}
+                          onClick={() => handleRetryAi(record)}
+                          style={{ height: 44, borderRadius: 12, fontWeight: 600 }}
+                        >
+                          Hoàn tất phân tích AI
+                        </Button>
+                      )}
+                      {record.status?.toLowerCase() === "applied" && (
+                        <Button
+                          danger
+                          onClick={() => handleWithdrawApplication(record)}
+                          style={{ height: 44, borderRadius: 12, fontWeight: 600 }}
+                        >
+                          Rút hồ sơ
+                        </Button>
+                      )}
                     </div>
                   </div>
                 );
