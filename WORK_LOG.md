@@ -12,6 +12,17 @@ File này là nhật ký nối tiếp, không chứa credential hoặc dữ li�
 
 ## Nhật ký thực hiện
 
+### 2026-08-22 02:02 +07:00 — VPS-PUBLIC-INGRESS-DIAG — Khoanh vùng Cloudflare 522 ngoài VPS
+
+- Trạng thái: `BỊ CHẶN` bởi quyền bảng điều khiển Cloudflare/VPS; không còn thay đổi code hoặc lệnh trong máy chủ có thể tự khôi phục đường truy cập công khai.
+- Mục tiêu/phạm vi: phân biệt lỗi Nginx/Docker/firewall hệ điều hành với DNS origin hoặc security group/firewall ở lớp nhà cung cấp.
+- Bằng chứng trong VPS: Nginx nghe `0.0.0.0:80/443`, gọi origin theo hostname/certificate trả 200, Docker NAT có rule chuyển 80/443, `iptables INPUT` là `ACCEPT`, UFW inactive. Trong lúc chủ động gọi domain và nhận Cloudflare 522, `tcpdump` trên `eth0` bắt được 0 SYN đích 80/443; bộ đếm rule NAT cũng không tăng.
+- Bằng chứng ngoài VPS: năm node TCP độc lập tại Đức, Romania, Ukraine và Anh đều timeout cổng 443; kiểm tra bổ sung cổng 80 cũng timeout. Vì gói chưa tới NIC, sửa Nginx, container, UFW hoặc source code không giải quyết được.
+- Quyền/cấu hình khả dụng: workspace, biến môi trường local và `.env` VPS không có Cloudflare API token/zone ID; VPS không cài `cloudflared` và không có agent firewall nhà cung cấp. Không thu thập hoặc ghi credential vào nhật ký.
+- Quyết định an toàn: không tự dựng quick tunnel/domain tạm, không thay kiến trúc public ingress và không đoán bản ghi DNS khi chưa có quyền zone. Cần kiểm tra A/AAAA origin trong Cloudflare và security group/firewall panel của nhà cung cấp; mở inbound TCP 80/443 tới đúng VPS hoặc cấp quyền Cloudflare Tunnel có kiểm soát.
+- Git/database/runtime: không sửa code, schema, dữ liệu hoặc container; VPS vẫn ở source commit `3e279a5`, runtime hotfix `4e57223`, ba container healthy và taxonomy 140 kỹ năng/58 alias đã tải.
+- Bước tiếp theo: người dùng cung cấp quyền thao tác panel hoặc thực hiện thay đổi 80/443/origin; sau đó chạy lại health công khai và smoke test đăng nhập đọc-only. VPS hiện cũng không có các biến credential smoke Admin/HR/Ứng viên nên E2E role cần bộ tài khoản kiểm thử riêng.
+
 ### 2026-08-22 01:54 +07:00 — VPS-DEPLOY-VERIFY — Xác minh hotfix, migration và runtime VPS
 
 - Trạng thái: `ĐÃ XONG` phần code, migration và runtime Docker tại origin; `BỊ CHẶN` riêng đường truy cập công khai do Cloudflare 522/lớp ingress ngoài máy chủ.
