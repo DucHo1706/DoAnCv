@@ -25,6 +25,7 @@ AI chỉ hỗ trợ quyết định; không tự động loại ứng viên và 
 - NLP/đối khớp: spaCy, scikit-learn/TF-IDF và phần phân tích ngữ nghĩa chuyên sâu khi Gemini khả dụng.
 - Khai phá dữ liệu: Apriori/HUIM nhưng phải chạy trên dữ liệu thật, theo phạm vi ngành nghề và công khai điều kiện đầu vào.
 - Triển khai: Docker trên VPS; Git là nguồn phát hành nhưng push Git không đồng nghĩa đã deploy VPS.
+- Giao tiếp nội bộ Docker dùng hostname service (`backend`, `ai-service`); `AllowedHosts` của ASP.NET phải cho phép đúng hostname nội bộ cần thiết, không mở wildcard chỉ để vận hành tiện.
 
 ## 3. Các quyết định nghiệp vụ đã thống nhất
 

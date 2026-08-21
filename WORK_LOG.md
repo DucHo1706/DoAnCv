@@ -6,11 +6,23 @@ File này là nhật ký nối tiếp, không chứa credential hoặc dữ li�
 
 | Môi trường | Trạng thái xác nhận gần nhất | Commit | Ghi chú |
 |---|---|---|---|
-| Local | Unit/build/migration script đạt lúc 2026-08-22 01:05 +07:00 | Chưa commit | 72 Python test, backend và frontend build đạt; migration alias chưa áp; chưa E2E theo role |
-| Git remote | Chưa kiểm tra trong phiên khởi tạo nhật ký | Chưa ghi nhận | Push không đồng nghĩa deploy |
-| VPS | Chưa kiểm tra trong phiên khởi tạo nhật ký | Chưa ghi nhận | Không dùng thông tin cũ để kết luận |
+| Local | Unit/build/benchmark đạt lúc 2026-08-22 01:48 +07:00 | `122d6fd` + hotfix chưa commit | 75 Python test, backend/frontend build đạt; đang sửa host nội bộ Docker |
+| Git remote | Đã push lúc 2026-08-22 01:40 +07:00 | `122d6fd` | Nhánh `feature/feature-based-refactor-vps` |
+| VPS | Ba container healthy; migration alias đã áp | `122d6fd` | HTTPS ngoài VPS đang bị Cloudflare 522; taxonomy sync nội bộ đang hotfix |
 
 ## Nhật ký thực hiện
+
+### 2026-08-22 01:48 +07:00 — VPS-DEPLOY-HOST-HOTFIX — Triển khai và sửa hostname đồng bộ taxonomy
+
+- Trạng thái: `ĐANG LÀM`; bản `122d6fd` đã build/kích hoạt, ba container healthy và migration đã áp, nhưng chưa nghiệm thu xong do đồng bộ taxonomy nhận HTTP 400 và HTTPS công khai trả 522.
+- Mục tiêu/phạm vi: triển khai bản đã kiểm thử lên VPS theo script có rollback, xác minh migration/scheduler/API/HTTPS và sửa lỗi cấu hình phát hiện trong smoke test.
+- Git/VPS: đã push `122d6fd`, cất 11 file sửa dở trên VPS vào Git stash `predeploy-20260822`; patch dự phòng đã lưu riêng trước đó. VPS fast-forward từ `9a4a64f` lên `122d6fd`; script `deploy/vps/deploy.sh` build và activate thành công, không kích hoạt rollback.
+- Database/runtime: EF đã áp `20260822011500_AddSkillAliases`; backend ghi nhận scheduler khởi động và Apriori/HUIM hoàn tất riêng cho 4 ngành. AI startup retry đúng lúc backend chưa sẵn sàng, sau đó nhận HTTP 400 vì `AllowedHosts` chưa chứa hostname dịch vụ Docker `backend`.
+- Quyết định hotfix: chỉ thêm `backend` vào `AllowedHosts`, không dùng wildcard và không đổi route/quyền truy cập. File sửa: `RecruitmentBackend/RecruitmentBackend/appsettings.json` và nhật ký/ngữ cảnh dự án.
+- Kiểm thử: backend Release build sau hotfix đạt 0 lỗi, còn 451 warning legacy. Trước hotfix, gọi `/api/skills` trong container trả `Bad Request - Invalid Hostname`, xác nhận đúng nguyên nhân; migration không lỗi và ba healthcheck nội bộ đều đạt.
+- HTTPS: Nginx trong VPS trả 200 khi gọi trực tiếp bằng hostname/certificate; cổng 80/443 đang listen và UFW local không bật. Cloudflare trả 522 và kết nối 443 từ máy ngoài không tới được origin, nên nghiêng về NAT/security rule/DNS origin ngoài ứng dụng; chưa tự ý đổi firewall hoặc DNS.
+- Rollback: image cũ có tag rollback theo deploy script; migration alias có thể rollback về `20260821233000_AddJobRepostingLifecycle`; bỏ hostname `backend` sẽ tái tạo lỗi sync nên chỉ rollback nếu kiến trúc mạng đổi.
+- Bước tiếp theo: commit/push hotfix, deploy lại backend, xác nhận AI sync trả taxonomy cùng alias; sau đó ghi rõ kết quả HTTPS hoặc blocker hạ tầng và mới chốt trạng thái.
 
 ### 2026-08-22 01:31 +07:00 — P2-02/P3-01/P3-03-PREDEPLOY — Khép kín scheduler và tách benchmark nội dung/layout
 
