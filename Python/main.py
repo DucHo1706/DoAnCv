@@ -85,13 +85,25 @@ async def limit_request_body_size(request: Request, call_next):
 # 2. Xử lý lỗi sai định dạng Payload / Lỗi Validation Pydantic
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
-    logger.warning(f"Payload sai dinh dang tu IP {request.client.host if request.client else 'unknown'}: {exc}")
+    safe_details = [
+        {
+            "type": str(error.get("type", "validation_error")),
+            "location": [str(item) for item in error.get("loc", ())],
+            "message": str(error.get("msg", "Dữ liệu không hợp lệ.")),
+        }
+        for error in exc.errors()
+    ]
+    logger.warning(
+        "Payload sai định dạng tại endpoint %s; số lỗi validation: %s.",
+        request.url.path,
+        len(safe_details),
+    )
     return JSONResponse(
         status_code=status.HTTP_400_BAD_REQUEST,
         content={
             "status": "error",
             "message": "Dữ liệu gửi lên sai định dạng hoặc chứa trường thông tin không hợp lệ.",
-            "details": exc.errors()
+            "details": safe_details,
         }
     )
 

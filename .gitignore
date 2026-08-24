@@ -85,3 +85,5 @@ Python/generate_visual_guide.py
 test*.pdf
 Python/runtime-data/
 RecruitmentBackend/RecruitmentBackend/App_Data/
+se-metadata.json
+.tmp_backend_build_*/

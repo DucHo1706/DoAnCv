@@ -11,7 +11,8 @@ namespace RecruitmentBackend.Interfaces
         Task<(bool IsSuccess, string Message, object Data)> GetHrApplicationsAsync(
             ClaimsPrincipal user,
             bool includeAiDetails = true,
-            string? applicationId = null);
+            string? applicationId = null,
+            string? jobId = null);
         Task<(bool IsSuccess, string Message, object Data)> GetMyApplicationsAsync(ClaimsPrincipal user);
         Task<(bool IsSuccess, string Message, object Data)> RetryAiEvaluationAsync(string applicationId, ClaimsPrincipal user);
         Task<(bool IsSuccess, string Message, object Data)> WithdrawApplicationAsync(string applicationId, ClaimsPrincipal user);

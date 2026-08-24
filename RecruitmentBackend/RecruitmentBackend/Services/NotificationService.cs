@@ -28,7 +28,7 @@ namespace RecruitmentBackend.Services
                 Content = content,
                 RedirectUrl = redirectUrl,
                 IsRead = false,
-                CreatedAt = DateTime.Now
+                CreatedAt = VietnamTimeService.NowLocal
             };
 
             _context.Notifications.Add(notification);

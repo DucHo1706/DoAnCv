@@ -207,7 +207,7 @@ export default function RecruiterJobDetailPage() {
           <Col xs={24} md={8} style={{ textAlign: "right" }}>
             <div style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "flex-end" }}>
               <Space>
-                <Tag color={statusMeta.color} style={{ borderRadius: 6, padding: "2px 8px" }}>
+                <Tag color={statusMeta.color} style={{ borderRadius: 8, padding: "2px 8px" }}>
                   {statusMeta.label}
                 </Tag>
               </Space>
@@ -447,7 +447,7 @@ export default function RecruiterJobDetailPage() {
                             background: "rgba(37, 99, 235, 0.05)",
                             border: "1.5px solid rgba(37, 99, 235, 0.15)",
                             color: "#2563EB",
-                            borderRadius: 6,
+                            borderRadius: 8,
                             padding: "2px 8px",
                           }}
                         >

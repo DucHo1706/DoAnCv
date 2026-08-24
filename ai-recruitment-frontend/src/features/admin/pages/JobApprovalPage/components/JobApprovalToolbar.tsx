@@ -72,21 +72,23 @@ export function JobApprovalToolbar({
     >
       {/* Hàng 1: Tabs Trạng thái & View mode toggle & Export CSV */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
-        <Segmented
-          value={statusTab}
-          onChange={(value) => setStatusTab(value as string)}
-          options={[
-            { label: `Chờ phê duyệt (${counts.pending})`, value: "pending" },
-            { label: `Đang hoạt động (${counts.active})`, value: "active" },
-            { label: `Đã hết hạn (${counts.expired})`, value: "expired" },
-            { label: `Đã đóng (${counts.closed})`, value: "closed" },
-            { label: `Đã lưu trữ (${counts.archived})`, value: "archived" },
-            { label: `Tất cả tin (${counts.all})`, value: "all" },
-          ]}
-          style={{ background: "#F1F5F9", padding: 3, fontWeight: 600 }}
-        />
+        <div style={{ maxWidth: "100%", overflowX: "auto", paddingBottom: 2 }}>
+          <Segmented
+            value={statusTab}
+            onChange={(value) => setStatusTab(value as string)}
+            options={[
+              { label: `Chờ phê duyệt (${counts.pending})`, value: "pending" },
+              { label: `Đang hoạt động (${counts.active})`, value: "active" },
+              { label: `Đã hết hạn (${counts.expired})`, value: "expired" },
+              { label: `Đã đóng (${counts.closed})`, value: "closed" },
+              { label: `Đã lưu trữ (${counts.archived})`, value: "archived" },
+              { label: `Tất cả tin (${counts.all})`, value: "all" },
+            ]}
+            style={{ background: "#F1F5F9", padding: 3, fontWeight: 600 }}
+          />
+        </div>
 
-        <Space size="middle">
+        <Space size="middle" wrap>
           <Button
             icon={<DownloadOutlined />}
             onClick={onExportCsv}

@@ -148,7 +148,7 @@ function highlight(text: string, query: string) {
   return (
     <>
       {text.slice(0, idx)}
-      <mark style={{ background: "rgba(37, 99, 235, 0.16)", color: appTheme.colors.primary, borderRadius: 3, padding: "0 1px" }}>
+      <mark style={{ background: "rgba(37, 99, 235, 0.16)", color: appTheme.colors.primary, borderRadius: 8, padding: "0 1px" }}>
         {text.slice(idx, idx + query.length)}
       </mark>
       {text.slice(idx + query.length)}
@@ -289,7 +289,7 @@ function GlobalSearchPalette({ open, onClose }: GlobalSearchPaletteProps) {
           placeholder="Tìm trang, người dùng, tin tuyển dụng..."
           prefix={<SearchOutlined style={{ color: appTheme.colors.textSecondary, fontSize: 16 }} />}
           suffix={
-            <Tag style={{ margin: 0, borderRadius: 6, fontSize: 11, color: appTheme.colors.textSecondary, background: appTheme.colors.background }}>
+            <Tag style={{ margin: 0, borderRadius: 8, fontSize: 11, color: appTheme.colors.textSecondary, background: appTheme.colors.background }}>
               Esc
             </Tag>
           }
@@ -379,13 +379,13 @@ function GlobalSearchPalette({ open, onClose }: GlobalSearchPaletteProps) {
         }}
       >
         <Text type="secondary" style={{ fontSize: 12, display: "flex", alignItems: "center", gap: 6 }}>
-          <Tag style={{ margin: 0, borderRadius: 6, fontSize: 11 }}>↑↓</Tag> Di chuyển
+          <Tag style={{ margin: 0, borderRadius: 8, fontSize: 11 }}>↑↓</Tag> Di chuyển
         </Text>
         <Text type="secondary" style={{ fontSize: 12, display: "flex", alignItems: "center", gap: 6 }}>
-          <Tag style={{ margin: 0, borderRadius: 6, fontSize: 11 }}>Enter</Tag> Chọn
+          <Tag style={{ margin: 0, borderRadius: 8, fontSize: 11 }}>Enter</Tag> Chọn
         </Text>
         <Text type="secondary" style={{ fontSize: 12, display: "flex", alignItems: "center", gap: 6, marginLeft: "auto" }}>
-          <Tag style={{ margin: 0, borderRadius: 6, fontSize: 11 }}>Ctrl+K</Tag> Mở nhanh
+          <Tag style={{ margin: 0, borderRadius: 8, fontSize: 11 }}>Ctrl+K</Tag> Mở nhanh
         </Text>
       </div>
     </Modal>

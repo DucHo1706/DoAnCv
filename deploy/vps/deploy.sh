@@ -5,7 +5,14 @@ PROJECT_DIR="${PROJECT_DIR:-/opt/recruitment/app}"
 WAIT_SECONDS="${DEPLOY_WAIT_SECONDS:-180}"
 cd "$PROJECT_DIR"
 
-docker compose config --quiet
+compose_profile=()
+health_services=(ai-service backend frontend)
+if [[ "${ENABLE_9ROUTER:-false}" == "true" ]]; then
+  compose_profile=(--profile llm-router)
+  health_services+=(9router)
+fi
+
+docker compose "${compose_profile[@]}" config --quiet
 
 for image in recruitment-ai recruitment-backend recruitment-frontend; do
   if docker image inspect "$image:latest" >/dev/null 2>&1; then
@@ -20,17 +27,17 @@ rollback() {
       docker tag "$image:rollback" "$image:latest"
     fi
   done
-  docker compose up -d --no-build
+  docker compose "${compose_profile[@]}" up -d --no-build
 }
 trap rollback ERR
 
-docker compose build
-docker compose up -d --remove-orphans
+docker compose "${compose_profile[@]}" build
+docker compose "${compose_profile[@]}" up -d --remove-orphans
 
 deadline=$((SECONDS + WAIT_SECONDS))
 while (( SECONDS < deadline )); do
   all_healthy=true
-  for service in ai-service backend frontend; do
+  for service in "${health_services[@]}"; do
     container_id="$(docker compose ps -q "$service")"
     health=""
     if [[ -n "$container_id" ]]; then
@@ -41,7 +48,7 @@ while (( SECONDS < deadline )); do
 
   if [[ "$all_healthy" == "true" ]]; then
     trap - ERR
-    docker compose ps
+    docker compose "${compose_profile[@]}" ps
     echo "Deployment completed successfully."
     exit 0
   fi

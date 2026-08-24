@@ -5,12 +5,32 @@ import time
 import requests
 import json
 import threading
+import base64
 from dotenv import load_dotenv
 from utils.logger import logger
 
 # Tai cau hinh tu env
 env_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env")
 load_dotenv(dotenv_path=env_path, override=True)
+
+GEMINI_ENABLED = os.getenv("GEMINI_ENABLED", "true").strip().casefold() not in {
+    "0", "false", "no", "off"
+}
+LLM_ROUTER_BASE_URL = os.getenv("LLM_ROUTER_BASE_URL", "").strip().rstrip("/")
+LLM_ROUTER_API_KEY = os.getenv("LLM_ROUTER_API_KEY", "").strip()
+LLM_ROUTER_MODELS = [
+    value.strip()
+    for value in os.getenv(
+        "LLM_ROUTER_MODELS",
+        "Gemini,deepseek,ag/gemini-3.5-flash-low",
+    ).split(",")
+    if value.strip()
+]
+LLM_ROUTER_TIMEOUT_SECONDS = max(
+    10, int(os.getenv("LLM_ROUTER_TIMEOUT_SECONDS", "25"))
+)
+LLM_ROUTER_MAX_TOKENS = max(512, int(os.getenv("LLM_ROUTER_MAX_TOKENS", "12000")))
+LLM_ROUTER_ENABLED = bool(LLM_ROUTER_BASE_URL and LLM_ROUTER_MODELS)
 
 MIN_REQUEST_TIMEOUT_MS = max(10000, int(os.getenv("GEMINI_MIN_REQUEST_TIMEOUT_MS", "10000")))
 DEFAULT_REQUEST_TIMEOUT_MS = max(
@@ -45,7 +65,25 @@ if extra_keys:
 
 api_keys = list(dict.fromkeys(api_keys))
 
-if not api_keys:
+if not GEMINI_ENABLED:
+    # Chế độ này chỉ tắt gọi dịch vụ ngoài trong tiến trình hiện tại. API key
+    # vẫn giữ nguyên trong cấu hình và các kết quả phía sau phải mang nhãn fallback.
+    api_keys = []
+
+if not GEMINI_ENABLED:
+    if LLM_ROUTER_ENABLED:
+        logger.info(
+            "[LLM Provider] Ưu tiên 9Router local; Gemini trực tiếp đã tắt nên "
+            "không tiêu thụ quota Gemini khi router hoạt động."
+        )
+    else:
+        logger.warning(
+            "[Gemini Service] GEMINI_ENABLED=false; tiến trình dùng fallback cục bộ, "
+            "không tiêu thụ quota Gemini."
+        )
+    clients = []
+    client = None
+elif not api_keys:
     logger.warning("[Gemini Service] Warning: No valid GEMINI_API_KEY found in environment. Python server will start with fallback AI modes.")
     clients = []
     client = None
@@ -203,6 +241,80 @@ def clean_json_text(text: str) -> str:
     return text
 
 
+def _router_headers() -> dict[str, str]:
+    headers = {"Content-Type": "application/json"}
+    if LLM_ROUTER_API_KEY:
+        headers["Authorization"] = f"Bearer {LLM_ROUTER_API_KEY}"
+    return headers
+
+
+def _router_response_text(response: requests.Response) -> str:
+    """Đọc cả JSON chuẩn lẫn SSE mà một số combo 9Router có thể trả về."""
+    raw = response.text.strip()
+    if not raw:
+        raise ValueError("9Router trả về nội dung trống.")
+    if raw.startswith("data:"):
+        fragments: list[str] = []
+        for line in raw.splitlines():
+            if not line.startswith("data:"):
+                continue
+            payload_text = line[5:].strip()
+            if not payload_text or payload_text == "[DONE]":
+                continue
+            payload = json.loads(payload_text)
+            for choice in payload.get("choices", []) or []:
+                delta = choice.get("delta", {}) or {}
+                if delta.get("content"):
+                    fragments.append(str(delta["content"]))
+        content = "".join(fragments).strip()
+        if content:
+            return content
+        raise ValueError("9Router kết thúc stream nhưng không trả nội dung.")
+    payload = response.json()
+    choices = payload.get("choices", []) if isinstance(payload, dict) else []
+    if not choices:
+        raise ValueError("9Router không trả choices hợp lệ.")
+    message = choices[0].get("message", {}) or {}
+    content = str(message.get("content") or "").strip()
+    if not content:
+        raise ValueError("9Router trả về message rỗng.")
+    return content
+
+
+def _generate_router_content(messages: list[dict], is_json: bool) -> str:
+    if not LLM_ROUTER_ENABLED:
+        raise ConnectionError("9Router chưa được bật cho tiến trình này.")
+    last_error: Exception | None = None
+    endpoint = f"{LLM_ROUTER_BASE_URL}/chat/completions"
+    for model_name in LLM_ROUTER_MODELS:
+        try:
+            response = requests.post(
+                endpoint,
+                headers=_router_headers(),
+                json={
+                    "model": model_name,
+                    "messages": messages,
+                    "temperature": 0,
+                    "max_tokens": LLM_ROUTER_MAX_TOKENS,
+                    "stream": False,
+                },
+                timeout=LLM_ROUTER_TIMEOUT_SECONDS,
+            )
+            response.raise_for_status()
+            content = _router_response_text(response)
+            if is_json:
+                content = clean_json_text(content)
+                json.loads(content)
+            logger.info(f"9Router phản hồi thành công với model {model_name}.")
+            return content
+        except Exception as error:
+            last_error = error
+            logger.warning(
+                f"9Router model {model_name} chưa tạo được phản hồi hợp lệ: {error}"
+            )
+    raise ConnectionError("9Router không tạo được phản hồi từ các model đã cấu hình.") from last_error
+
+
 def generate_content_with_retry(
     prompt: str,
     is_json: bool = True,
@@ -212,7 +324,21 @@ def generate_content_with_retry(
     """
     Goi Gemini API voi co che tu dong thu lai tren danh sach API Keys
     """
+    router_error: Exception | None = None
+    if LLM_ROUTER_ENABLED:
+        try:
+            return _generate_router_content(
+                [{"role": "user", "content": prompt}],
+                is_json=is_json,
+            )
+        except Exception as error:
+            router_error = error
+            logger.warning("9Router tạm thời không khả dụng; chuyển sang provider kế tiếp.")
     if not clients:
+        if router_error is not None:
+            raise ConnectionError(
+                "9Router không khả dụng và Gemini đang tắt hoặc chưa cấu hình."
+            ) from router_error
         raise Exception("Khong cau hinh API keys truc tiep.")
     if _network_is_cooling_down():
         raise ConnectionError("Ket noi Gemini dang tam nghi; su dung ket qua du phong cuc bo.")
@@ -411,6 +537,29 @@ def generate_vision_content_with_retry(image_bytes: bytes, mime_type: str, promp
     Sử dụng Gemini Multimodal Vision để đọc và bóc tách văn bản từ tệp ảnh CV (PNG/JPG/Screenshot)
     khi Tesseract OCR cục bộ bị thiếu hoặc không đọc được.
     """
+    if LLM_ROUTER_ENABLED:
+        try:
+            valid_router_mime = mime_type if mime_type in {
+                "image/png", "image/jpeg", "image/webp"
+            } else "image/jpeg"
+            encoded = base64.b64encode(image_bytes).decode("ascii")
+            return _generate_router_content(
+                [{
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": prompt},
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:{valid_router_mime};base64,{encoded}"
+                            },
+                        },
+                    ],
+                }],
+                is_json=False,
+            )
+        except Exception:
+            logger.warning("9Router Vision chưa khả dụng; chuyển sang Gemini Vision nếu có.")
     if not clients:
         return ""
     if _network_is_cooling_down():

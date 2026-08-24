@@ -212,7 +212,7 @@ export default function TalentPoolDetailPage() {
               )}
             </Space>
 
-            <Card size="small" style={{ marginTop: 20, borderRadius: 10, background: "#F8FAFC" }}>
+            <Card size="small" style={{ marginTop: 20, borderRadius: 12, background: "#F8FAFC" }}>
               <Title level={5} style={{ marginTop: 0, marginBottom: 4 }}>Thông tin sourcing</Title>
               <Text type="secondary" style={{ display: "block", marginBottom: 12 }}>
                 Context do HR ghi nhận để phân loại, tìm lại và cấp dữ liệu cho hệ thống đề xuất.
@@ -320,7 +320,7 @@ export default function TalentPoolDetailPage() {
                         <Col flex="auto">
                           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
                             <Text strong style={{ color: "#0F172A", fontSize: 14 }}>{job.jobTitle}</Text>
-                            <Tag color="green" style={{ margin: 0, borderRadius: 4 }}>Bao phủ {job.matchScore}% kỹ năng</Tag>
+                            <Tag color="green" style={{ margin: 0, borderRadius: 8 }}>Bao phủ {job.matchScore}% kỹ năng</Tag>
                           </div>
                           <div style={{ fontSize: 12, color: "#64748B", display: "flex", flexWrap: "wrap", gap: "4px 12px", marginBottom: 6 }}>
                             <span>{job.branchName}</span>
@@ -361,7 +361,7 @@ export default function TalentPoolDetailPage() {
               )}
             </div>
 
-            <Card size="small" style={{ marginTop: 20, borderRadius: 10, border: "1px solid #E2E8F0" }}>
+            <Card size="small" style={{ marginTop: 20, borderRadius: 12, border: "1px solid #E2E8F0" }}>
               <Row justify="space-between" align="middle" style={{ marginBottom: 12 }}>
                 <Col>
                   <Text strong style={{ display: "block" }}>Chọn tin tuyển dụng khác</Text>
@@ -605,7 +605,7 @@ export default function TalentPoolDetailPage() {
           <Space direction="vertical" size="large" style={{ width: "100%" }}>
             <Card title="Thông tin tóm tắt" style={{ borderRadius: 12 }}>
               <Space align="start" size="large" style={{ width: "100%" }}>
-                <Avatar size={72} icon={<UserOutlined />} style={{ backgroundColor: "#1677ff" }} />
+                <Avatar size={72} icon={<UserOutlined />} style={{ backgroundColor: "#2563EB" }} />
 
                 <div style={{ flex: 1 }}>
                   <Title level={4} style={{ marginBottom: 4, marginTop: 0 }}>
@@ -725,17 +725,17 @@ export default function TalentPoolDetailPage() {
                               </Text>
                             </div>
                             <div style={{ marginTop: 4, display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 6 }}>
-                              <Tag color="blue" style={{ fontSize: 10, margin: 0, padding: "0 4px", borderRadius: 4 }}>
+                              <Tag color="blue" style={{ fontSize: 10, margin: 0, padding: "0 4px", borderRadius: 8 }}>
                                 {interaction.type === "HrNote" ? "Ghi chú HR" :
                                   interaction.type === "Invited" ? "Đã mời ứng tuyển" :
                                     interaction.type === "EmailSent" ? "Đã gửi Email" :
                                       interaction.type === "Rejected" ? "Từ chối" : interaction.type}
                               </Tag>
                               {interaction.aiScore !== null && interaction.aiScore !== undefined && (
-                                <Tag color="green" style={{ fontSize: 10, margin: 0, padding: "0 4px", borderRadius: 4 }}>AI: {interaction.aiScore}/100</Tag>
+                                <Tag color="green" style={{ fontSize: 10, margin: 0, padding: "0 4px", borderRadius: 8 }}>AI: {interaction.aiScore}/100</Tag>
                               )}
                               {interaction.statusSnapshot && (
-                                <Tag style={{ fontSize: 10, margin: 0, padding: "0 4px", borderRadius: 4 }}>
+                                <Tag style={{ fontSize: 10, margin: 0, padding: "0 4px", borderRadius: 8 }}>
                                   {getApplicationStatusLabel(interaction.statusSnapshot)}
                                 </Tag>
                               )}

@@ -360,7 +360,7 @@ function CandidateProfilePage() {
       align-items: center;
       gap: 12px;
       padding: 12px 16px;
-      border-radius: 10px;
+      border-radius: 12px;
       cursor: pointer;
       font-weight: 500;
       font-size: 14px;

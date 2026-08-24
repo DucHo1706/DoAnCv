@@ -19,12 +19,35 @@ export interface JobDto {
   startDate?: string | null;
   deadline?: string | null;
   maxCandidates?: number | null;
+  viewCount?: number;
   jobLevel?: { id?: string; name: string } | null;
   rejectReason?: string | null;
   repostedFromJobId?: string | null;
   campaignGroupId?: string | null;
   recruitmentRound?: number;
   criteria?: JobCriterionDto[];
+}
+
+export interface RecruiterCampaignSummaryDto {
+  id: string;
+  status: string;
+  lifecycleStatus: string;
+  createdAt: string;
+  startDate?: string | null;
+  deadline?: string | null;
+  viewCount: number;
+  recruitmentRound: number;
+  position?: { id: string; name: string } | null;
+  category?: { id: string; name: string } | null;
+  branch?: { id: string; name: string } | null;
+  jobLevel?: { id: string; name: string } | null;
+  stats: {
+    total: number;
+    newApplications: number;
+    interviewing: number;
+    offers: number;
+    hired: number;
+  };
 }
 
 export interface CategoryDto {
@@ -129,6 +152,11 @@ export const jobService = {
 
   async createJob(payload: CreateJobPayload) {
     const response = await axiosClient.post("/jobs", payload);
+    return response.data;
+  },
+
+  async getMyCampaigns() {
+    const response = await axiosClient.get<RecruiterCampaignSummaryDto[]>("/jobs/my-campaigns");
     return response.data;
   },
 

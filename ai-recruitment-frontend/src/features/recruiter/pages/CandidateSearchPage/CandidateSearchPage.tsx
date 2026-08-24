@@ -167,7 +167,7 @@ export default function CandidateSearchPage({ embedded = false }: { embedded?: b
         </Row>
       </Card>
       <Card style={{ borderRadius: 16 }}>
-        <Table
+        <Table scroll={{ x: "max-content" }}
           rowKey="candidateId"
           columns={columns}
           dataSource={results}

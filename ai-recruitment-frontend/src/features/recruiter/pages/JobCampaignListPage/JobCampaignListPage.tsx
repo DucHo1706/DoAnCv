@@ -14,10 +14,10 @@ import {
   Row,
   Select,
   Skeleton,
-  Space,
   Tag,
   Typography,
   Alert,
+  DatePicker,
 } from "antd";
 import PageContainer from "../../../../components/common/PageContainer";
 import EmptyState from "../../../../components/common/EmptyState";
@@ -43,6 +43,7 @@ export default function JobCampaignListPage() {
   const navigate = useNavigate();
   const {
     loading,
+    refreshing,
     error,
     refetch,
     jobSearchQuery,
@@ -51,17 +52,37 @@ export default function JobCampaignListPage() {
     setJobCategoryFilter,
     jobStatusFilter,
     setJobStatusFilter,
+    jobBranchFilter,
+    setJobBranchFilter,
+    jobLevelFilter,
+    setJobLevelFilter,
+    jobPositionFilter,
+    setJobPositionFilter,
+    jobRoundFilter,
+    setJobRoundFilter,
+    jobCvFilter,
+    setJobCvFilter,
+    jobDeadlineRange,
+    setJobDeadlineRange,
     jobSortKey,
     setJobSortKey,
     jobCurrentPage,
     setJobCurrentPage,
     jobCategories,
+    jobBranches,
+    jobLevels,
+    jobPositions,
+    jobRounds,
+    totalCampaigns,
     filteredAndSortedJobs,
     paginatedJobs,
     handleResetJobFilters,
   } = useJobCampaigns();
 
-  const hasJobFilters = Boolean(jobSearchQuery || jobCategoryFilter || jobStatusFilter);
+  const hasJobFilters = Boolean(
+    jobSearchQuery || jobCategoryFilter || jobStatusFilter || jobBranchFilter ||
+    jobLevelFilter || jobPositionFilter || jobRoundFilter || jobCvFilter || jobDeadlineRange,
+  );
 
   return (
     <PageContainer title="Quản lý chiến dịch tuyển dụng">
@@ -81,86 +102,84 @@ export default function JobCampaignListPage() {
       )}
 
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-        {/* Search and Sort Toolbar */}
+        {/* Bộ lọc chiến dịch */}
         <div
           style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            flexWrap: "wrap",
-            gap: 16,
             background: "#FFFFFF",
             padding: "16px 24px",
             borderRadius: 16,
             border: "1px solid #E2E8F0",
           }}
         >
-          <Input
-            placeholder="Tìm kiếm chiến dịch theo vị trí, lĩnh vực..."
-            style={{ width: 300, borderRadius: 8 }}
-            value={jobSearchQuery}
-            onChange={(e) => {
-              setJobSearchQuery(e.target.value);
-              setJobCurrentPage(1);
-            }}
-            allowClear
-            prefix={<SearchOutlined style={{ color: "#BFBFBF" }} />}
-          />
-          <Space wrap>
-            <Select
-              placeholder="Lọc lĩnh vực"
-              style={{ width: 170 }}
-              allowClear
-              value={jobCategoryFilter}
-              onChange={(value) => {
-                setJobCategoryFilter(value);
-                setJobCurrentPage(1);
-              }}
-              options={jobCategories.map((c) => ({ label: c, value: c }))}
-            />
-            <Select
-              placeholder="Lọc trạng thái"
-              style={{ width: 150 }}
-              allowClear
-              value={jobStatusFilter}
-              onChange={(value) => {
-                setJobStatusFilter(value);
-                setJobCurrentPage(1);
-              }}
-              options={[
+          <Row gutter={[12, 12]}>
+            <Col xs={24} md={12} xl={8}>
+              <Input
+                placeholder="Tìm theo vị trí, lĩnh vực, cấp bậc hoặc chi nhánh"
+                style={{ width: "100%", borderRadius: 8 }}
+                value={jobSearchQuery}
+                onChange={(event) => {
+                  setJobSearchQuery(event.target.value);
+                  setJobCurrentPage(1);
+                }}
+                allowClear
+                prefix={<SearchOutlined style={{ color: "#94A3B8" }} />}
+              />
+            </Col>
+            <Col xs={24} sm={12} md={6} xl={4}>
+              <Select showSearch optionFilterProp="label" placeholder="Vị trí tuyển dụng" style={{ width: "100%" }} allowClear value={jobPositionFilter} onChange={(value) => { setJobPositionFilter(value); setJobCurrentPage(1); }} options={jobPositions.map((value) => ({ label: value, value }))} />
+            </Col>
+            <Col xs={24} sm={12} md={6} xl={4}>
+              <Select showSearch optionFilterProp="label" placeholder="Lĩnh vực" style={{ width: "100%" }} allowClear value={jobCategoryFilter} onChange={(value) => { setJobCategoryFilter(value); setJobCurrentPage(1); }} options={jobCategories.map((value) => ({ label: value, value }))} />
+            </Col>
+            <Col xs={24} sm={12} md={6} xl={4}>
+              <Select showSearch optionFilterProp="label" placeholder="Cấp bậc" style={{ width: "100%" }} allowClear value={jobLevelFilter} onChange={(value) => { setJobLevelFilter(value); setJobCurrentPage(1); }} options={jobLevels.map((value) => ({ label: value, value }))} />
+            </Col>
+            <Col xs={24} sm={12} md={6} xl={4}>
+              <Select showSearch optionFilterProp="label" placeholder="Chi nhánh" style={{ width: "100%" }} allowClear value={jobBranchFilter} onChange={(value) => { setJobBranchFilter(value); setJobCurrentPage(1); }} options={jobBranches.map((value) => ({ label: value, value }))} />
+            </Col>
+            <Col xs={24} sm={12} md={6} xl={4}>
+              <Select placeholder="Trạng thái chiến dịch" style={{ width: "100%" }} allowClear value={jobStatusFilter} onChange={(value) => { setJobStatusFilter(value); setJobCurrentPage(1); }} options={[
                 { label: "Đang tuyển", value: "Recruiting" },
-                { label: "Đã hết hạn", value: "Expired" },
                 { label: "Sắp mở tuyển", value: "Scheduled" },
+                { label: "Đã hết hạn", value: "Expired" },
                 { label: "Chờ duyệt", value: "Pending" },
                 { label: "Đã tạm ẩn", value: "Closed" },
                 { label: "Bị từ chối", value: "Rejected" },
-              ]}
-            />
-            {hasJobFilters && (
-              <Button
-                icon={<RotateLeftOutlined />}
-                onClick={handleResetJobFilters}
-                style={{ borderRadius: 8 }}
-              >
-                Xóa lọc
-              </Button>
-            )}
-            <span style={{ color: "#64748B", fontSize: 13 }}>Sắp xếp theo:</span>
-            <Select
-              style={{ width: 180 }}
-              value={jobSortKey}
-              onChange={(value) => {
-                setJobSortKey(value);
-                setJobCurrentPage(1);
-              }}
-              options={[
-                { label: "Mới đăng tuyển", value: "newest" },
-                { label: "Có hồ sơ mới nộp", value: "new_cvs" },
+                { label: "Đang kiểm duyệt", value: "Flagged" },
+                { label: "Đã lưu trữ", value: "Archived" },
+              ]} />
+            </Col>
+            <Col xs={24} sm={12} md={6} xl={4}>
+              <Select placeholder="Tình trạng hồ sơ" style={{ width: "100%" }} allowClear value={jobCvFilter} onChange={(value) => { setJobCvFilter(value); setJobCurrentPage(1); }} options={[
+                { label: "Có hồ sơ mới", value: "has-new" },
+                { label: "Đã có hồ sơ", value: "has-applications" },
+                { label: "Chưa có hồ sơ", value: "no-applications" },
+              ]} />
+            </Col>
+            <Col xs={24} sm={12} md={6} xl={4}>
+              <Select placeholder="Đợt tuyển dụng" style={{ width: "100%" }} allowClear value={jobRoundFilter} onChange={(value) => { setJobRoundFilter(value); setJobCurrentPage(1); }} options={jobRounds.map((value) => ({ label: `Đợt ${value}`, value }))} />
+            </Col>
+            <Col xs={24} md={12} xl={8}>
+              <DatePicker.RangePicker placeholder={["Hạn từ ngày", "Đến ngày"]} format="DD/MM/YYYY" style={{ width: "100%" }} value={jobDeadlineRange} onChange={(value) => { setJobDeadlineRange(value); setJobCurrentPage(1); }} />
+            </Col>
+            <Col xs={24} sm={12} md={6} xl={4}>
+              <Select style={{ width: "100%" }} value={jobSortKey} onChange={(value) => { setJobSortKey(value); setJobCurrentPage(1); }} options={[
+                { label: "Mới tạo trước", value: "newest" },
+                { label: "Cũ tạo trước", value: "oldest" },
+                { label: "Sắp hết hạn", value: "deadline" },
+                { label: "Nhiều hồ sơ mới", value: "new_cvs" },
                 { label: "Nhiều lượt xem", value: "most_viewed" },
                 { label: "Nhiều hồ sơ nhất", value: "most_applications" },
-              ]}
-            />
-          </Space>
+                { label: "Tên vị trí A–Z", value: "title" },
+              ]} />
+            </Col>
+          </Row>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10, marginTop: 14 }}>
+            <Text type="secondary" style={{ fontSize: 13 }}>
+              Hiển thị {filteredAndSortedJobs.length}/{totalCampaigns} chiến dịch{refreshing ? " · Đang đồng bộ dữ liệu mới" : ""}
+            </Text>
+            {hasJobFilters && <Button icon={<RotateLeftOutlined />} onClick={handleResetJobFilters}>Xóa bộ lọc</Button>}
+          </div>
         </div>
 
         {/* Campaign Cards Grid */}

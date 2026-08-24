@@ -57,6 +57,56 @@ class CvAnalysisExtractionGateTests(unittest.TestCase):
         self.assertEqual(cv_analysis_service.TEXT_CACHE[cv_hash]["cv_text"], extraction.text)
         self.assertFalse(cv_analysis_service.TEXT_CACHE[cv_hash]["extraction_quality"]["analysis_safe"])
 
+    def test_language_review_runs_when_safe_text_has_ocr_warning(self):
+        generated_review = {
+            "overall_language_score": 72,
+            "language_comment": "Nội dung có động từ hành động và một số kết quả định lượng.",
+            "good_action_verbs": ["Phát triển"],
+            "weak_phrases": [],
+            "insufficient_data": False,
+            "is_fallback": False,
+        }
+        quality = {
+            "quality_level": "partial",
+            "analysis_safe": True,
+            "warnings": ["Văn bản tiếng Việt có dấu hiệu mất dấu hoặc OCR nhận dạng sai."],
+        }
+
+        with patch(
+            "services.cv_analysis_service.scoring_service.generate_cv_language_review",
+            return_value=generated_review,
+        ) as generate_review:
+            result = cv_analysis_service.build_language_review_for_extraction(
+                cv_text="Kinh nghiệm phát triển và tối ưu API cho hệ thống tuyển dụng.",
+                job_description="Tuyển Backend Developer.",
+                extraction_quality=quality,
+            )
+
+        generate_review.assert_called_once()
+        self.assertFalse(result["insufficient_data"])
+        self.assertEqual(result["analysis_scope"], "extracted_text_with_quality_limitations")
+        self.assertIn("không được tính là lỗi diễn đạt", result["source_quality_notice"])
+
+    def test_language_review_still_stops_for_unsafe_extraction(self):
+        quality = {
+            "quality_level": "insufficient",
+            "analysis_safe": False,
+            "warnings": ["Các phương pháp đọc tài liệu cho nội dung khác nhau."],
+        }
+
+        with patch(
+            "services.cv_analysis_service.scoring_service.generate_cv_language_review",
+        ) as generate_review:
+            result = cv_analysis_service.build_language_review_for_extraction(
+                cv_text="KINH NGHIỆM " * 30,
+                job_description="Tuyển Backend Developer.",
+                extraction_quality=quality,
+            )
+
+        generate_review.assert_not_called()
+        self.assertTrue(result["insufficient_data"])
+        self.assertEqual(result["insufficient_reason"], "extraction_unreliable")
+
 
 if __name__ == "__main__":
     unittest.main()

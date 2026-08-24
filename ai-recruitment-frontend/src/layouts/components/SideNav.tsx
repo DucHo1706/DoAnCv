@@ -232,8 +232,20 @@ export function SideNav({
   const menuItems = isAdminRoute ? adminMenuItems : hrMenuItems;
 
   let selectedMenuKey = location.pathname;
-  if (location.pathname.startsWith("/recruiter/ranking")) {
+  if (
+    location.pathname.startsWith("/recruiter/applications") ||
+    location.pathname.startsWith("/recruiter/ranking") ||
+    location.pathname.startsWith("/recruiter/candidates/")
+  ) {
     selectedMenuKey = "/recruiter/applications";
+  } else if (location.pathname.startsWith("/recruiter/jobs/")) {
+    selectedMenuKey = "/recruiter/jobs";
+  } else if (location.pathname.startsWith("/recruiter/talent-pool/")) {
+    selectedMenuKey = "/recruiter/talent-pool";
+  } else if (location.pathname.startsWith("/recruiter/candidate-search/")) {
+    selectedMenuKey = "/recruiter/candidate-search";
+  } else if (location.pathname.startsWith("/admin/jobs/")) {
+    selectedMenuKey = "/admin/approval";
   }
 
   const sidebarContent = (
@@ -298,7 +310,7 @@ export function SideNav({
   return (
     <>
       <Sider
-        width={260}
+        width="min(260px, calc(100vw - 24px))"
         collapsedWidth={80}
         collapsed={collapsed}
         className="admin-custom-sider main-sider-responsive"

@@ -176,7 +176,7 @@ function SavedJobsPage() {
           }}
           bodyStyle={{ padding: 0 }}
         >
-          <Table
+          <Table scroll={{ x: "max-content" }}
             columns={columns}
             dataSource={savedJobs}
             rowKey="id"

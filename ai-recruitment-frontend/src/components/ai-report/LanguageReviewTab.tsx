@@ -23,12 +23,16 @@ interface LanguageReview {
   good_action_verbs: string[];
   weak_phrases: WeakPhrase[];
   uncertain_statements?: any[];
+  unverified_language_observations?: any[];
   ai_generation_risk?: AiGenerationRisk;
   summary?: string;
   effective_language?: string[];
   areas_for_improvement?: string[];
   insufficient_data?: boolean;
+  insufficient_reason?: "extraction_unreliable" | "ai_unavailable" | "analysis_error" | "pending_analysis" | "content_insufficient" | string;
   is_fallback?: boolean;
+  analysis_scope?: "full_extracted_text" | "extracted_text_with_quality_limitations" | string;
+  source_quality_notice?: string;
 }
 
 interface LanguageReviewTabProps {
@@ -44,7 +48,15 @@ const LanguageReviewTab: React.FC<LanguageReviewTabProps> = ({ languageReview })
   const weakPhrasesList = lang.weak_phrases || [];
 
   const uncertainStatements = lang.uncertain_statements || [];
+  const unverifiedObservations = lang.unverified_language_observations || [];
   const isLocalFallback = lang.is_fallback === true && lang.insufficient_data !== true;
+  const insufficientTitle = lang.insufficient_reason === "extraction_unreliable"
+    ? "Chưa thể đánh giá ngôn từ từ bản trích xuất này"
+    : lang.insufficient_reason === "ai_unavailable"
+      ? "Chưa hoàn tất phân tích ngôn từ do dịch vụ AI"
+      : lang.insufficient_reason === "analysis_error"
+        ? "Chưa thể hoàn tất phân tích ngôn từ"
+        : "Nội dung CV chưa đủ để đánh giá ngôn từ";
 
   const hasData = !!(summaryText || effectiveLanguage.length > 0 || weakPhrasesList.length > 0);
 
@@ -75,7 +87,7 @@ const LanguageReviewTab: React.FC<LanguageReviewTabProps> = ({ languageReview })
 
       {lang.insufficient_data ? (
         <Alert
-          message="Không đủ dữ liệu để đánh giá ngôn từ"
+          message={insufficientTitle}
           description={summaryText || "Hệ thống chưa có đủ dữ liệu để đánh giá ngôn từ của hồ sơ này."}
           type="warning"
           showIcon
@@ -83,6 +95,15 @@ const LanguageReviewTab: React.FC<LanguageReviewTabProps> = ({ languageReview })
         />
       ) : hasData ? (
         <>
+          {lang.analysis_scope === "extracted_text_with_quality_limitations" && (
+            <Alert
+              message="Phạm vi đánh giá theo phần văn bản đọc được"
+              description={lang.source_quality_notice || "Lỗi dấu, ký tự hoặc bố cục do bước đọc tài liệu không được tính là lỗi diễn đạt của ứng viên."}
+              type="warning"
+              showIcon
+              style={{ borderRadius: 12, border: "1px solid #FDE68A", background: "#FFFBEB" }}
+            />
+          )}
           {lang.overall_language_score !== null && lang.overall_language_score !== undefined && (
             <Alert
               message={
@@ -104,7 +125,7 @@ const LanguageReviewTab: React.FC<LanguageReviewTabProps> = ({ languageReview })
               </span>
             }
             style={{
-              borderRadius: 14,
+              borderRadius: 16,
               background: "#FFFFFF",
               border: "1px solid #E2E8F0",
               borderLeft: "4px solid #10B981",
@@ -145,7 +166,7 @@ const LanguageReviewTab: React.FC<LanguageReviewTabProps> = ({ languageReview })
               </span>
             }
             style={{
-              borderRadius: 14,
+              borderRadius: 16,
               background: "#FFFFFF",
               border: "1px solid #E2E8F0",
               borderLeft: "4px solid #F59E0B",
@@ -291,6 +312,51 @@ const LanguageReviewTab: React.FC<LanguageReviewTabProps> = ({ languageReview })
                         )}
                       </div>
                     </div>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {unverifiedObservations.length > 0 && (
+            <div style={{ marginTop: 8 }}>
+              <Alert
+                type="warning"
+                showIcon
+                message="Gợi ý ngôn từ AI chưa đối chiếu"
+                description="Các nhận xét dưới đây chưa truy hồi được cụm từ gần-nguyên-văn từ CV. Hãy xem như gợi ý rà soát, không phải kết luận về cách viết hoặc tính chân thực của ứng viên."
+                style={{
+                  border: "1px solid #FDE68A",
+                  borderRadius: 12,
+                  background: "#FFFBEB",
+                  marginBottom: 12,
+                }}
+              />
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                {unverifiedObservations.map((item: any, idx: number) => (
+                  <Card
+                    key={`language-unverified-${idx}`}
+                    size="small"
+                    style={{
+                      borderRadius: 12,
+                      background: "#FFFFFF",
+                      border: "1px solid #E2E8F0",
+                      borderLeft: "4px solid #F59E0B",
+                    }}
+                    bodyStyle={{ padding: 16 }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 4 }}>
+                      <Text strong style={{ color: "#0F172A", fontSize: 15 }}>
+                        {item?.title || "Nội dung AI đề xuất xem lại"}
+                      </Text>
+                      <Tag color="gold" style={{ margin: 0 }}>Chưa đối chiếu</Tag>
+                    </div>
+                    {item?.description && <Text type="secondary">{item.description}</Text>}
+                    {item?.suggestion && (
+                      <Text style={{ display: "block", marginTop: 6, color: "#475569" }}>
+                        <strong>Gợi ý:</strong> {item.suggestion}
+                      </Text>
+                    )}
                   </Card>
                 ))}
               </div>

@@ -46,14 +46,14 @@ import { formatJobDate, resolveJobLifecycle } from "../../../../utils/jobLifecyc
 const { Text, Title, Paragraph } = Typography;
 
 function getCampaignLifecycleTag(status: string) {
-  if (status === "Recruiting") return <Tag color="success" style={{ borderRadius: 6 }}>Đang tuyển</Tag>;
-  if (status === "Scheduled") return <Tag color="processing" style={{ borderRadius: 6 }}>Sắp mở tuyển</Tag>;
-  if (status === "Expired") return <Tag color="error" style={{ borderRadius: 6 }}>Đã duyệt · Hết hạn</Tag>;
-  if (status === "Closed") return <Tag color="default" style={{ borderRadius: 6 }}>Đã duyệt · Tạm ẩn</Tag>;
-  if (status === "Rejected") return <Tag color="error" style={{ borderRadius: 6 }}>Bị từ chối</Tag>;
-  if (status === "Archived") return <Tag color="default" style={{ borderRadius: 6 }}>Đã lưu trữ</Tag>;
-  if (status === "Flagged") return <Tag color="warning" style={{ borderRadius: 6 }}>Đang kiểm duyệt</Tag>;
-  return <Tag color="gold" style={{ borderRadius: 6 }}>Chờ duyệt</Tag>;
+  if (status === "Recruiting") return <Tag color="success" style={{ borderRadius: 8 }}>Đang tuyển</Tag>;
+  if (status === "Scheduled") return <Tag color="processing" style={{ borderRadius: 8 }}>Sắp mở tuyển</Tag>;
+  if (status === "Expired") return <Tag color="error" style={{ borderRadius: 8 }}>Đã duyệt · Hết hạn</Tag>;
+  if (status === "Closed") return <Tag color="default" style={{ borderRadius: 8 }}>Đã duyệt · Tạm ẩn</Tag>;
+  if (status === "Rejected") return <Tag color="error" style={{ borderRadius: 8 }}>Bị từ chối</Tag>;
+  if (status === "Archived") return <Tag color="default" style={{ borderRadius: 8 }}>Đã lưu trữ</Tag>;
+  if (status === "Flagged") return <Tag color="warning" style={{ borderRadius: 8 }}>Đang kiểm duyệt</Tag>;
+  return <Tag color="gold" style={{ borderRadius: 8 }}>Chờ duyệt</Tag>;
 }
 
 function renderAiDataStatusTag(application: ApplicationDto) {
@@ -241,7 +241,7 @@ export default function CampaignApplicationsPage() {
             overflow: "hidden",
             textOverflow: "ellipsis",
             whiteSpace: "nowrap",
-            borderRadius: 6,
+            borderRadius: 8,
             fontWeight: 500,
           }}
         >
@@ -260,7 +260,7 @@ export default function CampaignApplicationsPage() {
         return a.aiScore - b.aiScore;
       },
       render: (score: number | null, record: ApplicationDto) => {
-        let scoreBadge = <Tag style={{ borderRadius: 6 }}>Chưa có điểm AI</Tag>;
+        let scoreBadge = <Tag style={{ borderRadius: 8 }}>Chưa có điểm AI</Tag>;
 
         if (score != null) {
           const isOpt =
@@ -456,7 +456,7 @@ export default function CampaignApplicationsPage() {
           message="Lỗi tải dữ liệu"
           description={fetchError}
           action={
-            <Button size="small" type="primary" onClick={refetch}>
+            <Button size="small" type="primary" onClick={() => void refetch()}>
               Thử lại
             </Button>
           }
@@ -469,7 +469,7 @@ export default function CampaignApplicationsPage() {
         <Card
           style={{
             marginBottom: 20,
-            borderRadius: 14,
+            borderRadius: 16,
             border: "1px solid #E2E8F0",
             background: "rgba(255, 255, 255, 0.85)",
             backdropFilter: "blur(20px)",

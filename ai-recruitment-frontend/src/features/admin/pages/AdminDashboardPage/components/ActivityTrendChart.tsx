@@ -113,7 +113,7 @@ export default function ActivityTrendChart(props: { data: ActivityTrendItem[] })
                       height: cvHeight,
                       width: chartData.length > 20 ? 6 : 10,
                       borderRadius: "8px 8px 0 0",
-                      background: "linear-gradient(180deg, #69b1ff 0%, #1677ff 100%)",
+                      background: "linear-gradient(180deg, rgba(37, 99, 235, 0.55) 0%, #2563EB 100%)",
                     }}
                   />
 
@@ -122,7 +122,7 @@ export default function ActivityTrendChart(props: { data: ActivityTrendItem[] })
                       height: jobHeight,
                       width: chartData.length > 20 ? 6 : 10,
                       borderRadius: "8px 8px 0 0",
-                      background: "linear-gradient(180deg, #ffd591 0%, #fa8c16 100%)",
+                      background: "linear-gradient(180deg, rgba(249, 115, 22, 0.30) 0%, #F97316 100%)",
                     }}
                   />
                 </div>
@@ -151,7 +151,7 @@ export default function ActivityTrendChart(props: { data: ActivityTrendItem[] })
               width: 10,
               height: 10,
               borderRadius: 999,
-              backgroundColor: "#1677ff",
+              backgroundColor: "#2563EB",
               display: "inline-block",
             }}
           />
@@ -164,7 +164,7 @@ export default function ActivityTrendChart(props: { data: ActivityTrendItem[] })
               width: 10,
               height: 10,
               borderRadius: 999,
-              backgroundColor: "#fa8c16",
+              backgroundColor: "#F97316",
               display: "inline-block",
             }}
           />

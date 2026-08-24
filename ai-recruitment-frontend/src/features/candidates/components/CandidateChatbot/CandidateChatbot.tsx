@@ -366,7 +366,7 @@ export default function CandidateChatbot() {
                     display: "inline-block",
                     padding: "10px 14px",
                     borderRadius: 12,
-                    background: msg.role === "user" ? "#1677ff" : "#ffffff",
+                    background: msg.role === "user" ? "#2563EB" : "#ffffff",
                     color: msg.role === "user" ? "#fff" : "#0f172a",
                     boxShadow: "0 2px 6px rgba(0,0,0,0.05)",
                     maxWidth: "80%",
@@ -410,7 +410,7 @@ export default function CandidateChatbot() {
                               <Button
                                 type="primary"
                                 size="small"
-                                style={{ borderRadius: 6, width: "100%", fontSize: 12, height: 28, background: "#2563EB", border: "none" }}
+                                style={{ borderRadius: 8, width: "100%", fontSize: 12, height: 28, background: "#2563EB", border: "none" }}
                                 onClick={() => {
                                   navigate(`/jobs/${jobId}`);
                                   setOpen(false);
@@ -458,13 +458,13 @@ export default function CandidateChatbot() {
                                 target={isInternal ? "_self" : "_blank"}
                                 rel={isInternal ? "" : "noopener noreferrer"}
                                 style={{
-                                  color: msg.role === "ai" ? "#1677ff" : "#fff",
+                                  color: msg.role === "ai" ? "#2563EB" : "#fff",
                                   textDecoration: "none",
                                   fontWeight: 600,
                                   background:
-                                    msg.role === "ai" ? "#e6f4ff" : "rgba(255,255,255,0.2)",
+                                    msg.role === "ai" ? "#EFF6FF" : "rgba(255,255,255,0.2)",
                                   padding: "4px 12px",
-                                  borderRadius: 6,
+                                  borderRadius: 8,
                                   display: "inline-block",
                                   marginTop: 6,
                                   marginBottom: 2,
@@ -499,7 +499,7 @@ export default function CandidateChatbot() {
                               style={{
                                 fontWeight: "bold",
                                 marginRight: 12,
-                                color: msg.role === "ai" ? "#1677ff" : "#fff",
+                                color: msg.role === "ai" ? "#2563EB" : "#fff",
                                 fontSize: 16,
                               }}
                             >
@@ -525,7 +525,7 @@ export default function CandidateChatbot() {
                             <span
                               style={{
                                 marginRight: 12,
-                                color: msg.role === "ai" ? "#1677ff" : "#fff",
+                                color: msg.role === "ai" ? "#2563EB" : "#fff",
                               }}
                             >
                               •

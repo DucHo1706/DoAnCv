@@ -230,7 +230,7 @@ export default function RecruiterProfilePage() {
         <div>
           <Text strong style={{ color: "#0F172A", fontSize: 14 }}>{text}</Text>
           <div style={{ marginTop: 2 }}>
-            <Tag color="geekblue" style={{ fontSize: 11, borderRadius: 4 }}>
+            <Tag color="geekblue" style={{ fontSize: 11, borderRadius: 8 }}>
               {record.categoryName}
             </Tag>
           </div>
@@ -340,7 +340,7 @@ export default function RecruiterProfilePage() {
                   <Title level={3} style={{ margin: 0, color: "#0F172A", fontWeight: 700 }}>
                     {profileData?.fullName || "Nhà tuyển dụng"}
                   </Title>
-                  <Tag color="blue" icon={<IdcardOutlined />} style={{ fontWeight: 600, borderRadius: 6 }}>
+                  <Tag color="blue" icon={<IdcardOutlined />} style={{ fontWeight: 600, borderRadius: 8 }}>
                     HR RECRUITER
                   </Tag>
                 </Space>
@@ -350,11 +350,11 @@ export default function RecruiterProfilePage() {
                 </Paragraph>
 
                 <Space wrap size={[8, 8]}>
-                  <Tag icon={<MailOutlined />} color="default" style={{ borderRadius: 6, color: "#475569" }}>
+                  <Tag icon={<MailOutlined />} color="default" style={{ borderRadius: 8, color: "#475569" }}>
                     {profileData?.email || currentUser?.email}
                   </Tag>
                   {profileData?.phone && (
-                    <Tag icon={<PhoneOutlined />} color="default" style={{ borderRadius: 6, color: "#475569" }}>
+                    <Tag icon={<PhoneOutlined />} color="default" style={{ borderRadius: 8, color: "#475569" }}>
                       {profileData.phone}
                     </Tag>
                   )}
@@ -362,7 +362,7 @@ export default function RecruiterProfilePage() {
                     <Tag
                       icon={<LinkedinOutlined style={{ color: "#0A66C2" }} />}
                       color="default"
-                      style={{ borderRadius: 6, cursor: "pointer" }}
+                      style={{ borderRadius: 8, cursor: "pointer" }}
                       onClick={() => window.open(profileData.linkedInUrl, "_blank")}
                     >
                       LinkedIn Profile
@@ -874,7 +874,7 @@ export default function RecruiterProfilePage() {
                         style={{ borderRadius: appTheme.radius.md, border: "1px solid #E2E8F0" }}
                         bodyStyle={{ padding: 0 }}
                       >
-                        <Table
+                        <Table scroll={{ x: "max-content" }}
                           dataSource={profileData?.recentJobs || []}
                           columns={jobColumns}
                           rowKey="jobId"

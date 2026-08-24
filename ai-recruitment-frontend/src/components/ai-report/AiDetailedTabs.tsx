@@ -29,7 +29,7 @@ function AiTabSkeleton({ variant }: { variant: SkeletonVariant }) {
           <Card
             key={`${variant}-${index}`}
             size="small"
-            style={{ border: "1px solid #E2E8F0", borderRadius: 14 }}
+            style={{ border: "1px solid #E2E8F0", borderRadius: 16 }}
             styles={{ body: { padding: 20 } }}
           >
             <Skeleton.Input active size="small" style={{ width: index === 0 ? 190 : 150, marginBottom: 18 }} />

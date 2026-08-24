@@ -706,7 +706,7 @@ export default function CandidateJobPage() {
                           style={{
                             width: 56,
                             height: 56,
-                            borderRadius: 14,
+                            borderRadius: 16,
                             background: "rgba(37, 99, 235, 0.08)",
                             color: "#2563EB",
                             display: "flex",
@@ -762,12 +762,12 @@ export default function CandidateJobPage() {
                                   {companyName}
                                 </Text>
                                 {categoryName && (
-                                  <Tag style={{ background: "#F1F5F9", border: "1px solid #CBD5E1", color: "#475569", borderRadius: 6, margin: 0, fontSize: 11, fontWeight: 600 }}>
+                                  <Tag style={{ background: "#F1F5F9", border: "1px solid #CBD5E1", color: "#475569", borderRadius: 8, margin: 0, fontSize: 11, fontWeight: 600 }}>
                                     {categoryName}
                                   </Tag>
                                 )}
                                 {jobLevelName && (
-                                  <Tag style={{ background: "#EFF6FF", border: "1px solid #BFDBFE", color: "#1D4ED8", borderRadius: 6, margin: 0, fontSize: 11, fontWeight: 600 }}>
+                                  <Tag style={{ background: "#EFF6FF", border: "1px solid #BFDBFE", color: "#1D4ED8", borderRadius: 8, margin: 0, fontSize: 11, fontWeight: 600 }}>
                                     {jobLevelName}
                                   </Tag>
                                 )}
@@ -776,7 +776,7 @@ export default function CandidateJobPage() {
 
                             {/* Góc phải: Mức Lương & Nút Lưu */}
                             <div style={{ textAlign: "right", flexShrink: 0, display: "flex", alignItems: "center", gap: 12 }}>
-                              <div style={{ background: "#F0FDF4", border: "1px solid #BBF7D0", padding: "6px 14px", borderRadius: 10 }}>
+                              <div style={{ background: "#F0FDF4", border: "1px solid #BBF7D0", padding: "6px 14px", borderRadius: 12 }}>
                                 <Text strong style={{ fontSize: 17, color: "#10B981", fontWeight: 800, display: "block" }}>
                                   {salaryText}
                                 </Text>
@@ -816,7 +816,7 @@ export default function CandidateJobPage() {
 
                           {/* Hàng 3: Trích đoạn Yêu cầu & Mô tả công việc */}
                           {(job.requirements || job.description) && (
-                            <div style={{ background: "#F8FAFC", padding: "12px 16px", borderRadius: 10, border: "1px solid #F1F5F9", marginBottom: 14 }}>
+                            <div style={{ background: "#F8FAFC", padding: "12px 16px", borderRadius: 12, border: "1px solid #F1F5F9", marginBottom: 14 }}>
                               <Text type="secondary" style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", display: "block", marginBottom: 4, color: "#64748B" }}>
                                 Mô tả & Yêu cầu công việc:
                               </Text>
@@ -833,7 +833,7 @@ export default function CandidateJobPage() {
                                 ✓ Trùng khớp CV của bạn:
                               </span>
                               {matchResult.matched.map((sk: string, sIdx: number) => (
-                                <Tag key={sIdx} color="emerald" style={{ fontSize: 11, padding: "2px 8px", borderRadius: 6, margin: 0, backgroundColor: "#ECFDF5", color: "#059669", borderColor: "#A7F3D0", fontWeight: 700 }}>
+                                <Tag key={sIdx} color="emerald" style={{ fontSize: 11, padding: "2px 8px", borderRadius: 8, margin: 0, backgroundColor: "#ECFDF5", color: "#059669", borderColor: "#A7F3D0", fontWeight: 700 }}>
                                   {sk}
                                 </Tag>
                               ))}

@@ -97,10 +97,10 @@ export function AiReportDrawer({
                   percent={application.aiScore}
                   strokeColor={
                     application.aiScore >= 80
-                      ? "#52c41a"
+                      ? "#10B981"
                       : application.aiScore >= 60
-                      ? "#faad14"
-                      : "#ff4d4f"
+                      ? "#F59E0B"
+                      : "#EF4444"
                   }
                   format={(percent) => `${percent} Điểm`}
                 />
@@ -240,6 +240,7 @@ export function AiReportDrawer({
 
           <Title level={5}>Điểm chi tiết theo từng tiêu chí</Title>
           <Table
+            scroll={{ x: "max-content" }}
             dataSource={(application as any).criteriaResults || []}
             rowKey={(record: any) => record.criterionName || record.criterion_name}
             pagination={false}

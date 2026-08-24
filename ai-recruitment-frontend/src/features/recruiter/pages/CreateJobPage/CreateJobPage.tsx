@@ -26,6 +26,7 @@ import type {
   CategoryDto,
   JobPositionDto,
 } from "../../services/jobService";
+import { useRealtimeResourceRefresh } from "../../../../hooks/useRealtimeRefresh";
 
 interface CriterionGroupDto {
   id: string;
@@ -165,32 +166,15 @@ function CreateJobPage() {
     }
   }, []);
 
-  useEffect(() => {
-    let connection: import("@microsoft/signalr").HubConnection | undefined;
-    let cancelled = false;
-    const onFocus = () => refreshMetadata();
-    window.addEventListener("focus", onFocus);
+  useRealtimeResourceRefresh(
+    ["branches", "categories", "job-levels", "job-positions", "criterion-groups"],
+    refreshMetadata,
+  );
 
-    const connect = async () => {
-      const signalR = await import("@microsoft/signalr");
-      if (cancelled) return;
-      const apiUrl = import.meta.env.VITE_API_URL || "/api";
-      connection = new signalR.HubConnectionBuilder()
-        .withUrl(apiUrl.replace(/\/api\/?$/, "/hubs/notifications"), {
-          accessTokenFactory: () => localStorage.getItem("token") || "",
-        })
-        .withAutomaticReconnect()
-        .configureLogging(signalR.LogLevel.Warning)
-        .build();
-      connection.on("MetadataChanged", refreshMetadata);
-      try { await connection.start(); } catch { /* Đồng bộ lại khi cửa sổ được focus. */ }
-    };
-    connect();
-    return () => {
-      cancelled = true;
-      window.removeEventListener("focus", onFocus);
-      connection?.stop();
-    };
+  useEffect(() => {
+    const onFocus = () => void refreshMetadata();
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
   }, [refreshMetadata]);
 
   const saveDraft = (_changedValues: any, allValues: any) => {
@@ -282,8 +266,11 @@ function CreateJobPage() {
         const response = await jobService.updateJob(editingJobId, payload as any);
         message.success(response?.message || "Đã cập nhật và gửi lại tin để duyệt");
       } else {
-        await jobService.createJob(payload as any);
+        const response = await jobService.createJob(payload as any);
         message.success("Tạo tin tuyển dụng thành công, bài đang chờ duyệt");
+        localStorage.removeItem(draftKey);
+        navigate(response?.id ? `/recruiter/jobs/${response.id}` : "/recruiter/jobs");
+        return;
       }
       localStorage.removeItem(draftKey);
       navigate("/recruiter/jobs");

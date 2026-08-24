@@ -283,10 +283,10 @@ export function useApplicationStatus() {
     }
     closeProcessingModal();
 
-    processingModalRef.current = Modal.info({
-      title: "AI đang phân tích hồ sơ",
-      centered: true,
-      width: 560,
+processingModalRef.current = Modal.info({
+title: "AI đang phân tích hồ sơ",
+centered: true,
+width: typeof window !== "undefined" && window.innerWidth < 640 ? "92vw" : 560,
       okText: "Đóng",
       onOk: () => {
         clearPollingTimer();

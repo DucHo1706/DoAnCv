@@ -30,9 +30,10 @@ namespace RecruitmentBackend.Services
         public Task<(bool IsSuccess, string Message, object Data)> GetHrApplicationsAsync(
             ClaimsPrincipal user,
             bool includeAiDetails = true,
-            string? applicationId = null)
+            string? applicationId = null,
+            string? jobId = null)
         {
-            return _applicationService.GetHrApplicationsAsync(user, includeAiDetails, applicationId);
+            return _applicationService.GetHrApplicationsAsync(user, includeAiDetails, applicationId, jobId);
         }
 
         public Task<(bool IsSuccess, string Message, object Data)> GetMyApplicationsAsync(ClaimsPrincipal user)

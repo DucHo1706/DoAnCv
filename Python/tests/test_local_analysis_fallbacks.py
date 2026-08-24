@@ -1,7 +1,8 @@
 import unittest
+from unittest.mock import patch
 
 from services.interview_service import get_fallback_mock_interview, get_fallback_star_tips
-from services.scoring_service import build_local_language_review
+from services.scoring_service import build_local_language_review, classify_gemini_unavailable_reason
 
 
 class LocalAnalysisFallbackTests(unittest.TestCase):
@@ -37,6 +38,25 @@ class LocalAnalysisFallbackTests(unittest.TestCase):
         self.assertFalse(result["insufficient_data"])
         self.assertFalse(result["ai_generation_risk"]["detected"])
         self.assertIn("không thể xác minh", result["language_comment"].lower())
+
+    def test_disabled_local_mode_is_not_reported_as_quota_exhausted(self):
+        with patch("services.scoring_service.GEMINI_ENABLED", False):
+            reason = classify_gemini_unavailable_reason(Exception("Không cấu hình API keys trực tiếp."))
+        self.assertEqual(reason, "disabled_for_local_bulk")
+
+    def test_timeout_is_not_reported_as_quota_exhausted(self):
+        with patch("services.scoring_service.GEMINI_ENABLED", True):
+            reason = classify_gemini_unavailable_reason(
+                TimeoutError("504 DEADLINE_EXCEEDED")
+            )
+        self.assertEqual(reason, "overloaded_or_timeout")
+
+    def test_explicit_rate_limit_has_own_reason(self):
+        with patch("services.scoring_service.GEMINI_ENABLED", True):
+            reason = classify_gemini_unavailable_reason(
+                RuntimeError("429 RESOURCE_EXHAUSTED quota exceeded")
+            )
+        self.assertEqual(reason, "quota_or_rate_limit")
 
 
 if __name__ == "__main__":

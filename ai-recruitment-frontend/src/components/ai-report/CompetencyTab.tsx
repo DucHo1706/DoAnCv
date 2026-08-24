@@ -53,9 +53,9 @@ const CompetencyTab: React.FC<CompetencyTabProps> = (props) => {
               bodyStyle={{ padding: "16px" }}
             >
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                <div style={{ width: "80%", height: 16, background: "#e2e8f0", borderRadius: 4, animation: "pulse 1.5s infinite" }} />
-                <div style={{ width: "50%", height: 16, background: "#e2e8f0", borderRadius: 4, animation: "pulse 1.5s infinite" }} />
-                <div style={{ width: "65%", height: 16, background: "#e2e8f0", borderRadius: 4, animation: "pulse 1.5s infinite" }} />
+                <div style={{ width: "80%", height: 16, background: "#e2e8f0", borderRadius: 8, animation: "pulse 1.5s infinite" }} />
+                <div style={{ width: "50%", height: 16, background: "#e2e8f0", borderRadius: 8, animation: "pulse 1.5s infinite" }} />
+                <div style={{ width: "65%", height: 16, background: "#e2e8f0", borderRadius: 8, animation: "pulse 1.5s infinite" }} />
               </div>
             </Card>
           </Col>
@@ -73,9 +73,9 @@ const CompetencyTab: React.FC<CompetencyTabProps> = (props) => {
               bodyStyle={{ padding: "16px" }}
             >
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                <div style={{ width: "70%", height: 16, background: "#e2e8f0", borderRadius: 4, animation: "pulse 1.5s infinite" }} />
-                <div style={{ width: "60%", height: 16, background: "#e2e8f0", borderRadius: 4, animation: "pulse 1.5s infinite" }} />
-                <div style={{ width: "45%", height: 16, background: "#e2e8f0", borderRadius: 4, animation: "pulse 1.5s infinite" }} />
+                <div style={{ width: "70%", height: 16, background: "#e2e8f0", borderRadius: 8, animation: "pulse 1.5s infinite" }} />
+                <div style={{ width: "60%", height: 16, background: "#e2e8f0", borderRadius: 8, animation: "pulse 1.5s infinite" }} />
+                <div style={{ width: "45%", height: 16, background: "#e2e8f0", borderRadius: 8, animation: "pulse 1.5s infinite" }} />
               </div>
             </Card>
           </Col>
@@ -87,6 +87,18 @@ const CompetencyTab: React.FC<CompetencyTabProps> = (props) => {
   const matchedSkills = scoreAnalysis?.matched_skills || [];
   const missingSkills = scoreAnalysis?.missing_skills || [];
   const redFlags = scoreAnalysis?.red_flags || [];
+  const redFlagSuspicions = scoreAnalysis?.red_flag_suspicions || [];
+  const redFlagReviewStatus = scoreAnalysis?.red_flag_review_status
+    || (scoreAnalysis?.analysis_status === "ai_unavailable" ? "unavailable" : "completed");
+  const unavailableReason = String(scoreAnalysis?.ai_unavailable_reason || "");
+  const unavailableRedFlagMessage: Record<string, string> = {
+    disabled_for_local_bulk: "Chưa đánh giá red flag trong chế độ kiểm thử local",
+    quota_or_rate_limit: "Chưa đánh giá red flag do dịch vụ AI đã đạt giới hạn lượt xử lý",
+    overloaded_or_timeout: "Chưa đánh giá red flag do dịch vụ AI quá tải hoặc phản hồi quá thời gian",
+    not_configured: "Chưa đánh giá red flag do dịch vụ AI chưa được cấu hình",
+    router_unavailable: "Chưa đánh giá red flag do dịch vụ AI tạm thời không phản hồi",
+    service_unavailable: "Chưa đánh giá red flag do dịch vụ AI tạm thời không khả dụng",
+  };
   const strengths = scoreAnalysis?.strengths || [];
   const weaknesses = scoreAnalysis?.weaknesses || [];
   const calculatedEvidenceCoverage = (() => {
@@ -138,7 +150,7 @@ const CompetencyTab: React.FC<CompetencyTabProps> = (props) => {
         >
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
             {extractedSkills.map((skill) => (
-              <Tag color="blue" key={skill} style={{ margin: 0, borderRadius: 6 }}>
+              <Tag color="blue" key={skill} style={{ margin: 0, borderRadius: 8 }}>
                 {skill}
               </Tag>
             ))}
@@ -215,7 +227,7 @@ const CompetencyTab: React.FC<CompetencyTabProps> = (props) => {
                       overflowWrap: "anywhere",
                       lineHeight: 1.6,
                       padding: "3px 8px",
-                      borderRadius: 6,
+                      borderRadius: 8,
                       fontWeight: 600,
                       display: "inline-block",
                     }}
@@ -277,7 +289,7 @@ const CompetencyTab: React.FC<CompetencyTabProps> = (props) => {
                       overflowWrap: "anywhere",
                       lineHeight: 1.6,
                       padding: "3px 8px",
-                      borderRadius: 6,
+                      borderRadius: 8,
                       fontWeight: 600,
                       display: "inline-block",
                     }}
@@ -303,7 +315,7 @@ const CompetencyTab: React.FC<CompetencyTabProps> = (props) => {
         </Col>
       </Row>
 
-      {/* Thông tin cần HR làm rõ, không mặc định quy kết là gian lận */}
+      {/* Tách cảnh báo có bằng chứng khỏi dấu hiệu AI chưa đối chiếu; cả hai đều không kết luận gian lận. */}
       <div style={{ marginTop: 8 }}>
         <Text
           strong
@@ -316,21 +328,30 @@ const CompetencyTab: React.FC<CompetencyTabProps> = (props) => {
             fontWeight: 700,
           }}
         >
-          <QuestionCircleOutlined style={{ marginRight: 6 }} /> Thông tin cần làm rõ khi phỏng vấn
+          <QuestionCircleOutlined style={{ marginRight: 6 }} /> Red flag cần xác minh
         </Text>
-        {redFlags.length === 0 ? (
+        {redFlags.length === 0 && redFlagSuspicions.length === 0 ? (
           <Alert
-            type="info"
+            type={redFlagReviewStatus === "unavailable" ? "warning" : "info"}
             showIcon
-            message="Chưa có cảnh báo đủ bằng chứng để hiển thị"
-            description="Các cảnh báo AI không có đoạn trích nguyên văn trong CV đã được loại bỏ. Những tiêu chí còn thiếu hoặc cần bổ sung nằm ở mục Cần làm rõ / Cải thiện."
+            message={
+              redFlagReviewStatus === "unavailable"
+                ? unavailableRedFlagMessage[unavailableReason]
+                  || "Chưa đánh giá red flag do dịch vụ AI tạm thời không khả dụng"
+                : "Chưa ghi nhận red flag có bằng chứng trực tiếp từ CV"
+            }
+            description={
+              redFlagReviewStatus === "unavailable"
+                ? undefined
+                : "Kết quả này không xác nhận lời khai là đúng; hệ thống chỉ chưa có nội dung bất thường đủ căn cứ để hiển thị."
+            }
             style={{
               border: "1px solid #E2E8F0",
               borderRadius: 12,
               background: "#F8FAFC",
             }}
           />
-        ) : (
+        ) : redFlags.length > 0 ? (
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {redFlags.map((flag: any, idx: number) => {
               const titleText =
@@ -380,6 +401,55 @@ const CompetencyTab: React.FC<CompetencyTabProps> = (props) => {
                 </Card>
               );
             })}
+          </div>
+        ) : null}
+
+        {redFlagSuspicions.length > 0 && (
+          <div style={{ marginTop: redFlags.length > 0 ? 16 : 0 }}>
+            <Alert
+              type="warning"
+              showIcon
+              message="Dấu hiệu AI đề xuất – chưa đối chiếu"
+              description="Các mục dưới đây giúp định hướng kiểm tra, chưa có đoạn trích gần-nguyên-văn từ CV, không tham gia chấm điểm và không phải kết luận ứng viên gian dối."
+              style={{
+                border: "1px solid #FDE68A",
+                borderRadius: 12,
+                background: "#FFFBEB",
+                marginBottom: 12,
+              }}
+            />
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {redFlagSuspicions.map((flag: any, idx: number) => (
+                <Card
+                  key={`suspicion-${idx}`}
+                  size="small"
+                  style={{
+                    borderRadius: 12,
+                    background: "#FFFFFF",
+                    border: "1px solid #E2E8F0",
+                    borderLeft: "4px solid #F59E0B",
+                  }}
+                  bodyStyle={{ padding: "16px" }}
+                >
+                  <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                    <WarningOutlined style={{ color: "#D97706", fontSize: 16, marginTop: 3 }} />
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 4 }}>
+                        <Text strong style={{ color: "#0F172A", fontSize: 15 }}>
+                          {flag?.title || "Nội dung AI đề xuất kiểm tra"}
+                        </Text>
+                        <Tag color="gold" style={{ margin: 0 }}>Chưa đối chiếu</Tag>
+                      </div>
+                      {flag?.description && (
+                        <Text type="secondary" style={{ color: "#64748B", fontSize: 14 }}>
+                          {flag.description}
+                        </Text>
+                      )}
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
           </div>
         )}
       </div>

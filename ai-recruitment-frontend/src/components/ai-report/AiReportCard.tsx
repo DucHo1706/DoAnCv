@@ -282,7 +282,7 @@ export const AiReportCard: React.FC<AiReportCardProps> = ({
           <Text strong style={{ display: "block", marginBottom: 8, color: "#0F172A", fontSize: 13 }}>
             Điểm số theo tiêu chí:
           </Text>
-          <Table
+          <Table scroll={{ x: "max-content" }}
             dataSource={criteriaResults}
             rowKey={(record: any) => record.criterionName || record.criterion_name}
             pagination={false}

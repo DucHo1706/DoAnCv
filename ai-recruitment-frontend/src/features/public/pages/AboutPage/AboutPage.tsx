@@ -124,7 +124,7 @@ function AboutPage() {
       <div
         style={{
           background: "linear-gradient(135deg, #FFFFFF 0%, #EFF6FF 100%)",
-          borderRadius: 24,
+          borderRadius: 20,
           padding: "48px 40px",
           marginBottom: 48,
           boxShadow: "0 18px 50px rgba(37, 99, 235, 0.08)",
@@ -143,7 +143,7 @@ function AboutPage() {
                 background: "#EFF6FF",
                 border: "1px solid #BFDBFE",
                 padding: "6px 16px",
-                borderRadius: 30,
+                borderRadius: 20,
                 marginBottom: 20,
               }}
             >
@@ -171,7 +171,7 @@ function AboutPage() {
                 icon={<CompassOutlined />}
                 onClick={() => navigate("/jobs")}
                 style={{
-                  borderRadius: 10,
+                  borderRadius: 12,
                   height: 48,
                   padding: "0 28px",
                   background: "#2563EB",
@@ -188,7 +188,7 @@ function AboutPage() {
                 icon={<RobotOutlined />}
                 onClick={() => navigate("/candidate/dashboard")}
                 style={{
-                  borderRadius: 10,
+                  borderRadius: 12,
                   height: 48,
                   padding: "0 24px",
                   color: "#1D4ED8",
@@ -298,7 +298,7 @@ function AboutPage() {
                   </span>
                 </div>
 
-                <Tag style={{ background: item.tagBg, color: item.tagColor, border: "none", borderRadius: 6, fontWeight: 700, fontSize: 11, marginBottom: 10 }}>
+                <Tag style={{ background: item.tagBg, color: item.tagColor, border: "none", borderRadius: 8, fontWeight: 700, fontSize: 11, marginBottom: 10 }}>
                   {item.tag}
                 </Tag>
 
@@ -351,7 +351,7 @@ function AboutPage() {
                     style={{
                       width: 52,
                       height: 52,
-                      borderRadius: 14,
+                      borderRadius: 16,
                       background: "#F8FAFC",
                       border: "1px solid #E2E8F0",
                       display: "flex",
@@ -361,7 +361,7 @@ function AboutPage() {
                   >
                     {feat.icon}
                   </div>
-                  <Tag color={feat.badgeColor} style={{ borderRadius: 6, padding: "4px 12px", fontWeight: 700, fontSize: 12, margin: 0 }}>
+                  <Tag color={feat.badgeColor} style={{ borderRadius: 8, padding: "4px 12px", fontWeight: 700, fontSize: 12, margin: 0 }}>
                     {feat.badge}
                   </Tag>
                 </div>
@@ -449,7 +449,7 @@ function AboutPage() {
         <Row gutter={[32, 24]} align="middle" justify="space-between">
           <Col xs={24} md={16}>
             <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
-              <div style={{ width: 36, height: 36, borderRadius: 10, background: "#EFF6FF", color: "#2563EB", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>
+              <div style={{ width: 36, height: 36, borderRadius: 12, background: "#EFF6FF", color: "#2563EB", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>
                 <RocketOutlined />
               </div>
               <Title level={3} style={{ fontWeight: 800, color: "#0F172A", margin: 0 }}>
@@ -469,7 +469,7 @@ function AboutPage() {
                 icon={<ArrowRightOutlined />}
                 onClick={() => navigate("/jobs")}
                 style={{
-                  borderRadius: 10,
+                  borderRadius: 12,
                   height: 44,
                   padding: "0 24px",
                   background: "#2563EB",

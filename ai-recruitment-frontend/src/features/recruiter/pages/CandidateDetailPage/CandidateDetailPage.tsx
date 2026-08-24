@@ -74,7 +74,7 @@ export default function CandidateDetailPage() {
             icon={<ArrowLeftOutlined />}
             onClick={() => navigate(-1)}
             style={{
-              borderRadius: 10,
+              borderRadius: 12,
               fontFamily: appTheme.font.family,
             }}
           >
@@ -88,7 +88,7 @@ export default function CandidateDetailPage() {
             style={{
               background: appTheme.colors.primary,
               borderColor: appTheme.colors.primary,
-              borderRadius: 10,
+              borderRadius: 12,
               fontWeight: 600,
               fontFamily: appTheme.font.family,
             }}
@@ -153,7 +153,7 @@ export default function CandidateDetailPage() {
                         background: bg,
                         color: color,
                         border: `1px solid ${border}`,
-                        borderRadius: 6,
+                        borderRadius: 8,
                         padding: "3px 10px",
                         fontWeight: 600,
                       }}
@@ -185,7 +185,7 @@ export default function CandidateDetailPage() {
                         color: color,
                         border: `1px solid ${border}`,
                         fontWeight: 700,
-                        borderRadius: 6,
+                        borderRadius: 8,
                         padding: "3px 10px",
                       }}
                     >
@@ -303,7 +303,7 @@ export default function CandidateDetailPage() {
                     type="primary"
                     icon={<DownloadOutlined />}
                     onClick={handleExportPDF}
-                    style={{ borderRadius: 10, fontWeight: 600, background: appTheme.colors.primary, borderColor: appTheme.colors.primary }}
+                    style={{ borderRadius: 12, fontWeight: 600, background: appTheme.colors.primary, borderColor: appTheme.colors.primary }}
                   >
                     Xuất báo cáo PDF
                   </Button>
@@ -335,7 +335,7 @@ export default function CandidateDetailPage() {
 
                 <div style={{ marginBottom: "24px", background: "#F8FAFC", padding: "16px 20px", borderRadius: "12px", border: "1px solid #E2E8F0" }}>
                   <h3 style={{ margin: "0 0 12px", fontSize: "15px", fontWeight: 700, color: "#0F172A" }}>THÔNG TIN HỒ SƠ</h3>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px 24px", fontSize: "14px" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "10px 24px", fontSize: "14px" }}>
                     <div><strong>Ứng viên:</strong> {candidate.candidateName}</div>
                     <div><strong>Email:</strong> {candidate.email}</div>
                     <div><strong>Vị trí ứng tuyển:</strong> {candidate.jobTitle}</div>

@@ -47,7 +47,7 @@ export default function HUIMRulesSection() {
       render: (_: any, record: any) => (
         <Space size={8} wrap>
           {record.itemset.map((skill: string) => (
-            <Tag color="gold" key={skill} style={{ fontSize: 13, padding: "3px 10px", borderRadius: 4, fontWeight: 600 }}>
+            <Tag color="gold" key={skill} style={{ fontSize: 13, padding: "3px 10px", borderRadius: 8, fontWeight: 600 }}>
               {skill}
             </Tag>
           ))}
@@ -136,7 +136,7 @@ export default function HUIMRulesSection() {
         Xác định bộ kỹ năng có giá trị cao trên thị trường dựa trên năng lực ứng viên và mức lương tuyển dụng.
       </Paragraph>
 
-      <Table
+      <Table scroll={{ x: "max-content" }}
         loading={loading}
         dataSource={itemsets}
         columns={columns}

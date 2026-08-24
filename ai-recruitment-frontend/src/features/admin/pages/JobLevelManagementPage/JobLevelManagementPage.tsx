@@ -96,9 +96,9 @@ function JobLevelManagementPage() {
           ),
           icon:
             children.length > 0 ? (
-              <FolderOpenOutlined style={{ color: "#fa8c16" }} />
+              <FolderOpenOutlined style={{ color: "#F97316" }} />
             ) : (
-              <FolderOutlined style={{ color: "#ffd591" }} />
+              <FolderOutlined style={{ color: "rgba(249, 115, 22, 0.30)" }} />
             ),
           children: children.length > 0 ? children : undefined,
         };

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Avatar, Button, Card, DatePicker, Descriptions, Form, InputNumber, Modal, Select, Skeleton, Space, Tag, Typography, message } from "antd";
+import { Avatar, Button, Card, Col, DatePicker, Descriptions, Form, InputNumber, Modal, Row, Select, Skeleton, Space, Tag, Typography, message } from "antd";
 import { ArrowLeftOutlined, FilePdfOutlined, MailOutlined, UserOutlined } from "@ant-design/icons";
 import { useNavigate, useParams } from "react-router-dom";
 import PageContainer from "../../../../components/common/PageContainer";
@@ -109,7 +109,7 @@ export default function CandidateSearchDetailPage() {
       ) : (
         <Space direction="vertical" size="large" style={{ width: "100%" }}>
           <Card>
-            <Space align="start" size="large">
+            <Space align="start" size="large" wrap>
               <Avatar size={84} icon={<UserOutlined />} style={{ backgroundColor: "#0EA5E9" }} />
               <div>
                 <Title level={2} style={{ margin: 0 }}>{candidate.displayName}</Title>
@@ -143,8 +143,8 @@ export default function CandidateSearchDetailPage() {
           </Card>
           <Card title="Tài liệu được chia sẻ">
             {candidate.publicCvs?.length ? candidate.publicCvs.map((cv) => (
-              <div key={cv.cvId} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderBottom: "1px solid #F1F5F9" }}>
-                <div>
+              <div key={cv.cvId} style={{ display: "flex", flexWrap: "wrap", gap: 12, justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderBottom: "1px solid #F1F5F9" }}>
+                <div style={{ minWidth: 0, flex: "1 1 240px" }}>
                   <Text strong>{cv.displayName}</Text>
                   <Text type="secondary" style={{ display: "block", fontSize: 12 }}>{cv.sourceLabel} · {new Date(cv.createdAt).toLocaleDateString("vi-VN")}{cv.isApplicationSnapshot ? " · Snapshot lần ứng tuyển" : ""}</Text>
                 </div>
@@ -183,21 +183,29 @@ export default function CandidateSearchDetailPage() {
               <Form.Item label="Cấp bậc" name="jobLevel">
                 <Select allowClear options={levelOptions} placeholder="Chọn cấp bậc trong danh mục hệ thống" />
               </Form.Item>
-              <Space style={{ display: "flex" }} align="start">
-                <Form.Item label="Ưu tiên" name="sourcingPriority">
-                  <Select style={{ width: 150 }} options={[{ value: "Low", label: "Thấp" }, { value: "Normal", label: "Bình thường" }, { value: "High", label: "Cao" }]} />
-                </Form.Item>
-                <Form.Item label="Giai đoạn" name="sourcingStage">
-                  <Select style={{ width: 170 }} options={["Saved", "Reviewed", "ContactPlanned", "Contacted", "Interested"].map(value => ({ value, label: getSourcingStageLabel(value) }))} />
-                </Form.Item>
-              </Space>
+              <Row gutter={[12, 0]}>
+                <Col xs={24} sm={12}>
+                  <Form.Item label="Ưu tiên" name="sourcingPriority">
+                    <Select style={{ width: "100%" }} options={[{ value: "Low", label: "Thấp" }, { value: "Normal", label: "Bình thường" }, { value: "High", label: "Cao" }]} />
+                  </Form.Item>
+                </Col>
+                <Col xs={24} sm={12}>
+                  <Form.Item label="Giai đoạn" name="sourcingStage">
+                    <Select style={{ width: "100%" }} options={["Saved", "Reviewed", "ContactPlanned", "Contacted", "Interested"].map(value => ({ value, label: getSourcingStageLabel(value) }))} />
+                  </Form.Item>
+                </Col>
+              </Row>
               <Form.Item label="Tag" name="tags">
                 <Select mode="tags" placeholder="Ví dụ: Ưu tiên liên hệ, Có thể nhận việc sớm" />
               </Form.Item>
-              <Space style={{ display: "flex" }} align="start">
-                <Form.Item label="Lương kỳ vọng" name="expectedSalary"><InputNumber min={0} style={{ width: 170 }} /></Form.Item>
-                <Form.Item label="Có thể bắt đầu từ" name="availableFrom"><DatePicker format="DD/MM/YYYY" /></Form.Item>
-              </Space>
+              <Row gutter={[12, 0]}>
+                <Col xs={24} sm={12}>
+                  <Form.Item label="Lương kỳ vọng" name="expectedSalary"><InputNumber min={0} style={{ width: "100%" }} /></Form.Item>
+                </Col>
+                <Col xs={24} sm={12}>
+                  <Form.Item label="Có thể bắt đầu từ" name="availableFrom"><DatePicker format="DD/MM/YYYY" style={{ width: "100%" }} /></Form.Item>
+                </Col>
+              </Row>
             </Form>
           </Modal>
         </Space>

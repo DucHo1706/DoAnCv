@@ -141,7 +141,7 @@ export default function TalentPoolPage() {
           <Text type="secondary" style={{ display: "block", fontSize: 12 }}>
             Từng nộp: {record.highestScoreJobTitle || "Chưa cập nhật"}
           </Text>
-          <Tag color="green" icon={<TrophyOutlined />} style={{ marginTop: 4, borderRadius: 6 }}>
+          <Tag color="green" icon={<TrophyOutlined />} style={{ marginTop: 4, borderRadius: 8 }}>
             {record.highestAiScore ? `${record.highestAiScore}/100` : "N/A"}
           </Tag>
         </div>
@@ -443,7 +443,7 @@ export default function TalentPoolPage() {
             </Row>
           </div>
 
-          <Table
+          <Table scroll={{ x: "max-content" }}
             columns={columns}
             dataSource={filteredCandidates}
             rowKey={(record) => record.talentPoolCandidateId || record.candidateId}

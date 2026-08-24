@@ -110,7 +110,7 @@ function UploadCVPage() {
                     <Text type="secondary" style={{ fontSize: 12 }}>{(fileList[0].size / 1024 / 1024).toFixed(2)} MB</Text>
                   </div>
                 </Space>
-                <Tag color="success" icon={<CheckCircleFilled />} style={{ borderRadius: 4 }}>Đã chọn</Tag>
+                <Tag color="success" icon={<CheckCircleFilled />} style={{ borderRadius: 8 }}>Đã chọn</Tag>
               </Space>
             </div>
           )}
@@ -123,7 +123,7 @@ function UploadCVPage() {
               disabled={fileList.length === 0}
               onClick={handleUpload}
               style={{
-                borderRadius: 10,
+                borderRadius: 12,
                 background: fileList.length === 0 ? undefined : appTheme.colors.primary,
                 borderColor: fileList.length === 0 ? undefined : appTheme.colors.primary,
                 fontWeight: 600,

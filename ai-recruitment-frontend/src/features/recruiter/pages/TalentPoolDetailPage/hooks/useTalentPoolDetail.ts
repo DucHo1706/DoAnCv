@@ -188,15 +188,15 @@ export function useTalentPoolDetail() {
 
   const getTimelineDot = (interaction: TalentPoolInteractionDto) => {
     if (interaction.type === "Rejected") {
-      return React.createElement(CloseCircleOutlined, { style: { color: "#ff4d4f" } });
+      return React.createElement(CloseCircleOutlined, { style: { color: "#EF4444" } });
     }
     if (interaction.type === "HrNote") {
-      return React.createElement(MessageOutlined, { style: { color: "#1677ff" } });
+      return React.createElement(MessageOutlined, { style: { color: "#2563EB" } });
     }
     if (interaction.type === "Invited" || interaction.type === "EmailSent") {
-      return React.createElement(SendOutlined, { style: { color: "#52c41a" } });
+      return React.createElement(SendOutlined, { style: { color: "#10B981" } });
     }
-    return React.createElement(FileTextOutlined, { style: { color: "#722ed1" } });
+    return React.createElement(FileTextOutlined, { style: { color: "#F97316" } });
   };
 
   const getTimelineColor = (interaction: TalentPoolInteractionDto) => {

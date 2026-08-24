@@ -45,6 +45,7 @@ def _build_insufficient_preview_result(
             "strengths": [],
             "weaknesses": [],
             "red_flags": [],
+            "red_flag_suspicions": [],
             "matched_skills": [],
             "missing_skills": [],
             "whitebox_score": 0,
@@ -53,7 +54,10 @@ def _build_insufficient_preview_result(
         },
         "criteria_results": [],
         "optimization_tips": [],
-        "language_review": scoring_service.build_insufficient_language_review(OCR_INSUFFICIENT_MESSAGE),
+        "language_review": scoring_service.build_insufficient_language_review(
+            OCR_INSUFFICIENT_MESSAGE,
+            reason="extraction_unreliable",
+        ),
         "mock_interview": [],
         "candidate_info": {
             "email": "",
@@ -157,6 +161,54 @@ def serialize_extraction_quality(extraction_result: Any) -> Dict[str, Any]:
         "agreement_kind": extraction_result.agreement_kind,
         "analysis_safe": extraction_result.analysis_safe,
     }
+
+
+_LANGUAGE_INTEGRITY_WARNING_TOKENS = (
+    "ký tự lỗi",
+    "mã hóa",
+    "encoding",
+    "mất dấu",
+    "nhận dạng sai",
+    "độ tin cậy ký tự",
+)
+
+
+def build_language_review_for_extraction(
+    cv_text: str,
+    job_description: str,
+    extraction_quality: Dict[str, Any] | None,
+) -> Dict[str, Any]:
+    """Đánh giá ngôn từ theo mức chất lượng đọc, không chặn cả CV vì một cảnh báo OCR."""
+    quality = extraction_quality or {}
+    quality_level = str(quality.get("quality_level", "") or "").casefold()
+    analysis_safe = quality.get("analysis_safe") is not False
+    warnings = [str(item) for item in quality.get("warnings", []) if str(item).strip()]
+
+    if not analysis_safe or quality_level in {"low", "insufficient"}:
+        return scoring_service.build_insufficient_language_review(
+            "Văn bản trích xuất chưa đủ tin cậy để đánh giá cách diễn đạt. Hệ thống không quy lỗi đọc tài liệu cho ứng viên.",
+            reason="extraction_unreliable",
+        )
+
+    review = scoring_service.generate_cv_language_review(
+        cv_text=cv_text,
+        jd_text=job_description,
+    )
+
+    warning_text = " ".join(warnings).casefold()
+    has_integrity_limit = quality_level == "partial" or any(
+        token in warning_text for token in _LANGUAGE_INTEGRITY_WARNING_TOKENS
+    )
+    if has_integrity_limit:
+        review = dict(review)
+        review["analysis_scope"] = "extracted_text_with_quality_limitations"
+        review["source_quality_notice"] = (
+            "Kết quả chỉ đánh giá phần nội dung hệ thống đọc được. Lỗi dấu, ký tự hoặc bố cục do OCR không được tính là lỗi diễn đạt của ứng viên."
+        )
+    else:
+        review.setdefault("analysis_scope", "full_extracted_text")
+
+    return review
 
 
 def cache_document_extraction(file_bytes: bytes, extraction_result: Any) -> str:
@@ -280,7 +332,10 @@ def score_resume_sync(
     )
 
     # Chạy các tác vụ phân tích chuyên sâu
-    deep_res = {"skill_mining_context": {"status": "insufficient_data"}}
+    deep_res = {"status": "unavailable", "skill_mining_context": {"status": "insufficient_data"}}
+    deep_analysis_status = "unavailable"
+    deep_unavailable_reason = ""
+    red_flag_suspicions = []
     try:
         deep_res = scoring_service.analyze_cv_deep(
             cv_text=cv_text,
@@ -288,17 +343,28 @@ def score_resume_sync(
             cv_skills=cv_skills,
             jd_skills=jd_skills
         )
+        deep_analysis_status = str(deep_res.get("status", "success") or "success")
         score_analysis = deep_res.get("score_analysis", {})
+        deep_unavailable_reason = str(score_analysis.get("ai_unavailable_reason", "") or "")
         strengths = score_analysis.get("strengths", [])
-        weaknesses = score_analysis.get("weaknesses", [])
-        red_flags = scoring_service.sanitize_red_flags(
+        reclassified_improvements = scoring_service.collect_reclassified_improvements(
+            score_analysis.get("red_flags", []),
+            score_analysis.get("red_flag_suspicions", []),
+        )
+        weaknesses = scoring_service.merge_analysis_improvements(
+            score_analysis.get("weaknesses", []),
+            reclassified_improvements,
+        )
+        red_flags, red_flag_suspicions = scoring_service.partition_red_flags(
             score_analysis.get("red_flags", []),
             cv_text,
             extraction_quality,
+            declared_suspicions=score_analysis.get("red_flag_suspicions", []),
         )
     except Exception as e:
         logger.error(f"Loi khi phan tich chuyen sau CV: {e}")
-        strengths, weaknesses, red_flags = [], [], []
+        deep_analysis_status = "error"
+        strengths, weaknesses, red_flags, red_flag_suspicions = [], [], [], []
 
     try:
         star_tips = interview_service.generate_cv_star_tips(
@@ -312,26 +378,16 @@ def score_resume_sync(
         star_tips = interview_service.get_fallback_star_tips(cv_skills, jd_skills)
 
     try:
-        extraction_method = str(extraction_quality.get("method", "") or "").casefold()
-        extraction_level = str(extraction_quality.get("quality_level", "") or "").casefold()
-        extraction_warnings = " ".join(str(item) for item in extraction_quality.get("warnings", [])).casefold()
-        language_source_unreliable = (
-            extraction_level in {"low", "insufficient"}
-            or any(token in extraction_warnings for token in ("ký tự lỗi", "mã hóa", "encoding", "mất dấu", "nhận dạng sai"))
+        language_review = build_language_review_for_extraction(
+            cv_text=cv_text,
+            job_description=job_description,
+            extraction_quality=extraction_quality,
         )
-        if language_source_unreliable:
-            language_review = scoring_service.build_insufficient_language_review(
-                "Văn bản được đọc qua OCR hoặc có chất lượng trích xuất chưa ổn định; hệ thống không quy lỗi ký tự cho cách viết của ứng viên."
-            )
-        else:
-            language_review = scoring_service.generate_cv_language_review(
-                cv_text=cv_text,
-                jd_text=job_description
-            )
     except Exception as e:
         logger.error(f"Loi khi review ngon tu CV: {e}")
         language_review = scoring_service.build_insufficient_language_review(
-            "Chưa thể hoàn tất đánh giá ngôn từ từ nội dung CV đã trích xuất."
+            "Chưa thể hoàn tất đánh giá ngôn từ từ nội dung CV đã trích xuất.",
+            reason="analysis_error",
         )
 
     try:
@@ -370,10 +426,14 @@ def score_resume_sync(
             "analysis_confidence": analysis_confidence,
             "evidence_coverage": evidence_coverage,
             "verification_count": verification_count,
+            "deep_analysis_status": deep_analysis_status,
+            "ai_unavailable_reason": deep_unavailable_reason,
+            "red_flag_review_status": "completed" if deep_analysis_status == "success" else "unavailable",
             "summary": scoring_result.get("summary", "Da hoan thanh phan tich CV."),
             "strengths": strengths,
             "weaknesses": weaknesses,
             "red_flags": red_flags,
+            "red_flag_suspicions": red_flag_suspicions,
             "matched_skills": scoring_result.get("matched_skills", []),
             "missing_skills": scoring_result.get("missing_skills", [])
         },

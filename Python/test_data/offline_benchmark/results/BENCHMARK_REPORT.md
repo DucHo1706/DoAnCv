@@ -25,9 +25,9 @@
 
 | Kịch bản | Số cặp | Điểm nhỏ nhất | Trung bình | Trung vị | P95 | Lớn nhất | P95 thời gian (ms) |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| strong_same_role | 1170 | 92 | 95.83 | 95.0 | 100.0 | 100 | 2.598 |
-| partial_same_domain | 1170 | 41 | 48.81 | 49.0 | 59.0 | 66 | 5.158 |
-| negative_cross_domain | 1170 | 18 | 25.93 | 25.0 | 35.0 | 41 | 6.764 |
+| strong_same_role | 1170 | 92 | 95.83 | 95.0 | 100.0 | 100 | 6.547 |
+| partial_same_domain | 1170 | 41 | 48.81 | 49.0 | 59.0 | 66 | 10.695 |
+| negative_cross_domain | 1170 | 18 | 25.93 | 25.0 | 35.0 | 41 | 12.416 |
 
 Thứ tự `cùng vị trí > cùng ngành khác vị trí > trái ngành` đạt 1164/1170 CV.
 Các ngoại lệ được giữ trong báo cáo vì kỹ năng chuyển đổi có thể làm một CV trái ngành khớp hơn vai trò liền kề; benchmark không ép điểm để đạt 100% nhân tạo.
@@ -44,14 +44,14 @@ HUIM dùng trọng số hư cấu 1–5 để kiểm tra phép tính; không di�
 
 | Ngành | Giao dịch | Taxonomy | Luật Apriori | Tập HUIM | Sai số | Thời gian (ms) |
 |---|---:|---:|---:|---:|---:|---:|
-| Giáo dục và Đào tạo | 90 | 27 | 12 | 212 | 0 | 23.588 |
-| Tài chính và Kế toán | 90 | 27 | 12 | 187 | 0 | 21.979 |
-| Y tế và Dược | 90 | 27 | 12 | 215 | 0 | 19.531 |
-| Nhân sự và Hành chính | 90 | 26 | 28 | 175 | 0 | 18.149 |
-| Công nghệ thông tin | 540 | 48 | 12 | 23 | 0 | 295.481 |
-| Logistics và Chuỗi cung ứng | 90 | 27 | 12 | 141 | 0 | 20.310 |
-| Marketing | 90 | 27 | 12 | 167 | 0 | 17.418 |
-| Kinh doanh và Chăm sóc khách hàng | 90 | 27 | 12 | 192 | 0 | 20.906 |
+| Giáo dục và Đào tạo | 90 | 27 | 12 | 212 | 0 | 28.453 |
+| Tài chính và Kế toán | 90 | 27 | 12 | 187 | 0 | 40.343 |
+| Y tế và Dược | 90 | 27 | 12 | 215 | 0 | 35.014 |
+| Nhân sự và Hành chính | 90 | 26 | 28 | 175 | 0 | 35.203 |
+| Công nghệ thông tin | 540 | 48 | 12 | 23 | 0 | 735.985 |
+| Logistics và Chuỗi cung ứng | 90 | 27 | 12 | 141 | 0 | 32.840 |
+| Marketing | 90 | 27 | 12 | 167 | 0 | 26.360 |
+| Kinh doanh và Chăm sóc khách hàng | 90 | 27 | 12 | 192 | 0 | 24.508 |
 
 ## Điều kiện kiểm tra tự động
 

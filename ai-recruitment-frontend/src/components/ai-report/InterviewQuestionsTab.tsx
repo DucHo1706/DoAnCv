@@ -87,7 +87,7 @@ const InterviewQuestionsTab: React.FC<InterviewQuestionsTabProps> = ({ interview
             </span>
           }
           style={{
-            borderRadius: 14,
+            borderRadius: 16,
             background: "#EFF6FF",
             border: "1px solid #BFDBFE",
           }}

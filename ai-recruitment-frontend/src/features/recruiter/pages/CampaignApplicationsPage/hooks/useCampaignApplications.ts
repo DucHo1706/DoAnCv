@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { message } from "antd";
 import dayjs from "dayjs";
@@ -13,13 +13,13 @@ import {
   type CandidateRankingSortType,
 } from "../../../../../services/candidateComparisonService";
 import { removeVietnameseTones } from "../../../../../utils/exportUtils";
+import { useRealtimeResourceRefresh } from "../../../../../hooks/useRealtimeRefresh";
 
 export function useCampaignApplications() {
   const navigate = useNavigate();
   const { jobId } = useParams<{ jobId: string }>();
 
   const [applications, setApplications] = useState<ApplicationDto[]>([]);
-  const applicationsRef = useRef<ApplicationDto[]>([]);
   const [jobs, setJobs] = useState<JobDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -45,10 +45,6 @@ export function useCampaignApplications() {
   const [rankingCandidates, setRankingCandidates] = useState<CandidateRankingItem[]>([]);
   const [rankingLoading, setRankingLoading] = useState(false);
   const [rankingError, setRankingError] = useState("");
-
-  useEffect(() => {
-    applicationsRef.current = applications;
-  }, [applications]);
 
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedApplicationIds, setSelectedApplicationIds] = useState<string[]>([]);
@@ -98,12 +94,12 @@ export function useCampaignApplications() {
     }
   };
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async (background = false) => {
     try {
-      setLoading(true);
+      if (!background) setLoading(true);
       setFetchError(null);
       const [appData, jobData] = await Promise.all([
-        recruitmentService.getHrApplications(false),
+        recruitmentService.getHrApplications(false, jobId),
         jobService.getMyJobs(),
       ]);
       setApplications(Array.isArray(appData) ? appData : (appData as any)?.$values || []);
@@ -112,75 +108,15 @@ export function useCampaignApplications() {
       console.error(err);
       setFetchError("Không thể tải danh sách ứng viên. Vui lòng kiểm tra kết nối và thử lại.");
     } finally {
-      setLoading(false);
+      if (!background) setLoading(false);
     }
-  };
+  }, [jobId]);
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    void fetchData();
+  }, [fetchData]);
 
-  // Real-time updates via SignalR
-  useEffect(() => {
-    let connection: any = null;
-    let isSubscribed = true;
-
-    const startSignalR = async () => {
-      try {
-        const signalR = await import("@microsoft/signalr");
-        const apiBase = import.meta.env.VITE_API_URL || "/api";
-        const hubUrl = apiBase.replace(/\/api\/?$/, "") + "/hubs/ai-evaluation";
-        connection = new signalR.HubConnectionBuilder()
-          .withUrl(hubUrl, { accessTokenFactory: () => localStorage.getItem("token") || "" })
-          .withAutomaticReconnect()
-          .build();
-
-        connection.on("ApplicationStatusChanged", (data: { applicationId: string; status: string }) => {
-          if (!isSubscribed) return;
-          setApplications((prev) =>
-            prev.map((app) => (app.id === data.applicationId ? { ...app, status: data.status } : app))
-          );
-        });
-
-        connection.on("ReceiveResult", () => {
-          if (!isSubscribed) return;
-          recruitmentService
-            .getHrApplications(false)
-            .then((updatedApps: any) => {
-              if (isSubscribed) {
-                setApplications(Array.isArray(updatedApps) ? updatedApps : (updatedApps as any)?.$values || []);
-              }
-            })
-            .catch((err: any) => console.error("Lỗi cập nhật danh sách sau chấm điểm AI:", err));
-        });
-
-        await connection.start();
-
-        const currentApplications = applicationsRef.current;
-        for (const application of currentApplications) {
-          const applicationId = application.id;
-          if (applicationId) {
-            try {
-              await connection.invoke("JoinApplicationGroup", applicationId);
-            } catch (joinError) {
-              console.warn("Không thể tham gia kênh cập nhật AI của hồ sơ:", joinError);
-            }
-          }
-        }
-      } catch (err: any) {
-        console.warn("[SignalR] Kết nối SignalR thất bại, sử dụng fallback.", err);
-      }
-    };
-
-    startSignalR();
-
-    return () => {
-      isSubscribed = false;
-      if (connection) {
-        connection.stop().catch((err: any) => console.error("[SignalR] Stop error", err));
-      }
-    };
-  }, [applications.length]);
+  useRealtimeResourceRefresh(["applications", "jobs"], () => fetchData(true));
 
   // Fetch Rankings for current jobId
   useEffect(() => {

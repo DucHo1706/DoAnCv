@@ -115,7 +115,9 @@ def extract_experience_timeline(
     lines = [line.strip() for line in timeline_source.splitlines()]
     skills = sorted({str(item).strip() for item in (known_skills or []) if str(item).strip()}, key=len, reverse=True)
     experiences = []
+    future_periods = []
     seen = set()
+    current_point = MonthPoint(current.year, current.month)
 
     for line_index, line in enumerate(lines):
         matches = list(PERIOD_PATTERN.finditer(line))
@@ -132,18 +134,32 @@ def extract_experience_timeline(
                 continue
             seen.add(key)
             context = _context_for_match(lines, line_index)
+            if start.index > current_point.index:
+                future_periods.append({
+                    "declared_start_date": start.iso(),
+                    "declared_end_date": end.iso(),
+                    "evidence_text": context,
+                    "source_line": line_index + 1,
+                    "message": "Giai đoạn nằm hoàn toàn sau ngày phân tích nên không được cộng vào kinh nghiệm.",
+                    "needs_verification": True,
+                })
+                continue
+            effective_end = end if end.index <= current_point.index else current_point
+            future_end_detected = end.index > current_point.index
             context_skills = {skill.casefold() for skill in nlp_processor.extract_skills(context)}
             related_skills = [skill for skill in skills if skill.casefold() in context_skills]
             experiences.append({
                 "start_date": start.iso(),
-                "end_date": end.iso(),
+                "end_date": effective_end.iso(),
+                "declared_end_date": end.iso(),
+                "future_date_detected": future_end_detected,
                 "is_current": " ".join(match.group("end").lower().split()) in PRESENT_WORDS,
-                "duration_months": end.index - start.index + 1,
+                "duration_months": effective_end.index - start.index + 1,
                 "skills": related_skills,
                 "evidence_text": context,
                 "source_line": line_index + 1,
                 "confidence": round(min(start_confidence, end_confidence), 2),
-                "needs_verification": min(start_confidence, end_confidence) < 0.8,
+                "needs_verification": future_end_detected or min(start_confidence, end_confidence) < 0.8,
             })
 
     all_intervals = [
@@ -186,6 +202,8 @@ def extract_experience_timeline(
         "total_experience_months": _months_count(all_intervals),
         "skill_experience_months": skill_months,
         "gaps": gaps,
+        "future_periods": future_periods,
+        "future_date_detected": bool(future_periods) or any(item.get("future_date_detected") for item in experiences),
         "overlap_detected": sum(item["duration_months"] for item in experiences) > _months_count(all_intervals),
         "confidence": average_confidence,
         "insufficient_data": not experiences,

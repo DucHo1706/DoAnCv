@@ -18,7 +18,7 @@ import {
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import PageContainer from "../../../../components/common/PageContainer";
-import MetricCard from "./components/MetricCard";
+import StatCard from "../../../../components/common/StatCard";
 import ActivityTrendChart from "./components/ActivityTrendChart";
 import CategoryDonutChart from "./components/CategoryDonutChart";
 import ConversionFunnelChart from "./components/ConversionFunnelChart";
@@ -156,34 +156,34 @@ export default function AdminDashboardPage() {
           {/* KPI chính - có so sánh % với kỳ trước */}
           <Row gutter={[24, 24]} style={{ marginBottom: 24 }}>
             <Col xs={24} sm={12} lg={6}>
-              <MetricCard
+              <StatCard
                 title="Tổng người dùng"
                 value={stats.quickMetrics.totalUsers}
                 subtitle={`${formatNumber(stats.quickMetrics.totalHrUsers)} Nhà tuyển dụng | ${formatNumber(stats.quickMetrics.totalCandidateUsers)} Ứng viên`}
                 icon={<TeamOutlined />}
-                color={appTheme.colors.primary}
+                accent="primary"
                 trend={trends?.totalUsers}
                 index={0}
               />
             </Col>
             <Col xs={24} sm={12} lg={6}>
-              <MetricCard
+              <StatCard
                 title="Tin tuyển dụng đang mở"
                 value={stats.quickMetrics.activeJobs}
                 subtitle="Tin đang hiển thị công khai và chưa hết hạn"
                 icon={<FileTextOutlined />}
-                color={appTheme.colors.success}
+                accent="success"
                 trend={trends?.activeJobs}
                 index={1}
               />
             </Col>
             <Col xs={24} sm={12} lg={6}>
-              <MetricCard
+              <StatCard
                 title="CV đã phân tích AI"
                 value={stats.quickMetrics.analyzedCvs}
                 subtitle="AI OCR/NLP xử lý thành công"
                 icon={<RobotOutlined />}
-                color="#722ed1"
+                accent="accent"
                 trend={trends?.analyzedCvs}
                 index={2}
               />

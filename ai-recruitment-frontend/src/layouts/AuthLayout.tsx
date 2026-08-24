@@ -47,6 +47,24 @@ const AiCoreIcon = ({ size = 32 }: { size?: number }) => (
 );
 
 function AuthLayout() {
+  const authResponsiveStyles = `
+    @media (max-width: 992px) {
+      .auth-shell {
+        grid-template-columns: 1fr !important;
+        min-height: auto !important;
+      }
+      .auth-left-panel {
+        display: none !important;
+      }
+      .auth-right-panel {
+        padding: 56px 20px 32px !important;
+      }
+      .auth-back-wrap {
+        left: 20px !important;
+      }
+    }
+  `;
+
   const featureItems = [
     {
       icon: <AiCoreIcon size={20} />,
@@ -67,6 +85,7 @@ function AuthLayout() {
 
   return (
     <Layout style={{ minHeight: "100vh", background: "#F8FAFC" }}>
+      <style dangerouslySetInnerHTML={{ __html: authResponsiveStyles }} />
       <Content
         style={{
           display: "flex",
@@ -76,12 +95,13 @@ function AuthLayout() {
         }}
       >
         <div
+          className="auth-shell"
           style={{
             width: "100%",
             maxWidth: 1200,
             minHeight: 680,
             background: "#FFFFFF",
-            borderRadius: 24,
+            borderRadius: 20,
             overflow: "hidden",
             boxShadow: "0 20px 60px rgba(15, 23, 42, 0.08)",
             display: "grid",
@@ -90,6 +110,7 @@ function AuthLayout() {
         >
           {/* Left panel */}
           <div
+            className="auth-left-panel"
             style={{
               position: "relative",
               padding: 48,
@@ -245,6 +266,7 @@ function AuthLayout() {
 
           {/* Right panel with back button */}
           <div
+            className="auth-right-panel"
             style={{
               padding: 48,
               display: "flex",
@@ -255,7 +277,7 @@ function AuthLayout() {
             }}
           >
             {/* Back to homepage button */}
-            <div style={{ position: "absolute", top: 24, left: 48 }}>
+            <div className="auth-back-wrap" style={{ position: "absolute", top: 24, left: 48 }}>
               <Link
                 to="/"
                 style={{

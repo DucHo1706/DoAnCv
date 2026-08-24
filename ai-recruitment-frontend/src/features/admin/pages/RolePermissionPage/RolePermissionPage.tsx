@@ -147,7 +147,7 @@ function RolePermissionPage() {
             const permObj = allPermissions.find((ap) => ap.value === p);
             const label = permObj ? permObj.label : p;
             return (
-              <Tag key={p} color="blue" style={{ fontSize: 12, padding: "2px 8px", borderRadius: 4 }}>
+              <Tag key={p} color="blue" style={{ fontSize: 12, padding: "2px 8px", borderRadius: 8 }}>
                 {label}
               </Tag>
             );
@@ -164,7 +164,7 @@ function RolePermissionPage() {
           <Button
             icon={<EditOutlined />}
             type="text"
-            style={{ color: "#1677ff", background: "#e6f4ff" }}
+            style={{ color: "#2563EB", background: "#EFF6FF" }}
             onClick={() => handleOpenEdit(record)}
           >
             Sửa
@@ -215,7 +215,7 @@ function RolePermissionPage() {
           }
         />
 
-        <Table
+        <Table scroll={{ x: "max-content" }}
           columns={columns}
           dataSource={filteredRoles}
           rowKey="id"

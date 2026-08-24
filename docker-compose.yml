@@ -25,6 +25,10 @@ services:
       GEMINI_MIN_REQUEST_TIMEOUT_MS: ${GEMINI_MIN_REQUEST_TIMEOUT_MS:-10000}
       GEMINI_TARGET_ATTEMPTS_PER_REQUEST: ${GEMINI_TARGET_ATTEMPTS_PER_REQUEST:-4}
       GEMINI_TRANSIENT_KEYS_BEFORE_MODEL_FAILOVER: ${GEMINI_TRANSIENT_KEYS_BEFORE_MODEL_FAILOVER:-2}
+      LLM_ROUTER_BASE_URL: ${LLM_ROUTER_BASE_URL:-}
+      LLM_ROUTER_API_KEY: ${LLM_ROUTER_API_KEY:-}
+      LLM_ROUTER_MODELS: ${LLM_ROUTER_MODELS:-Gemini,deepseek,ag/gemini-3.5-flash-low}
+      LLM_ROUTER_TIMEOUT_SECONDS: ${LLM_ROUTER_TIMEOUT_SECONDS:-25}
       MINING_DATA_DIR: /app/runtime-data
     expose:
       - "8000"
@@ -39,6 +43,41 @@ services:
     restart: unless-stopped
     mem_limit: ${AI_MEMORY_LIMIT:-2g}
     cpus: ${AI_CPU_LIMIT:-1.5}
+    pids_limit: 256
+    logging: *default-logging
+    networks:
+      - internal
+
+  9router:
+    profiles: ["llm-router"]
+    image: ${NINE_ROUTER_IMAGE:-decolua/9router:latest}
+    environment:
+      DATA_DIR: /app/data
+      PORT: "20128"
+      HOSTNAME: 0.0.0.0
+      NODE_ENV: production
+      BASE_URL: http://127.0.0.1:20128
+      NEXT_PUBLIC_BASE_URL: http://127.0.0.1:20128
+      REQUIRE_API_KEY: "true"
+      ENABLE_REQUEST_LOGS: "false"
+      AUTH_COOKIE_SECURE: "false"
+      JWT_SECRET: ${NINE_ROUTER_JWT_SECRET:-}
+      API_KEY_SECRET: ${NINE_ROUTER_API_KEY_SECRET:-}
+      MACHINE_ID_SALT: ${NINE_ROUTER_MACHINE_ID_SALT:-}
+      INITIAL_PASSWORD: ${NINE_ROUTER_INITIAL_PASSWORD:-}
+    ports:
+      - "127.0.0.1:20128:20128"
+    volumes:
+      - nine_router_data:/app/data
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:20128/dashboard').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 45s
+    restart: unless-stopped
+    mem_limit: ${NINE_ROUTER_MEMORY_LIMIT:-1g}
+    cpus: ${NINE_ROUTER_CPU_LIMIT:-1.0}
     pids_limit: 256
     logging: *default-logging
     networks:
@@ -118,3 +157,4 @@ networks:
 volumes:
   ai_runtime_data:
   backend_runtime_data:
+  nine_router_data:

@@ -1,4 +1,5 @@
 import { Typography, Tooltip } from "antd";
+import { useResponsive } from "../../../../../hooks/useResponsive";
 
 const { Paragraph, Text } = Typography;
 
@@ -13,6 +14,8 @@ interface SkillHorizontalBarChartProps {
 }
 
 export default function SkillHorizontalBarChart({ topSkillData }: SkillHorizontalBarChartProps) {
+  const { isMobile } = useResponsive();
+
   if (topSkillData.length === 0) {
     return <Paragraph>Chưa có dữ liệu kỹ năng để hiển thị.</Paragraph>;
   }
@@ -38,9 +41,9 @@ export default function SkillHorizontalBarChart({ topSkillData }: SkillHorizonta
             key={item.skill}
             style={{
               display: "grid",
-              gridTemplateColumns: "190px 1fr 36px",
+              gridTemplateColumns: isMobile ? "minmax(78px, 105px) 1fr 30px" : "190px 1fr 36px",
               alignItems: "center",
-              gap: 12,
+              gap: isMobile ? 6 : 12,
             }}
           >
             <Tooltip title={item.skill}>
@@ -70,14 +73,14 @@ export default function SkillHorizontalBarChart({ topSkillData }: SkillHorizonta
                   style={{
                     width: `${widthPercent}%`,
                     height: "100%",
-                    background: "linear-gradient(90deg, #69b1ff, #1677ff)",
+                    background: "linear-gradient(90deg, rgba(37, 99, 235, 0.55), #2563EB)",
                     borderRadius: 999,
                   }}
                 />
               </div>
             </Tooltip>
 
-            <Text strong style={{ color: "#1677ff" }}>
+            <Text strong style={{ color: "#2563EB" }}>
               {item.count}
             </Text>
           </div>

@@ -1,6 +1,6 @@
 # Hồ sơ ngữ cảnh dự án RecruitInsightAI
 
-> Cập nhật nền: 2026-08-22. Đây là nguồn ngữ cảnh bền vững cho các phiên làm việc sau. Code và dữ liệu thực tế vẫn là nguồn xác minh cuối cùng.
+> Cập nhật nền: 2026-08-25. Đây là nguồn ngữ cảnh bền vững cho các phiên làm việc sau. Code và dữ liệu thực tế vẫn là nguồn xác minh cuối cùng.
 
 ## 1. Mục tiêu đề tài
 
@@ -113,8 +113,41 @@ AI chỉ hỗ trợ quyết định; không tự động loại ứng viên và 
 - Báo cáo AI dùng fallback cục bộ vẫn được lưu để không mất kết quả, nhưng phải ghi rõ `is_fallback=true` và được xem là phân tích một phần. Người dùng được xem kết quả hiện có và chạy lại khi Gemini khả dụng.
 - Điểm phù hợp với job và điểm diễn đạt là hai thang đo độc lập; điểm diễn đạt không được cộng vào điểm đáp ứng tiêu chí tuyển dụng.
 - Cảnh báo AI chỉ được hiển thị khi hệ thống truy hồi được đoạn gần-nguyên-văn trong CV đã trích xuất và phải thay câu AI trả về bằng đúng đoạn gốc. Được phép bỏ qua dấu câu/xuống dòng và một sai khác ký tự nhỏ; thay số, thay phủ định hoặc diễn giải lại phải bị loại.
+- Red flag không phải kết luận ứng viên khai gian và hệ thống không thể xác minh tính thật của lời khai chỉ từ CV. Trạng thái không có red flag phải hiển thị trung tính, không dùng màu thành công và phải nói rõ đó không phải xác nhận CV là đúng. Các bất thường ngày tháng xác định được bằng quy tắc (mốc kết thúc sau ngày phân tích hoặc mốc bắt đầu sau mốc kết thúc) được bổ sung độc lập với LLM, nhưng chỉ khi văn bản trích xuất an toàn và luôn gắn nhãn cần xác minh. Timeline giữ mốc tương lai ứng viên đã ghi để đối chiếu nhưng không được cộng các tháng sau ngày phân tích vào tổng kinh nghiệm hoặc kinh nghiệm kỹ năng; giai đoạn nằm hoàn toàn trong tương lai được loại khỏi phép tính.
 - Thứ tự API key Gemini trong cấu hình là thứ tự ưu tiên vì không thể suy ra paid/free từ chuỗi key. 503/504/timeout phải thử thêm project key cho cùng model trong ngân sách hữu hạn; chỉ cooldown model sau khi nhiều key/project cùng lỗi.
 - Trích xuất tài liệu không được chọn một chuỗi chỉ vì dài và có đủ tiêu đề CV. Các kết quả PyPDF2/pdfplumber/OCR/Vision phải có chỉ số đồng thuận; nguồn raster chưa được xác nhận hoặc các nguồn độc lập mâu thuẫn phải dừng ở `Không đủ dữ liệu`, không chuyển văn bản nghi sai sang chấm điểm/NLP/mining.
+
+### 3.12 Thông báo nghiệp vụ và dữ liệu E2E nhiều job
+
+- API thông báo dùng trường `content` cho nội dung; mọi giao diện Admin/HR phải đọc đúng `content`, chỉ dùng `message` để tương thích dữ liệu cũ. Tiêu đề không được là nhãn chung chung nếu có thể nêu đối tượng chính.
+- Thông báo ứng tuyển phải cho HR biết tên ứng viên, vị trí và đợt tuyển; thông báo duyệt tin phải cho Admin biết HR gửi duyệt và cho HR biết kết quả/lý do. Liên kết mở thẳng chiến dịch hoặc chi tiết tin tương ứng, không chỉ về trang danh sách chung.
+- Tên provider AI như 9Router/Gemini là chi tiết vận hành chỉ giữ trong log; UI chỉ nêu trạng thái dịch vụ AI và hướng xử lý phù hợp.
+- Ma trận E2E nhiều job được phép dùng lại cùng 20 tài khoản ứng viên trong một batch để mô phỏng một người ứng tuyển nhiều vị trí. CV vẫn phải được sinh riêng theo từng JD, khác nội dung/bố cục và đi qua đúng UI; checkpoint tiếp tục chống nộp trùng.
+- Mật khẩu tài khoản synthetic do tool sinh chỉ tồn tại trong tiến trình, không ghi file/log. Nếu batch bị dừng, dùng batch tag mới cho phần còn lại thay vì khôi phục hoặc công khai credential cũ.
+- Batch Selenium nhiều worker phải cô lập lỗi theo từng CV: upload làm modal render lại thì phải tìm lại element trước khi bấm; một timeout/stale element được thử lại hữu hạn và không được làm chết toàn bộ worker. Chỉ hồ sơ xác nhận đã nộp/đã tồn tại mới được checkpoint.
+
+### 3.13 Phạm vi đánh giá Ngôn từ & Chân thực
+
+- Một cảnh báo OCR hoặc mất dấu không được phép tự động vô hiệu hóa toàn bộ tab Ngôn từ & Chân thực nếu kết quả trích xuất vẫn có `analysis_safe=true` và không ở mức `low/insufficient`.
+- Văn bản an toàn nhưng có giới hạn chất lượng vẫn được rà soát; payload phải ghi `analysis_scope=extracted_text_with_quality_limitations` và UI nêu rõ lỗi dấu, ký tự hoặc bố cục do bước đọc tài liệu không được tính là lỗi diễn đạt của ứng viên.
+- Chỉ dừng đánh giá ngôn từ khi kết quả đọc không an toàn hoặc thực sự không đủ nội dung. Khi dịch vụ LLM lỗi nhưng văn bản đủ dài, bộ quy tắc cục bộ trả kết quả `is_fallback=true`; đây là phân tích một phần, không được trình bày như kết quả AI chuyên sâu.
+- Kết quả đã lưu không tự thay đổi theo code mới. CV cũ có phân tích thiếu hoặc fallback phải dùng luồng phân tích lại trên chính snapshot đã nộp; không yêu cầu ứng viên nộp CV lần nữa và không sửa lịch sử hồ sơ.
+- Mọi CV đủ điều kiện phân tích phải cung cấp thông tin hữu ích cho HR qua kết quả tiêu chí, kỹ năng thiếu, điểm cần cải thiện và rà soát ngôn từ; không được ép mọi CV phải có red flag. Mô tả chung chung, thiếu số liệu, thiếu kỹ năng JD và khoảng nghỉ nghề nghiệp thông thường được chuyển sang `weaknesses`. `red_flags` chỉ giữ nhồi từ khóa bất thường, mâu thuẫn nội bộ, thông tin bằng cấp/liên hệ không nhất quán hoặc bất thường timeline có thể đối chiếu trực tiếp; đoạn trích chỉ chứng minh nội dung xuất hiện trong CV, không chứng minh lời khai là thật.
+
+### 3.14 Realtime, tải danh sách và bộ lọc vận hành
+
+- SignalR là kênh báo thay đổi; page nhận sự kiện phải tải lại đúng tài nguyên bằng request nền và không bật lại skeleton toàn trang. Poll thông báo 30 giây chỉ là fallback và không được tạo state mới khi payload không đổi.
+- Danh sách chiến dịch HR không tải toàn bộ payload hồ sơ/CV/AI chỉ để đếm. API tóm tắt phải group/count ở SQL, chỉ trả metadata job và số lượng theo trạng thái; dữ liệu nhạy cảm chỉ tải khi mở chiến dịch.
+- Bộ lọc tổng quan chỉ đưa ra giá trị thật sự xuất hiện trong tập dữ liệu HR/Admin đang xem để tránh chọn điều kiện chắc chắn không có kết quả. Chi tiết ứng viên vẫn thuộc trang chiến dịch.
+- Realtime không thay thế phân quyền. Event chỉ mang ID/trạng thái tối thiểu; API tải lại vẫn là nơi kiểm tra quyền và trả dữ liệu đầy đủ.
+- Audit responsive phải điều hướng bằng React Router/History API và chỉ tải dữ liệu một lần cho mỗi route; reload toàn ứng dụng cho từng breakpoint tạo request MainLayout không có trong thao tác thật và có thể tự vượt quota 100 request/phút.
+
+### 3.15 9Router trên Ubuntu
+
+- 9Router chỉ là provider dự phòng cho Python, không phải bằng chứng thuật toán hoặc thành phần bắt buộc để hệ thống khởi động.
+- Trên VPS Ubuntu, 9Router chạy bằng Docker Compose profile riêng, chỉ map port vào loopback và Python gọi qua hostname mạng nội bộ. Dashboard chỉ truy cập bằng SSH tunnel; không mở port `20128` ra Internet.
+- Secret, OAuth state, API key và SQLite của 9Router không nằm trong Git/log. Container chính thức dùng entrypoint sửa quyền volume rồi hạ tiến trình xuống user `node`; quyền `sudo`/Docker chỉ dùng cho thao tác cài đặt và quản lý container.
+- Khi router lỗi, Python chuyển Gemini trực tiếp rồi fallback cục bộ có nhãn; tắt profile phải bỏ `LLM_ROUTER_BASE_URL` và restart `ai-service`.
 
 ## 4. Khoảng trống đã xác định trong code/hệ thống
 
@@ -153,6 +186,7 @@ Những điểm dưới đây là kết quả khảo sát trước đó và ph�
 - Talent Pool đã áp migration bổ sung `RecruiterID` và unique `(RecruiterID, CandidateID)` lên database cấu hình hiện tại; backend khởi động và health check local thành công. Chưa smoke test luồng Talent Pool theo vai trò trên trình duyệt hoặc deploy VPS.
 - Vòng đời tin đã dùng chung `JobLifecyclePolicy`; migration thêm quan hệ tin gốc/nhóm chiến dịch/vòng tuyển đã được áp lên database cấu hình hiện tại. Ngày 2026-08-21 có 19 tin thực sự đang tuyển và 57 tin `Published` đã hết hạn; chênh lệch trước đây là do UI coi trạng thái duyệt là trạng thái hiển thị, không phải lệch múi giờ SQL.
 - Gemini mặc định đã bỏ model 2.5 ngừng cấp cho tài khoản mới, dùng chuỗi 3.x có failover 404/429/503 và timeout. Phân tích ngôn từ fallback không còn được coi là báo cáo AI hoàn chỉnh; dữ liệu lịch sử cần chạy lại để nhận kết quả Gemini mới.
+- Bộ Selenium E2E nằm độc lập tại `tools/selenium_e2e`: dùng Chrome/Edge thao tác UI, có ma trận nhỏ 15 CV theo `3 mức quan hệ CV–JD × 5 trường hợp bằng chứng` và ma trận lớn 20 mức bao phủ tiêu chí/20 biến thể bố cục cho mỗi job. Catalog hiện có 24 tin IT không trùng vị trí, phân bố 7 chi nhánh/4 cấp bậc/nhiều chuyên ngành con; lệnh `create-jobs` đi qua form HR thật, tạo tám tiêu chí cấu trúc tổng 100% và có thể đăng nhập Admin duyệt tiếp. Không dùng seeder/API/SQL cho luồng này; tiến độ được lưu nội bộ theo `E2E_RUN_ID` để chạy tiếp không tạo trùng sau gián đoạn. Credential chỉ lấy từ `.env` bị Git bỏ qua. Checkpoint local ngày 2026-08-24 đã đạt 480/480 application qua UI, đủ 20 CV cho cả 24/24 job; report lượt nối cuối có một bước retry thất bại nhưng checkpoint chỉ hoàn tất sau lần nộp thành công. Dữ liệu này kiểm chứng flow/validation/layout, không phải accuracy trên CV thị trường.
 
 ## 5. Thiết kế tiêu chí đánh giá cần triển khai
 
@@ -186,12 +220,13 @@ Nguyên tắc tính điểm dự kiến:
 | P0-03 | Lịch sử trạng thái và thống kê trong ngày | ĐANG LÀM | Thống nhất trạng thái | Dashboard HR/Admin có số hôm nay đúng theo sự kiện và múi giờ VN |
 | P1-01 | HR chủ động tìm ứng viên | ĐANG LÀM | P0-01, quyền riêng tư | Đã có MVP opt-in và tìm/lọc hồ sơ rút gọn; còn smoke test endpoint và hoàn thiện luồng mời/liên hệ |
 | P1-02 | Đăng lại tin tuyển dụng | ĐANG LÀM | Luồng duyệt tin | Code/API/UI/migration và public smoke test đã đạt; còn smoke test thao tác đăng lại bằng tài khoản HR và duyệt vòng mới bằng Admin |
+| P1-03 | Realtime, bộ lọc và responsive HR/Admin | ĐÃ XONG | SignalR, dữ liệu job/application | Local: API chiến dịch trả 200/113 bản ghi; Selenium read-only đạt 54/54 bước trên 17 route × 3 breakpoint, không tràn ngang/429/lỗi network nội bộ; backend/frontend build đạt. Chưa deploy VPS |
 | P2-01 | Phân tích kỹ năng theo ngành | ĐANG LÀM | Taxonomy kỹ năng | Đã bỏ domain/skill hard-code runtime, áp catalog SQL đã duyệt và chạy startup mining cho 4 ngành; còn kiểm chứng chất lượng trên dataset thật nhiều ngành |
 | P2-02 | Sửa mô hình HUIM/Apriori và cơ chế skip | ĐANG LÀM | P2-01 | Đã tách model theo domain, fingerprint gồm alias, backend/Python chạy startup + 02:00 và có metadata; còn kiểm chứng utility lương trên dữ liệu thật |
-| P2-03 | Trang Admin AI Insights riêng | CHƯA LÀM | P2-01 | Điều hướng rõ, filter và giải thích giới hạn dữ liệu |
+| P2-03 | Trang Admin AI Insights riêng | TẠM HOÃN | P2-01 | Theo quyết định 2026-08-22, Apriori/HUIM chạy nền và không cần màn Admin riêng; chỉ mở lại nếu phạm vi khóa luận thay đổi |
 | P3-01 | Bộ tối thiểu 15 CV kiểm thử | ĐÃ XONG | Danh sách ngành/mẫu | 15 CV hư cấu dài, đa định dạng/layout + 1 PDF không phải CV, có ground truth và audit tự động đạt 16/16 local |
-| P3-02 | Test nghiệp vụ/API/UI/AI | ĐANG LÀM | Các task trên | Có 75 unit test Python, build backend/frontend, migration script, parser corpus và benchmark offline đạt; còn test API theo role và E2E trình duyệt |
-| P3-03 | Benchmark và bằng chứng báo cáo | ĐANG LÀM | P3-01, P3-02 | Đã có parser corpus và benchmark offline 1.170 CV/162 JD/3.510 cặp, tối thiểu 15 CV/JD; còn p95 end-to-end có Gemini, tải đồng thời và dữ liệu CV thật đã ẩn danh nếu muốn kết luận accuracy thực tế |
+| P3-02 | Test nghiệp vụ/API/UI/AI | ĐANG LÀM | Các task trên | Selenium đã tạo/duyệt 24 job và nộp đủ 480/480 application qua UI, 20 CV/job. Audit read-only đã đọc đủ 480 snapshot: 81 mức điểm, 479 JSON v4 và 1 legacy; phát hiện 211 kết quả ngôn từ cũ ở trạng thái insufficient và 373 hồ sơ từng bị gắn red flag quá rộng. Policy mới chuyển điểm yếu thông thường về `weaknesses`; live API xác nhận CV văn bản tốt có language review và không bị ép red flag. Còn phân tích lại mẫu snapshot cũ, các kịch bản role HR/Admin còn lại và báo cáo tổng hợp; không gọi dữ liệu synthetic là accuracy AI |
+| P3-03 | Benchmark và bằng chứng báo cáo | ĐANG LÀM | P3-01, P3-02 | Benchmark offline 1.170 CV/162 JD/3.510 cặp đã chạy lại và đạt; còn p95 end-to-end có Gemini, tải đồng thời và dữ liệu CV thật đã ẩn danh nếu muốn kết luận accuracy thực tế |
 
 ## 7. Ma trận CV kiểm thử tối thiểu
 
@@ -236,7 +271,19 @@ Mỗi mẫu cần expected result cho: đọc file, trường trích xuất, tr�
 
 ## 10. Nhật ký quyết định
 
+- 2026-08-25: Realtime HR/Admin dùng hai hub hiện có làm kênh báo thay đổi và phát event tài nguyên dùng chung ở frontend; page tự refetch nền có debounce. Danh sách chiến dịch chuyển sang `GET /api/Jobs/my-campaigns` group/count tại SQL và giữ fallback tuyến tính cho backend cũ chưa restart. Tác động: không còn tải toàn bộ CV/PII/AI để dựng card chiến dịch; badge Admin, danh sách tin, chiến dịch, ứng viên và danh mục có cùng cơ chế làm mới.
+- 2026-08-25: 9Router trên Ubuntu được đóng gói thành Compose profile tùy chọn, map `127.0.0.1:20128`, bắt buộc API key và không công khai dashboard. Tác động: Python có thể dùng `http://9router:20128/v1` trong Docker nhưng hệ thống lõi vẫn chạy khi profile tắt; chưa được gọi là đã deploy cho tới khi volume/config/health và request thật trên VPS đạt.
+- 2026-08-24: Tin và hồ sơ dùng làm bằng chứng E2E phải được tạo qua form web khi luồng giao diện có sẵn; không dùng `TestJobPostingSeeder`, API trực tiếp hoặc SQL để né validation/quyền. Catalog `create-jobs` có 24 vị trí IT không trùng, tám tiêu chí/job và lưu progress theo run ID. Mặc định chỉ dùng credential HR để tạo trạng thái Pending, người dùng tự duyệt bằng Admin; tùy chọn auto-approve vẫn có nhưng tắt. Khi chưa có credential chỉ được ghi tool/unit/doctor đạt, không được ghi database đã có thêm job.
+- 2026-08-24: Một batch có toàn điểm 100 không chứng minh scorer đúng nếu đầu vào chỉ gồm CV cùng vai trò hoặc JD dùng tiêu chí chung chung. Ma trận live phải có strong/partial/cross-domain và JD có `SKILL` + `TOTAL_EXPERIENCE` + bằng chứng. Audit job Backend hiện tại cho thấy năm tiêu chí đều `CUSTOM`; điểm live 49/11/0 chỉ dùng để phát hiện dữ liệu tiêu chí yếu, không dùng làm accuracy. Tác động: ưu tiên job DevOps đang có 5 tiêu chí kỹ năng + 1 kinh nghiệm để chạy mốc đầu tiên, sau đó mới mở rộng nhiều job.
+- 2026-08-24: Rate limiter API chia quota theo `AccountID` sau authentication; người dùng chưa đăng nhập mới chia theo IP. Tác động: nhiều ứng viên Selenium trên cùng máy không còn làm nghẽn nhau ở ngưỡng 100 request/phút, trong khi từng tài khoản vẫn bị giới hạn độc lập.
+- 2026-08-24: Đính chính kết luận lỗi modal trước đó: frontend local/public không hỏng. Automation đã nhận sai vì điều kiện `"/jobs/"` khớp cả URL danh sách có dấu `/` cuối, selector modal còn theo AntD 5 trong khi dự án dùng AntD 6, và selector nút primary chọn nhầm nút upload. Sau khi chờ chính xác `/jobs/<id>`, hỗ trợ `.ant-modal-container` và bấm đúng `Nộp hồ sơ`, local/public smoke cùng lượt 15 CV đều đạt. Tác động: không sửa/deploy ứng dụng cho lỗi giả; chỉ sửa tool và giữ ảnh/log cũ làm bằng chứng quá trình chẩn đoán.
+- 2026-08-24: Dữ liệu E2E phải được tạo qua giao diện bằng Selenium thay vì chèn SQL/API để đồng thời kiểm tra route, form, validation, auth, upload, loading và lỗi JavaScript. Tool chỉ ghi khi có cờ xác nhận, URL từ xa cần xác nhận riêng, credential lấy từ env và artifact nằm trong `.local`. Tác động: benchmark offline vẫn dùng để đo thuật toán; Selenium là bằng chứng nghiệp vụ độc lập và không được gọi là accuracy AI.
+- 2026-08-24: Batch Selenium có thể bật `E2E_AUTO_GENERATE_CANDIDATE_PASSWORD` để sinh mật khẩu ứng viên mới chỉ trong bộ nhớ khi cần nạp nhiều dữ liệu tổng hợp; không lưu credential và không khẳng định có thể dùng lại tài khoản cũ. Checkpoint vẫn là nguồn duy nhất để bỏ qua hồ sơ đã nộp; nếu tiến trình dừng, phải dùng batch tag mới hoặc credential runtime được cấp an toàn.
+- 2026-08-24: Theo nội dung phản biện, red flag AI không bị xóa khỏi báo cáo chỉ vì chưa truy hồi được đoạn trích. UI/API phải tách `red_flags` có bằng chứng (được dùng để giải thích) khỏi `red_flag_suspicions` chưa đối chiếu (chỉ là dấu hiệu AI đề xuất, không dùng chấm điểm và không kết luận gian dối). Trạng thái OCR/AI không đủ dữ liệu vẫn phải hiển thị lý do kỹ thuật; không được biến thành “không có vấn đề”.
+- 2026-08-24: Không tiếp tục tạo đủ 15 hồ sơ lên public khi smoke đầu tiên không qua nút ứng tuyển. Chín tài khoản ứng viên synthetic đã được tạo trong quá trình chẩn đoán nhưng chưa nộp CV; phép thử chuột cấp Chrome xác nhận token có, nút không disabled, cả modal direct/AI đều không mở. Tác động: phải sửa hoặc deploy lại frontend và chạy lại smoke một hồ sơ trước khi seed hàng loạt, tránh làm bẩn database bằng thêm tài khoản rỗng.
 - 2026-08-22: Cloudflare 522 được khoanh ngoài tiến trình ứng dụng: origin TLS/API trả 200, ba container healthy, host firewall cho phép nhưng không có SYN 80/443 nào tới NIC khi Cloudflare gọi; nhiều node ngoài cũng timeout. Không sửa UFW/Nginx để che lỗi và không dựng tunnel tạm. Cần quyền Cloudflare/VPS panel để xác nhận bản ghi origin và security group trước khi tuyên bố HTTPS công khai đạt.
+- 2026-08-22: Sau khi người dùng xác nhận PikaMC vừa bảo trì, chọn named Cloudflare Tunnel làm ingress lâu dài vì inbound 80/443 vẫn không tới VPS. Connector systemd đã active và origin HTTPS loopback đạt, nhưng DNS công khai chưa chuyển: route `www` chưa xuất hiện trên nameserver có thẩm quyền và bản ghi A gốc còn gây lỗi 1003. Phải xác nhận đúng zone/nameserver trước khi thay DNS; không ghi `ĐÃ XONG` cho đến khi domain HTTPS và smoke API công khai đạt.
+- 2026-08-22: Xác nhận registrar đang công bố nameserver Cloudflare cũ `donald`/`kia`, còn zone mà người dùng vừa Authorize và cấu hình được gán `iris`/`ray`; DNS công khai không có DS. Phải chuẩn bị route tunnel trong zone mới trước, rồi đổi nameserver tại PikaMC và chờ zone Active. Tác động: thay đổi đã làm trong zone mới không thể xuất hiện công khai trước khi registrar đổi delegation.
 - 2026-08-22: Không dùng 1.170 CV text cùng cấu trúc để chứng minh khả năng đọc nhiều layout. Bằng chứng được tách thành benchmark nội dung 1.170 CV chi tiết và corpus parser 15 CV dài trên 15 định dạng/bố cục; ground truth không nằm trong text CV. Tác động: báo cáo trả lời đúng hai câu hỏi độc lập về đối sánh nội dung và chất lượng trích xuất, đồng thời công khai lỗi mất dấu OCR còn lại.
 - 2026-08-22: Taxonomy/alias chạy nền ở cả backend và Python lúc khởi động và 02:00 giờ Việt Nam; fingerprint backend bao gồm `SkillAliases`, Python thay file taxonomy atomically rồi reload trong tiến trình. Không xây UI Admin theo dõi thuật toán; trạng thái chỉ nằm trong log/metadata kỹ thuật.
 - 2026-08-22: Alias kỹ năng trở thành dữ liệu taxonomy có cấu trúc trong SQL (`SkillAliases`), không còn là dictionary viết cứng trong Python. CV/JD, dữ liệu lịch sử trước mining và đầu vào gợi ý đều được quy về canonical skill; Apriori/HUIM nhận cả taxonomy và alias cùng dataset metadata. Tác động: các cách viết như `Node.js`, `NodeJS`, `Node JS` không chia nhỏ support/utility; alias mới cần Admin duyệt, không tự suy đoán đồng nghĩa. Trên báo cáo, toàn bộ skill nhận diện được tách khỏi tập skill khớp job.

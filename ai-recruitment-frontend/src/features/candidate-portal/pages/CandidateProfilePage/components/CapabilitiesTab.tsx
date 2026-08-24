@@ -161,7 +161,7 @@ export const CapabilitiesTab: React.FC<CapabilitiesTabProps> = ({
                   style={{
                     padding: "4px 10px",
                     fontSize: 13,
-                    borderRadius: 6,
+                    borderRadius: 8,
                     display: "flex",
                     alignItems: "center",
                     gap: 4
@@ -175,7 +175,7 @@ export const CapabilitiesTab: React.FC<CapabilitiesTabProps> = ({
                 <Input
                   type="text"
                   size="small"
-                  style={{ width: 100, borderRadius: 6 }}
+                  style={{ width: 100, borderRadius: 8 }}
                   value={inputValue}
                   onChange={handleInputChange}
                   onBlur={handleInputConfirm}
@@ -188,7 +188,7 @@ export const CapabilitiesTab: React.FC<CapabilitiesTabProps> = ({
                   style={{ 
                     padding: "4px 10px", 
                     fontSize: 13, 
-                    borderRadius: 6, 
+                    borderRadius: 8,
                     borderStyle: "dashed", 
                     cursor: "pointer", 
                     display: "flex", 

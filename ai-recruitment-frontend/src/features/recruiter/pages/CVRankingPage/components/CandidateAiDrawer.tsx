@@ -65,6 +65,7 @@ export default function CandidateAiDrawer({ candidate, onClose }: CandidateAiDra
 
           <Card title="Điểm theo tiêu chí" style={cardStyle}>
             <Table<CandidateCriterionResult>
+              scroll={{ x: "max-content" }}
               rowKey="criterionName"
               size="small"
               pagination={false}

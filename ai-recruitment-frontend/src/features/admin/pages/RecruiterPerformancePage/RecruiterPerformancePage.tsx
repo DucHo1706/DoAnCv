@@ -356,7 +356,7 @@ export default function RecruiterPerformancePage() {
             prefix={<SearchOutlined style={{ color: appTheme.colors.textSecondary }} />}
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
-            style={{ width: 320, borderRadius: 8 }}
+            style={{ width: "100%", maxWidth: 320, minWidth: 0, borderRadius: 8 }}
             allowClear
           />
 

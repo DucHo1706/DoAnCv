@@ -54,6 +54,35 @@ namespace RecruitmentBackend.Services
             }
         }
 
+        private async Task SendResultAsync(string applicationId, string aiStatus, string? errorMessage = null)
+        {
+            try
+            {
+                await _hubContext.Clients.Group(applicationId).SendAsync("ReceiveResult", new
+                {
+                    aiStatus,
+                    message = errorMessage
+                });
+
+                string? jobId = await _context.Applications
+                    .AsNoTracking()
+                    .Where(application => application.ApplicationID == applicationId)
+                    .Select(application => application.JobID)
+                    .FirstOrDefaultAsync();
+
+                await _hubContext.Clients.All.SendAsync("ApplicationAnalysisChanged", new
+                {
+                    applicationId,
+                    jobId,
+                    aiStatus
+                });
+            }
+            catch (Exception signalRException)
+            {
+                Console.WriteLine($"[SignalR Error] Không thể phát kết quả hồ sơ {applicationId}: {signalRException.Message}");
+            }
+        }
+
         public async Task RunAiEvaluationInBackgroundAsync(
             string applicationId,
             byte[] cvFileBytes,
@@ -82,7 +111,7 @@ namespace RecruitmentBackend.Services
                 {
                     Console.WriteLine("Application đã có kết quả AI, bỏ qua: " + applicationId);
                     await SendProgressAsync(applicationId, 100, "COMPLETED", "Đã có kết quả AI.");
-                    await _hubContext.Clients.Group(applicationId).SendAsync("ReceiveResult", new { aiStatus = "Success" });
+                    await SendResultAsync(applicationId, "Success");
                     return;
                 }
 
@@ -96,7 +125,7 @@ namespace RecruitmentBackend.Services
                         "Không tìm thấy tin tuyển dụng để AI phân tích."
                     );
                     await SendProgressAsync(applicationId, 0, "FAILED", "Không tìm thấy tin tuyển dụng.");
-                    await _hubContext.Clients.Group(applicationId).SendAsync("ReceiveResult", new { aiStatus = "Failed", message = "Không tìm thấy tin tuyển dụng." });
+                    await SendResultAsync(applicationId, "Failed", "Không tìm thấy tin tuyển dụng.");
                     return;
                 }
 
@@ -112,7 +141,7 @@ namespace RecruitmentBackend.Services
                         "Tin tuyển dụng này chưa có tiêu chí đánh giá CV."
                     );
                     await SendProgressAsync(applicationId, 0, "FAILED", "Tin tuyển dụng chưa cấu hình tiêu chí.");
-                    await _hubContext.Clients.Group(applicationId).SendAsync("ReceiveResult", new { aiStatus = "Failed", message = "Tin tuyển dụng chưa cấu hình tiêu chí đánh giá." });
+                    await SendResultAsync(applicationId, "Failed", "Tin tuyển dụng chưa cấu hình tiêu chí đánh giá.");
                     return;
                 }
 
@@ -307,7 +336,7 @@ namespace RecruitmentBackend.Services
                 }
 
                 await SendProgressAsync(applicationId, 100, "COMPLETED", "Đã hoàn tất phân tích AI! 🎉");
-                await _hubContext.Clients.Group(applicationId).SendAsync("ReceiveResult", new { aiStatus = "Success" });
+                await SendResultAsync(applicationId, "Success");
             }
             catch (Exception ex)
             {
@@ -319,7 +348,7 @@ namespace RecruitmentBackend.Services
                 );
 
                 await SendProgressAsync(applicationId, 0, "FAILED", "Phân tích AI thất bại.");
-                await _hubContext.Clients.Group(applicationId).SendAsync("ReceiveResult", new { aiStatus = "Failed", message = ex.Message });
+                await SendResultAsync(applicationId, "Failed", ex.Message);
             }
         }
 

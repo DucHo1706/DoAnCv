@@ -111,14 +111,15 @@ QUY TẮC AN TOÀN VÀ GIỚI HẠN:
 --- NỀN TẢNG LÝ LUẬN CẦN ÁP DỤNG ---
 1. Mô hình năng lực ASK:
    - Phân loại kỹ năng và kiến thức để chấm điểm phù hợp của ứng viên.
-2. Tiêu chuẩn lọc hồ sơ & Kiểm soát rủi ro nhân sự của SHRM:
-   - Phát hiện thông tin cần HR làm rõ và vấn đề trình bày; đây không phải kết luận bất lợi về ứng viên.
-   - Các nhóm thông tin cần rà soát gồm:
-     - KEYWORD_STUFFING: Nhồi nhét từ khóa kỹ năng vô tội vạ.
-     - GENERIC_CV: Mô tả chung chung, thiếu chiều sâu.
-     - CHRONOLOGY_GAP: Có khoảng trống thời gian sự nghiệp không rõ lý do.
-     - MISSING_METRICS: Thiếu các số liệu định lượng chứng minh thành tích.
-     - OTHER: Các lỗi trình bày, lỗi chính tả, sai lệch bối cảnh khác.
+2. Rà soát hồ sơ và kiểm soát rủi ro diễn giải:
+   - Điểm yếu thông thường như mô tả chung chung, thiếu số liệu, thiếu kỹ năng theo JD hoặc khoảng nghỉ nghề nghiệp phải nằm trong `weaknesses`, không phải `red_flags`.
+   - `red_flags` chỉ dành cho bất thường có thể chỉ ra trực tiếp trong CV:
+     - KEYWORD_STUFFING: một danh sách/cụm từ khóa bị lặp bất thường nhằm thao túng khớp từ khóa.
+     - INTERNAL_CONTRADICTION: hai thông tin trong CV tự mâu thuẫn nhau.
+     - CREDENTIAL_INCONSISTENCY: tên/chứng chỉ/bằng cấp hoặc thời điểm cấp không nhất quán trong chính CV.
+     - CONTACT_INCONSISTENCY: nhiều thông tin liên hệ xung đột trong chính CV.
+     - CHRONOLOGY_INCONSISTENCY: mốc bắt đầu sau mốc kết thúc hoặc mốc cụ thể sau Ngày phân tích hiện tại.
+   - Không tạo red flag từ lỗi trình bày, chính tả, OCR, thiếu dữ liệu, thiếu thành tích định lượng, thiếu kỹ năng JD, mô tả chung chung hoặc khoảng nghỉ thông thường.
 
 [KẾT QUẢ ĐO LƯỜNG TƯƠNG ĐỒNG NỀN TẢNG MACHINE LEARNING]
 {scikit_info}
@@ -147,17 +148,19 @@ Yêu cầu phân tích:
 - Nhận xét tổng quan (summary) 2-3 câu tiếng Việt.
 - Điểm mạnh (strengths): 3-5 điểm mạnh rõ ràng của CV so với JD.
 - Điểm yếu (weaknesses): 3-5 điểm yếu hoặc thiếu sót cần khắc phục.
-- Thông tin cần HR làm rõ: tối đa 4 mục có ảnh hưởng trực tiếp đến việc hiểu hồ sơ.
+- Red flag cần HR xác minh: tối đa 4 bất thường thuộc đúng các nhóm cho phép ở trên.
   - Chỉ kết luận một mốc thời gian ở tương lai khi tháng/năm cụ thể sau Ngày phân tích hiện tại.
   - Nếu CV chỉ ghi năm trùng với năm hiện tại mà không có tháng, chỉ nêu "chưa rõ tháng, cần xác minh"; không gọi đó là mốc tương lai.
   - Không tạo mục lỗi font, OCR, mã hóa hoặc ký tự hỏng trong danh sách này. Đó là chất lượng extraction của hệ thống, không phải đặc điểm của ứng viên.
-  Mỗi mục cần làm rõ phải có đoạn trích nguyên văn. Nếu không có đoạn trích, không tạo mục đó.
+  Ưu tiên tạo cảnh báo có đoạn trích nguyên văn trong `red_flags`.
+  Nếu nhận thấy một dấu hiệu hợp lý nhưng không thể sao chép được đoạn trích đáng tin cậy,
+  đưa dấu hiệu đó vào `red_flag_suspicions`; không sáng tác đoạn trích và không dùng dấu hiệu này để chấm điểm.
   `evidence_text` phải là một chuỗi từ liên tiếp được sao chép trực tiếp từ NỘI DUNG CV;
   không sửa dấu/chính tả, không thêm dấu ba chấm, không ghép hai đoạn và không diễn giải lại.
   Mỗi mục gồm:
-  - type: loại lỗi ("KEYWORD_STUFFING", "GENERIC_CV", "CHRONOLOGY_GAP", "MISSING_METRICS", "OTHER")
-  - title: tiêu đề cảnh báo ngắn gọn (ví dụ: 'Nhồi nhét từ khóa', 'Kinh nghiệm chung chung')
-  - description: giải thích tại sao đó là lỗi và cách sửa (1-2 câu)
+  - type: một trong "KEYWORD_STUFFING", "INTERNAL_CONTRADICTION", "CREDENTIAL_INCONSISTENCY", "CONTACT_INCONSISTENCY", "CHRONOLOGY_INCONSISTENCY"
+  - title: tiêu đề bất thường ngắn gọn
+  - description: giải thích nội dung nào cần đối chiếu (1-2 câu), không kết luận khai gian
   - evidence_text: đoạn trích nguyên văn từ CV
   - evidence_section: khu vực CV
   - confidence: độ tin cậy rằng đoạn văn được trích/diễn giải đúng, không phải độ tin cậy về tính thật của lời khai
@@ -185,6 +188,17 @@ Cấu trúc JSON bắt buộc:
         "evidence_text": "<đoạn trích nguyên văn từ CV>",
         "evidence_section": "<EXPERIENCE|PROJECTS|EDUCATION|SKILLS|OTHER>",
         "confidence": <số từ 0 đến 1>,
+        "needs_verification": true
+      }}
+    ],
+    "red_flag_suspicions": [
+      {{
+        "type": "<loại>",
+        "title": "<tiêu đề dấu hiệu AI đề xuất kiểm tra>",
+        "description": "<mô tả trung tính, không khẳng định là sự thật>",
+        "evidence_text": "",
+        "evidence_section": "<EXPERIENCE|PROJECTS|EDUCATION|SKILLS|OTHER>",
+        "confidence": <số từ 0 đến 0.4>,
         "needs_verification": true
       }}
     ]

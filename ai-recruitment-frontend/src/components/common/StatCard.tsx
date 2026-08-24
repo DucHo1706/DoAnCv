@@ -1,10 +1,16 @@
 import { Card, Space, Typography } from "antd";
+import { ArrowDownOutlined, ArrowUpOutlined } from "@ant-design/icons";
 import type { ReactNode } from "react";
 import { appTheme } from "../../constants/theme";
 
 const { Text, Title } = Typography;
 
-type StatCardAccent = "primary" | "success" | "warning" | "error" | "info";
+export type StatCardAccent = "primary" | "success" | "warning" | "error" | "info" | "accent";
+
+export type StatCardTrend = {
+  percent: number | null;
+  direction: "up" | "down" | "flat";
+};
 
 type StatCardProps = {
   title: string;
@@ -13,6 +19,8 @@ type StatCardProps = {
   subtitle?: string;
   /** Semantic accent color driving the icon chip + top accent bar. Defaults to "primary". */
   accent?: StatCardAccent;
+  /** So sánh với kỳ trước, ví dụ +12% (xanh) hoặc -5% (đỏ). */
+  trend?: StatCardTrend | null;
   /** Optional stagger index for entry animation when rendered in a grid (CSS var --i). */
   index?: number;
 };
@@ -23,10 +31,13 @@ const ACCENT_MAP: Record<StatCardAccent, { fg: string; bg: string }> = {
   warning: { fg: appTheme.colors.warning, bg: "#FFFBEB" },
   error: { fg: appTheme.colors.error, bg: "#FEF2F2" },
   info: { fg: appTheme.colors.info, bg: "#F0F9FF" },
+  accent: { fg: appTheme.colors.accent, bg: "#FFF7ED" },
 };
 
-function StatCard({ title, value, icon, subtitle, accent = "primary", index }: StatCardProps) {
+function StatCard({ title, value, icon, subtitle, accent = "primary", trend, index }: StatCardProps) {
   const { fg, bg } = ACCENT_MAP[accent];
+  const showTrend = trend && trend.percent !== null && trend.direction !== "flat";
+  const trendColor = trend?.direction === "up" ? appTheme.colors.success : appTheme.colors.error;
 
   return (
     <Card
@@ -57,9 +68,26 @@ function StatCard({ title, value, icon, subtitle, accent = "primary", index }: S
 
       <Space align="start" style={{ width: "100%", justifyContent: "space-between" }}>
         <div style={{ minWidth: 0 }}>
-          <Text type="secondary" style={{ fontSize: 13, fontWeight: 500 }}>
-            {title}
-          </Text>
+          <Space size={8} align="center">
+            <Text type="secondary" style={{ fontSize: 13, fontWeight: 500 }}>
+              {title}
+            </Text>
+            {showTrend ? (
+              <span
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 2,
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: trendColor,
+                }}
+              >
+                {trend!.direction === "up" ? <ArrowUpOutlined /> : <ArrowDownOutlined />}
+                {trend!.percent}%
+              </span>
+            ) : null}
+          </Space>
           <Title level={3} style={{ margin: "6px 0 4px", color: appTheme.colors.textPrimary, fontWeight: 800 }}>
             {value}
           </Title>

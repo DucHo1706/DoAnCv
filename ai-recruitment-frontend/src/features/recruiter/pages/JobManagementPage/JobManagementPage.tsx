@@ -29,19 +29,20 @@ import {
   Typography,
   Popconfirm,
   Tooltip,
+  DatePicker,
 } from "antd";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import dayjs, { type Dayjs } from "dayjs";
 import PageContainer from "../../../../components/common/PageContainer";
 import StatCard from "../../../../components/common/StatCard";
 import TableToolbar from "../../../../components/common/TableToolbar";
 import { jobService } from "../../services/jobService";
-import type {
-  CategoryDto,
-  JobDto,
-} from "../../services/jobService";
+import type { JobDto } from "../../services/jobService";
 import { appTheme } from "../../../../constants/theme";
 import { formatJobDate, resolveJobLifecycle, type JobLifecycleStatus } from "../../../../utils/jobLifecycle";
+import { removeVietnameseTones } from "../../../../utils/exportUtils";
+import { useRealtimeResourceRefresh } from "../../../../hooks/useRealtimeRefresh";
 
 const { Text } = Typography;
 type JobStatus = "approved" | "pending" | "closed" | "rejected" | "archived" | "flagged";
@@ -95,36 +96,37 @@ function JobManagementPage() {
 
   // Filter states
   const [searchQuery, setSearchQuery] = useState("");
-  const [filterStatus, setFilterStatus] = useState<string | undefined>(undefined);
-  const [filterCategory, setFilterCategory] = useState<string | undefined>(undefined);
-  const [filterActivity, setFilterActivity] = useState<string | undefined>(undefined);
-
-  // Dropdown data từ API
-  const [categories, setCategories] = useState<CategoryDto[]>([]);
+  const [filterStatus, setFilterStatus] = useState<string>();
+  const [filterCategory, setFilterCategory] = useState<string>();
+  const [filterActivity, setFilterActivity] = useState<string>();
+  const [filterJobLevel, setFilterJobLevel] = useState<string>();
+  const [filterBranch, setFilterBranch] = useState<string>();
+  const [filterPosition, setFilterPosition] = useState<string>();
+  const [filterRound, setFilterRound] = useState<number>();
+  const [deadlineRange, setDeadlineRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
+  const [sortKey, setSortKey] = useState("newest");
 
   // ── Fetch danh sách tin ────────────────────────────────
-  const fetchJobs = async () => {
+  const fetchJobs = useCallback(async (background = false) => {
     try {
-      setLoading(true);
+      if (!background) setLoading(true);
       const data: any = await jobService.getMyJobs();
       setJobs(Array.isArray(data) ? data : data?.$values || []);
     } catch {
       message.error("Không tải được danh sách tin tuyển dụng");
     } finally {
-      setLoading(false);
+      if (!background) setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    fetchJobs();
-    jobService
-      .getCategories()
-      .then((data: any) => setCategories(data))
-      .catch(() => message.error("Lỗi tải danh sách lĩnh vực"));
   }, []);
 
+  useEffect(() => {
+    void fetchJobs();
+  }, [fetchJobs]);
+
+  useRealtimeResourceRefresh(["jobs"], () => fetchJobs(true));
+
   // ── Table data ─────────────────────────────────────────
-  const tableData: JobTableItem[] = jobs.map((job) => {
+  const tableData: JobTableItem[] = useMemo(() => jobs.map((job) => {
     let status: JobStatus = "pending";
     if (job.status === "Published") {
       status = "approved";
@@ -161,38 +163,98 @@ function JobManagementPage() {
       deadline: job.deadline,
       raw: job,
     };
-  });
+  }), [jobs]);
 
   const approvedJobs = tableData.filter((j) => j.lifecycleStatus === "Recruiting").length;
   const pendingJobs = tableData.filter((j) => j.status === "pending").length;
   const rejectedJobs = tableData.filter((j) => j.status === "rejected").length;
   const expiredJobs = tableData.filter((j) => j.activityState === "expired").length;
 
-  const hasActiveFilters = searchQuery !== "" || filterStatus !== undefined || filterCategory !== undefined || filterActivity !== undefined;
+  const hasActiveFilters = Boolean(
+    searchQuery || filterStatus || filterCategory || filterActivity || filterJobLevel ||
+    filterBranch || filterPosition || filterRound || deadlineRange,
+  );
 
   const handleResetFilters = () => {
     setSearchQuery("");
     setFilterStatus(undefined);
     setFilterCategory(undefined);
     setFilterActivity(undefined);
+    setFilterJobLevel(undefined);
+    setFilterBranch(undefined);
+    setFilterPosition(undefined);
+    setFilterRound(undefined);
+    setDeadlineRange(null);
+    setSortKey("newest");
   };
 
-  const filteredTableData = tableData.filter((item) => {
-    const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase());
+  const sortedUnique = (values: string[]) => Array.from(new Set(values)).sort((left, right) => left.localeCompare(right, "vi"));
+  const categoryOptions = useMemo(() => sortedUnique(tableData.map((item) => item.field)), [tableData]);
+  const jobLevelOptions = useMemo(
+    () => sortedUnique(tableData.map((item) => item.raw?.jobLevel?.name).filter((name): name is string => Boolean(name))),
+    [tableData],
+  );
+  const branchOptions = useMemo(() => sortedUnique(tableData.map((item) => item.location)), [tableData]);
+  const positionOptions = useMemo(() => sortedUnique(tableData.map((item) => item.title)), [tableData]);
+  const roundOptions = useMemo(
+    () => Array.from(new Set(tableData.map((item) => item.raw.recruitmentRound || 1))).sort((left, right) => left - right),
+    [tableData],
+  );
+
+  const filteredTableData = useMemo(() => {
+    const query = removeVietnameseTones(searchQuery.trim());
+    const filtered = tableData.filter((item) => {
+    const searchableText = removeVietnameseTones([
+      item.title,
+      item.field,
+      item.location,
+      item.raw.jobLevel?.name,
+    ].filter(Boolean).join(" "));
+    const matchesSearch = !query || searchableText.includes(query);
     const matchesStatus = filterStatus ? item.status === filterStatus : true;
     const matchesCategory = filterCategory ? item.field === filterCategory : true;
-    
+    const matchesJobLevel = filterJobLevel ? item.raw?.jobLevel?.name === filterJobLevel : true;
+    const matchesBranch = filterBranch ? item.location === filterBranch : true;
+    const matchesPosition = filterPosition ? item.title === filterPosition : true;
+    const matchesRound = filterRound ? (item.raw.recruitmentRound || 1) === filterRound : true;
+    const deadline = item.deadline ? dayjs(item.deadline) : null;
+    const matchesDeadline = !deadlineRange || !deadlineRange[0] || !deadlineRange[1] ||
+      Boolean(deadline && !deadline.isBefore(deadlineRange[0], "day") && !deadline.isAfter(deadlineRange[1], "day"));
+
     let matchesActivity = true;
     if (filterActivity === "active") {
       matchesActivity = item.activityState === "active";
     } else if (filterActivity === "expired") {
       matchesActivity = item.activityState === "expired";
-    } else if (filterActivity === "not-open") {
-      matchesActivity = item.activityState === "not-open" || item.activityState === "closed";
+    } else if (filterActivity === "scheduled") {
+      matchesActivity = item.lifecycleStatus === "Scheduled";
+    } else if (filterActivity === "closed") {
+      matchesActivity = item.activityState === "closed";
     }
 
-    return matchesSearch && matchesStatus && matchesCategory && matchesActivity;
-  });
+    return matchesSearch && matchesStatus && matchesCategory && matchesActivity && matchesJobLevel &&
+      matchesBranch && matchesPosition && matchesRound && matchesDeadline;
+    });
+
+    return [...filtered].sort((left, right) => {
+      if (sortKey === "oldest") return dayjs(left.raw.createdAt).valueOf() - dayjs(right.raw.createdAt).valueOf();
+      if (sortKey === "deadline") return dayjs(left.deadline).valueOf() - dayjs(right.deadline).valueOf();
+      if (sortKey === "title") return left.title.localeCompare(right.title, "vi");
+      return dayjs(right.raw.createdAt).valueOf() - dayjs(left.raw.createdAt).valueOf();
+    });
+  }, [
+    deadlineRange,
+    filterActivity,
+    filterBranch,
+    filterCategory,
+    filterJobLevel,
+    filterPosition,
+    filterRound,
+    filterStatus,
+    searchQuery,
+    sortKey,
+    tableData,
+  ]);
 
   const handleViewJob = (record: JobTableItem) => {
     navigate(`/recruiter/jobs/${record.id}`);
@@ -253,7 +315,7 @@ function JobManagementPage() {
       key: "field",
       width: 180,
       render: (value: string) => (
-        <Tag color="geekblue" style={{ borderRadius: 6, fontWeight: 500 }}>
+        <Tag color="geekblue" style={{ borderRadius: 8, fontWeight: 500 }}>
           {value}
         </Tag>
       ),
@@ -266,7 +328,7 @@ function JobManagementPage() {
       render: (value: JobStatus, record: JobTableItem) => {
         const meta = getStatusMeta(value, record.lifecycleStatus);
         const tag = (
-          <Tag color={meta.color} icon={meta.icon} style={{ borderRadius: 6, fontWeight: 500 }}>
+          <Tag color={meta.color} icon={meta.icon} style={{ borderRadius: 8, fontWeight: 500 }}>
             {meta.label}
           </Tag>
         );
@@ -287,17 +349,17 @@ function JobManagementPage() {
       render: (_: unknown, record: JobTableItem) => {
         const deadlineText = record.deadline ? formatJobDate(record.deadline) : "Chưa đặt hạn";
         if (record.activityState === "not-open") {
-          return <><Text type="secondary" style={{ display: "block", fontSize: 12 }}>{deadlineText}</Text><Tag color="warning" icon={<ClockCircleOutlined />} style={{ borderRadius: 6 }}>Chưa mở tuyển</Tag></>;
+          return <><Text type="secondary" style={{ display: "block", fontSize: 12 }}>{deadlineText}</Text><Tag color="warning" icon={<ClockCircleOutlined />} style={{ borderRadius: 8 }}>Chưa mở tuyển</Tag></>;
         }
         if (record.activityState === "closed") {
-          return <><Text type="secondary" style={{ display: "block", fontSize: 12 }}>{deadlineText}</Text><Tag color="default" icon={<LockOutlined />} style={{ borderRadius: 6 }}>Đã đóng</Tag></>;
+          return <><Text type="secondary" style={{ display: "block", fontSize: 12 }}>{deadlineText}</Text><Tag color="default" icon={<LockOutlined />} style={{ borderRadius: 8 }}>Đã đóng</Tag></>;
         }
         return record.activityState === "expired" ? (
-          <Tag color="error" icon={<ClockCircleOutlined />} style={{ borderRadius: 6 }}>
+          <Tag color="error" icon={<ClockCircleOutlined />} style={{ borderRadius: 8 }}>
             <Text delete style={{ color: "inherit" }}>{deadlineText}</Text> · Hết hạn
           </Tag>
         ) : (
-          <><Text type="secondary" style={{ display: "block", fontSize: 12 }}>{deadlineText}</Text><Tag color="success" icon={<CheckCircleOutlined />} style={{ borderRadius: 6 }}>Đang tuyển</Tag></>
+          <><Text type="secondary" style={{ display: "block", fontSize: 12 }}>{deadlineText}</Text><Tag color="success" icon={<CheckCircleOutlined />} style={{ borderRadius: 8 }}>Đang tuyển</Tag></>
         );
       },
     },
@@ -312,7 +374,7 @@ function JobManagementPage() {
             size="small"
             icon={<EyeOutlined />}
             onClick={() => handleViewJob(record)}
-            style={{ borderRadius: 6 }}
+            style={{ borderRadius: 8 }}
           >
             Chi tiết
           </Button>
@@ -321,7 +383,7 @@ function JobManagementPage() {
               size="small"
               icon={<EditOutlined />}
               onClick={() => navigate(`/recruiter/jobs/${record.id}/edit`)}
-              style={{ borderRadius: 6 }}
+              style={{ borderRadius: 8 }}
             >
               Sửa
             </Button>
@@ -342,7 +404,7 @@ function JobManagementPage() {
                 size="small"
                 icon={record.status === "approved" ? <LockOutlined /> : <UnlockOutlined />}
                 danger={record.status === "approved"}
-                style={{ borderRadius: 6 }}
+                style={{ borderRadius: 8 }}
               >
                 {record.status === "approved" ? "Tạm ẩn" : "Hiển thị"}
               </Button>
@@ -354,7 +416,7 @@ function JobManagementPage() {
               type="primary"
               icon={<CopyOutlined />}
               onClick={() => navigate(`/recruiter/jobs/${record.id}/repost`)}
-              style={{ borderRadius: 6 }}
+              style={{ borderRadius: 8 }}
             >
               Đăng lại
             </Button>
@@ -366,7 +428,7 @@ function JobManagementPage() {
               okText="Khôi phục"
               cancelText="Hủy"
             >
-              <Button size="small" icon={<UndoOutlined />} style={{ borderRadius: 6 }}>
+              <Button size="small" icon={<UndoOutlined />} style={{ borderRadius: 8 }}>
                 Khôi phục
               </Button>
             </Popconfirm>
@@ -378,7 +440,7 @@ function JobManagementPage() {
               okText="Lưu trữ"
               cancelText="Hủy"
             >
-              <Button size="small" icon={<InboxOutlined />} style={{ borderRadius: 6 }}>
+              <Button size="small" icon={<InboxOutlined />} style={{ borderRadius: 8 }}>
                 Lưu trữ
               </Button>
             </Popconfirm>
@@ -428,66 +490,47 @@ function JobManagementPage() {
         }}
       >
         <TableToolbar
-          searchPlaceholder="Tìm theo tên vị trí tuyển dụng..."
+          searchPlaceholder="Tìm theo vị trí, lĩnh vực, cấp bậc hoặc chi nhánh..."
           searchValue={searchQuery}
           onSearchChange={setSearchQuery}
           extra={
-            <Space wrap>
-              <Select
-                showSearch
-                placeholder="Lọc theo Lĩnh vực"
-                style={{ width: 190 }}
-                allowClear
-                value={filterCategory}
-                onChange={setFilterCategory}
-                optionFilterProp="label"
-                options={categories.map((c) => ({
-                  label: c.name,
-                  value: c.name,
-                }))}
-              />
-              <Select
-                placeholder="Trạng thái duyệt"
-                style={{ width: 150 }}
-                allowClear
-                value={filterStatus}
-                onChange={setFilterStatus}
-                options={[
-                  { label: "Đã duyệt", value: "approved" },
-                  { label: "Tạm ẩn", value: "closed" },
-                  { label: "Chờ duyệt", value: "pending" },
-                  { label: "Bị từ chối", value: "rejected" },
-                  { label: "Đã lưu trữ", value: "archived" },
-                  { label: "Đang kiểm duyệt", value: "flagged" },
-                ]}
-              />
-              <Select
-                placeholder="Hạn tuyển dụng"
-                style={{ width: 150 }}
-                allowClear
-                value={filterActivity}
-                onChange={setFilterActivity}
-                options={[
-                  { label: "Đang tuyển", value: "active" },
-                  { label: "Hết hạn", value: "expired" },
-                  { label: "Chưa mở / đã đóng", value: "not-open" },
-                ]}
-              />
-
-              {hasActiveFilters && (
-                <Button
-                  icon={<ReloadOutlined />}
-                  onClick={handleResetFilters}
-                  style={{ borderRadius: 8 }}
-                >
-                  Xóa lọc
-                </Button>
-              )}
-            </Space>
+            <Row gutter={[10, 10]} style={{ width: "100%" }}>
+              <Col xs={24} sm={12} lg={8} xl={6}><Select showSearch optionFilterProp="label" placeholder="Vị trí tuyển dụng" style={{ width: "100%" }} allowClear value={filterPosition} onChange={setFilterPosition} options={positionOptions.map((value) => ({ label: value, value }))} /></Col>
+              <Col xs={24} sm={12} lg={8} xl={6}><Select showSearch optionFilterProp="label" placeholder="Lĩnh vực" style={{ width: "100%" }} allowClear value={filterCategory} onChange={setFilterCategory} options={categoryOptions.map((value) => ({ label: value, value }))} /></Col>
+              <Col xs={24} sm={12} lg={8} xl={6}><Select showSearch optionFilterProp="label" placeholder="Cấp bậc" style={{ width: "100%" }} allowClear value={filterJobLevel} onChange={setFilterJobLevel} options={jobLevelOptions.map((value) => ({ label: value, value }))} /></Col>
+              <Col xs={24} sm={12} lg={8} xl={6}><Select showSearch optionFilterProp="label" placeholder="Chi nhánh" style={{ width: "100%" }} allowClear value={filterBranch} onChange={setFilterBranch} options={branchOptions.map((value) => ({ label: value, value }))} /></Col>
+              <Col xs={24} sm={12} lg={8} xl={6}><Select placeholder="Trạng thái duyệt" style={{ width: "100%" }} allowClear value={filterStatus} onChange={setFilterStatus} options={[
+                { label: "Đã duyệt", value: "approved" },
+                { label: "Tạm ẩn", value: "closed" },
+                { label: "Chờ duyệt", value: "pending" },
+                { label: "Bị từ chối", value: "rejected" },
+                { label: "Đã lưu trữ", value: "archived" },
+                { label: "Đang kiểm duyệt", value: "flagged" },
+              ]} /></Col>
+              <Col xs={24} sm={12} lg={8} xl={6}><Select placeholder="Vòng đời tuyển dụng" style={{ width: "100%" }} allowClear value={filterActivity} onChange={setFilterActivity} options={[
+                { label: "Đang tuyển", value: "active" },
+                { label: "Sắp mở tuyển", value: "scheduled" },
+                { label: "Đã hết hạn", value: "expired" },
+                { label: "Đã đóng / tạm ẩn", value: "closed" },
+              ]} /></Col>
+              <Col xs={24} sm={12} lg={8} xl={6}><Select placeholder="Đợt tuyển dụng" style={{ width: "100%" }} allowClear value={filterRound} onChange={setFilterRound} options={roundOptions.map((value) => ({ label: `Đợt ${value}`, value }))} /></Col>
+              <Col xs={24} sm={12} lg={8} xl={6}><DatePicker.RangePicker placeholder={["Hạn từ ngày", "Đến ngày"]} format="DD/MM/YYYY" style={{ width: "100%" }} value={deadlineRange} onChange={setDeadlineRange} /></Col>
+              <Col xs={24} sm={12} lg={8} xl={6}><Select value={sortKey} style={{ width: "100%" }} onChange={setSortKey} options={[
+                { label: "Mới tạo trước", value: "newest" },
+                { label: "Cũ tạo trước", value: "oldest" },
+                { label: "Sắp hết hạn", value: "deadline" },
+                { label: "Tên vị trí A–Z", value: "title" },
+              ]} /></Col>
+              {hasActiveFilters && <Col xs={24} sm={12} lg={8} xl={6}><Button block icon={<ReloadOutlined />} onClick={handleResetFilters}>Xóa bộ lọc</Button></Col>}
+            </Row>
           }
         />
 
-        <Table
+        <Text type="secondary" style={{ display: "block", marginBottom: 8, fontSize: 13 }}>
+          Hiển thị {filteredTableData.length}/{tableData.length} tin tuyển dụng
+        </Text>
+
+        <Table scroll={{ x: "max-content" }}
           rowKey="id"
           columns={columns}
           dataSource={filteredTableData}

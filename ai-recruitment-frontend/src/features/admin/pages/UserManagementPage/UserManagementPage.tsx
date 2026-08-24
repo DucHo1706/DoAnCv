@@ -166,7 +166,7 @@ function UserManagementPage() {
       render: (name: string, record: any) => {
         // Đổi màu Avatar theo Role cho trực quan
         const avatarColor =
-          record.role === "Admin" ? "#f5222d" : record.role === "Recruiter" ? "#1677ff" : "#52c41a";
+          record.role === "Admin" ? "#EF4444" : record.role === "Recruiter" ? "#2563EB" : "#10B981";
         return (
           <Space>
             <Avatar style={{ backgroundColor: avatarColor, verticalAlign: "middle" }}>
@@ -374,7 +374,7 @@ function UserManagementPage() {
             </>
           }
         />
-        <Table
+        <Table scroll={{ x: "max-content" }}
           columns={columns}
           dataSource={filteredUsers}
           rowKey="id"

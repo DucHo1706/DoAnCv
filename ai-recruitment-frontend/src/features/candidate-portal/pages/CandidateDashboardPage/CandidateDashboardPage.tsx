@@ -392,7 +392,7 @@ function CandidateDashboardPage() {
                         style={{ 
                           fontSize: 13, 
                           padding: "4px 12px", 
-                          borderRadius: 6, 
+                          borderRadius: 8,
                           background: "#EFF6FF", 
                           color: "#1D4ED8", 
                           borderColor: "#BFDBFE",
@@ -418,7 +418,7 @@ function CandidateDashboardPage() {
                   ) : (
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                       {sortedMatchedSkills.map((skill, idx) => (
-                        <Tag key={idx} style={{ color: "#059669", backgroundColor: "#ECFDF5", borderColor: "#A7F3D0", fontSize: 13, padding: "4px 10px", borderRadius: 6, fontWeight: 600 }}>
+                        <Tag key={idx} style={{ color: "#059669", backgroundColor: "#ECFDF5", borderColor: "#A7F3D0", fontSize: 13, padding: "4px 10px", borderRadius: 8, fontWeight: 600 }}>
                           ✓ {skill}
                         </Tag>
                       ))}
@@ -637,10 +637,10 @@ function CandidateDashboardPage() {
                     </div>
 
                     <div style={{ margin: "10px 0", display: "flex", gap: 6, flexWrap: "wrap" }}>
-                      <Tag style={{ borderRadius: 6, fontSize: 12, margin: 0 }}>
+                      <Tag style={{ borderRadius: 8, fontSize: 12, margin: 0 }}>
                         <EnvironmentOutlined /> {job.location}
                       </Tag>
-                      <Tag color="green" style={{ borderRadius: 6, fontSize: 12, margin: 0, fontWeight: 600 }}>
+                      <Tag color="green" style={{ borderRadius: 8, fontSize: 12, margin: 0, fontWeight: 600 }}>
                         <DollarOutlined /> {job.salary}
                       </Tag>
                     </div>
@@ -652,7 +652,7 @@ function CandidateDashboardPage() {
                         </span>
                         <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
                           {job.matchedSkillsList.map((sk: string, sIdx: number) => (
-                            <Tag key={sIdx} color="cyan" style={{ fontSize: 11, padding: "0 6px", borderRadius: 4, margin: 0 }}>
+                            <Tag key={sIdx} color="cyan" style={{ fontSize: 11, padding: "0 6px", borderRadius: 8, margin: 0 }}>
                               ✓ {sk}
                             </Tag>
                           ))}
@@ -665,7 +665,7 @@ function CandidateDashboardPage() {
                     <span style={{ fontSize: 12, fontWeight: 600, color: "#2563EB", display: "inline-flex", alignItems: "center", gap: 4 }}>
                       <CheckCircleOutlined /> Có kỹ năng trùng khớp
                     </span>
-                    <Button type="primary" size="small" style={{ borderRadius: 6, background: "#2563EB", fontWeight: 600 }}>
+                    <Button type="primary" size="small" style={{ borderRadius: 8, background: "#2563EB", fontWeight: 600 }}>
                       Xem việc làm
                     </Button>
                   </div>

@@ -46,6 +46,7 @@ import axiosClient from "../../../../services/axiosClient";
 import { branchService } from "../../../../services/jobService";
 import { appTheme } from "../../../../constants/theme";
 import { exportToCsv } from "../../../../utils/exportUtils";
+import { useRealtimeResourceRefresh } from "../../../../hooks/useRealtimeRefresh";
 
 const { Text } = Typography;
 
@@ -181,6 +182,7 @@ function CriterionGroupTab() {
   };
 
   useEffect(() => { fetchItems(); }, []);
+  useRealtimeResourceRefresh(["criterion-groups"], fetchItems);
 
   const openCreate = () => {
     setEditingItem(null);
@@ -234,7 +236,7 @@ function CriterionGroupTab() {
       <Space style={{ width: "100%", justifyContent: "flex-end", marginBottom: 16 }}>
         <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>Thêm nhóm tiêu chí</Button>
       </Space>
-      <Table
+      <Table scroll={{ x: "max-content" }}
         rowKey="id"
         loading={loading}
         dataSource={items}
@@ -291,6 +293,7 @@ function BranchTab() {
   useEffect(() => {
     fetchBranches();
   }, []);
+  useRealtimeResourceRefresh(["branches"], fetchBranches);
 
   const isFiltered = searchText.trim() !== "" || statusFilter !== "all" || sortBy !== "name-asc";
 
@@ -400,11 +403,11 @@ function BranchTab() {
       onFilter: (value: any, record: any) => record.isActive === value,
       render: (isActive: boolean) =>
         isActive ? (
-          <Tag color="success" style={{ borderRadius: 6, fontWeight: 700, padding: "2px 10px" }}>
+          <Tag color="success" style={{ borderRadius: 8, fontWeight: 700, padding: "2px 10px" }}>
             Hoạt động
           </Tag>
         ) : (
-          <Tag color="error" style={{ borderRadius: 6, fontWeight: 600, padding: "2px 10px" }}>
+          <Tag color="error" style={{ borderRadius: 8, fontWeight: 600, padding: "2px 10px" }}>
             Đã khóa
           </Tag>
         ),
@@ -526,7 +529,7 @@ function BranchTab() {
         </Col>
       </Row>
 
-      <Table
+      <Table scroll={{ x: "max-content" }}
         dataSource={filteredBranches.map((b) => ({ ...b, key: b.id }))}
         columns={columns}
         loading={loading}
@@ -588,6 +591,7 @@ function CategoryTab() {
   useEffect(() => {
     fetchCategories();
   }, []);
+  useRealtimeResourceRefresh(["categories"], fetchCategories);
 
   const categoryMap = useMemo(() => {
     const map = new Map<string, string>();
@@ -749,11 +753,11 @@ function CategoryTab() {
       onFilter: (value: any, record: any) => record.isActive === value,
       render: (isActive: boolean) =>
         isActive ? (
-          <Tag color="success" style={{ borderRadius: 6, fontWeight: 700, padding: "2px 10px" }}>
+          <Tag color="success" style={{ borderRadius: 8, fontWeight: 700, padding: "2px 10px" }}>
             Hoạt động
           </Tag>
         ) : (
-          <Tag color="error" style={{ borderRadius: 6, fontWeight: 600, padding: "2px 10px" }}>
+          <Tag color="error" style={{ borderRadius: 8, fontWeight: 600, padding: "2px 10px" }}>
             Đã khóa
           </Tag>
         ),
@@ -904,7 +908,7 @@ function CategoryTab() {
         </Col>
       </Row>
 
-      <Table
+      <Table scroll={{ x: "max-content" }}
         dataSource={filteredCategories.map((c) => ({ ...c, key: c.id }))}
         columns={columns}
         loading={loading}
@@ -981,6 +985,7 @@ function JobLevelTab() {
   useEffect(() => {
     fetchLevels();
   }, []);
+  useRealtimeResourceRefresh(["job-levels"], fetchLevels);
 
   const levelMap = useMemo(() => {
     const map = new Map<string, string>();
@@ -1116,11 +1121,11 @@ function JobLevelTab() {
       onFilter: (value: any, record: any) => record.isActive === value,
       render: (isActive: boolean) =>
         isActive ? (
-          <Tag color="success" style={{ borderRadius: 6, fontWeight: 700, padding: "2px 10px" }}>
+          <Tag color="success" style={{ borderRadius: 8, fontWeight: 700, padding: "2px 10px" }}>
             Hoạt động
           </Tag>
         ) : (
-          <Tag color="error" style={{ borderRadius: 6, fontWeight: 600, padding: "2px 10px" }}>
+          <Tag color="error" style={{ borderRadius: 8, fontWeight: 600, padding: "2px 10px" }}>
             Đã khóa
           </Tag>
         ),
@@ -1242,7 +1247,7 @@ function JobLevelTab() {
         </Col>
       </Row>
 
-      <Table
+      <Table scroll={{ x: "max-content" }}
         dataSource={filteredLevels.map((l) => ({ ...l, key: l.id }))}
         columns={columns}
         loading={loading}
@@ -1322,6 +1327,7 @@ function JobPositionTab() {
   useEffect(() => {
     fetchData();
   }, []);
+  useRealtimeResourceRefresh(["job-positions", "categories"], fetchData);
 
   const isFiltered = searchText.trim() !== "" || selectedCategoryId !== "all" || statusFilter !== "all" || sortBy !== "name-asc";
 
@@ -1453,11 +1459,11 @@ function JobPositionTab() {
       onFilter: (value: any, record: any) => record.isActive === value,
       render: (isActive: boolean) =>
         isActive ? (
-          <Tag color="success" style={{ borderRadius: 6, fontWeight: 700, padding: "2px 10px" }}>
+          <Tag color="success" style={{ borderRadius: 8, fontWeight: 700, padding: "2px 10px" }}>
             Hoạt động
           </Tag>
         ) : (
-          <Tag color="error" style={{ borderRadius: 6, fontWeight: 600, padding: "2px 10px" }}>
+          <Tag color="error" style={{ borderRadius: 8, fontWeight: 600, padding: "2px 10px" }}>
             Đã khóa
           </Tag>
         ),
@@ -1593,7 +1599,7 @@ function JobPositionTab() {
         </Col>
       </Row>
 
-      <Table
+      <Table scroll={{ x: "max-content" }}
         dataSource={filteredPositions.map((p) => ({ ...p, key: p.id }))}
         columns={columns}
         loading={loading}

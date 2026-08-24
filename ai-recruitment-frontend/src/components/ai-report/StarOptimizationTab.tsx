@@ -114,7 +114,7 @@ const renderFormattedStarText = (text: string | null) => {
                 style={{
                   display: "inline-block",
                   padding: "3px 9px",
-                  borderRadius: 6,
+                  borderRadius: 8,
                   fontSize: "11px",
                   fontWeight: 700,
                   color: badgeColor,
@@ -271,7 +271,7 @@ const StarOptimizationTab: React.FC<StarOptimizationTabProps> = ({ optimizationT
               </span>
             }
             style={{
-              borderRadius: 14,
+              borderRadius: 16,
               background: "#FFFFFF",
               border: "1px solid #E2E8F0",
               borderLeft: "4px solid #2563EB",
@@ -300,7 +300,7 @@ const StarOptimizationTab: React.FC<StarOptimizationTabProps> = ({ optimizationT
                         style={{
                           fontSize: 10,
                           padding: "2px 8px",
-                          borderRadius: 4,
+                          borderRadius: 8,
                           background: "rgba(239, 68, 68, 0.06)",
                           border: "1px solid rgba(239, 68, 68, 0.15)",
                           color: "#EF4444",
@@ -325,7 +325,7 @@ const StarOptimizationTab: React.FC<StarOptimizationTabProps> = ({ optimizationT
                         border: "1px solid #E2E8F0",
                         borderLeft: "3px solid #2563EB",
                         padding: "10px 14px",
-                        borderRadius: 6,
+                        borderRadius: 8,
                         marginBottom: 16,
                       }}
                     >

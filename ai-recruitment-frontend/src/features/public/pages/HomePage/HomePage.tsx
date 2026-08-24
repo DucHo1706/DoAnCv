@@ -489,7 +489,7 @@ function HomePage() {
       box-shadow: 0 8px 30px rgba(15, 23, 42, 0.06);
       transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
       border: 1px solid #E2E8F0;
-      border-radius: 14px;
+      border-radius: 16px;
     }
     .search-refined:focus-within {
       border-color: #2563EB;
@@ -845,7 +845,7 @@ function HomePage() {
                     </div>
 
                     {/* Competency & Risk Flags Section */}
-                    <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: 16, paddingTop: 16, borderTop: "1px solid #E2E8F0" }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 16, paddingTop: 16, borderTop: "1px solid #E2E8F0" }}>
                       {/* NĂNG LỰC CỐT LÕI */}
                       <div>
                         <span style={{ fontSize: 10, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.08em", color: "#10B981", display: "flex", alignItems: "center", gap: 4, marginBottom: 10 }}>

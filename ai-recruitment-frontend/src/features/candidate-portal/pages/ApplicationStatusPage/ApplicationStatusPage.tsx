@@ -307,7 +307,7 @@ export default function ApplicationStatusPage() {
     }
     .pagination-btn {
       transition: all 0.2s ease;
-      border-radius: 10px;
+      border-radius: 12px;
       border: 1px solid #E2E8F0;
       background: #FFFFFF;
       color: #64748B;
@@ -333,11 +333,13 @@ export default function ApplicationStatusPage() {
         align-items: flex-start !important;
         gap: 20px !important;
       }
-      .app-card > div {
+      .app-card > div:not(.app-card-strip) {
         width: 100% !important;
       }
       .app-card-actions {
-        justify-content: space-between !important;
+        justify-content: flex-start !important;
+        flex-wrap: wrap !important;
+        gap: 12px !important;
         border-top: 1px solid #F1F5F9;
         padding-top: 16px;
         margin-top: 4px;
@@ -416,7 +418,7 @@ export default function ApplicationStatusPage() {
 
                     <div style={{ marginBottom: "24px", background: "#F8FAFC", padding: "16px 20px", borderRadius: "12px", border: "1px solid #E2E8F0" }}>
                       <h3 style={{ margin: "0 0 12px", fontSize: "15px", fontWeight: 700, color: "#0F172A" }}>THÔNG TIN HỒ SƠ</h3>
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px 24px", fontSize: "14px" }}>
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "10px 24px", fontSize: "14px" }}>
                         <div><strong>Vị trí ứng tuyển:</strong> {selectedApp?.jobTitle}</div>
                         <div><strong>Mức đáp ứng tiêu chí:</strong> <span style={{ color: "#2563EB", fontWeight: 700 }}>{selectedApp?.aiScore} / 100</span></div>
                         <div><strong>Phân loại:</strong> {selectedApp?.classification || "Chờ xử lý"}</div>
@@ -721,6 +723,7 @@ export default function ApplicationStatusPage() {
                   >
                     {/* Brand border strip */}
                     <div
+                      className="app-card-strip"
                       style={{
                         position: "absolute",
                         left: 0,

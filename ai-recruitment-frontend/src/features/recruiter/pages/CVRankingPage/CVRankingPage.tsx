@@ -381,6 +381,7 @@ export default function CVRankingPage() {
           />
 
           <Table<CandidateRankingItem>
+            scroll={{ x: "max-content" }}
             rowKey="applicationId"
             loading={loading}
             dataSource={candidateList}

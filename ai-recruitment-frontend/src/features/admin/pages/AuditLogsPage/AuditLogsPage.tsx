@@ -246,7 +246,7 @@ function AuditLogsPage() {
           </Col>
         </Row>
 
-        <Table
+        <Table scroll={{ x: "max-content" }}
           columns={columns}
           dataSource={filteredLogs.map((log, idx) => ({ ...log, key: log.auditLogID || idx }))}
           loading={loading}

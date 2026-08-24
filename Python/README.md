@@ -2,6 +2,8 @@
 
 Đây là bản đồ tra cứu module Python khi phát triển và vấn đáp. Python thực hiện xử lý CV, đối khớp AI và khai phá kỹ năng; ASP.NET Core quản lý dữ liệu nghiệp vụ, phân quyền và quyết định tuyển dụng.
 
+Nếu cần đọc source theo đúng thứ tự từ lúc ứng viên nộp CV đến khi lưu điểm, xem [`SOURCE_FLOW_GUIDE.md`](SOURCE_FLOW_GUIDE.md). File này có sơ đồ end-to-end, luồng OCR, Apriori/HUIM, LLM/fallback và bản đồ debug theo triệu chứng.
+
 ## 1. Kiến trúc xử lý
 
 ```text
@@ -120,7 +122,15 @@ Kết quả      → quality + agreement + analysis_safe → NLP/chấm điểm 
 - Không được xem nội dung Gemini sinh ra là bằng chứng nếu đoạn đó không tồn tại trong CV.
 - Chuỗi model mặc định hiện dùng Gemini 3.x; có thể cấu hình qua biến môi trường. Key giữ đúng thứ tự cấu hình để có thể đặt project paid trước project free. Lỗi 404 loại model, 429 cooldown key; 503/504/timeout mặc định chuyển model sau hai key/project để giữ ngân sách cho failover. Mỗi attempt mặc định 15 giây, không bao giờ gửi deadline dưới 10 giây và toàn request có ngân sách mặc định 60 giây.
 - `language_review.is_fallback=true` là rà soát cục bộ, không phải kết quả Gemini hoàn chỉnh và phải được UI/API nhận diện là phân tích một phần.
-- Bằng chứng AI được truy hồi lại từ CV theo token gần-nguyên-văn và UI chỉ nhận đoạn nguồn. Khác dấu câu/xuống dòng hoặc một lỗi ký tự nhỏ có thể phục hồi; thay số, phủ định hoặc diễn giải lại bị loại.
+- Cảnh báo CV được tách hai lớp: `red_flags` chỉ chứa mục truy hồi được đoạn nguồn; `red_flag_suspicions` chứa dấu hiệu AI đề xuất nhưng chưa đối chiếu được. Nhóm thứ hai vẫn hiển thị để định hướng phỏng vấn, nhưng không được dùng chấm điểm hay kết luận gian dối.
+- Phân tích ngôn từ áp dụng nguyên tắc tương tự qua `unverified_language_observations`. Khi extraction không an toàn, `insufficient_reason=extraction_unreliable` được trả rõ thay vì chấm điểm trên văn bản OCR lỗi. Nếu extraction vẫn an toàn nhưng có cảnh báo OCR/mất dấu hoặc ở mức `partial`, hệ thống vẫn rà soát phần văn bản đọc được và trả `analysis_scope=extracted_text_with_quality_limitations`; lỗi ký tự/bố cục không được quy thành lỗi viết của ứng viên.
+
+### 9Router local
+
+- Có thể ưu tiên endpoint OpenAI-compatible của 9Router bằng `LLM_ROUTER_BASE_URL` (local thường là `http://127.0.0.1:20128/v1`) và `LLM_ROUTER_MODELS`.
+- `LLM_ROUTER_API_KEY` là tùy chọn cho router có bật xác thực và chỉ được cấp qua biến môi trường; không ghi key vào source hoặc log.
+- Thứ tự failover: 9Router local → Gemini (nếu bật/có key) → fallback cục bộ có gắn trạng thái. Khi chỉ muốn dùng router local mà không tiêu thụ quota Gemini, đặt thêm `GEMINI_ENABLED=false` cho đúng tiến trình Python local.
+- Bằng chứng AI được truy hồi lại từ CV theo token gần-nguyên-văn. Khác dấu câu/xuống dòng hoặc một lỗi ký tự nhỏ có thể phục hồi; thay số, phủ định hoặc diễn giải lại không được giữ như bằng chứng và chỉ có thể xuất hiện dưới nhãn dấu hiệu chưa đối chiếu nếu không vi phạm quy tắc OCR/ngày tháng.
 
 ### Apriori
 

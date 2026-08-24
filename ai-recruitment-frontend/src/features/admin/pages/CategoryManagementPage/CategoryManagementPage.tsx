@@ -101,7 +101,7 @@ function CategoryManagementPage() {
           ),
           icon:
             children.length > 0 ? (
-              <FolderOpenOutlined style={{ color: "#1677ff" }} />
+              <FolderOpenOutlined style={{ color: "#2563EB" }} />
             ) : (
               <FolderOutlined style={{ color: "#bae0ff" }} />
             ),

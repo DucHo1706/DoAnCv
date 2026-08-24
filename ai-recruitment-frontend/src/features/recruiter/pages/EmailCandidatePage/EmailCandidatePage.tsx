@@ -105,7 +105,7 @@ export default function EmailCandidatePage() {
                       <strong>Gửi tới (To):</strong>{" "}
                       <span
                         style={{
-                          color: "#1677ff",
+                          color: "#2563EB",
                           fontFamily: "monospace",
                           fontWeight: 500,
                         }}
@@ -126,7 +126,7 @@ export default function EmailCandidatePage() {
                         <strong>(CC):</strong>{" "}
                         <span
                           style={{
-                            color: "#faad14",
+                            color: "#F59E0B",
                             fontFamily: "monospace",
                             fontWeight: 500,
                           }}
@@ -176,7 +176,7 @@ export default function EmailCandidatePage() {
                 icon={<AiCoreIcon size={16} />}
                 onClick={() => generateAiEmail("invite")}
                 disabled={isGeneratingAi || isSending}
-                style={{ borderColor: "#52c41a", color: "#52c41a" }}
+                style={{ borderColor: "#10B981", color: "#10B981" }}
               >
                 {isTalentPoolInvite ? "Tạo thư mời vào kho ứng viên" : "Tạo thư mời"}
               </Button>
@@ -186,7 +186,7 @@ export default function EmailCandidatePage() {
                   icon={<AiCoreIcon size={16} />}
                   onClick={() => generateAiEmail("reject")}
                   disabled={isGeneratingAi || isSending}
-                  style={{ borderColor: "#ff4d4f", color: "#ff4d4f" }}
+                  style={{ borderColor: "#EF4444", color: "#EF4444" }}
                 >
                   Tạo thư từ chối
                 </Button>
@@ -290,7 +290,7 @@ export default function EmailCandidatePage() {
                   <div
                     style={{
                       fontFamily: "monospace",
-                      color: "#1677ff",
+                      color: "#2563EB",
                       marginTop: 2,
                     }}
                   >
@@ -304,7 +304,7 @@ export default function EmailCandidatePage() {
                   <div
                     style={{
                       fontFamily: "monospace",
-                      color: "#faad14",
+                      color: "#F59E0B",
                       marginTop: 2,
                     }}
                   >

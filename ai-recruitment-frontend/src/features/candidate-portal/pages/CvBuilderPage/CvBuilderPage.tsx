@@ -36,6 +36,7 @@ import {
   message,
 } from "antd";
 import { appTheme } from "../../../../constants/theme";
+import PageContainer from "../../../../components/common/PageContainer";
 import { cvBuilderService, type CvBuilderDocumentSummary } from "../../services/cvBuilderService";
 
 const { Text, Title } = Typography;
@@ -158,7 +159,7 @@ export const defaultSettings: BuilderSettings = {
   fontSize: 13,
   headingSize: 13,
   frameStyle: "thin",
-  zoom: 100,
+  zoom: typeof window !== "undefined" && window.innerWidth < 768 ? 55 : 100,
   sectionOrder: ["summary", "experience", "education", "projects", "skills", "certificates"],
   customLayout: "single",
   customSidebarWidth: 34,
@@ -520,11 +521,9 @@ export default function CvBuilderPage() {
 
   return (
     <div style={{ maxWidth: 1500, margin: "0 auto", padding: "24px 20px 56px" }}>
-      <Row justify="space-between" align="middle" gutter={[16, 16]} style={{ marginBottom: 20 }}>
-        <Col>
-          <Title level={2} style={{ margin: 0, color: appTheme.colors.textPrimary }}>Tạo CV trực tuyến</Title>
-        </Col>
-        <Col>
+      <PageContainer
+        title="Tạo CV trực tuyến"
+        extra={
           <Space wrap>
             {localStorage.getItem("token") ? (
               <Select
@@ -546,8 +545,8 @@ export default function CvBuilderPage() {
             ) : null}
             <Button type="primary" icon={<DownloadOutlined />} loading={exportingPdf} onClick={printPdf}>Lưu dưới dạng PDF</Button>
           </Space>
-        </Col>
-      </Row>
+        }
+      >
 
       <Card style={{ marginBottom: 20, border: "1px solid #E2E8F0", borderRadius: 16 }}>
         <Row gutter={[24, 16]} align="middle">
@@ -557,7 +556,7 @@ export default function CvBuilderPage() {
           </Col>
           <Col xs={24} lg={8}>
             <Text strong>Mẫu CV</Text>
-            <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 8, padding: 10, border: "1px solid #E2E8F0", borderRadius: 10, background: "#F8FAFC" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 8, padding: 10, border: "1px solid #E2E8F0", borderRadius: 12, background: "#F8FAFC" }}>
               <div style={{ width: 76, flex: "0 0 76px" }}><TemplateThumbnail layout={currentTemplate.layout} color={settings.accentColor} /></div>
               <div style={{ minWidth: 0, flex: 1 }}>
                 <Text strong style={{ display: "block" }}>{currentTemplate.name}</Text>
@@ -623,7 +622,7 @@ export default function CvBuilderPage() {
           </Col>
           <Col xs={12} md={6} lg={4}>
             <Text strong>Thu phóng bản xem trước</Text>
-            <Slider min={70} max={110} step={5} value={settings.zoom} tooltip={{ formatter: (value) => `${value}%` }} onChange={(zoom) => setSettings((old) => ({ ...old, zoom }))} />
+            <Slider min={50} max={110} step={5} value={settings.zoom} tooltip={{ formatter: (value) => `${value}%` }} onChange={(zoom) => setSettings((old) => ({ ...old, zoom }))} />
           </Col>
           <Col xs={24} md={8} lg={5}>
             <Text strong>Bố cục tự thiết kế</Text>
@@ -708,9 +707,9 @@ export default function CvBuilderPage() {
                   onDragStart={(event) => event.dataTransfer.setData("text/cv-section-index", String(index))}
                   onDragOver={(event) => event.preventDefault()}
                   onDrop={(event) => { event.preventDefault(); reorderSection(Number(event.dataTransfer.getData("text/cv-section-index")), index); }}
-                  style={{ display: "inline-flex", alignItems: "center", border: "1px solid #E2E8F0", borderRadius: 6, paddingLeft: 8, background: "#FFFFFF", cursor: "grab" }}
+                  style={{ display: "inline-flex", alignItems: "center", border: "1px solid #E2E8F0", borderRadius: 8, paddingLeft: 8, background: "#FFFFFF", cursor: "grab" }}
                 >
-                  <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 20, height: 20, marginRight: 6, borderRadius: 5, background: "#EFF6FF", color: "#1D4ED8", fontSize: 11, fontWeight: 700 }}>
+                  <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 20, height: 20, marginRight: 6, borderRadius: 8, background: "#EFF6FF", color: "#1D4ED8", fontSize: 11, fontWeight: 700 }}>
                     {index + 1}
                   </span>
                   <Text style={{ fontSize: 12 }}>{sectionLabels[section]}</Text>
@@ -859,6 +858,7 @@ export default function CvBuilderPage() {
           </div>
         </Col>
       </Row>
+      </PageContainer>
     </div>
   );
 }
@@ -1019,7 +1019,7 @@ export function PreviewContent({ values, skills, settings, include }: { values: 
     experience: (values.experience || []).some((item) => item.company || item.position || item.description) ? <CvSection title="KINH NGHIỆM LÀM VIỆC" settings={settings}>{values.experience?.filter((item) => item.company || item.position || item.description).map((item, index) => <PreviewEntry key={index} title={item.position || "Vị trí công việc"} subtitle={item.company} period={item.period} description={item.description} settings={settings} />)}</CvSection> : null,
     education: (values.education || []).some((item) => item.school || item.major) ? <CvSection title="HỌC VẤN" settings={settings}>{values.education?.filter((item) => item.school || item.major).map((item, index) => <PreviewEntry key={index} title={item.school || "Trường / Cơ sở đào tạo"} subtitle={item.major} period={item.period} settings={settings} />)}</CvSection> : null,
     projects: (values.projects || []).some((item) => item.name || item.description) ? <CvSection title="DỰ ÁN" settings={settings}>{values.projects?.filter((item) => item.name || item.description).map((item, index) => <PreviewEntry key={index} title={item.name || "Tên dự án"} subtitle={[item.role, item.link].filter(Boolean).join(" · ")} description={item.description} settings={settings} />)}</CvSection> : null,
-    skills: !fullBleedTemplates.has(settings.template) && skills.length > 0 ? <CvSection title="KỸ NĂNG" settings={settings}><div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>{skills.map((skill) => <span key={skill} style={{ padding: "4px 9px", borderRadius: 5, background: `${settings.accentColor}12`, color: settings.accentColor, fontSize: settings.fontSize - 1, fontWeight: 700 }}>{skill}</span>)}</div></CvSection> : null,
+    skills: !fullBleedTemplates.has(settings.template) && skills.length > 0 ? <CvSection title="KỸ NĂNG" settings={settings}><div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>{skills.map((skill) => <span key={skill} style={{ padding: "4px 9px", borderRadius: 8, background: `${settings.accentColor}12`, color: settings.accentColor, fontSize: settings.fontSize - 1, fontWeight: 700 }}>{skill}</span>)}</div></CvSection> : null,
     certificates: !fullBleedTemplates.has(settings.template) && (values.certificates || []).some((item) => item.name) ? <CvSection title="CHỨNG CHỈ" settings={settings}>{values.certificates?.filter((item) => item.name).map((item, index) => <PreviewEntry key={index} title={item.name || ""} subtitle={item.issuer} period={item.year} settings={settings} />)}</CvSection> : null,
   };
   const hiddenSections = settings.hiddenSections || [];
@@ -1082,14 +1082,14 @@ async function resizeImage(file: File, maxSize: number, quality: number): Promis
 }
 
 function TemplateThumbnail({ layout, color }: { layout: "single" | "sidebar" | "columns" | "timeline"; color: string }) {
-  const line = (width: string, key: string) => <span key={key} style={{ display: "block", width, height: 2, marginBottom: 4, borderRadius: 2, background: "#CBD5E1" }} />;
+  const line = (width: string, key: string) => <span key={key} style={{ display: "block", width, height: 2, marginBottom: 4, borderRadius: 8, background: "#CBD5E1" }} />;
   return (
     <span style={{ display: "block", height: 72, padding: 10, background: "#F8FAFC", borderBottom: "1px solid #E2E8F0" }}>
       <span style={{ display: "grid", gridTemplateColumns: layout === "sidebar" ? "31% 69%" : layout === "columns" ? "42% 58%" : "1fr", height: "100%", gap: layout === "single" || layout === "timeline" ? 0 : 6, background: "#FFFFFF", border: "1px solid #E2E8F0", padding: layout === "sidebar" ? 0 : 6 }}>
         {layout === "sidebar" && <span style={{ display: "block", background: color, opacity: .9 }} />}
         {layout === "timeline" && <span style={{ position: "absolute", width: 2, height: 38, margin: "8px 0 0 4px", background: color }} />}
         <span style={{ display: "block", padding: layout === "sidebar" ? 6 : 0 }}>
-          <span style={{ display: "block", width: "58%", height: 4, marginBottom: 6, borderRadius: 2, background: color }} />
+          <span style={{ display: "block", width: "58%", height: 4, marginBottom: 6, borderRadius: 8, background: color }} />
           {line("92%", "a")}{line("75%", "b")}{line("88%", "c")}{line("62%", "d")}
         </span>
       </span>

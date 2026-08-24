@@ -179,7 +179,7 @@ export function JobDetailModal({
 
           <div style={{ marginBottom: 16 }}>
             <Text strong>Tiêu chí đánh giá CV do HR thiết lập</Text>
-            <Table
+            <Table scroll={{ x: "max-content" }}
               style={{ marginTop: 8 }}
               size="small"
               bordered

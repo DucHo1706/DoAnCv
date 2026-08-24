@@ -197,7 +197,7 @@ function AppHeader({ title, userName, roleLabel, onLogout }: AppHeaderProps) {
 
   // Render notification Popover content
   const notifPopoverContent = (
-    <div style={{ width: 350, maxHeight: 450, display: "flex", flexDirection: "column" }}>
+    <div style={{ width: 350, maxWidth: "calc(100vw - 24px)", maxHeight: 450, display: "flex", flexDirection: "column" }}>
       <div
         style={{
           display: "flex",

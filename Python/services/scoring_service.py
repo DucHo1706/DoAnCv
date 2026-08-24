@@ -1,8 +1,9 @@
-from .gemini_service import generate_content_with_retry
+from .gemini_service import GEMINI_ENABLED, LLM_ROUTER_ENABLED, generate_content_with_retry
 from .mining_context_service import build_skill_mining_context
 from .ml_service import calculate_scikit_similarity, HAS_SKLEARN
 from . import interview_service
 from .section_segmentation_service import segment_cv_sections
+from .skill_mining_guard import normalize_match_key
 from prompts.scoring_prompts import get_scoring_prompt, get_deep_analysis_prompt
 from prompts.language_prompts import get_language_review_prompt
 from utils.logger import logger
@@ -13,13 +14,42 @@ import re
 import unicodedata
 
 
-def build_insufficient_language_review(message: str = "Không đủ dữ liệu CV để đánh giá chất lượng ngôn từ.") -> dict:
+def classify_gemini_unavailable_reason(error: Exception) -> str:
+    """Trả mã an toàn cho UI; không suy đoán hết quota từ lỗi timeout/503."""
+    if not GEMINI_ENABLED and not LLM_ROUTER_ENABLED:
+        return "disabled_for_local_bulk"
+    messages = []
+    current: BaseException | None = error
+    visited: set[int] = set()
+    while current is not None and id(current) not in visited:
+        visited.add(id(current))
+        messages.append(str(current).casefold())
+        current = current.__cause__ or current.__context__
+    combined = " ".join(messages)
+    if any(marker in combined for marker in ("429", "resource_exhausted", "quota", "rate limit")):
+        return "quota_or_rate_limit"
+    if any(marker in combined for marker in (
+        "timeout", "timed out", "deadline", "503", "unavailable", "quá tải", "qua tai"
+    )):
+        return "overloaded_or_timeout"
+    if "khong cau hinh api" in combined or "no valid gemini_api_key" in combined:
+        return "not_configured"
+    if "9router" in combined:
+        return "router_unavailable"
+    return "service_unavailable"
+
+
+def build_insufficient_language_review(
+    message: str = "Không đủ dữ liệu CV để đánh giá chất lượng ngôn từ.",
+    reason: str = "content_insufficient",
+) -> dict:
     return {
         "overall_language_score": None,
         "language_comment": message,
         "good_action_verbs": [],
         "weak_phrases": [],
         "uncertain_statements": [],
+        "unverified_language_observations": [],
         "ai_generation_risk": {
             "detected": False,
             "section": "",
@@ -27,7 +57,8 @@ def build_insufficient_language_review(message: str = "Không đủ dữ liệu 
             "comment": "Không đưa ra kết luận khi dữ liệu CV chưa đầy đủ."
         },
         "insufficient_data": True,
-        "is_fallback": True
+        "is_fallback": True,
+        "insufficient_reason": reason,
     }
 
 def build_local_language_review(cv_text: str) -> dict:
@@ -65,6 +96,7 @@ def build_local_language_review(cv_text: str) -> dict:
         "good_action_verbs": found_verbs[:8],
         "weak_phrases": weak_phrases[:5],
         "uncertain_statements": [],
+        "unverified_language_observations": [],
         "ai_generation_risk": {
             "detected": False,
             "section": "",
@@ -155,8 +187,168 @@ def resolve_grounded_evidence(evidence_text: str, cv_text: str) -> tuple[str, st
     return "", "missing", best_similarity
 
 
-def sanitize_red_flags(red_flags: list, cv_text: str, extraction_quality: dict | None = None, today: date | None = None) -> list:
-    """Loại cảnh báo AI thiếu bằng chứng; lỗi OCR/extraction không bao giờ là red flag ứng viên."""
+_EXPLICIT_MONTH_PERIOD_PATTERN = re.compile(
+    r"\b(?P<start_month>0?[1-9]|1[0-2])[./-](?P<start_year>(?:19|20)\d{2})"
+    r"\s*(?:–|—|-|đến|tới|to|until)\s*"
+    r"(?P<end_month>0?[1-9]|1[0-2])[./-](?P<end_year>(?:19|20)\d{2})\b",
+    re.IGNORECASE,
+)
+
+_ALLOWED_AI_RED_FLAG_TYPES = {
+    "KEYWORD_STUFFING",
+    "INTERNAL_CONTRADICTION",
+    "CREDENTIAL_INCONSISTENCY",
+    "CONTACT_INCONSISTENCY",
+    "CHRONOLOGY_INCONSISTENCY",
+}
+
+_RED_FLAG_TYPES_RECLASSIFIED_AS_IMPROVEMENTS = {
+    "GENERIC_CV",
+    "MISSING_METRICS",
+    "MISSING_SKILL",
+    "MISSING_SKILLS",
+    "SKILL_GAP",
+    "CAREER_GAP",
+    "CHRONOLOGY_GAP",
+    "OTHER",
+}
+
+
+def _is_allowed_ai_red_flag(item: dict) -> bool:
+    """Không để điểm yếu CV thông thường bị nâng thành red flag tuyển dụng."""
+    normalized_type = str(item.get("type", "") or "").strip().upper()
+    return normalized_type in _ALLOWED_AI_RED_FLAG_TYPES
+
+
+def collect_reclassified_improvements(
+    red_flags: list | None,
+    declared_suspicions: list | None = None,
+) -> list[str]:
+    """Giữ nhận xét hữu ích nhưng không gắn nhãn red flag sai cho ứng viên."""
+    improvements: list[str] = []
+    seen: set[str] = set()
+    for item in [*(red_flags or []), *(declared_suspicions or [])]:
+        if not isinstance(item, dict):
+            continue
+        normalized_type = str(item.get("type", "") or "").strip().upper()
+        if normalized_type not in _RED_FLAG_TYPES_RECLASSIFIED_AS_IMPROVEMENTS:
+            continue
+        title = str(item.get("title", "") or item.get("flag", "") or "").strip()
+        description = str(item.get("description", "") or "").strip()
+        content = title
+        if description and normalize_match_key(description) != normalize_match_key(title):
+            content = f"{title}: {description}" if title else description
+        content = content.strip()
+        content_key = normalize_match_key(content)
+        if not content_key or content_key in seen:
+            continue
+        seen.add(content_key)
+        improvements.append(content)
+    return improvements[:5]
+
+
+def merge_analysis_improvements(existing: list | None, additions: list | None) -> list[str]:
+    """Gộp điểm cần cải thiện, không lặp và không tạo nhận xét giả khi không có dữ liệu."""
+    merged: list[str] = []
+    seen: set[str] = set()
+    for item in [*(existing or []), *(additions or [])]:
+        content = str(item or "").strip()
+        content_key = normalize_match_key(content)
+        if not content_key or content_key in seen:
+            continue
+        seen.add(content_key)
+        merged.append(content)
+    return merged[:8]
+
+
+def _build_deterministic_timeline_red_flags(
+    cv_text: str,
+    extraction_quality: dict | None,
+    today: date,
+) -> list[dict]:
+    """Chỉ bắt bất thường ngày tháng có thể đối chiếu trực tiếp, không suy đoán gian dối."""
+    quality = extraction_quality or {}
+    quality_level = str(quality.get("quality_level", "") or "").casefold()
+    if quality.get("analysis_safe") is False or quality_level in {"low", "insufficient"}:
+        return []
+
+    segmented = segment_cv_sections(cv_text or "")
+    experience_sections = [
+        str(section.get("content") or "")
+        for section in segmented.get("sections", [])
+        if section.get("type") == "experience"
+    ]
+    if not experience_sections:
+        normalized_document = normalize_match_key(cv_text or "")
+        if "kinh nghiem" in normalized_document or "experience" in normalized_document:
+            # Một số CV đặt tiêu đề và mốc thời gian trên cùng một dòng nên bộ tách mục
+            # không tạo section riêng. Chỉ quét toàn văn khi tài liệu có nhãn kinh nghiệm.
+            experience_sections = [cv_text or ""]
+        else:
+            return []
+
+    results: list[dict] = []
+    current_point = (today.year, today.month)
+    seen_evidence: set[str] = set()
+    for section_text in experience_sections:
+        for match in _EXPLICIT_MONTH_PERIOD_PATTERN.finditer(section_text):
+            evidence = match.group(0).strip()
+            evidence_key = evidence.casefold()
+            if evidence_key in seen_evidence:
+                continue
+            start_point = (int(match.group("start_year")), int(match.group("start_month")))
+            end_point = (int(match.group("end_year")), int(match.group("end_month")))
+
+            title = ""
+            description = ""
+            rule_id = ""
+            if start_point > end_point:
+                title = "Thứ tự mốc thời gian cần làm rõ"
+                description = (
+                    f"Giai đoạn “{evidence}” có mốc bắt đầu sau mốc kết thúc. "
+                    "Cần xác nhận đây là lỗi nhập ngày hay thứ tự thời gian trong CV."
+                )
+                rule_id = "timeline_reversed"
+            elif end_point > current_point:
+                title = "Mốc kết thúc sau ngày phân tích"
+                description = (
+                    f"Giai đoạn “{evidence}” kết thúc sau ngày phân tích "
+                    f"{today.strftime('%d/%m/%Y')}. Cần xác nhận đây là mốc dự kiến, "
+                    "công việc đang tiếp diễn hay ngày được nhập nhầm."
+                )
+                rule_id = "timeline_future_end"
+
+            if not rule_id:
+                continue
+            seen_evidence.add(evidence_key)
+            results.append({
+                "type": "CHRONOLOGY",
+                "title": title,
+                "description": description,
+                "evidence_text": evidence,
+                "evidence_section": "EXPERIENCE",
+                "confidence": 1.0,
+                "needs_verification": True,
+                "evidence_notice": "Đoạn trích từ CV là thông tin ứng viên tự khai, chưa xác minh với nguồn bên ngoài.",
+                "detection_source": "deterministic_rule",
+                "rule_id": rule_id,
+            })
+    return results
+
+
+def partition_red_flags(
+    red_flags: list,
+    cv_text: str,
+    extraction_quality: dict | None = None,
+    today: date | None = None,
+    declared_suspicions: list | None = None,
+) -> tuple[list, list]:
+    """Tách cảnh báo có đoạn nguồn khỏi dấu hiệu AI chưa đối chiếu.
+
+    Dấu hiệu chưa đối chiếu vẫn được trả về để HR/ứng viên biết nội dung cần xem lại,
+    nhưng không giữ đoạn trích do mô hình tự tạo và không được dùng làm bằng chứng/điểm.
+    Lỗi OCR/extraction và nhận định ngày tương lai trái quy tắc vẫn bị loại hoàn toàn.
+    """
     current = today or date.today()
     text = cv_text or ""
     has_future_date = False
@@ -173,10 +365,21 @@ def sanitize_red_flags(red_flags: list, cv_text: str, extraction_quality: dict |
         "sai dấu", "quá trình quét", "định dạng tệp", "extraction", "font error", "ocr error",
     )
 
-    sanitized = []
-    rejected_without_evidence = 0
+    sanitized = _build_deterministic_timeline_red_flags(text, extraction_quality, current)
+    suspicions: list[dict] = []
+    seen_evidence = {
+        str(item.get("evidence_text", "")).casefold()
+        for item in sanitized
+        if str(item.get("evidence_text", "")).strip()
+    }
+    unverified_without_evidence = 0
     recovered_near_verbatim = 0
-    for item in red_flags or []:
+    raw_items = [
+        *((item, False) for item in (red_flags or [])),
+        *((item, True) for item in (declared_suspicions or [])),
+    ]
+    seen_suspicions: set[str] = set()
+    for item, declared_as_suspicion in raw_items:
         if not isinstance(item, dict):
             continue
         combined = f"{item.get('title', '')} {item.get('description', '')}".casefold()
@@ -185,10 +388,44 @@ def sanitize_red_flags(red_flags: list, cv_text: str, extraction_quality: dict |
         if unsupported_future or is_extraction_issue:
             logger.warning("RED_FLAG_POLICY_REJECTED: Bỏ qua cảnh báo không phù hợp quy tắc ngày/OCR.")
             continue
+        if not _is_allowed_ai_red_flag(item):
+            logger.info(
+                "RED_FLAG_POLICY_RECLASSIFIED: Bỏ khỏi red flag vì đây là điểm yếu/cải thiện "
+                "hoặc loại cảnh báo không được phép: %s.",
+                str(item.get("type", "") or "missing"),
+            )
+            continue
         evidence_text = str(item.get("evidence_text", "") or "").strip()
         grounded_evidence, match_method, _ = resolve_grounded_evidence(evidence_text, text)
         if not grounded_evidence:
-            rejected_without_evidence += 1
+            title = str(item.get("title", "") or item.get("flag", "") or "").strip()
+            description = str(item.get("description", "") or "").strip()
+            if not title and not description:
+                continue
+            suspicion_key = f"{title} {description}".casefold()
+            if suspicion_key in seen_suspicions:
+                continue
+            seen_suspicions.add(suspicion_key)
+            unverified_without_evidence += 1
+            try:
+                suspicion_confidence = max(0.0, min(0.4, float(item.get("confidence", 0) or 0)))
+            except (TypeError, ValueError):
+                suspicion_confidence = 0.0
+            suspicions.append({
+                "type": str(item.get("type", "OTHER") or "OTHER"),
+                "title": title or "Nội dung AI đề xuất kiểm tra",
+                "description": description or "AI đề xuất HR và ứng viên xem lại nội dung này.",
+                "evidence_text": "",
+                "evidence_section": str(item.get("evidence_section", "") or ""),
+                "confidence": round(suspicion_confidence, 2),
+                "needs_verification": True,
+                "evidence_status": "unverified",
+                "detection_source": "ai_suspicion",
+                "verification_note": (
+                    "AI đề xuất kiểm tra nhưng hệ thống chưa truy hồi được đoạn trích gần-nguyên-văn "
+                    "từ CV. Mục này không được dùng để chấm điểm hoặc kết luận ứng viên gian dối."
+                ),
+            })
             continue
         if match_method == "near_verbatim":
             recovered_near_verbatim += 1
@@ -196,32 +433,58 @@ def sanitize_red_flags(red_flags: list, cv_text: str, extraction_quality: dict |
             confidence = max(0.0, min(1.0, float(item.get("confidence", 0))))
         except (TypeError, ValueError):
             confidence = 0.0
-        sanitized.append({
+        normalized_item = {
             **item,
             "evidence_text": grounded_evidence,
             "confidence": round(confidence, 2),
             "needs_verification": True,
             "evidence_notice": "Đoạn trích từ CV là thông tin ứng viên tự khai, chưa xác minh với nguồn bên ngoài.",
-        })
-    if rejected_without_evidence:
+        }
+        evidence_key = str(normalized_item.get("evidence_text", "")).casefold()
+        if evidence_key not in seen_evidence:
+            sanitized.append(normalized_item)
+            seen_evidence.add(evidence_key)
+    if unverified_without_evidence:
         logger.warning(
-            "RED_FLAG_EVIDENCE_REJECTED: Bỏ qua %s cảnh báo vì đoạn AI trả về "
-            "không khớp gần-nguyên-văn với CV đã trích xuất; đây là cơ chế chống bịa bằng chứng.",
-            rejected_without_evidence,
+            "RED_FLAG_EVIDENCE_UNVERIFIED: Chuyển %s cảnh báo sang nhóm dấu hiệu chưa đối chiếu "
+            "vì không truy hồi được đoạn gần-nguyên-văn từ CV.",
+            unverified_without_evidence,
         )
     if recovered_near_verbatim:
         logger.info(
             "RED_FLAG_EVIDENCE_RECOVERED: Truy hồi lại %s đoạn gốc có sai khác ký tự nhỏ.",
             recovered_near_verbatim,
         )
-    return sanitized[:4]
+    return sanitized[:4], suspicions[:4]
+
+
+def sanitize_red_flags(red_flags: list, cv_text: str, extraction_quality: dict | None = None, today: date | None = None) -> list:
+    """Giữ API cũ: chỉ trả cảnh báo đã truy hồi được bằng chứng từ CV."""
+    verified, _ = partition_red_flags(red_flags, cv_text, extraction_quality, today)
+    return verified
 
 
 def normalize_language_review(result: dict, cv_text: str) -> dict:
     """Chỉ giữ nhận xét ngôn từ có đoạn trích; không cho mô hình suy đoán tác giả hay tính thật giả."""
     if not isinstance(result, dict):
-        return build_insufficient_language_review()
+        fallback = build_local_language_review(cv_text)
+        fallback["fallback_reason"] = "invalid_ai_response"
+        return fallback
+
+    has_model_content = bool(
+        isinstance(result.get("overall_language_score"), (int, float))
+        or str(result.get("language_comment", "") or "").strip()
+        or (result.get("good_action_verbs") or [])
+        or (result.get("weak_phrases") or [])
+        or (result.get("uncertain_statements") or [])
+        or (result.get("unverified_language_observations") or [])
+    )
+    if not has_model_content:
+        fallback = build_local_language_review(cv_text)
+        fallback["fallback_reason"] = "empty_ai_response"
+        return fallback
     weak_phrases = []
+    unverified_observations = []
     for item in result.get("weak_phrases", []) or []:
         if not isinstance(item, dict):
             continue
@@ -229,6 +492,15 @@ def normalize_language_review(result: dict, cv_text: str) -> dict:
         grounded_original, _, _ = resolve_grounded_evidence(original, cv_text)
         if grounded_original:
             weak_phrases.append({**item, "original": grounded_original})
+        elif item.get("suggestion") or item.get("reason"):
+            unverified_observations.append({
+                "type": "weak_phrase",
+                "title": "Cách diễn đạt AI đề xuất xem lại",
+                "description": str(item.get("reason", "") or "").strip(),
+                "suggestion": str(item.get("suggestion", "") or "").strip(),
+                "evidence_status": "unverified",
+                "needs_verification": True,
+            })
     uncertain = []
     for item in result.get("uncertain_statements", []) or []:
         if not isinstance(item, dict):
@@ -241,8 +513,41 @@ def normalize_language_review(result: dict, cv_text: str) -> dict:
                 "evidence_text": grounded_evidence,
                 "needs_verification": True,
             })
+        elif item.get("title") or item.get("description"):
+            unverified_observations.append({
+                "type": "uncertain_statement",
+                "title": str(item.get("title", "") or "Nội dung AI đề xuất làm rõ").strip(),
+                "description": str(item.get("description", "") or "").strip(),
+                "suggestion": "",
+                "evidence_status": "unverified",
+                "needs_verification": True,
+            })
+    for item in result.get("unverified_language_observations", []) or []:
+        if not isinstance(item, dict):
+            continue
+        title = str(item.get("title", "") or "Nội dung AI đề xuất xem lại").strip()
+        description = str(item.get("description", "") or "").strip()
+        suggestion = str(item.get("suggestion", "") or "").strip()
+        if not title and not description and not suggestion:
+            continue
+        observation_key = f"{title} {description} {suggestion}".casefold()
+        existing_keys = {
+            f"{entry.get('title', '')} {entry.get('description', '')} {entry.get('suggestion', '')}".casefold()
+            for entry in unverified_observations
+        }
+        if observation_key in existing_keys:
+            continue
+        unverified_observations.append({
+            "type": str(item.get("type", "uncertain_statement") or "uncertain_statement"),
+            "title": title,
+            "description": description,
+            "suggestion": suggestion,
+            "evidence_status": "unverified",
+            "needs_verification": True,
+        })
     result["weak_phrases"] = weak_phrases[:5]
     result["uncertain_statements"] = uncertain[:5]
+    result["unverified_language_observations"] = unverified_observations[:5]
     result["ai_generation_risk"] = {
         "detected": False,
         "section": "",
@@ -494,10 +799,12 @@ def reconcile_timeline_criteria(scoring_result: dict, criteria_list: list, timel
             ]
 
         weight = int(item.get("weight", criterion.get("weight", 0)) or 0)
-        if required == 0:
-            level, score, confidence = "FULL", weight, 1.0
-        elif timeline.get("insufficient_data"):
+        if timeline.get("insufficient_data"):
             level, score, confidence = "INSUFFICIENT_DATA", 0, 0.0
+        elif required == 0 and actual > 0:
+            level, score, confidence = "FULL", weight, timeline_confidence
+        elif required == 0:
+            level, score, confidence = "NOT_FOUND", 0, timeline_confidence
         elif required > 0 and actual >= required:
             level, score, confidence = "FULL", weight, timeline_confidence
         elif actual > 0:
@@ -516,7 +823,12 @@ def reconcile_timeline_criteria(scoring_result: dict, criteria_list: list, timel
             "extracted_value": f"{actual} tháng",
             "needs_verification": confidence < 0.8 or level != "FULL",
             "comment": (
-                "Tiêu chí không yêu cầu số tháng kinh nghiệm tối thiểu."
+                (
+                    f"Tiêu chí không đặt ngưỡng tháng; CV có {actual} tháng "
+                    "được chuẩn hóa từ timeline."
+                    if actual > 0
+                    else "Tiêu chí không đặt ngưỡng tháng nhưng CV chưa có timeline đủ để ghi nhận."
+                )
                 if required == 0
                 else f"Đã chuẩn hóa {actual} tháng; yêu cầu tối thiểu {required} tháng. "
                      "Thời gian chồng lặp đã được loại khỏi tổng."
@@ -605,7 +917,13 @@ def reconcile_structured_criteria(
             )
             evidence = next(
                 ((section_type, line) for section_type, line in searchable_lines
-                 if folded_target and folded_target in _fold_for_match(line)),
+                 if folded_target and (
+                     folded_target in _fold_for_match(line)
+                     or (
+                         criterion_type == "SKILL"
+                         and _line_contains_canonical_skill(line, folded_target)
+                     )
+                 )),
                 None,
             )
             if evidence or skill_match:
@@ -660,6 +978,39 @@ def _fold_for_match(value: str) -> str:
     normalized = unicodedata.normalize("NFD", str(value or "").casefold())
     without_marks = "".join(char for char in normalized if unicodedata.category(char) != "Mn")
     return " ".join(re.sub(r"[^a-z0-9+#.]+", " ", without_marks).split())
+
+
+def _line_contains_canonical_skill(line: str, folded_target: str) -> bool:
+    """Đối chiếu alias ngay trên dòng bằng chứng, không dùng việc skill xuất hiện ở nơi khác."""
+    try:
+        import nlp_processor
+
+        if any(
+            folded_target == _fold_for_match(skill)
+            for skill in nlp_processor.extract_skills(line)
+        ):
+            return True
+    except Exception:
+        pass
+
+    # Dấu chấm trong tên công nghệ thường bị OCR/Word biến thành khoảng trắng
+    # (ASP.NET -> ASP NET, Node.js -> Node JS). Đây chỉ là chuẩn hóa ký hiệu,
+    # không phải danh sách alias nghiệp vụ ẩn. Không bỏ dấu `#`/`+` vì sẽ làm
+    # C#, C++ bị đồng nhất sai với C.
+    target_key = normalize_match_key(folded_target)
+    line_key = normalize_match_key(line)
+    if target_key and f" {target_key} " in f" {line_key} ":
+        return True
+    target_tokens = target_key.split()
+    if "dot" not in target_tokens:
+        return False
+    punctuation_tolerant_target = [token for token in target_tokens if token != "dot"]
+    if len(punctuation_tolerant_target) < 2:
+        return False
+    punctuation_tolerant_line = [token for token in line_key.split() if token != "dot"]
+    target_phrase = " ".join(punctuation_tolerant_target)
+    line_phrase = " ".join(punctuation_tolerant_line)
+    return f" {target_phrase} " in f" {line_phrase} "
 
 
 def _api_section_name(section_type: str) -> str:
@@ -809,6 +1160,7 @@ def analyze_cv_deep(cv_text: str, jd_text: str, cv_skills: list, jd_skills: list
         score_analysis.setdefault("strengths", [])
         score_analysis.setdefault("weaknesses", [])
         score_analysis.setdefault("red_flags", [])
+        score_analysis.setdefault("red_flag_suspicions", [])
         score_analysis.setdefault("matched_skills", cv_skills)
         score_analysis.setdefault("missing_skills", jd_skills)
 
@@ -817,13 +1169,15 @@ def analyze_cv_deep(cv_text: str, jd_text: str, cv_skills: list, jd_skills: list
             "score_analysis": score_analysis,
             "optimization_tips": interview_service.get_fallback_star_tips(cv_skills, jd_skills),
             "language_review": build_insufficient_language_review(
-                "Phân tích ngôn từ chuyên sâu chưa hoàn tất. Không sử dụng điểm hoặc nhận xét mẫu."
+                "Phân tích ngôn từ chuyên sâu chưa hoàn tất. Không sử dụng điểm hoặc nhận xét mẫu.",
+                reason="pending_analysis",
             ),
             "mock_interview": interview_service.get_fallback_mock_interview(cv_skills, jd_skills)
         }
 
     except Exception as ex:
         logger.error(f"Loi analyze_cv_deep, kich hoat che do du phong Local AI Rule Engine: {ex}")
+        unavailable_reason = classify_gemini_unavailable_reason(ex)
         return {
             "status": "degraded",
             "message": "Dịch vụ AI tạm thời không khả dụng. Kết quả không được chấm bằng dữ liệu dự phòng.",
@@ -834,15 +1188,18 @@ def analyze_cv_deep(cv_text: str, jd_text: str, cv_skills: list, jd_skills: list
                 "strengths": [],
                 "weaknesses": [],
                 "red_flags": [],
+                "red_flag_suspicions": [],
                 "matched_skills": [],
                 "missing_skills": [],
                 "whitebox_score": 0,
                 "blackbox_score": 0,
-                "analysis_status": "ai_unavailable"
+                "analysis_status": "ai_unavailable",
+                "ai_unavailable_reason": unavailable_reason
             },
             "optimization_tips": [],
             "language_review": build_insufficient_language_review(
-                "Dịch vụ AI tạm thời không khả dụng nên chưa thể đánh giá ngôn từ."
+                "Dịch vụ AI tạm thời không khả dụng nên chưa thể đánh giá ngôn từ.",
+                reason="ai_unavailable",
             ),
             "mock_interview": []
         }

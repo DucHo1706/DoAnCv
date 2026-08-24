@@ -53,9 +53,9 @@ export function useRecruiterDashboard(filters: RecruiterDashboardFilters = {}) {
   }, [filters.categoryId, filters.positionId, filters.jobLevelId, filters.branchId, filters.jobId, selectedTimeRange]);
 
   const getFitScoreColor = (score: number) => {
-    if (score < 50) return "#ff4d4f";
-    if (score >= 50 && score <= 70) return "#faad14";
-    return "#52c41a";
+    if (score < 50) return "#EF4444";
+    if (score >= 50 && score <= 70) return "#F59E0B";
+    return "#10B981";
   };
 
   const getAverageFitScoreColor = (score: number) => {
@@ -113,8 +113,8 @@ export function useRecruiterDashboard(filters: RecruiterDashboardFilters = {}) {
   };
 
   const getFitScoreColumnColor = (range: string) => {
-    if (range === "Trên 85") return "#52c41a";
-    if (range === "70-85") return "#1677ff";
+    if (range === "Trên 85") return "#10B981";
+    if (range === "70-85") return "#2563EB";
     if (range === "50-70") return "#91caff";
     return "#d9d9d9";
   };

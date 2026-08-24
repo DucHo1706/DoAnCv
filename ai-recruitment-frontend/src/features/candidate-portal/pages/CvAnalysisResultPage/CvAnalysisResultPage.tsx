@@ -9,6 +9,7 @@ import type { BuilderSettings, CvBuilderValues } from "../CvBuilderPage/CvBuilde
 import AiDetailedTabs from "../../../../components/ai-report/AiDetailedTabs";
 import PdfExportUtils from "./components/PdfExportUtils";
 import AiCoreIcon from "../../../../components/common/AiCoreIcon";
+import PageContainer from "../../../../components/common/PageContainer";
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -635,7 +636,7 @@ export default function CvAnalysisResultPage() {
           color="default"
           style={{
             fontWeight: 700,
-            borderRadius: 6,
+            borderRadius: 8,
             fontSize: 14,
             padding: "4px 14px",
             background: "#f1f5f9",
@@ -654,7 +655,7 @@ export default function CvAnalysisResultPage() {
             color="default"
             style={{
               fontWeight: 700,
-              borderRadius: 6,
+              borderRadius: 8,
               fontSize: 14,
               padding: "4px 14px",
               background: "#f8fafc",
@@ -667,7 +668,7 @@ export default function CvAnalysisResultPage() {
         );
       case "AI tạm thời không khả dụng":
         return (
-          <Tag color="warning" style={{ fontWeight: 700, borderRadius: 6, fontSize: 14, padding: "4px 14px" }}>
+          <Tag color="warning" style={{ fontWeight: 700, borderRadius: 8, fontSize: 14, padding: "4px 14px" }}>
             AI tạm thời không khả dụng
           </Tag>
         );
@@ -677,7 +678,7 @@ export default function CvAnalysisResultPage() {
             color="success"
             style={{
               fontWeight: 700,
-              borderRadius: 6,
+              borderRadius: 8,
               fontSize: 14,
               padding: "4px 14px",
               background: "#f0fdf4",
@@ -694,7 +695,7 @@ export default function CvAnalysisResultPage() {
             color="warning"
             style={{
               fontWeight: 700,
-              borderRadius: 6,
+              borderRadius: 8,
               fontSize: 14,
               padding: "4px 14px",
               background: "#fffbeb",
@@ -711,7 +712,7 @@ export default function CvAnalysisResultPage() {
             color="error"
             style={{
               fontWeight: 700,
-              borderRadius: 6,
+              borderRadius: 8,
               fontSize: 14,
               padding: "4px 14px",
               background: "#fef2f2",
@@ -755,7 +756,7 @@ export default function CvAnalysisResultPage() {
         .light-glass-tabs .ant-tabs-ink-bar {
           background: #2563EB !important;
           height: 3px !important;
-          border-radius: 2px !important;
+          border-radius: 8px !important;
         }
         @keyframes spin {
           0% { transform: rotate(0deg); }
@@ -774,22 +775,26 @@ export default function CvAnalysisResultPage() {
       `}</style>
 
       <div style={{ maxWidth: 1300, margin: "0 auto", padding: "0 24px" }}>
-        <div style={{ marginBottom: 24 }}>
-          <Button
-            icon={<ArrowLeftOutlined />}
-            onClick={() => navigate(`/jobs/${id}`)}
-            style={{
-              background: "#FFFFFF",
-              border: "1px solid #E2E8F0",
-              color: "#0F172A",
-              borderRadius: 8,
-              fontWeight: 600,
-              height: 38,
-            }}
-          >
-            Quay lại Tin tuyển dụng
-          </Button>
-        </div>
+        <PageContainer
+          title="Kết quả phân tích CV"
+          subtitle={meta?.jobTitle || locationJobTitle || "Báo cáo đánh giá hồ sơ ứng tuyển bằng AI"}
+          extra={
+            <Button
+              icon={<ArrowLeftOutlined />}
+              onClick={() => navigate(`/jobs/${id}`)}
+              style={{
+                background: "#FFFFFF",
+                border: "1px solid #E2E8F0",
+                color: "#0F172A",
+                borderRadius: 8,
+                fontWeight: 600,
+                height: 38,
+              }}
+            >
+              Quay lại Tin tuyển dụng
+            </Button>
+          }
+        >
 
         <Row gutter={[24, 24]}>
           {/* CỘT TRÁI - Rộng 8/24 */}
@@ -907,10 +912,10 @@ export default function CvAnalysisResultPage() {
 
                 {isInitialLoading ? (
                   <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 24 }}>
-                    <div style={{ width: "100%", height: 12, background: "#f1f5f9", borderRadius: 4, animation: "pulse 1.5s infinite" }} />
-                    <div style={{ width: "90%", height: 12, background: "#f1f5f9", borderRadius: 4, animation: "pulse 1.5s infinite" }} />
-                    <div style={{ width: "95%", height: 12, background: "#f1f5f9", borderRadius: 4, animation: "pulse 1.5s infinite" }} />
-                    <div style={{ width: "60%", height: 12, background: "#f1f5f9", borderRadius: 4, animation: "pulse 1.5s infinite" }} />
+                    <div style={{ width: "100%", height: 12, background: "#f1f5f9", borderRadius: 8, animation: "pulse 1.5s infinite" }} />
+                    <div style={{ width: "90%", height: 12, background: "#f1f5f9", borderRadius: 8, animation: "pulse 1.5s infinite" }} />
+                    <div style={{ width: "95%", height: 12, background: "#f1f5f9", borderRadius: 8, animation: "pulse 1.5s infinite" }} />
+                    <div style={{ width: "60%", height: 12, background: "#f1f5f9", borderRadius: 8, animation: "pulse 1.5s infinite" }} />
                   </div>
                 ) : (
                   <Paragraph
@@ -1033,6 +1038,7 @@ export default function CvAnalysisResultPage() {
           />
         </div>
         )}
+        </PageContainer>
       </div>
 
     </div>

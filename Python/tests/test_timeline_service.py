@@ -26,6 +26,37 @@ Vận hành Docker cho hệ thống thử nghiệm.
         self.assertFalse(result["overlap_detected"])
         self.assertEqual(result["source_scope"], "experience_sections")
 
+    def test_one_job_and_one_hundred_overlapping_jobs_are_both_twelve_months(self):
+        single_job = """KINH NGHIỆM LÀM VIỆC
+Backend Developer - Công ty A
+01/2025 - 12/2025
+Phát triển REST API bằng ASP.NET Core và SQL Server.
+"""
+        many_jobs = "KINH NGHIỆM LÀM VIỆC\n" + "\n".join(
+            f"Backend Developer {index:03d} - Đơn vị {index:03d}\n"
+            "01/2025 - 12/2025\n"
+            "Phát triển REST API bằng ASP.NET Core và SQL Server."
+            for index in range(1, 101)
+        )
+
+        single_result = extract_experience_timeline(
+            single_job,
+            ["ASP.NET Core", "SQL Server"],
+            date(2026, 8, 20),
+        )
+        many_result = extract_experience_timeline(
+            many_jobs,
+            ["ASP.NET Core", "SQL Server"],
+            date(2026, 8, 20),
+        )
+
+        self.assertEqual(single_result["total_experience_months"], 12)
+        self.assertEqual(many_result["total_experience_months"], 12)
+        self.assertEqual(single_result["skill_experience_months"]["ASP.NET Core"], 12)
+        self.assertEqual(many_result["skill_experience_months"]["ASP.NET Core"], 12)
+        self.assertFalse(single_result["overlap_detected"])
+        self.assertTrue(many_result["overlap_detected"])
+
     def test_does_not_count_project_or_education_period_as_work_experience(self):
         text = """KINH NGHIỆM LÀM VIỆC
 Backend Developer
@@ -80,6 +111,31 @@ Triển khai Linux.
         self.assertEqual(experience["end_date"], "2026-08")
         self.assertTrue(experience["needs_verification"])
 
+    def test_future_end_is_flagged_but_not_counted_after_analysis_month(self):
+        result = extract_experience_timeline(
+            "KINH NGHIỆM\n01/2024 - 10/2026 | Backend Developer\nPhát triển REST API.",
+            ["REST API"],
+            date(2026, 8, 24),
+        )
+
+        self.assertEqual(result["total_experience_months"], 32)
+        self.assertTrue(result["future_date_detected"])
+        self.assertEqual(result["experiences"][0]["end_date"], "2026-08")
+        self.assertEqual(result["experiences"][0]["declared_end_date"], "2026-10")
+        self.assertTrue(result["experiences"][0]["needs_verification"])
+
+    def test_period_entirely_in_future_is_not_counted_as_experience(self):
+        result = extract_experience_timeline(
+            "KINH NGHIỆM\n10/2026 - 12/2026 | Backend Developer\nPhát triển REST API.",
+            ["REST API"],
+            date(2026, 8, 24),
+        )
+
+        self.assertEqual(result["total_experience_months"], 0)
+        self.assertEqual(result["experiences"], [])
+        self.assertEqual(len(result["future_periods"]), 1)
+        self.assertTrue(result["future_date_detected"])
+
     def test_returns_insufficient_instead_of_inventing_timeline(self):
         result = extract_experience_timeline("Kỹ năng: Docker, Linux", ["Docker", "Linux"])
         self.assertTrue(result["insufficient_data"])
@@ -111,7 +167,7 @@ Triển khai Linux.
         self.assertEqual(result["criteria_results"][0]["match_level"], "PARTIAL")
         self.assertLessEqual(result["total_score"], 70)
 
-    def test_zero_month_requirement_is_satisfied_without_inventing_experience(self):
+    def test_zero_month_requirement_does_not_invent_experience(self):
         scoring = {
             "criteria_results": [{
                 "criterion_name": "Kinh nghiệm Fresher",
@@ -134,9 +190,36 @@ Triển khai Linux.
         }
         result = reconcile_timeline_criteria(scoring, criteria, timeline)
         item = result["criteria_results"][0]
+        self.assertEqual(item["match_level"], "INSUFFICIENT_DATA")
+        self.assertEqual(item["score"], 0)
+        self.assertEqual(item["extracted_value"], "0 tháng")
+
+    def test_zero_month_requirement_accepts_an_observed_timeline(self):
+        scoring = {
+            "criteria_results": [{
+                "criterion_name": "Kinh nghiệm Fresher",
+                "weight": 100,
+                "score": 0,
+            }]
+        }
+        criteria = [{
+            "name": "Kinh nghiệm Fresher",
+            "weight": 100,
+            "criterionType": "TOTAL_EXPERIENCE",
+            "minDurationMonths": 0,
+        }]
+        timeline = {
+            "insufficient_data": False,
+            "total_experience_months": 3,
+            "skill_experience_months": {},
+            "experiences": [{"evidence_text": "04/2026 - 06/2026 | Thực tập"}],
+            "confidence": 0.9,
+        }
+        result = reconcile_timeline_criteria(scoring, criteria, timeline)
+        item = result["criteria_results"][0]
         self.assertEqual(item["match_level"], "FULL")
         self.assertEqual(item["score"], 100)
-        self.assertEqual(item["extracted_value"], "0 tháng")
+        self.assertEqual(item["extracted_value"], "3 tháng")
 
 
 if __name__ == "__main__":

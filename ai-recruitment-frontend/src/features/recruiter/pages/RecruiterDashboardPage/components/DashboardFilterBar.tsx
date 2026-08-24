@@ -138,7 +138,7 @@ export default function DashboardFilterBar({
                         fontSize: 11,
                         fontWeight: 700,
                         padding: "1px 8px",
-                        borderRadius: 10,
+                        borderRadius: 12,
                         marginLeft: 8,
                       }}
                     >

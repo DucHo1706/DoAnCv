@@ -20,7 +20,15 @@ export function NotificationPopover({
   onNotificationClick,
 }: NotificationPopoverProps) {
   const notifContent = (
-    <div style={{ width: 340, maxHeight: 420, display: "flex", flexDirection: "column" }}>
+    <div
+      style={{
+        width: 400,
+        maxWidth: "calc(100vw - 32px)",
+        maxHeight: 480,
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
       <div
         style={{
           display: "flex",
@@ -47,7 +55,11 @@ export function NotificationPopover({
       </div>
 
       <div style={{ flex: 1, overflowY: "auto", padding: "4px 0" }}>
-        {notifications.length === 0 ? (
+        {loadingNotifs && notifications.length === 0 ? (
+          <div style={{ padding: "32px 16px", textAlign: "center", color: "#64748B" }}>
+            Đang tải thông báo...
+          </div>
+        ) : notifications.length === 0 ? (
           <div style={{ padding: "32px 16px", textAlign: "center", color: "#94A3B8" }}>
             Chưa có thông báo nào
           </div>
@@ -69,10 +81,15 @@ export function NotificationPopover({
               >
                 <List.Item.Meta
                   title={
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
                       <Text
                         strong={!item.isRead}
-                        style={{ fontSize: 13, color: item.isRead ? "#334155" : "#0F172A" }}
+                        style={{
+                          minWidth: 0,
+                          fontSize: 13,
+                          lineHeight: 1.45,
+                          color: item.isRead ? "#334155" : "#0F172A",
+                        }}
                       >
                         {item.title}
                       </Text>
@@ -84,19 +101,46 @@ export function NotificationPopover({
                             borderRadius: "50%",
                             background: "#2563EB",
                             display: "inline-block",
+                            flexShrink: 0,
+                            marginTop: 6,
                           }}
                         />
                       )}
                     </div>
                   }
                   description={
-                    <div>
-                      <Text type="secondary" style={{ fontSize: 12, display: "block" }}>
-                        {item.message}
+                    <div style={{ marginTop: 4 }}>
+                      <Text
+                        type="secondary"
+                        style={{
+                          fontSize: 12,
+                          lineHeight: 1.55,
+                          display: "block",
+                          color: "#475569",
+                          whiteSpace: "normal",
+                          wordBreak: "break-word",
+                        }}
+                      >
+                        {item.content || item.message || "Mở thông báo để xem nội dung chi tiết."}
                       </Text>
-                      <Text type="secondary" style={{ fontSize: 10, color: "#94A3B8", marginTop: 4, display: "block" }}>
-                        {item.createdAt ? new Date(item.createdAt).toLocaleString("vi-VN") : ""}
-                      </Text>
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          gap: 12,
+                          marginTop: 6,
+                        }}
+                      >
+                        <Text type="secondary" style={{ fontSize: 10, color: "#94A3B8" }}>
+                          {item.createdAt ? new Date(item.createdAt).toLocaleString("vi-VN") : ""}
+                        </Text>
+                        {item.redirectUrl && (
+                          <Text style={{ fontSize: 11, color: "#2563EB", whiteSpace: "nowrap" }}>
+                            Mở chi tiết
+                          </Text>
+                        )}
+                      </div>
                     </div>
                   }
                 />
@@ -119,7 +163,7 @@ export function NotificationPopover({
         <Button
           type="text"
           icon={<BellOutlined style={{ fontSize: 18, color: "#475569" }} />}
-          style={{ width: 40, height: 40, borderRadius: 10 }}
+          style={{ width: 40, height: 40, borderRadius: 12 }}
         />
       </Badge>
     </Popover>

@@ -213,7 +213,7 @@ function PublicLayout() {
 
   // Render notification Popover content
   const notifPopoverContent = (
-    <div style={{ width: 350, maxHeight: 450, display: "flex", flexDirection: "column" }} onClick={(e) => e.stopPropagation()}>
+    <div style={{ width: 350, maxWidth: "calc(100vw - 24px)", maxHeight: 450, display: "flex", flexDirection: "column" }} onClick={(e) => e.stopPropagation()}>
       <div
         style={{
           display: "flex",

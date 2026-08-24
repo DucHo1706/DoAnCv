@@ -4,6 +4,7 @@ import { Button, Card, Carousel, Tooltip, Typography } from "antd";
 const { Text } = Typography;
 import React from "react";
 import { appTheme } from "../../../../../constants/theme";
+import { useResponsive } from "../../../../../hooks/useResponsive";
 
 interface ExperienceItem {
   range: string;
@@ -48,10 +49,13 @@ export default function AutoSliderAnalytics({
   degreeData,
   universityData,
 }: AutoSliderAnalyticsProps) {
+  const { isMobile } = useResponsive();
+  const chartHeight = isMobile ? 320 : 260;
+
   const renderExperienceColumnChart = () => {
     if (experienceData.length === 0) {
       return (
-        <div style={{ height: 260, display: "flex", alignItems: "center", justifyContent: "center", color: "#8c8c8c" }}>
+        <div style={{ height: chartHeight, display: "flex", alignItems: "center", justifyContent: "center", color: "#8c8c8c" }}>
           Chưa có dữ liệu kinh nghiệm.
         </div>
       );
@@ -62,8 +66,8 @@ export default function AutoSliderAnalytics({
     return (
       <div
         style={{
-          height: 260,
-          padding: "18px 20px 6px 20px",
+          height: chartHeight,
+          padding: isMobile ? "18px 4px 6px" : "18px 20px 6px",
           display: "flex",
           alignItems: "flex-end",
           justifyContent: "space-around",
@@ -86,19 +90,19 @@ export default function AutoSliderAnalytics({
                   gap: 8,
                 }}
               >
-                <Text strong style={{ color: item.count > 0 ? "#1677ff" : "#bfbfbf" }}>
+                <Text strong style={{ color: item.count > 0 ? "#2563EB" : "#bfbfbf" }}>
                   {item.count}
                 </Text>
                 <div
                   style={{
-                    width: 46,
+                    width: isMobile ? 28 : 46,
                     height: `${heightPercent}%`,
-                    backgroundColor: item.count > 0 ? "#1677ff" : "#f0f0f0",
+                    backgroundColor: item.count > 0 ? "#2563EB" : "#f0f0f0",
                     borderRadius: "8px 8px 0 0",
                     transition: "all 0.25s ease",
                   }}
                 />
-                <Text style={{ fontSize: 12, color: "#8c8c8c", whiteSpace: "nowrap" }}>
+                <Text style={{ fontSize: isMobile ? 10 : 12, color: "#8c8c8c", whiteSpace: "nowrap" }}>
                   {item.range}
                 </Text>
               </div>
@@ -112,13 +116,13 @@ export default function AutoSliderAnalytics({
   const renderDegreePieChart = () => {
     if (degreeData.length === 0) {
       return (
-        <div style={{ height: 260, display: "flex", alignItems: "center", justifyContent: "center", color: "#8c8c8c" }}>
+        <div style={{ height: chartHeight, display: "flex", alignItems: "center", justifyContent: "center", color: "#8c8c8c" }}>
           Chưa có dữ liệu học vấn.
         </div>
       );
     }
 
-    const colors = ["#1677ff", "#52c41a", "#faad14", "#722ed1", "#13c2c2", "#ff4d4f"];
+    const colors = ["#2563EB", "#10B981", "#F59E0B", "#F97316", "#0EA5E9", "#EF4444"];
     const totalValue = degreeData.reduce((total, item) => total + item.value, 0);
 
     let currentPercent = 0;
@@ -135,18 +139,18 @@ export default function AutoSliderAnalytics({
     return (
       <div
         style={{
-          height: 260,
+          height: chartHeight,
           display: "grid",
-          gridTemplateColumns: "220px 1fr",
+          gridTemplateColumns: isMobile ? "1fr" : "220px 1fr",
           alignItems: "center",
-          gap: 28,
-          padding: "10px 24px",
+          gap: isMobile ? 10 : 28,
+          padding: isMobile ? "8px 4px" : "10px 24px",
         }}
       >
         <div
           style={{
-            width: 190,
-            height: 190,
+            width: isMobile ? 140 : 190,
+            height: isMobile ? 140 : 190,
             borderRadius: "50%",
             background: pieBackground,
             margin: "0 auto",
@@ -154,7 +158,7 @@ export default function AutoSliderAnalytics({
           }}
         />
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: isMobile ? 6 : 10, minWidth: 0 }}>
           {degreeData.map((item, index) => {
             const percent = totalValue > 0 ? Math.round((item.value / totalValue) * 100) : 0;
 
@@ -185,7 +189,7 @@ export default function AutoSliderAnalytics({
   const renderUniversityBarChart = () => {
     if (universityData.length === 0) {
       return (
-        <div style={{ height: 260, display: "flex", alignItems: "center", justifyContent: "center", color: "#8c8c8c" }}>
+        <div style={{ height: chartHeight, display: "flex", alignItems: "center", justifyContent: "center", color: "#8c8c8c" }}>
           Chưa có dữ liệu trường đại học.
         </div>
       );
@@ -196,7 +200,7 @@ export default function AutoSliderAnalytics({
     return (
       <div
         style={{
-          height: 260,
+          height: chartHeight,
           padding: "12px 8px",
           display: "flex",
           flexDirection: "column",
@@ -212,9 +216,9 @@ export default function AutoSliderAnalytics({
               key={item.type}
               style={{
                 display: "grid",
-                gridTemplateColumns: "190px 1fr 38px",
+                gridTemplateColumns: isMobile ? "minmax(80px, 110px) 1fr 30px" : "190px 1fr 38px",
                 alignItems: "center",
-                gap: 12,
+                gap: isMobile ? 6 : 12,
               }}
             >
               <Tooltip title={item.type}>
@@ -244,7 +248,7 @@ export default function AutoSliderAnalytics({
                     style={{
                       width: `${widthPercent}%`,
                       height: "100%",
-                      background: "linear-gradient(90deg, #ffd666, #faad14)",
+                      background: "linear-gradient(90deg, rgba(245, 158, 11, 0.55), #F59E0B)",
                       borderRadius: 999,
                       transition: "all 0.25s ease",
                     }}
@@ -252,7 +256,7 @@ export default function AutoSliderAnalytics({
                 </div>
               </Tooltip>
 
-              <Text strong style={{ color: "#fa8c16" }}>
+              <Text strong style={{ color: "#F97316" }}>
                 {item.value}
               </Text>
             </div>
@@ -275,11 +279,11 @@ export default function AutoSliderAnalytics({
       }
       style={{
         borderRadius: 16,
-        height: 400,
+        height: isMobile ? 460 : 400,
         boxShadow: appTheme.shadow.card,
         border: `1px solid ${appTheme.colors.border}`,
       }}
-      bodyStyle={{ padding: "12px 16px", height: 344 }}
+      bodyStyle={{ padding: isMobile ? "12px 10px" : "12px 16px", height: isMobile ? 404 : 344 }}
     >
       <Carousel
         ref={carouselRef}
@@ -304,7 +308,7 @@ export default function AutoSliderAnalytics({
                 height: 8,
                 borderRadius: 999,
                 border: "none",
-                backgroundColor: activeSlide === index ? "#1677ff" : "#d9d9d9",
+                backgroundColor: activeSlide === index ? "#2563EB" : "#d9d9d9",
                 cursor: "pointer",
                 transition: "all 0.2s ease",
                 padding: 0,

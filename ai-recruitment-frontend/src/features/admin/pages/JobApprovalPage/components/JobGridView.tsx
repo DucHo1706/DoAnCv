@@ -109,35 +109,35 @@ export function JobGridView({
                   </Title>
 
                   {resolveJobLifecycle(item.raw) === "Expired" ? (
-                    <Tag color="error" style={{ borderRadius: 6, fontWeight: 700 }}>
+                    <Tag color="error" style={{ borderRadius: 8, fontWeight: 700 }}>
                       Đã duyệt · Hết hạn
                     </Tag>
                   ) : resolveJobLifecycle(item.raw) === "Scheduled" ? (
-                    <Tag color="processing" style={{ borderRadius: 6, fontWeight: 700 }}>
+                    <Tag color="processing" style={{ borderRadius: 8, fontWeight: 700 }}>
                       Đã duyệt · Sắp mở
                     </Tag>
                   ) : resolveJobLifecycle(item.raw) === "Recruiting" ? (
-                    <Tag color="success" style={{ borderRadius: 6, fontWeight: 700 }}>
+                    <Tag color="success" style={{ borderRadius: 8, fontWeight: 700 }}>
                       Đang tuyển
                     </Tag>
                   ) : item.raw.status === "Closed" ? (
-                    <Tag color="default" style={{ borderRadius: 6 }}>
+                    <Tag color="default" style={{ borderRadius: 8 }}>
                       Đã đóng
                     </Tag>
                   ) : item.raw.status === "Rejected" ? (
                     <Tooltip title={item.raw.rejectReason || "Không có lý do cụ thể"}>
-                      <Tag color="error" style={{ borderRadius: 6, fontWeight: 700, cursor: "help" }}>
+                      <Tag color="error" style={{ borderRadius: 8, fontWeight: 700, cursor: "help" }}>
                         Đã từ chối
                       </Tag>
                     </Tooltip>
                   ) : item.raw.status === "Archived" ? (
-                    <Tag icon={<InboxOutlined />} color="default" style={{ borderRadius: 6 }}>
+                    <Tag icon={<InboxOutlined />} color="default" style={{ borderRadius: 8 }}>
                       Đã lưu trữ
                     </Tag>
                   ) : (
                     <Tag
                       color="warning"
-                      style={{ borderRadius: 6, fontWeight: 800, backgroundColor: "#FFF7ED", color: "#C2410C" }}
+                      style={{ borderRadius: 8, fontWeight: 800, backgroundColor: "#FFF7ED", color: "#C2410C" }}
                     >
                       Chờ duyệt
                     </Tag>

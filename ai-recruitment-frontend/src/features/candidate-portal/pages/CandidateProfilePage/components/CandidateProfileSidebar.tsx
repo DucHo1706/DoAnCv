@@ -137,7 +137,7 @@ export function CandidateProfileSidebar({
             textAlign: "left",
             background: "#F8FAFC",
             padding: "12px 16px",
-            borderRadius: 10,
+            borderRadius: 12,
             border: "1px solid #F1F5F9"
           }}
         >

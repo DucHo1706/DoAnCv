@@ -117,9 +117,9 @@ namespace RecruitmentBackend.Services
                 {
                     await _notificationService.CreateNotificationAsync(
                         admin.AccountID,
-                        "Tin tuyển dụng chờ duyệt",
-                        $"Tin tuyển dụng {position.PositionName} do HR {recruiter.FullName} đăng tuyển đang chờ phê duyệt.",
-                        "/admin/approval"
+                        $"Tin chờ duyệt: {position.PositionName}",
+                        $"HR {recruiter.FullName} vừa gửi tin {position.PositionName}, đợt {newJob.RecruitmentRound}; hạn nhận hồ sơ {newJob.Deadline:dd/MM/yyyy}.",
+                        $"/admin/jobs/{newJob.JobID}"
                     );
                 }
             }
@@ -271,9 +271,9 @@ namespace RecruitmentBackend.Services
                 {
                     await _notificationService.CreateNotificationAsync(
                         adminId,
-                        "Tin đăng lại chờ duyệt",
-                        $"Đợt {newRound} của tin {positionName} đang chờ phê duyệt.",
-                        "/admin/approval");
+                        $"Tin đăng lại chờ duyệt: {positionName}",
+                        $"HR {recruiter.FullName} vừa gửi đợt {newRound} của tin {positionName}; hạn nhận hồ sơ {repostedJob.Deadline:dd/MM/yyyy}.",
+                        $"/admin/jobs/{repostedJob.JobID}");
                 }
             }
             catch (Exception exception)
@@ -477,6 +477,130 @@ namespace RecruitmentBackend.Services
                               category = c != null ? new { id = c.CategoryID, name = c.Name, parentId = c.ParentId } : null,
                               jobLevel = jl != null ? new { id = jl.JobLevelID, name = jl.Name } : null
                           }).ToListAsync();
+        }
+
+        public async Task<IReadOnlyList<RecruiterCampaignSummaryDto>> GetRecruiterCampaignSummariesAsync(string accountId)
+        {
+            if (string.IsNullOrWhiteSpace(accountId))
+            {
+                return Array.Empty<RecruiterCampaignSummaryDto>();
+            }
+
+            var recruiter = await _context.Recruiters
+                .AsNoTracking()
+                .FirstOrDefaultAsync(item => item.AccountID == accountId);
+
+            if (recruiter == null)
+            {
+                return Array.Empty<RecruiterCampaignSummaryDto>();
+            }
+
+            var branchIds = await _context.RecruiterBranches
+                .AsNoTracking()
+                .Where(item => item.RecruiterID == recruiter.RecruiterID)
+                .Select(item => item.BranchID)
+                .ToListAsync();
+
+            DateTime today = JobLifecyclePolicy.TodayVietnam;
+            var campaigns = await (
+                from job in _context.JobPostings.AsNoTracking()
+                join position in _context.Positions.AsNoTracking()
+                    on job.PositionID equals position.PositionID into positionGroup
+                from position in positionGroup.DefaultIfEmpty()
+                join category in _context.Categories.AsNoTracking()
+                    on position.CategoryID equals category.CategoryID into categoryGroup
+                from category in categoryGroup.DefaultIfEmpty()
+                join branch in _context.Branches.AsNoTracking()
+                    on job.BranchID equals branch.BranchID into branchGroup
+                from branch in branchGroup.DefaultIfEmpty()
+                join level in _context.JobLevels.AsNoTracking()
+                    on job.JobLevelID equals level.JobLevelID into levelGroup
+                from level in levelGroup.DefaultIfEmpty()
+                where job.RecruiterID == recruiter.RecruiterID ||
+                      string.IsNullOrEmpty(job.RecruiterID) ||
+                      branchIds.Contains(job.BranchID)
+                orderby job.CreatedAt descending
+                select new RecruiterCampaignSummaryDto
+                {
+                    Id = job.JobID,
+                    Status = job.Status,
+                    LifecycleStatus = job.Status == "Pending" ? JobLifecyclePolicy.Pending
+                        : job.Status == "Rejected" ? JobLifecyclePolicy.Rejected
+                        : job.Status == "Flagged" ? JobLifecyclePolicy.Flagged
+                        : job.Status == "Archived" ? JobLifecyclePolicy.Archived
+                        : (job.Status == "Published" || job.Status == "Closed") && job.Deadline.Date < today ? JobLifecyclePolicy.Expired
+                        : (job.Status == "Closed" || job.Status == "Locked") ? JobLifecyclePolicy.Closed
+                        : job.Status == "Published" && job.StartDate.HasValue && job.StartDate.Value.Date > today ? JobLifecyclePolicy.Scheduled
+                        : job.Status == "Published" ? JobLifecyclePolicy.Recruiting
+                        : job.Status,
+                    CreatedAt = job.CreatedAt,
+                    StartDate = job.StartDate,
+                    Deadline = job.Deadline,
+                    ViewCount = job.ViewCount,
+                    RecruitmentRound = job.RecruitmentRound,
+                    Position = position == null ? null : new RecruiterCampaignLookupDto
+                    {
+                        Id = position.PositionID,
+                        Name = position.PositionName
+                    },
+                    Category = category == null ? null : new RecruiterCampaignLookupDto
+                    {
+                        Id = category.CategoryID,
+                        Name = category.Name
+                    },
+                    Branch = branch == null ? null : new RecruiterCampaignLookupDto
+                    {
+                        Id = branch.BranchID,
+                        Name = branch.BranchName
+                    },
+                    JobLevel = level == null ? null : new RecruiterCampaignLookupDto
+                    {
+                        Id = level.JobLevelID,
+                        Name = level.Name
+                    },
+                    Stats = new RecruiterCampaignStatsDto()
+                }
+            ).ToListAsync();
+
+            if (campaigns.Count == 0)
+            {
+                return campaigns;
+            }
+
+            var campaignIds = campaigns.Select(item => item.Id).ToList();
+            var applicationStats = await _context.Applications
+                .AsNoTracking()
+                .Where(application => campaignIds.Contains(application.JobID))
+                .GroupBy(application => application.JobID)
+                .Select(group => new
+                {
+                    JobId = group.Key,
+                    Total = group.Count(),
+                    NewApplications = group.Count(application => application.Status == "Applied"),
+                    Interviewing = group.Count(application => application.Status == "Interview"),
+                    Offers = group.Count(application => application.Status == "Offer"),
+                    Hired = group.Count(application => application.Status == "Hired")
+                })
+                .ToDictionaryAsync(item => item.JobId);
+
+            foreach (var campaign in campaigns)
+            {
+                if (!applicationStats.TryGetValue(campaign.Id, out var stats))
+                {
+                    continue;
+                }
+
+                campaign.Stats = new RecruiterCampaignStatsDto
+                {
+                    Total = stats.Total,
+                    NewApplications = stats.NewApplications,
+                    Interviewing = stats.Interviewing,
+                    Offers = stats.Offers,
+                    Hired = stats.Hired
+                };
+            }
+
+            return campaigns;
         }
 
         public async Task<IEnumerable<object>> GetAdminJobsAsync()
@@ -716,9 +840,9 @@ namespace RecruitmentBackend.Services
 
                     await _notificationService.CreateNotificationAsync(
                         recruiter.AccountID,
-                        "Tin tuyển dụng đã được duyệt",
-                        $"Tin tuyển dụng {positionName} của bạn đã được phê duyệt và hiển thị công khai.",
-                        "/recruiter/jobs"
+                        $"Đã duyệt tin: {positionName}",
+                        $"Tin {positionName}, đợt {job.RecruitmentRound} đã được quản trị viên phê duyệt và đang hiển thị công khai.",
+                        $"/recruiter/jobs/{job.JobID}"
                     );
                 }
             }
@@ -751,9 +875,9 @@ namespace RecruitmentBackend.Services
 
                     await _notificationService.CreateNotificationAsync(
                         recruiter.AccountID,
-                        "Tin tuyển dụng bị từ chối",
-                        $"Tin tuyển dụng {positionName} của bạn đã bị từ chối. Lý do: {job.RejectReason}",
-                        "/recruiter/jobs"
+                        $"Tin bị từ chối: {positionName}",
+                        $"Tin {positionName}, đợt {job.RecruitmentRound} chưa được phê duyệt. Lý do: {job.RejectReason}",
+                        $"/recruiter/jobs/{job.JobID}"
                     );
                 }
             }

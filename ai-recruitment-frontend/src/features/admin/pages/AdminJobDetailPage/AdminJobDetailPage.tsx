@@ -113,7 +113,7 @@ export default function AdminJobDetailPage() {
         </Col>
         <Col xs={24} xl={10}>
           <Card title="Tiêu chí đánh giá CV của HR" style={{ borderRadius: 16, border: `1px solid ${appTheme.colors.border}` }}>
-            <Table
+            <Table scroll={{ x: "max-content" }}
               rowKey={(record) => record.id || record.name}
               dataSource={criteria}
               pagination={false}

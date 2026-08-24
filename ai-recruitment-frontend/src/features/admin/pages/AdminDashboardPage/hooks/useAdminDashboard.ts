@@ -95,13 +95,13 @@ export const emptyAdminDashboardStats: AdminDashboardStats = {
 };
 
 export const chartColors = [
-  "#1677ff",
-  "#52c41a",
-  "#faad14",
-  "#722ed1",
-  "#13c2c2",
+  "#2563EB",
+  "#10B981",
+  "#F59E0B",
+  "#F97316",
+  "#0EA5E9",
   "#eb2f96",
-  "#fa8c16",
+  "#F97316",
   "#2f54eb",
 ];
 
@@ -206,9 +206,9 @@ export function normalizeAdminDashboardStats(rawData: any): AdminDashboardStats 
 }
 
 export function getStatusColor(status: string): string {
-  if (status === "Bình thường") return "#52c41a";
-  if (status === "Cảnh báo") return "#faad14";
-  if (status === "Quá tải") return "#ff4d4f";
+  if (status === "Bình thường") return "#10B981";
+  if (status === "Cảnh báo") return "#F59E0B";
+  if (status === "Quá tải") return "#EF4444";
   return "#8c8c8c";
 }
 

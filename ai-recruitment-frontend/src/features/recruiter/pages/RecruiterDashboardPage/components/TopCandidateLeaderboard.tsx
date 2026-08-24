@@ -1,5 +1,6 @@
 import { TrophyOutlined, UserOutlined } from "@ant-design/icons";
 import { Avatar, Tag, Tooltip, Typography } from "antd";
+import { useResponsive } from "../../../../../hooks/useResponsive";
 
 const { Text } = Typography;
 
@@ -22,6 +23,8 @@ export default function TopCandidateLeaderboard({
   getFitScoreColor,
   truncateText,
 }: TopCandidateLeaderboardProps) {
+  const { isMobile } = useResponsive();
+
   if (topCandidates.length === 0) {
     return (
       <div
@@ -63,7 +66,7 @@ export default function TopCandidateLeaderboard({
             style={{
               height: 56,
               display: "grid",
-              gridTemplateColumns: "34px 1fr 120px 82px",
+              gridTemplateColumns: isMobile ? "30px minmax(0, 1fr) 72px" : "34px 1fr 120px 82px",
               alignItems: "center",
               columnGap: 10,
               padding: "7px 10px",
@@ -82,8 +85,8 @@ export default function TopCandidateLeaderboard({
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                backgroundColor: isTopOne ? "#faad14" : "#e6f4ff",
-                color: isTopOne ? "#ffffff" : "#1677ff",
+                backgroundColor: isTopOne ? "#F59E0B" : "#EFF6FF",
+                color: isTopOne ? "#ffffff" : "#2563EB",
                 fontWeight: 700,
                 fontSize: 13,
               }}
@@ -105,8 +108,8 @@ export default function TopCandidateLeaderboard({
                 style={{
                   flexShrink: 0,
                   backgroundColor: isTopOne ? "#fff7e6" : "#f0f5ff",
-                  color: isTopOne ? "#fa8c16" : "#1677ff",
-                  border: isTopOne ? "1px solid #ffd591" : "1px solid #adc6ff",
+                  color: isTopOne ? "#F97316" : "#2563EB",
+                  border: isTopOne ? "1px solid rgba(249, 115, 22, 0.30)" : "1px solid #adc6ff",
                 }}
               />
 
@@ -137,7 +140,7 @@ export default function TopCandidateLeaderboard({
                   {isTopOne && (
                     <TrophyOutlined
                       style={{
-                        color: "#faad14",
+                        color: "#F59E0B",
                         fontSize: 14,
                         flexShrink: 0,
                       }}
@@ -162,21 +165,23 @@ export default function TopCandidateLeaderboard({
               </div>
             </div>
 
-            <Tooltip title={candidate.featuredSkill}>
-              <Tag
-                color="blue"
-                style={{
-                  maxWidth: 120,
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
-                  marginInlineEnd: 0,
-                  textAlign: "center",
-                }}
-              >
-                {truncateText(candidate.featuredSkill, 16)}
-              </Tag>
-            </Tooltip>
+            {!isMobile && (
+              <Tooltip title={candidate.featuredSkill}>
+                <Tag
+                  color="blue"
+                  style={{
+                    maxWidth: 120,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                    marginInlineEnd: 0,
+                    textAlign: "center",
+                  }}
+                >
+                  {truncateText(candidate.featuredSkill, 16)}
+                </Tag>
+              </Tooltip>
+            )}
 
             <Tag
               style={{
@@ -202,7 +207,7 @@ export default function TopCandidateLeaderboard({
           style={{
             height: 56,
             display: "grid",
-            gridTemplateColumns: "34px 1fr 120px 82px",
+            gridTemplateColumns: isMobile ? "30px minmax(0, 1fr) 72px" : "34px 1fr 120px 82px",
             alignItems: "center",
             columnGap: 10,
             padding: "7px 10px",
@@ -230,7 +235,7 @@ export default function TopCandidateLeaderboard({
             Chưa có ứng viên ở vị trí này
           </Text>
 
-          <div />
+          {!isMobile && <div />}
           <div />
         </div>
       ))}

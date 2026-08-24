@@ -73,9 +73,9 @@ export interface RejectApplicationRequest {
 }
 
 export const recruitmentService = {
-  async getHrApplications(includeAiDetails = true) {
+  async getHrApplications(includeAiDetails = true, jobId?: string) {
     const response = await axiosClient.get<ApplicationDto[]>("/Recruitment/hr/applications", {
-      params: { includeAiDetails },
+      params: { includeAiDetails, jobId },
     });
     return response.data;
   },

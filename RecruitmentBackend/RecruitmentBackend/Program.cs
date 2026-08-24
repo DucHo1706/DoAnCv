@@ -15,6 +15,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
+using System.Security.Claims;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -141,16 +142,21 @@ builder.Services.AddScoped<IAuditLogService, AuditLogService>();
 builder.Services.AddScoped<IProfileService, ProfileService>();
 builder.Services.AddScoped<IMetadataChangeNotifier, MetadataChangeNotifier>();
 
-// 4. Cấu hình Rate Limiting toàn cục cho Backend (Giới hạn 100 requests / 1 phút per IP)
+// 4. Cấu hình Rate Limiting toàn cục. Tài khoản đã xác thực có quota riêng;
+// khách chưa đăng nhập vẫn giới hạn theo IP để tránh một thiết bị gọi ẩn danh quá mức.
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 
     options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
     {
-        var clientIp = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown_ip";
+        string? accountId = httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);
+        string clientIp = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown_ip";
+        string partitionKey = string.IsNullOrWhiteSpace(accountId)
+            ? $"ip:{clientIp}"
+            : $"account:{accountId}";
         return RateLimitPartition.GetFixedWindowLimiter(
-            partitionKey: clientIp,
+            partitionKey: partitionKey,
             factory: _ => new FixedWindowRateLimiterOptions
             {
                 AutoReplenishment = true,
@@ -223,10 +229,10 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-// Sử dụng CORS & Rate Limiting
+// Xác thực phải chạy trước Rate Limiter để limiter có thể chia quota theo AccountID.
 app.UseCors("AllowReactApp");
-app.UseRateLimiter();
 app.UseAuthentication();
+app.UseRateLimiter();
 app.UseAuthorization();
 app.MapControllers();
 app.MapHealthChecks("/health");

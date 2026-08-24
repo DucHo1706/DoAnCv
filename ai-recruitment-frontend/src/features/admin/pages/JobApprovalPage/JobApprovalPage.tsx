@@ -26,7 +26,7 @@ import {
   Alert,
   Skeleton,
 } from "antd";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import PageContainer from "../../../../components/common/PageContainer";
 import EmptyState from "../../../../components/common/EmptyState";
@@ -40,6 +40,7 @@ import { JobGridView } from "./components/JobGridView";
 import { JobTableView } from "./components/JobTableView";
 import { JobApprovalToolbar } from "./components/JobApprovalToolbar";
 import { formatJobDate, resolveJobLifecycle } from "../../../../utils/jobLifecycle";
+import { useRealtimeResourceRefresh } from "../../../../hooks/useRealtimeRefresh";
 
 const { Paragraph, Text, Title } = Typography;
 
@@ -90,9 +91,9 @@ function JobApprovalPage() {
 
   const [fetchError, setFetchError] = useState<string | null>(null);
 
-  const fetchAdminJobs = async () => {
+  const fetchAdminJobs = useCallback(async (background = false) => {
     try {
-      setLoading(true);
+      if (!background) setLoading(true);
       setFetchError(null);
       const data: any = await jobService.getAdminJobs();
       setJobs(Array.isArray(data) ? data : data?.$values || []);
@@ -100,9 +101,9 @@ function JobApprovalPage() {
       console.error(error);
       setFetchError("Không tải được danh sách tin tuyển dụng. Vui lòng kiểm tra kết nối và thử lại.");
     } finally {
-      setLoading(false);
+      if (!background) setLoading(false);
     }
-  };
+  }, []);
 
   const fetchCategories = async () => {
     try {
@@ -114,9 +115,11 @@ function JobApprovalPage() {
   };
 
   useEffect(() => {
-    fetchAdminJobs();
-    fetchCategories();
-  }, []);
+    void fetchAdminJobs();
+    void fetchCategories();
+  }, [fetchAdminJobs]);
+
+  useRealtimeResourceRefresh(["jobs"], () => fetchAdminJobs(true));
 
   // Multi-filter states
   const [selectedRecruiterEmail, setSelectedRecruiterEmail] = useState<string>("all");
@@ -140,6 +143,21 @@ function JobApprovalPage() {
     });
     return Array.from(set);
   }, [jobs]);
+
+  const representedCategories = useMemo(() => {
+    const byId = new Map<string, { id: string; name: string }>();
+    jobs.forEach((job) => {
+      if (job.category?.id && job.category.name) {
+        byId.set(job.category.id, { id: job.category.id, name: job.category.name });
+      }
+    });
+    categories.forEach((category) => {
+      if (byId.has(category.id)) {
+        byId.set(category.id, { id: category.id, name: category.name });
+      }
+    });
+    return Array.from(byId.values()).sort((left, right) => left.name.localeCompare(right.name, "vi"));
+  }, [categories, jobs]);
 
   // Mặc định mở tab chờ duyệt khi có tin mới.
   useEffect(() => {
@@ -453,7 +471,7 @@ function JobApprovalPage() {
       key: "salaryRange",
       width: 160,
       render: (text: string) => (
-        <Tag color="blue" style={{ borderRadius: 6, padding: "2px 8px", fontWeight: 600 }}>
+        <Tag color="blue" style={{ borderRadius: 8, padding: "2px 8px", fontWeight: 600 }}>
           {text}
         </Tag>
       ),
@@ -481,28 +499,28 @@ function JobApprovalPage() {
         const lifecycle = resolveJobLifecycle(record.raw);
         if (lifecycle === "Expired") {
           return (
-            <Tag color="error" style={{ borderRadius: 6, fontWeight: 700, padding: "3px 10px" }}>
+            <Tag color="error" style={{ borderRadius: 8, fontWeight: 700, padding: "3px 10px" }}>
               Đã duyệt · Hết hạn
             </Tag>
           );
         }
         if (lifecycle === "Scheduled") {
           return (
-            <Tag color="processing" style={{ borderRadius: 6, fontWeight: 700, padding: "3px 10px" }}>
+            <Tag color="processing" style={{ borderRadius: 8, fontWeight: 700, padding: "3px 10px" }}>
               Đã duyệt · Sắp mở
             </Tag>
           );
         }
         if (lifecycle === "Recruiting") {
           return (
-            <Tag color="success" style={{ borderRadius: 6, fontWeight: 700, padding: "3px 10px" }}>
+            <Tag color="success" style={{ borderRadius: 8, fontWeight: 700, padding: "3px 10px" }}>
               Đang tuyển
             </Tag>
           );
         }
         if (st === "Closed" || st === "Locked") {
           return (
-            <Tag color="default" style={{ borderRadius: 6, fontWeight: 600, padding: "3px 10px", color: "#64748B" }}>
+            <Tag color="default" style={{ borderRadius: 8, fontWeight: 600, padding: "3px 10px", color: "#64748B" }}>
               Đã đóng
             </Tag>
           );
@@ -510,7 +528,7 @@ function JobApprovalPage() {
         if (st === "Rejected") {
           return (
             <Tooltip title={record.raw.rejectReason || "Không có lý do cụ thể"}>
-              <Tag color="error" style={{ borderRadius: 6, fontWeight: 700, padding: "3px 10px", cursor: "help" }}>
+              <Tag color="error" style={{ borderRadius: 8, fontWeight: 700, padding: "3px 10px", cursor: "help" }}>
                 Đã từ chối
               </Tag>
             </Tooltip>
@@ -520,7 +538,7 @@ function JobApprovalPage() {
           return <Tag icon={<InboxOutlined />} color="default">Đã lưu trữ</Tag>;
         }
         return (
-          <Tag color="warning" style={{ borderRadius: 6, fontWeight: 800, padding: "3px 10px", backgroundColor: "#FFF7ED", borderColor: "#FFEDD5", color: "#C2410C" }}>
+          <Tag color="warning" style={{ borderRadius: 8, fontWeight: 800, padding: "3px 10px", backgroundColor: "#FFF7ED", borderColor: "#FFEDD5", color: "#C2410C" }}>
             Chờ duyệt
           </Tag>
         );
@@ -605,7 +623,7 @@ function JobApprovalPage() {
           message="Lỗi tải dữ liệu"
           description={fetchError}
           action={
-            <Button size="small" type="primary" onClick={fetchAdminJobs}>
+            <Button size="small" type="primary" onClick={() => void fetchAdminJobs()}>
               Thử lại
             </Button>
           }
@@ -720,7 +738,7 @@ function JobApprovalPage() {
         setViewMode={setViewMode}
         uniqueRecruiters={uniqueRecruiters}
         uniqueBranches={uniqueBranches}
-        categories={categories}
+        categories={representedCategories}
         counts={{
           pending: pendingJobsCount,
           active: publishedJobsCount,

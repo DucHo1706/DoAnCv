@@ -596,6 +596,19 @@ namespace RecruitmentBackend.Services
 
                 await _context.SaveChangesAsync();
 
+                try
+                {
+                    await _hubContext.Clients.All.SendAsync("ApplicationCreated", new
+                    {
+                        applicationId = newApplication.ApplicationID,
+                        jobId = newApplication.JobID
+                    });
+                }
+                catch (Exception signalRException)
+                {
+                    Console.WriteLine("Không thể phát sự kiện hồ sơ mới: " + signalRException.Message);
+                }
+
                 // 9.5. Send notification to Recruiter
                 try
                 {
@@ -608,8 +621,8 @@ namespace RecruitmentBackend.Services
 
                         await _notificationService.CreateNotificationAsync(
                             recruiter.AccountID,
-                            "Đơn ứng tuyển mới",
-                            $"Ứng viên {candidate.FullName} đã nộp hồ sơ cho công việc {positionName}",
+                            $"Ứng viên mới: {candidate.FullName}",
+                            $"{candidate.FullName} đã ứng tuyển vị trí {positionName}, đợt {job.RecruitmentRound}. Mở chiến dịch để xem hồ sơ và kết quả phân tích.",
                             $"/recruiter/applications/{job.JobID}"
                         );
                     }
@@ -665,7 +678,8 @@ namespace RecruitmentBackend.Services
         public async Task<(bool IsSuccess, string Message, object Data)> GetHrApplicationsAsync(
             ClaimsPrincipal user,
             bool includeAiDetails = true,
-            string? applicationId = null)
+            string? applicationId = null,
+            string? jobId = null)
         {
             try
             {
@@ -687,8 +701,9 @@ namespace RecruitmentBackend.Services
                 var rawApplications = await (
                     from app in _context.Applications.AsNoTracking()
                     join job in _context.JobPostings.AsNoTracking() on app.JobID equals job.JobID
-                    where (job.RecruiterID == recruiter.RecruiterID || string.IsNullOrEmpty(job.RecruiterID) || branchIds.Contains(job.BranchID))
-                        && (applicationId == null || app.ApplicationID == applicationId)
+                     where (job.RecruiterID == recruiter.RecruiterID || string.IsNullOrEmpty(job.RecruiterID) || branchIds.Contains(job.BranchID))
+                         && (applicationId == null || app.ApplicationID == applicationId)
+                         && (jobId == null || app.JobID == jobId)
                     join cv in _context.CandidateCVs.AsNoTracking() on app.CVID equals cv.CVID
                     join cand in _context.Candidates.AsNoTracking() on cv.CandidateID equals cand.CandidateID
                     join acc in _context.Accounts.AsNoTracking() on cand.AccountID equals acc.AccountID
@@ -1148,7 +1163,12 @@ namespace RecruitmentBackend.Services
                 try
                 {
                     await _hubContext.Clients.Group(applicationId).SendAsync("ReceiveStatusUpdate", new { applicationId, status = application.Status });
-                    await _hubContext.Clients.All.SendAsync("ApplicationStatusChanged", new { applicationId, status = application.Status });
+                    await _hubContext.Clients.All.SendAsync("ApplicationStatusChanged", new
+                    {
+                        applicationId,
+                        jobId = application.JobID,
+                        status = application.Status
+                    });
                 }
                 catch {}
 
@@ -1392,7 +1412,12 @@ namespace RecruitmentBackend.Services
                 try
                 {
                     await _hubContext.Clients.Group(applicationId).SendAsync("ReceiveStatusUpdate", new { applicationId, status = application.Status });
-                    await _hubContext.Clients.All.SendAsync("ApplicationStatusChanged", new { applicationId, status = application.Status });
+                    await _hubContext.Clients.All.SendAsync("ApplicationStatusChanged", new
+                    {
+                        applicationId,
+                        jobId = application.JobID,
+                        status = application.Status
+                    });
                 }
                 catch {}
 
