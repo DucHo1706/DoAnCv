@@ -29,8 +29,16 @@ LLM_ROUTER_MODELS = [
 LLM_ROUTER_TIMEOUT_SECONDS = max(
     10, int(os.getenv("LLM_ROUTER_TIMEOUT_SECONDS", "25"))
 )
+LLM_ROUTER_TOTAL_BUDGET_SECONDS = max(
+    10, int(os.getenv("LLM_ROUTER_TOTAL_BUDGET_SECONDS", "25"))
+)
+LLM_ROUTER_COOLDOWN_SECONDS = max(
+    30, int(os.getenv("LLM_ROUTER_COOLDOWN_SECONDS", "120"))
+)
 LLM_ROUTER_MAX_TOKENS = max(512, int(os.getenv("LLM_ROUTER_MAX_TOKENS", "12000")))
 LLM_ROUTER_ENABLED = bool(LLM_ROUTER_BASE_URL and LLM_ROUTER_MODELS)
+_router_unavailable_until = 0.0
+_router_state_lock = threading.Lock()
 
 MIN_REQUEST_TIMEOUT_MS = max(10000, int(os.getenv("GEMINI_MIN_REQUEST_TIMEOUT_MS", "10000")))
 DEFAULT_REQUEST_TIMEOUT_MS = max(
@@ -248,6 +256,23 @@ def _router_headers() -> dict[str, str]:
     return headers
 
 
+def _router_is_cooling_down() -> bool:
+    with _router_state_lock:
+        return _router_unavailable_until > time.monotonic()
+
+
+def _cool_down_router() -> None:
+    global _router_unavailable_until
+    with _router_state_lock:
+        _router_unavailable_until = time.monotonic() + LLM_ROUTER_COOLDOWN_SECONDS
+
+
+def _mark_router_available() -> None:
+    global _router_unavailable_until
+    with _router_state_lock:
+        _router_unavailable_until = 0.0
+
+
 def _router_response_text(response: requests.Response) -> str:
     """Đọc cả JSON chuẩn lẫn SSE mà một số combo 9Router có thể trả về."""
     raw = response.text.strip()
@@ -286,7 +311,11 @@ def _generate_router_content(messages: list[dict], is_json: bool) -> str:
         raise ConnectionError("9Router chưa được bật cho tiến trình này.")
     last_error: Exception | None = None
     endpoint = f"{LLM_ROUTER_BASE_URL}/chat/completions"
+    request_deadline = time.monotonic() + LLM_ROUTER_TOTAL_BUDGET_SECONDS
     for model_name in LLM_ROUTER_MODELS:
+        remaining_seconds = request_deadline - time.monotonic()
+        if remaining_seconds <= 0:
+            break
         try:
             response = requests.post(
                 endpoint,
@@ -298,7 +327,7 @@ def _generate_router_content(messages: list[dict], is_json: bool) -> str:
                     "max_tokens": LLM_ROUTER_MAX_TOKENS,
                     "stream": False,
                 },
-                timeout=LLM_ROUTER_TIMEOUT_SECONDS,
+                timeout=min(LLM_ROUTER_TIMEOUT_SECONDS, max(1, remaining_seconds)),
             )
             response.raise_for_status()
             content = _router_response_text(response)
@@ -312,6 +341,8 @@ def _generate_router_content(messages: list[dict], is_json: bool) -> str:
             logger.warning(
                 f"9Router model {model_name} chưa tạo được phản hồi hợp lệ: {error}"
             )
+    if last_error is None:
+        raise TimeoutError("9Router đã hết ngân sách chờ trước khi thử model tiếp theo.")
     raise ConnectionError("9Router không tạo được phản hồi từ các model đã cấu hình.") from last_error
 
 
@@ -325,15 +356,20 @@ def generate_content_with_retry(
     Goi Gemini API voi co che tu dong thu lai tren danh sach API Keys
     """
     router_error: Exception | None = None
-    if LLM_ROUTER_ENABLED:
+    if LLM_ROUTER_ENABLED and not _router_is_cooling_down():
         try:
-            return _generate_router_content(
+            content = _generate_router_content(
                 [{"role": "user", "content": prompt}],
                 is_json=is_json,
             )
+            _mark_router_available()
+            return content
         except Exception as error:
             router_error = error
+            _cool_down_router()
             logger.warning("9Router tạm thời không khả dụng; chuyển sang provider kế tiếp.")
+    elif LLM_ROUTER_ENABLED:
+        router_error = ConnectionError("9Router đang tạm nghỉ sau lần gọi lỗi gần nhất.")
     if not clients:
         if router_error is not None:
             raise ConnectionError(
@@ -537,13 +573,13 @@ def generate_vision_content_with_retry(image_bytes: bytes, mime_type: str, promp
     Sử dụng Gemini Multimodal Vision để đọc và bóc tách văn bản từ tệp ảnh CV (PNG/JPG/Screenshot)
     khi Tesseract OCR cục bộ bị thiếu hoặc không đọc được.
     """
-    if LLM_ROUTER_ENABLED:
+    if LLM_ROUTER_ENABLED and not _router_is_cooling_down():
         try:
             valid_router_mime = mime_type if mime_type in {
                 "image/png", "image/jpeg", "image/webp"
             } else "image/jpeg"
             encoded = base64.b64encode(image_bytes).decode("ascii")
-            return _generate_router_content(
+            content = _generate_router_content(
                 [{
                     "role": "user",
                     "content": [
@@ -558,7 +594,10 @@ def generate_vision_content_with_retry(image_bytes: bytes, mime_type: str, promp
                 }],
                 is_json=False,
             )
+            _mark_router_available()
+            return content
         except Exception:
+            _cool_down_router()
             logger.warning("9Router Vision chưa khả dụng; chuyển sang Gemini Vision nếu có.")
     if not clients:
         return ""

@@ -6,11 +6,36 @@ File này là nhật ký nối tiếp, không chứa credential hoặc dữ li�
 
 | Môi trường | Trạng thái xác nhận gần nhất | Commit | Ghi chú |
 |---|---|---|---|
-| Local | 24 job đã duyệt; 480 hồ sơ synthetic qua Selenium lúc 2026-08-24 21:11 +07:00 | `7d1e2db` + worktree | 24/24 job đủ 20 CV/job; cần audit trạng thái AI đã lưu trên tập đại diện |
-| Git remote | Đã push lúc 2026-08-22 01:49 +07:00 | `4e57223` | Nhánh `feature/feature-based-refactor-vps` |
-| VPS | Public HTTPS và nộp CV hoạt động; source/runtime chưa đối chiếu lại | chưa xác nhận | Public smoke 6/6, lượt 15 CV đạt 62/62; đây không phải deploy mới |
+| Local | 9Router circuit breaker đạt 4/4 unit; audit đủ 480 snapshot | `45fdd9c` + thay đổi chưa commit | Hai tệp demo có credential thử nghiệm được giữ local và không đưa vào Git |
+| Git remote | Đã push lúc 2026-08-25 01:14 +07:00 | `45fdd9c` | Nhánh `feature/feature-based-refactor-vps` |
+| VPS | Bốn container healthy; SQLite 9Router đã phục hồi, cổng loopback | `45fdd9c` + cấu hình runtime | `/v1/models` đạt; provider free hiện 429/timeout/403 giống local, circuit breaker mới chờ phát hành |
 
 ## Nhật ký thực hiện
+
+### 2026-08-25 01:39 +07:00 — VPS-9ROUTER-MIGRATION — Chuyển nguyên SQLite và bảo vệ failover
+
+- Trạng thái: `ĐANG LÀM`; 9Router/SQLite trên VPS đã phục hồi và healthy, code circuit breaker đạt unit local nhưng chưa commit/push/rebuild `ai-service`.
+- Mục tiêu/phạm vi: đưa 9Router local lên Ubuntu như provider dự phòng mà không bắt người dùng tạo lại provider OAuth, combo hoặc API key; không công khai dashboard và không để tài khoản free lỗi làm chậm toàn bộ batch CV.
+- Dữ liệu/bảo mật: SQLite Online Backup trả `integrity=ok`, app `0.5.55`, 11 provider, 2 combo và 2 API key active. Gói sao lưu nằm trong `.local` bị Git ignore, truyền bằng SSH, đặt mode `600`; secret/value/email/token không được in ra. Phục hồi cả database, JWT, machine identity và trạng thái auth vào volume `recruitment_nine_router_data`; local giữ nguyên làm rollback.
+- VPS/cấu hình: ghim `decolua/9router:0.5.55` để khớp schema, profile `llm-router`, port chỉ `127.0.0.1:20128`; Python gọi `http://9router:20128/v1`. Dashboard dùng SSH tunnel, đề xuất cổng local `20129` vì `20128` đang được bản Windows sử dụng. Cả `9router`, `ai-service`, backend và frontend đều healthy.
+- Kiểm thử thật: từ container Python gọi `/v1/models` đạt HTTP 200 và nhận 18 model, xác nhận network nội bộ, SQLite và API key hoạt động. Completion qua combo chưa thành công: VPS log Antigravity refresh trả 403/không có project ID; đối chứng ngay trên local trả `deepseek=429` và `Gemini=timeout`, nên đây là trạng thái provider/tài khoản free hiện tại, không phải mất dữ liệu do migration. Không khẳng định upstream AI đã khả dụng.
+- Sửa failover local: `gemini_service.py` thêm ngân sách tổng router 25 giây và cooldown 120 giây; sau lần router lỗi, request kế tiếp đi thẳng Gemini trực tiếp/fallback thay vì thử lại ba model × 25 giây. Compose thêm hai biến tương ứng; test router JSON/SSE/budget/cooldown đạt 4/4, `py_compile` và `git diff --check` đạt.
+- Database/API/migration: không đổi SQL Server, không chạy EF migration, không ghi dữ liệu tuyển dụng. Chỉ phục hồi SQLite riêng của 9Router. Không đổi DNS/firewall/Nginx.
+- File sửa: `Python/services/gemini_service.py`, `Python/tests/test_llm_router_service.py`, `docker-compose.yml`, `deploy/vps/9router-ubuntu.md`, `PROJECT_CONTEXT.md`, `WORK_LOG.md`.
+- Rollback: dừng profile 9Router, bỏ `LLM_ROUTER_BASE_URL` khỏi `.env` rồi recreate `ai-service`; volume và gói backup vẫn giữ. Hạn chế còn lại: chờ quota free reset hoặc người dùng chủ động refresh provider; circuit breaker cần được commit/push và deploy trước khi đóng task.
+
+### 2026-08-25 01:22 +07:00 — VPS-DEPLOY-45FDD9C — Phát hành bản realtime, audit AI và responsive
+
+- Trạng thái: `ĐÃ XONG` cho commit/push/deploy ba service lõi và smoke HTTPS; 9Router vẫn là profile tùy chọn chưa bật, P3-02 tổng thể vẫn `ĐANG LÀM` theo các hạn chế audit snapshot.
+- Mục tiêu/phạm vi: phát hành toàn bộ thay đổi đã kiểm thử từ các task realtime/filter/responsive, dữ liệu E2E, fallback ngôn từ và policy red flag; giữ Git là nguồn phát hành và không sao chép credential vào repository/log.
+- Git/bảo mật: commit `45fdd9c1b7151caf58061d7dadf669a300455fe5` gồm 179 tệp tích lũy đã push lên `feature/feature-based-refactor-vps`. Quét vùng stage phát hiện hai tệp demo có thông tin đăng nhập thử nghiệm; hai tệp này được loại khỏi commit và vẫn untracked local. `.env`, deploy key, API key, token và connection string không được stage/in ra log.
+- VPS: IP origin mới `180.93.100.30`, SSH bằng user `ubuntu`; source cũ và `.env` còn nguyên ở `/home/ubuntu/KhoaLuan`, nên không dùng thư mục `/opt/recruitment/app` trống vừa tạo. VPS fast-forward sạch từ `7d1e2db` lên `45fdd9c`; `docker compose config --quiet` đạt. Script có rollback build/activate thành công `ai-service`, `backend`, `frontend`; backend image build 0 lỗi/452 warning legacy, frontend Vite build đạt với warning chunk/SignalR đã biết.
+- Health/API/log: cả ba container báo `healthy`. Origin HTTPS qua Nginx trả 200 cho `/health`, `/api/jobs/published`, `/api/skills`; `/api/dashboard/admin-stats` ẩn danh trả đúng 401. Log 5 phút sau startup có 0 `Unhandled exception`, 0 `Failed executing DbCommand`; không có migration/schema mới trong commit và dữ liệu cũ không bị xóa.
+- HTTPS công khai: ba lượt `/health` từ máy ngoài đều 200 trong 0,36–0,43 giây; `/api/jobs/published` trả 200 trong 1,26 giây. Đây là smoke latency đơn lẻ, không phải benchmark tải hoặc SLA.
+- Vai trò/UI: Selenium production read-only đạt 26 bước gồm đăng nhập HR và 24 route/breakpoint HR; dừng khi tool đổi phiên từ HR sang Admin trong cùng Chrome. Retry vẫn dừng đúng điểm này, nhưng access log cho thấy các POST login đều 200, probe API Admin trả 200/role Admin và người dùng xác nhận tự đăng nhập được cả Admin lẫn HR. Vì vậy ghi đây là hạn chế cô lập phiên của automation, không kết luận production login lỗi; audit local trước deploy đã đạt 54/54 cho 17 route × 3 breakpoint.
+- Database/API/cấu hình: không migration, không thay DNS/firewall và không bật `llm-router`. Database external dùng nguyên cấu hình VPS hiện có; deploy không chạy seeder hoặc cleanup dữ liệu.
+- Rollback: image trước deploy đã được gắn tag `rollback` cho cả ba service. Nếu cần, dùng script rollback/image tag theo `deploy/vps/deploy.sh`; schema không cần rollback. Source có thể trở về commit `7d1e2db`, nhưng chưa có lý do rollback vì health/API/đăng nhập đều đạt.
+- Hạn chế/bước tiếp theo: sửa tool để mỗi role dùng browser riêng hoặc audit role độc lập trước lần đo kế tiếp; chọn một số snapshot lịch sử để phân tích lại policy mới. 9Router chỉ cấu hình sau khi secret được nhập trực tiếp trên VPS và phải kiểm tra profile/health/request thật riêng.
 
 ### 2026-08-25 01:12 +07:00 — P3-02-AI-SNAPSHOT-AUDIT — Audit 480 kết quả và thu hẹp chính sách red flag
 

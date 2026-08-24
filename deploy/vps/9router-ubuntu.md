@@ -7,8 +7,8 @@
 - Chạy bằng Docker Compose profile `llm-router`; không chạy tiến trình ứng dụng thường trực bằng tài khoản `root` của Ubuntu.
 - Image chính thức khởi động entrypoint để sửa quyền volume rồi hạ xuống user `node`. Docker daemon vẫn cần `sudo` hoặc quyền thuộc nhóm `docker` khi cài đặt/vận hành container.
 - Port `20128` chỉ map vào `127.0.0.1` của VPS. Không mở port này trên firewall và không proxy công khai dashboard.
-- Truy cập dashboard bằng SSH tunnel từ máy cá nhân: `ssh -L 20128:127.0.0.1:20128 <user>@<vps-ip>`, sau đó mở `http://127.0.0.1:20128`.
-- Bật `REQUIRE_API_KEY=true`. Secret và API key chỉ đặt trong `/opt/recruitment/app/.env` với quyền tệp `600`, không ghi vào Git hoặc log.
+- Truy cập dashboard bằng SSH tunnel từ máy cá nhân: `ssh -L 20129:127.0.0.1:20128 <user>@<vps-ip>`, sau đó mở `http://127.0.0.1:20129`. Có thể dùng lại cổng local `20128` nếu bản 9Router local đã tắt.
+- Bật `REQUIRE_API_KEY=true`. Secret và API key chỉ đặt trong `/home/ubuntu/KhoaLuan/.env` với quyền tệp `600`, không ghi vào Git hoặc log.
 
 ## Biến môi trường cần cấu hình
 
@@ -30,10 +30,12 @@ LLM_ROUTER_TIMEOUT_SECONDS=25
 
 `LLM_ROUTER_API_KEY` là key do dashboard 9Router tạo cho Python, không phải `NINE_ROUTER_API_KEY_SECRET`.
 
+Khi chuyển dữ liệu từ máy khác, phải sao lưu SQLite bằng SQLite Online Backup hoặc dừng hẳn tiến trình trước khi chép. Phục hồi cùng `jwt-secret`, `machine-id` và trạng thái `auth`; không sinh `JWT_SECRET` mới vì token provider trong database cần secret cũ để giải mã. Ghim image cùng `appVersion` trong bảng `_meta`, kiểm tra `PRAGMA integrity_check`, rồi mới nâng phiên bản có chủ đích.
+
 ## Khởi động và kiểm tra
 
 ```bash
-cd /opt/recruitment/app
+cd /home/ubuntu/KhoaLuan
 chmod 600 .env
 docker compose --profile llm-router config --quiet
 docker compose --profile llm-router pull 9router
@@ -54,7 +56,7 @@ Sau khi chép dữ liệu vào volume `recruitment_nine_router_data`, bảo đ�
 ## Rollback
 
 ```bash
-cd /opt/recruitment/app
+cd /home/ubuntu/KhoaLuan
 docker compose --profile llm-router stop 9router
 ```
 
