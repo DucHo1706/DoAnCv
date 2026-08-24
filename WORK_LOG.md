@@ -6,11 +6,22 @@ File này là nhật ký nối tiếp, không chứa credential hoặc dữ li�
 
 | Môi trường | Trạng thái xác nhận gần nhất | Commit | Ghi chú |
 |---|---|---|---|
-| Local | 9Router circuit breaker đạt 4/4 unit; audit đủ 480 snapshot | `45fdd9c` + thay đổi chưa commit | Hai tệp demo có credential thử nghiệm được giữ local và không đưa vào Git |
-| Git remote | Đã push lúc 2026-08-25 01:14 +07:00 | `45fdd9c` | Nhánh `feature/feature-based-refactor-vps` |
-| VPS | Bốn container healthy; SQLite 9Router đã phục hồi, cổng loopback | `45fdd9c` + cấu hình runtime | `/v1/models` đạt; provider free hiện 429/timeout/403 giống local, circuit breaker mới chờ phát hành |
+| Local | README gốc và 9Router circuit breaker đã kiểm thử | Git `HEAD` + hai tệp demo không stage | Hai tệp demo có credential thử nghiệm được giữ local và không đưa vào Git |
+| Git remote | Code 9Router và README gốc đã push | Nhánh `feature/feature-based-refactor-vps` | Commit runtime `b5322a2`, README/config mẫu `5fc56d2`; nhật ký hoàn tất nằm ở commit tài liệu kế tiếp |
+| VPS | Bốn container healthy; SQLite 9Router đã phục hồi, source có README | `5fc56d2` | Compose đạt, origin health 200, router chỉ map loopback; tài khoản free có thể thành công/timeout theo từng lượt |
 
 ## Nhật ký thực hiện
+
+### 2026-08-25 01:47 +07:00 — VPS-9ROUTER-README-CLOSE — Nghiệm thu router và tạo trang giới thiệu dự án
+
+- Trạng thái: `ĐÃ XONG` cho migration/triển khai 9Router, circuit breaker Python và README gốc; không thay đổi SQL Server hoặc dữ liệu tuyển dụng trong bước nghiệm thu.
+- 9Router runtime: commit `b5322a2` đã build/recreate riêng `ai-service`; bốn container `9router`, `ai-service`, backend và frontend đều healthy, origin `/health` trả 200. Port router được xác nhận đúng `127.0.0.1:20128`; `/v1/models` từ container Python trả 200 với 18 model.
+- Provider thật: probe sau deploy qua combo `Gemini` có một lượt thành công trong 1,84 giây, xác nhận OAuth/provider trong SQLite đã dùng được trên VPS. Lượt kế tiếp timeout đúng ngân sách 25 giây và chuyển cooldown; kết quả thất thường phù hợp trạng thái tài khoản free, không được diễn giải thành SLA. Unit JSON/SSE/budget/cooldown vẫn đạt 4/4.
+- Bảo mật/khôi phục: đã xóa các bản sao tạm chứa SQLite/script/probe khỏi `/tmp` VPS và khỏi container sau nghiệm thu; bản backup nhất quán còn ở `.local` trên máy người dùng nên có thể phục hồi, không nằm trong Git. Dashboard chỉ quản lý qua SSH tunnel cổng local `20129`; không mở firewall/Nginx cho 9Router.
+- README: thêm `README.md` ngay root với phần giới thiệu, badges công nghệ, bảng chức năng theo vai trò, hai sơ đồ Mermaid, luồng OCR/scoring/bằng chứng/red flag, Apriori/HUIM, cấu trúc source, hướng dẫn local/VPS, 9Router, dữ liệu kiểm thử, bảo mật và giới hạn. Không dùng ảnh cũ `ai_recruitment_visual.png` làm banner vì nội dung minh họa có lỗi chữ và không phản ánh dữ liệu thật.
+- Cấu hình mẫu: `.env.example` đổi model mặc định lỗi thời Gemini 2.x sang chuỗi Gemini 3.x đang dùng và bổ sung toàn bộ biến 9Router dưới dạng comment/placeholder; không chứa credential. Commit `5fc56d2` đã push và VPS fast-forward; `docker compose --profile llm-router config --quiet` đạt, không recreate container vì thay đổi chỉ là README/config mẫu.
+- Kiểm thử tài liệu: README có 334 dòng, 28 code fence cân bằng và 0 relative link bị thiếu; `git diff --check` đạt. Local không chạy được Compose do Docker Desktop/config không khả dụng, nhưng cùng Compose đã được xác nhận trực tiếp trên VPS sau pull. Không ghi đây là lỗi source.
+- Git/trạng thái còn lại: hai tệp demo untracked có credential thử nghiệm tiếp tục bị loại khỏi stage/commit. Hạn chế tiếp theo của P3-02 vẫn là snapshot AI lịch sử chưa tự được phân tích lại; đây là task riêng, không phải lỗi 9Router/README.
 
 ### 2026-08-25 01:39 +07:00 — VPS-9ROUTER-MIGRATION — Chuyển nguyên SQLite và bảo vệ failover
 
