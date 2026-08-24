@@ -32,6 +32,35 @@ namespace RecruitmentBackend.Controllers
 
             return Ok(result.Data);
         }
+
+        [HttpGet("search")]
+        public async Task<IActionResult> SearchDiscoverableCandidates([FromQuery] CandidateDiscoverySearchRequest request)
+        {
+            var result = await _talentPoolService.SearchDiscoverableCandidatesAsync(request, User);
+            if (result.IsSuccess == false)
+            {
+                return BadRequest(new { message = result.Message });
+            }
+            return Ok(result.Data);
+        }
+
+        [HttpPost("discoverable/{candidateId}/save")]
+        public async Task<IActionResult> SaveDiscoverableCandidate(
+            string candidateId,
+            [FromBody] UpdateTalentPoolProfileRequest request)
+        {
+            var result = await _talentPoolService.SaveDiscoverableCandidateAsync(candidateId, request, User);
+            if (!result.IsSuccess) return BadRequest(new { message = result.Message });
+            return Ok(new { message = result.Message, data = result.Data });
+        }
+
+        [HttpGet("discoverable/{candidateId}")]
+        public async Task<IActionResult> GetDiscoverableCandidateDetail(string candidateId)
+        {
+            var result = await _talentPoolService.GetDiscoverableCandidateDetailAsync(candidateId, User);
+            if (!result.IsSuccess) return BadRequest(new { message = result.Message });
+            return Ok(result.Data);
+        }
         [HttpGet("{talentPoolCandidateId}")]
         public async Task<IActionResult> GetTalentPoolDetail(string talentPoolCandidateId)
         {
@@ -93,6 +122,32 @@ namespace RecruitmentBackend.Controllers
                 message = result.Message,
                 data = result.Data
             });
+        }
+
+        [HttpDelete("{talentPoolCandidateId}")]
+        public async Task<IActionResult> RemoveTalentPoolCandidate(string talentPoolCandidateId)
+        {
+            var result = await _talentPoolService.RemoveTalentPoolCandidateAsync(
+                talentPoolCandidateId,
+                User
+            );
+
+            if (result.IsSuccess == false)
+            {
+                return BadRequest(new { message = result.Message });
+            }
+
+            return Ok(new { message = result.Message });
+        }
+
+        [HttpPut("{talentPoolCandidateId}/profile")]
+        public async Task<IActionResult> UpdateTalentPoolProfile(
+            string talentPoolCandidateId,
+            [FromBody] UpdateTalentPoolProfileRequest request)
+        {
+            var result = await _talentPoolService.UpdateTalentPoolProfileAsync(talentPoolCandidateId, request, User);
+            if (!result.IsSuccess) return BadRequest(new { message = result.Message });
+            return Ok(new { message = result.Message, data = result.Data });
         }
     }
 }

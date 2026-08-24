@@ -84,14 +84,14 @@ export default function UpcomingInterviewsWidget({ interviews = [] }: UpcomingIn
                     <Tag
                       color="blue"
                       icon={<ClockCircleOutlined />}
-                      style={{ borderRadius: 6, fontWeight: 600, margin: 0 }}
+                      style={{ borderRadius: 8, fontWeight: 600, margin: 0 }}
                     >
                       {timeStr} ({dateStr})
                     </Tag>
                     <Tag
                       color={item.format === "Online" ? "purple" : "cyan"}
                       icon={item.format === "Online" ? <VideoCameraOutlined /> : <EnvironmentOutlined />}
-                      style={{ borderRadius: 6, margin: 0 }}
+                      style={{ borderRadius: 8, margin: 0 }}
                     >
                       {item.format}
                     </Tag>

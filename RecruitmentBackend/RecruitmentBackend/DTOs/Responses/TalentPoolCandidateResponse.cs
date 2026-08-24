@@ -18,5 +18,13 @@ namespace RecruitmentBackend.DTOs.Responses
         public string Source { get; set; }
         public bool IsInviteLocked { get; set; }
         public string InviteLockReason { get; set; }
+        public string DomainJson { get; set; } = "[]";
+        public string TargetPositionsJson { get; set; } = "[]";
+        public string JobLevel { get; set; }
+        public string SourcingPriority { get; set; }
+        public string SourcingStage { get; set; }
+        public string TagsJson { get; set; } = "[]";
+        public decimal? ExpectedSalary { get; set; }
+        public DateTime? AvailableFrom { get; set; }
     }
 }

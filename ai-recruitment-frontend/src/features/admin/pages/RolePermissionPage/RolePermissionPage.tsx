@@ -28,7 +28,6 @@ const allPermissions = [
   { value: "manage_users", label: "Quản lý người dùng" },
   { value: "approve_jobs", label: "Duyệt tin tuyển dụng" },
   { value: "publish_close_jobs", label: "Khóa/Mở hiển thị tin tuyển dụng" },
-  { value: "train_ai_models", label: "Huấn luyện AI (Apriori & HUIM)" },
   { value: "manage_roles", label: "Quản lý vai trò & phân quyền" },
   { value: "view_audit_logs", label: "Xem nhật ký hoạt động" },
   { value: "manage_branches", label: "Quản lý chi nhánh & danh mục" },
@@ -148,7 +147,7 @@ function RolePermissionPage() {
             const permObj = allPermissions.find((ap) => ap.value === p);
             const label = permObj ? permObj.label : p;
             return (
-              <Tag key={p} color="blue" style={{ fontSize: 12, padding: "2px 8px", borderRadius: 4 }}>
+              <Tag key={p} color="blue" style={{ fontSize: 12, padding: "2px 8px", borderRadius: 8 }}>
                 {label}
               </Tag>
             );
@@ -165,7 +164,7 @@ function RolePermissionPage() {
           <Button
             icon={<EditOutlined />}
             type="text"
-            style={{ color: "#1677ff", background: "#e6f4ff" }}
+            style={{ color: "#2563EB", background: "#EFF6FF" }}
             onClick={() => handleOpenEdit(record)}
           >
             Sửa
@@ -190,7 +189,7 @@ function RolePermissionPage() {
 
   return (
     <PageContainer
-      title="Phân quyền & Vai trò hệ thống"
+      title="Phân quyền và vai trò hệ thống"
     >
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
         <Col xs={24} sm={12} md={8}>
@@ -216,7 +215,7 @@ function RolePermissionPage() {
           }
         />
 
-        <Table
+        <Table scroll={{ x: "max-content" }}
           columns={columns}
           dataSource={filteredRoles}
           rowKey="id"

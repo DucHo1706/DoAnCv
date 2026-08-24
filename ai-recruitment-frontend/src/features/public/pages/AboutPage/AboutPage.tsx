@@ -40,7 +40,7 @@ function AboutPage() {
       icon: <SlidersOutlined style={{ fontSize: 24, color: "#10B981" }} />,
       title: "Đối Sánh AI 3 Lớp Minh Bạch",
       subtitle: "Explainable AI & Gemini LLM",
-      desc: "Kết hợp giữa thuật toán Hộp trắng (TF-IDF + Cosine Similarity) với Mô hình ngôn ngữ lớn Google Gemini 1.5/2.0 để chấm điểm độ tương hợp ngữ nghĩa chính xác tuyệt đối.",
+      desc: "Kết hợp thuật toán hộp trắng (TF-IDF + Cosine Similarity) với Google Gemini để tạo điểm tham chiếu, phân tích ngữ nghĩa và giải thích các tiêu chí phù hợp.",
       tag: "Đối Sánh Đa Thuật Toán",
       tagBg: "#F0FDF4",
       tagColor: "#15803D",
@@ -48,9 +48,9 @@ function AboutPage() {
     {
       step: "03",
       icon: <AuditOutlined style={{ fontSize: 24, color: "#F59E0B" }} />,
-      title: "Năng Lực & Gợi Ý Phỏng Vấn",
+      title: "Năng Lực & Lộ Trình Ôn Tập",
       subtitle: "Apriori Mining & Coaching",
-      desc: "Khai phá tập kỹ năng đi kèm từ dữ liệu tuyển dụng, cảnh báo các khoảng trống kỹ năng còn thiếu và tự động tạo bộ câu hỏi phỏng vấn tối ưu cho từng ứng viên.",
+      desc: "Khai phá tập kỹ năng đi kèm, xác định khoảng trống năng lực và đề xuất chủ đề cùng tài liệu để ứng viên chủ động ôn tập.",
       tag: "Cảnh Báo & Gợi Ý",
       tagBg: "#FEF3C7",
       tagColor: "#B45309",
@@ -68,15 +68,15 @@ function AboutPage() {
     {
       icon: <SafetyCertificateOutlined style={{ fontSize: 26, color: "#10B981" }} />,
       title: "Ngôn Từ & Chân Thực (Bias Reduction)",
-      description: "Loại bỏ hoàn toàn các yếu tố gây định kiến vô thức như giới tính, độ tuổi, địa phương hay tên trường đại học. Quá trình đánh giá ứng viên được thực hiện hoàn toàn công bằng dựa trên năng lực thực chiến.",
+      description: "Che giấu một số thông tin cá nhân không cần thiết và trình bày kết quả theo tiêu chí nhằm hạn chế ảnh hưởng trực tiếp của dữ liệu nhạy cảm. Kết quả vẫn cần HR giám sát và xem xét.",
       badge: "Công Bằng & Minh Bạch",
       badgeColor: "green",
     },
     {
       icon: <BookOutlined style={{ fontSize: 26, color: "#F59E0B" }} />,
-      title: "Gợi Ý Phỏng Vấn Cá Nhân Hóa",
-      description: "Tự động phân tích điểm mạnh, điểm yếu và các kinh nghiệm chưa rõ ràng trong CV của ứng viên để sinh ra bộ câu hỏi phỏng vấn chuyên sâu, hỗ trợ nhà tuyển dụng khai thác đúng thông tin cần thiết.",
-      badge: "Hỗ Trợ Phỏng Vấn",
+      title: "Lộ Trình Ôn Tập Cá Nhân Hóa",
+      description: "Phân tích điểm mạnh, khoảng trống kỹ năng và kinh nghiệm chưa rõ trong CV để đề xuất tối đa ba chủ đề ôn tập cùng tài liệu tham khảo cho ứng viên.",
+      badge: "Hỗ Trợ Ứng Viên",
       badgeColor: "gold",
     },
     {
@@ -103,15 +103,15 @@ function AboutPage() {
       icon: <DatabaseOutlined style={{ color: "#10B981" }} />,
       items: [
         { name: "C# .NET 8 Web API", detail: "Kiến trúc Repository-Service đáp ứng tải cao và bảo mật nhiều lớp" },
-        { name: "PostgreSQL Database", detail: "Lưu trữ dữ liệu có cấu trúc, lập chỉ mục tìm kiếm tối ưu hiệu năng" },
-        { name: "JWT Auth & Role Permissions", detail: "Phân quyền chi tiết 3 vai trò: Admin, Recruiter và Candidate" },
+        { name: "Microsoft SQL Server", detail: "Lưu trữ dữ liệu có cấu trúc và hỗ trợ truy vấn nghiệp vụ qua Entity Framework Core" },
+        { name: "JWT và phân quyền truy cập", detail: "Phân quyền chi tiết ba vai trò: quản trị viên, nhà tuyển dụng và ứng viên" },
       ],
     },
     {
       layer: "AI & DATA SCIENCE SERVICES",
       icon: <BranchesOutlined style={{ color: "#F59E0B" }} />,
       items: [
-        { name: "Google Gemini 1.5/2.0 LLM", detail: "Phân tích ngữ nghĩa CV, chấm điểm ASK và sinh câu hỏi phỏng vấn" },
+        { name: "Google Gemini", detail: "Phân tích ngữ nghĩa CV, giải thích kết quả ASK và đề xuất chủ đề ôn tập" },
         { name: "Python FastAPI Microservice", detail: "Dịch vụ tính toán độc lập cho các thuật toán AI và Data Mining" },
         { name: "TF-IDF & Apriori Miner", detail: "Tính độ tương đồng văn bản hộp trắng và khai phá tập kỹ năng đi kèm" },
       ],
@@ -123,12 +123,12 @@ function AboutPage() {
       {/* 1. HERO SHOWCASE SECTION */}
       <div
         style={{
-          background: "linear-gradient(135deg, #0F172A 0%, #1E293B 100%)",
-          borderRadius: 24,
+          background: "linear-gradient(135deg, #FFFFFF 0%, #EFF6FF 100%)",
+          borderRadius: 20,
           padding: "48px 40px",
-          color: "#FFFFFF",
           marginBottom: 48,
-          boxShadow: appTheme.shadow.panel,
+          boxShadow: "0 18px 50px rgba(37, 99, 235, 0.08)",
+          border: "1px solid #DBEAFE",
           position: "relative",
           overflow: "hidden",
         }}
@@ -140,25 +140,28 @@ function AboutPage() {
                 display: "inline-flex",
                 alignItems: "center",
                 gap: 8,
-                background: "rgba(37, 99, 235, 0.2)",
-                border: "1px solid rgba(59, 130, 246, 0.3)",
+                background: "#EFF6FF",
+                border: "1px solid #BFDBFE",
                 padding: "6px 16px",
-                borderRadius: 30,
+                borderRadius: 20,
                 marginBottom: 20,
               }}
             >
-              <ThunderboltOutlined style={{ color: "#60A5FA" }} />
-              <span style={{ color: "#93C5FD", fontSize: 13, fontWeight: 700, letterSpacing: "0.04em" }}>
+              <ThunderboltOutlined style={{ color: "#2563EB" }} />
+              <span style={{ color: "#1D4ED8", fontSize: 13, fontWeight: 700, letterSpacing: "0.04em" }}>
                 AI RECRUITMENT PLATFORM • NỀN TẢNG TUYỂN DỤNG THÔNG MINH
               </span>
             </div>
 
-            <Title level={1} style={{ color: "#FFFFFF", fontWeight: 800, fontSize: 36, margin: "0 0 18px", lineHeight: 1.25 }}>
+            <Title level={1} style={{ color: "#0F172A", fontWeight: 800, fontSize: 36, margin: "0 0 18px", lineHeight: 1.25 }}>
               Tối Ưu Hóa Tuyển Dụng Với AI Đa Mô-Hình & Khai Phá Dữ Liệu Lớn
             </Title>
 
-            <Paragraph style={{ color: "#94A3B8", fontSize: 16, lineHeight: 1.7, marginBottom: 32 }}>
-              Hệ thống **AI Recruitment** đột phá quy trình tuyển dụng truyền thống bằng việc kết hợp giữa **Mô hình Ngôn ngữ Lớn (Google Gemini)**, **Thuật toán Hộp trắng minh bạch (TF-IDF)** và **Khai phá luật kết hợp (Apriori Mining)**. Giúp doanh nghiệp chọn đúng tài năng nhanh chóng và hỗ trợ ứng viên nâng cao năng lực.
+            <Paragraph style={{ color: "#475569", fontSize: 16, lineHeight: 1.75, marginBottom: 32, maxWidth: 720 }}>
+              Hệ thống <Text strong style={{ color: "#0F172A" }}>AI Recruitment</Text> hỗ trợ số hóa và sàng lọc hồ sơ bằng cách kết hợp
+              {" "}<Text strong style={{ color: "#1D4ED8" }}>Google Gemini</Text> để phân tích ngữ cảnh,
+              {" "}<Text strong style={{ color: "#1D4ED8" }}>TF-IDF và Cosine Similarity</Text> để đối chiếu minh bạch,
+              cùng <Text strong style={{ color: "#1D4ED8" }}>Apriori</Text> để khai phá nhóm kỹ năng liên quan. Kết quả giúp HR ưu tiên hồ sơ cần xem xét và giúp ứng viên nhận biết khoảng trống năng lực.
             </Paragraph>
 
             <Space size={16} wrap>
@@ -168,7 +171,7 @@ function AboutPage() {
                 icon={<CompassOutlined />}
                 onClick={() => navigate("/jobs")}
                 style={{
-                  borderRadius: 10,
+                  borderRadius: 12,
                   height: 48,
                   padding: "0 28px",
                   background: "#2563EB",
@@ -182,15 +185,15 @@ function AboutPage() {
               </Button>
               <Button
                 size="large"
-                ghost
                 icon={<RobotOutlined />}
                 onClick={() => navigate("/candidate/dashboard")}
                 style={{
-                  borderRadius: 10,
+                  borderRadius: 12,
                   height: 48,
                   padding: "0 24px",
-                  color: "#FFFFFF",
-                  borderColor: "rgba(255, 255, 255, 0.3)",
+                  color: "#1D4ED8",
+                  borderColor: "#93C5FD",
+                  background: "#FFFFFF",
                   fontWeight: 600,
                   fontSize: 15,
                 }}
@@ -204,40 +207,40 @@ function AboutPage() {
           <Col xs={24} lg={10}>
             <div
               style={{
-                background: "rgba(255, 255, 255, 0.04)",
-                backdropFilter: "blur(20px)",
-                border: "1px solid rgba(255, 255, 255, 0.1)",
+                background: "#FFFFFF",
+                border: "1px solid #DBEAFE",
                 borderRadius: 20,
                 padding: 24,
+                boxShadow: "0 12px 36px rgba(15, 23, 42, 0.06)",
               }}
             >
-              <div style={{ fontSize: 12, fontWeight: 800, color: "#60A5FA", letterSpacing: "0.08em", marginBottom: 20, textTransform: "uppercase" }}>
-                HIỆU NĂNG VÀ CHỈ SỐ HỆ THỐNG
+              <div style={{ fontSize: 12, fontWeight: 800, color: "#2563EB", letterSpacing: "0.08em", marginBottom: 20, textTransform: "uppercase" }}>
+                CÁCH HỆ THỐNG TẠO KẾT QUẢ
               </div>
 
               <Row gutter={[14, 14]}>
                 <Col span={12}>
-                  <div style={{ background: "rgba(15, 23, 42, 0.65)", padding: 18, borderRadius: 12, border: "1px solid rgba(255, 255, 255, 0.08)" }}>
-                    <div style={{ fontSize: 28, fontWeight: 800, color: "#10B981" }}>99.2%</div>
-                    <div style={{ fontSize: 12, color: "#94A3B8", marginTop: 4, fontWeight: 500 }}>Chính xác bóc tách CV</div>
+                  <div style={{ background: "#F8FAFC", padding: 18, borderRadius: 12, border: "1px solid #E2E8F0", height: "100%" }}>
+                    <div style={{ fontSize: 20, fontWeight: 800, color: "#2563EB" }}>OCR + NLP</div>
+                    <div style={{ fontSize: 12, color: "#64748B", marginTop: 6, fontWeight: 500 }}>Đọc và chuẩn hóa nội dung CV</div>
                   </div>
                 </Col>
                 <Col span={12}>
-                  <div style={{ background: "rgba(15, 23, 42, 0.65)", padding: 18, borderRadius: 12, border: "1px solid rgba(255, 255, 255, 0.08)" }}>
-                    <div style={{ fontSize: 28, fontWeight: 800, color: "#3B82F6" }}>80%</div>
-                    <div style={{ fontSize: 12, color: "#94A3B8", marginTop: 4, fontWeight: 500 }}>Tiết kiệm thời gian HR</div>
+                  <div style={{ background: "#F8FAFC", padding: 18, borderRadius: 12, border: "1px solid #E2E8F0", height: "100%" }}>
+                    <div style={{ fontSize: 20, fontWeight: 800, color: "#2563EB" }}>TF-IDF</div>
+                    <div style={{ fontSize: 12, color: "#64748B", marginTop: 6, fontWeight: 500 }}>Đối chiếu từ khóa có thể kiểm chứng</div>
                   </div>
                 </Col>
                 <Col span={12}>
-                  <div style={{ background: "rgba(15, 23, 42, 0.65)", padding: 18, borderRadius: 12, border: "1px solid rgba(255, 255, 255, 0.08)" }}>
-                    <div style={{ fontSize: 28, fontWeight: 800, color: "#F59E0B" }}>3 Lớp</div>
-                    <div style={{ fontSize: 12, color: "#94A3B8", marginTop: 4, fontWeight: 500 }}>Đối sánh đa thuật toán</div>
+                  <div style={{ background: "#F8FAFC", padding: 18, borderRadius: 12, border: "1px solid #E2E8F0", height: "100%" }}>
+                    <div style={{ fontSize: 20, fontWeight: 800, color: "#2563EB" }}>Gemini</div>
+                    <div style={{ fontSize: 12, color: "#64748B", marginTop: 6, fontWeight: 500 }}>Phân tích ngữ cảnh và giải thích</div>
                   </div>
                 </Col>
                 <Col span={12}>
-                  <div style={{ background: "rgba(15, 23, 42, 0.65)", padding: 18, borderRadius: 12, border: "1px solid rgba(255, 255, 255, 0.08)" }}>
-                    <div style={{ fontSize: 28, fontWeight: 800, color: "#EC4899" }}>Apriori</div>
-                    <div style={{ fontSize: 12, color: "#94A3B8", marginTop: 4, fontWeight: 500 }}>Khai phá luật kết hợp</div>
+                  <div style={{ background: "#F8FAFC", padding: 18, borderRadius: 12, border: "1px solid #E2E8F0", height: "100%" }}>
+                    <div style={{ fontSize: 20, fontWeight: 800, color: "#2563EB" }}>Apriori</div>
+                    <div style={{ fontSize: 12, color: "#64748B", marginTop: 6, fontWeight: 500 }}>Khai phá nhóm kỹ năng liên quan</div>
                   </div>
                 </Col>
               </Row>
@@ -295,7 +298,7 @@ function AboutPage() {
                   </span>
                 </div>
 
-                <Tag style={{ background: item.tagBg, color: item.tagColor, border: "none", borderRadius: 6, fontWeight: 700, fontSize: 11, marginBottom: 10 }}>
+                <Tag style={{ background: item.tagBg, color: item.tagColor, border: "none", borderRadius: 8, fontWeight: 700, fontSize: 11, marginBottom: 10 }}>
                   {item.tag}
                 </Tag>
 
@@ -348,7 +351,7 @@ function AboutPage() {
                     style={{
                       width: 52,
                       height: 52,
-                      borderRadius: 14,
+                      borderRadius: 16,
                       background: "#F8FAFC",
                       border: "1px solid #E2E8F0",
                       display: "flex",
@@ -358,7 +361,7 @@ function AboutPage() {
                   >
                     {feat.icon}
                   </div>
-                  <Tag color={feat.badgeColor} style={{ borderRadius: 6, padding: "4px 12px", fontWeight: 700, fontSize: 12, margin: 0 }}>
+                  <Tag color={feat.badgeColor} style={{ borderRadius: 8, padding: "4px 12px", fontWeight: 700, fontSize: 12, margin: 0 }}>
                     {feat.badge}
                   </Tag>
                 </div>
@@ -446,7 +449,7 @@ function AboutPage() {
         <Row gutter={[32, 24]} align="middle" justify="space-between">
           <Col xs={24} md={16}>
             <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
-              <div style={{ width: 36, height: 36, borderRadius: 10, background: "#EFF6FF", color: "#2563EB", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>
+              <div style={{ width: 36, height: 36, borderRadius: 12, background: "#EFF6FF", color: "#2563EB", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>
                 <RocketOutlined />
               </div>
               <Title level={3} style={{ fontWeight: 800, color: "#0F172A", margin: 0 }}>
@@ -466,7 +469,7 @@ function AboutPage() {
                 icon={<ArrowRightOutlined />}
                 onClick={() => navigate("/jobs")}
                 style={{
-                  borderRadius: 10,
+                  borderRadius: 12,
                   height: 44,
                   padding: "0 24px",
                   background: "#2563EB",

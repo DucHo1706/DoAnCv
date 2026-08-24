@@ -1,10 +1,13 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { Suspense } from "react";
 import ScrollToTop from "./components/common/ScrollToTop";
+import RouteLoading from "./components/common/RouteLoading";
+import { lazyWithRetry as lazy } from "./utils/lazyWithRetry";
 
 // Auth
-import LoginPage from "./features/auth/pages/LoginPage";
-import RegisterPage from "./features/auth/pages/RegisterPage";
-import ForgotPasswordPage from "./features/auth/pages/ForgotPasswordPage";
+const LoginPage = lazy(() => import("./features/auth/pages/LoginPage"));
+const RegisterPage = lazy(() => import("./features/auth/pages/RegisterPage"));
+const ForgotPasswordPage = lazy(() => import("./features/auth/pages/ForgotPasswordPage"));
 
 // Layout chung
 import MainLayout from "./layouts/MainLayout";
@@ -12,52 +15,56 @@ import AuthLayout from "./layouts/AuthLayout";
 import PublicLayout from "./layouts/PublicLayout";
 
 // Recruiter pages
-import JobManagementPage from "./features/recruiter/pages/JobManagementPage";
-import CreateJobPage from "./features/recruiter/pages/CreateJobPage";
-import RecruiterDashboardPage from "./features/recruiter/pages/RecruiterDashboardPage";
-import CandidateDetailPage from "./features/recruiter/pages/CandidateDetailPage";
-import JobCampaignListPage from "./features/recruiter/pages/JobCampaignListPage";
-import CampaignApplicationsPage from "./features/recruiter/pages/CampaignApplicationsPage";
-import CandidateComparisonPage from "./features/recruiter/pages/CandidateComparisonPage";
-import EmailCandidatePage from "./features/recruiter/pages/EmailCandidatePage";
-import TalentPoolPage from "./features/recruiter/pages/TalentPoolPage";
-import TalentPoolDetailPage from "./features/recruiter/pages/TalentPoolDetailPage";
-import InterviewSchedulePage from "./features/recruiter/pages/InterviewSchedulePage";
-import EmailLogsPage from "./features/recruiter/pages/EmailLogsPage";
-import HomePage from "./features/public/pages/HomePage";
-import AboutPage from "./features/public/pages/AboutPage";
-import RecruiterProfilePage from "./features/recruiter/pages/RecruiterProfilePage";
-import RecruiterJobDetailPage from "./features/recruiter/pages/RecruiterJobDetailPage";
+const JobManagementPage = lazy(() => import("./features/recruiter/pages/JobManagementPage"));
+const CreateJobPage = lazy(() => import("./features/recruiter/pages/CreateJobPage"));
+const RecruiterDashboardPage = lazy(() => import("./features/recruiter/pages/RecruiterDashboardPage"));
+const CandidateDetailPage = lazy(() => import("./features/recruiter/pages/CandidateDetailPage"));
+const JobCampaignListPage = lazy(() => import("./features/recruiter/pages/JobCampaignListPage"));
+const CampaignApplicationsPage = lazy(() => import("./features/recruiter/pages/CampaignApplicationsPage"));
+const CandidateComparisonPage = lazy(() => import("./features/recruiter/pages/CandidateComparisonPage"));
+const EmailCandidatePage = lazy(() => import("./features/recruiter/pages/EmailCandidatePage"));
+const TalentPoolPage = lazy(() => import("./features/recruiter/pages/TalentPoolPage"));
+const CandidateSearchPage = lazy(() => import("./features/recruiter/pages/CandidateSearchPage/CandidateSearchPage"));
+const CandidateSearchDetailPage = lazy(() => import("./features/recruiter/pages/CandidateSearchDetailPage/CandidateSearchDetailPage"));
+const TalentPoolDetailPage = lazy(() => import("./features/recruiter/pages/TalentPoolDetailPage"));
+const InterviewSchedulePage = lazy(() => import("./features/recruiter/pages/InterviewSchedulePage"));
+const EmailLogsPage = lazy(() => import("./features/recruiter/pages/EmailLogsPage"));
+const HomePage = lazy(() => import("./features/public/pages/HomePage"));
+const AboutPage = lazy(() => import("./features/public/pages/AboutPage"));
+const RecruiterProfilePage = lazy(() => import("./features/recruiter/pages/RecruiterProfilePage"));
+const RecruiterJobDetailPage = lazy(() => import("./features/recruiter/pages/RecruiterJobDetailPage"));
 
 // Candidate pages
-import CandidateJobPage from "./features/candidate-portal/pages/CandidateJobPage";
-import ApplicationStatusPage from "./features/candidate-portal/pages/ApplicationStatusPage";
-import CandidateProfilePage from "./features/candidate-portal/pages/CandidateProfilePage";
-import CandidateJobDetailPage from "./features/candidate-portal/pages/CandidateJobDetailPage";
-import CvAnalysisResultPage from "./features/candidate-portal/pages/CvAnalysisResultPage";
-import CandidateDashboardPage from "./features/candidate-portal/pages/CandidateDashboardPage";
-import SavedJobsPage from "./features/candidate-portal/pages/SavedJobsPage";
+const CandidateJobPage = lazy(() => import("./features/candidate-portal/pages/CandidateJobPage"));
+const ApplicationStatusPage = lazy(() => import("./features/candidate-portal/pages/ApplicationStatusPage"));
+const CandidateProfilePage = lazy(() => import("./features/candidate-portal/pages/CandidateProfilePage"));
+const CandidateJobDetailPage = lazy(
+  () => import("./features/candidate-portal/pages/CandidateJobDetailPage"),
+  "CandidateJobDetailPage"
+);
+const CvAnalysisResultPage = lazy(() => import("./features/candidate-portal/pages/CvAnalysisResultPage"));
+const CandidateDashboardPage = lazy(() => import("./features/candidate-portal/pages/CandidateDashboardPage"));
+const SavedJobsPage = lazy(() => import("./features/candidate-portal/pages/SavedJobsPage"));
+const CvBuilderPage = lazy(() => import("./features/candidate-portal/pages/CvBuilderPage"));
 
 // Admin pages
-import AdminDashboardPage from "./features/admin/pages/AdminDashboardPage";
-import JobApprovalPage from "./features/admin/pages/JobApprovalPage";
-import UserManagementPage from "./features/admin/pages/UserManagementPage";
-import AuditLogsPage from "./features/admin/pages/AuditLogsPage";
-import RolePermissionPage from "./features/admin/pages/RolePermissionPage";
-import BranchManagementPage from "./features/admin/pages/BranchManagementPage";
-import CategoryManagementPage from "./features/admin/pages/CategoryManagementPage";
-import JobPositionManagementPage from "./features/admin/pages/JobPositionManagementPage";
-import JobLevelManagementPage from "./features/admin/pages/JobLevelManagementPage";
-import RecruiterPerformancePage from "./features/admin/pages/RecruiterPerformancePage/RecruiterPerformancePage";
-import SystemSettingsPage from "./features/admin/pages/SystemSettingsPage/SystemSettingsPage";
-import OrganizationManagementPage from "./features/admin/pages/OrganizationManagementPage/OrganizationManagementPage";
-import AdminProfilePage from "./features/admin/pages/AdminProfilePage/AdminProfilePage";
+const AdminDashboardPage = lazy(() => import("./features/admin/pages/AdminDashboardPage"));
+const JobApprovalPage = lazy(() => import("./features/admin/pages/JobApprovalPage"));
+const AdminJobDetailPage = lazy(() => import("./features/admin/pages/AdminJobDetailPage/AdminJobDetailPage"));
+const UserManagementPage = lazy(() => import("./features/admin/pages/UserManagementPage"));
+const AuditLogsPage = lazy(() => import("./features/admin/pages/AuditLogsPage"));
+const RolePermissionPage = lazy(() => import("./features/admin/pages/RolePermissionPage"));
+const RecruiterPerformancePage = lazy(() => import("./features/admin/pages/RecruiterPerformancePage/RecruiterPerformancePage"));
+const SystemSettingsPage = lazy(() => import("./features/admin/pages/SystemSettingsPage/SystemSettingsPage"));
+const OrganizationManagementPage = lazy(() => import("./features/admin/pages/OrganizationManagementPage/OrganizationManagementPage"));
+const AdminProfilePage = lazy(() => import("./features/admin/pages/AdminProfilePage/AdminProfilePage"));
 
 function App() {
   return (
     <BrowserRouter>
       <ScrollToTop />
-      <Routes>
+      <Suspense fallback={<RouteLoading />}>
+        <Routes>
         {/* Auth */}
         <Route element={<AuthLayout />}>
           <Route path="/login" element={<LoginPage />} />
@@ -76,6 +83,7 @@ function App() {
           <Route path="profile" element={<CandidateProfilePage />} />
           <Route path="candidate/dashboard" element={<CandidateDashboardPage />} />
           <Route path="candidate/saved-jobs" element={<SavedJobsPage />} />
+          <Route path="candidate/cv-builder" element={<CvBuilderPage />} />
         </Route>
 
         {/* Recruiter */}
@@ -83,6 +91,8 @@ function App() {
           <Route path="dashboard" element={<RecruiterDashboardPage />} />
           <Route path="jobs" element={<JobManagementPage />} />
           <Route path="jobs/create" element={<CreateJobPage />} />
+          <Route path="jobs/:repostSourceId/repost" element={<CreateJobPage />} />
+          <Route path="jobs/:id/edit" element={<CreateJobPage />} />
           <Route path="jobs/:id" element={<RecruiterJobDetailPage />} />
           <Route path="applications" element={<JobCampaignListPage />} />
           <Route path="applications/:jobId" element={<CampaignApplicationsPage />} />
@@ -92,6 +102,8 @@ function App() {
           <Route path="ranking" element={<Navigate to="/recruiter/applications" replace />} />
           <Route path="ranking/compare" element={<CandidateComparisonPage />} />
           <Route path="talent-pool" element={<TalentPoolPage />} />
+          <Route path="candidate-search" element={<CandidateSearchPage />} />
+          <Route path="candidate-search/:candidateId" element={<CandidateSearchDetailPage />} />
           <Route path="talent-pool/:id" element={<TalentPoolDetailPage />} />
           <Route path="email-logs" element={<EmailLogsPage />} />
           <Route path="profile" element={<RecruiterProfilePage />} />
@@ -102,6 +114,7 @@ function App() {
         <Route path="/admin" element={<MainLayout />}>
           <Route path="dashboard" element={<AdminDashboardPage />} />
           <Route path="approval" element={<JobApprovalPage />} />
+          <Route path="jobs/:id" element={<AdminJobDetailPage />} />
           <Route path="users" element={<UserManagementPage />} />
           <Route path="recruiter-performance" element={<RecruiterPerformancePage />} />
           <Route path="roles" element={<RolePermissionPage />} />
@@ -118,7 +131,8 @@ function App() {
 
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+        </Routes>
+      </Suspense>
     </BrowserRouter>
   );
 }

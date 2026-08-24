@@ -81,103 +81,273 @@ namespace RecruitmentBackend.Services
             return result;
         }
 
-        public async Task<bool> SyncSkillsToAiAsync(List<string> skills)
+        public async Task<AiMatchingResponse> GetMatchingScoreFromTextAsync(
+            string cvText,
+            string jobDescription,
+            string criteriaJson)
         {
-            var payload = new { skills = skills };
-            var jsonContent = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
+            using var content = new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["cv_text"] = cvText ?? string.Empty,
+                ["job_description"] = jobDescription ?? string.Empty,
+                ["criteria"] = criteriaJson ?? "[]"
+            });
 
-            var response = await _httpClient.PostAsync("update-skills", jsonContent);
+            using var response = await _httpClient.PostAsync("score-cv-text", content);
+            var jsonResponse = await response.Content.ReadAsStringAsync();
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new Exception("Lỗi từ AI Service Python: " + response.StatusCode + " - " + jsonResponse);
+            }
 
-            return response.IsSuccessStatusCode;
+            var result = JsonSerializer.Deserialize<AiMatchingResponse>(jsonResponse, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+            if (result == null)
+            {
+                throw new Exception("AI Service không trả về dữ liệu hợp lệ.");
+            }
+            if (result.Status != "success")
+            {
+                throw new Exception(string.IsNullOrWhiteSpace(result.Message)
+                    ? "AI Service xử lý CV trực tuyến thất bại."
+                    : result.Message);
+            }
+
+            return result;
         }
 
-        public async Task<bool> TrainAprioriAsync(List<List<string>> transactions)
+        public async Task<(bool IsValid, string Message)> ValidateCvAsync(byte[] fileBytes, string fileName, string contentType)
         {
-            var payload = new 
-            { 
-                transactions = transactions,
-                min_support = 0.05,
-                min_confidence = 0.3
-            };
-            var jsonContent = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
+            using var content = new MultipartFormDataContent();
+            using var fileContent = new ByteArrayContent(fileBytes);
+            if (!string.IsNullOrWhiteSpace(contentType))
+            {
+                fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(contentType);
+            }
+            content.Add(fileContent, "file", fileName);
 
-            var response = await _httpClient.PostAsync("train-apriori", jsonContent);
-            return response.IsSuccessStatusCode;
+            using var response = await _httpClient.PostAsync("validate-cv", content);
+            var responseBody = await response.Content.ReadAsStringAsync();
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new HttpRequestException($"Dịch vụ kiểm tra CV trả về {response.StatusCode}.");
+            }
+
+            using var document = JsonDocument.Parse(responseBody);
+            var root = document.RootElement;
+            var isValid = root.TryGetProperty("is_valid", out var validElement) && validElement.GetBoolean();
+            var message = root.TryGetProperty("message", out var messageElement)
+                ? messageElement.GetString() ?? "Không thể xác minh nội dung CV."
+                : "Không thể xác minh nội dung CV.";
+            return (isValid, message);
+        }
+
+        public async Task<CvExtractionResponse> ExtractCvAsync(byte[] fileBytes, string fileName, string contentType)
+        {
+            using var content = new MultipartFormDataContent();
+            using var fileContent = new ByteArrayContent(fileBytes);
+            if (!string.IsNullOrWhiteSpace(contentType))
+            {
+                fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(contentType);
+            }
+            content.Add(fileContent, "file", fileName);
+
+            using var response = await _httpClient.PostAsync("extract-cv", content);
+            var responseBody = await response.Content.ReadAsStringAsync();
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new HttpRequestException($"Dịch vụ trích xuất CV trả về {response.StatusCode}.");
+            }
+            var result = JsonSerializer.Deserialize<CvExtractionResponse>(responseBody, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true,
+                PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
+            });
+            if (result == null) throw new InvalidDataException("Phản hồi trích xuất CV không hợp lệ.");
+            return result;
+        }
+
+        public async Task<bool> SyncSkillsToAiAsync(List<string> skills)
+        {
+            try
+            {
+                var payload = new { skills = skills };
+                var jsonContent = new StringContent(
+                    JsonSerializer.Serialize(payload, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }),
+                    Encoding.UTF8,
+                    "application/json");
+
+                var response = await _httpClient.PostAsync("update-skills", jsonContent);
+
+                return response.IsSuccessStatusCode;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        public async Task<bool> TrainAprioriAsync(
+            List<List<string>> transactions,
+            string? domain = null,
+            string? datasetId = null,
+            List<string>? taxonomySkills = null,
+            Dictionary<string, string>? taxonomyAliases = null,
+            bool resetModels = false)
+        {
+            try
+            {
+                var payload = new 
+                { 
+                    transactions = transactions,
+                    min_support = 0.05,
+                    min_confidence = 0.3,
+                    domain = domain,
+                    dataset_id = datasetId,
+                    taxonomy_skills = taxonomySkills,
+                    taxonomy_aliases = taxonomyAliases,
+                    min_support_count = 2,
+                    reset_models = resetModels
+                };
+                var jsonContent = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
+
+                var response = await _httpClient.PostAsync("train-apriori", jsonContent);
+                return await IsSuccessfulMiningResponseAsync(response);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[AiService] TrainApriori error: {ex.Message}");
+                return false;
+            }
         }
 
         public async Task<List<string>> RecommendSkillsAsync(List<string> currentSkills, int topN = 5)
         {
-            var payload = new 
-            { 
-                current_skills = currentSkills,
-                top_n = topN
-            };
-            var jsonContent = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
+            try
+            {
+                var payload = new 
+                { 
+                    current_skills = currentSkills,
+                    top_n = topN
+                };
+                var jsonContent = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
 
-            var response = await _httpClient.PostAsync("recommend-skills", jsonContent);
-            if (response.IsSuccessStatusCode == false)
+                var response = await _httpClient.PostAsync("recommend-skills", jsonContent);
+                if (response.IsSuccessStatusCode == false)
+                {
+                    return new List<string>();
+                }
+
+                var jsonResponse = await response.Content.ReadAsStringAsync();
+                using var doc = JsonDocument.Parse(jsonResponse);
+                var root = doc.RootElement;
+                if (root.TryGetProperty("recommended_skills", out var recommendedProp) && recommendedProp.ValueKind == JsonValueKind.Array)
+                {
+                    var result = new List<string>();
+                    foreach (var item in recommendedProp.EnumerateArray())
+                    {
+                        result.Add(item.GetString());
+                    }
+                    return result;
+                }
+
+                return new List<string>();
+            }
+            catch
             {
                 return new List<string>();
             }
-
-            var jsonResponse = await response.Content.ReadAsStringAsync();
-            using var doc = JsonDocument.Parse(jsonResponse);
-            var root = doc.RootElement;
-            if (root.TryGetProperty("recommended_skills", out var recommendedProp) && recommendedProp.ValueKind == JsonValueKind.Array)
-            {
-                var result = new List<string>();
-                foreach (var item in recommendedProp.EnumerateArray())
-                {
-                    result.Add(item.GetString());
-                }
-                return result;
-            }
-
-            return new List<string>();
         }
 
         public async Task<string> GetAssociationRulesJsonAsync()
         {
-            var response = await _httpClient.GetAsync("association-rules");
-            if (response.IsSuccessStatusCode == false)
+            try
+            {
+                var response = await _httpClient.GetAsync("association-rules");
+                if (response.IsSuccessStatusCode == false)
+                {
+                    return "{\"rules\":[]}";
+                }
+
+                return await response.Content.ReadAsStringAsync();
+            }
+            catch
             {
                 return "{\"rules\":[]}";
             }
-
-            return await response.Content.ReadAsStringAsync();
         }
 
         public async Task<bool> TrainHuimAsync(object payload)
         {
-            var jsonContent = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
-            var response = await _httpClient.PostAsync("train-huim", jsonContent);
-            return response.IsSuccessStatusCode;
+            try
+            {
+                var jsonContent = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
+                var response = await _httpClient.PostAsync("train-huim", jsonContent);
+                return await IsSuccessfulMiningResponseAsync(response);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[AiService] TrainHuim error: {ex.Message}");
+                return false;
+            }
+        }
+
+        private static async Task<bool> IsSuccessfulMiningResponseAsync(HttpResponseMessage response)
+        {
+            if (!response.IsSuccessStatusCode) return false;
+            try
+            {
+                var responseBody = await response.Content.ReadAsStringAsync();
+                using var document = JsonDocument.Parse(responseBody);
+                return document.RootElement.TryGetProperty("status", out var status)
+                    && string.Equals(status.GetString(), "success", StringComparison.OrdinalIgnoreCase);
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         public async Task<string> RecommendHighUtilitySkillsAsync(List<string> currentSkills, int topN = 5)
         {
-            var payload = new
+            try
             {
-                current_skills = currentSkills,
-                top_n = topN
-            };
-            var jsonContent = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
-            var response = await _httpClient.PostAsync("recommend-high-utility-skills", jsonContent);
-            if (response.IsSuccessStatusCode == false)
+                var payload = new
+                {
+                    current_skills = currentSkills,
+                    top_n = topN
+                };
+                var jsonContent = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
+                var response = await _httpClient.PostAsync("recommend-high-utility-skills", jsonContent);
+                if (response.IsSuccessStatusCode == false)
+                {
+                    return "{\"recommended_skills\":[]}";
+                }
+                return await response.Content.ReadAsStringAsync();
+            }
+            catch
             {
                 return "{\"recommended_skills\":[]}";
             }
-            return await response.Content.ReadAsStringAsync();
         }
 
         public async Task<string> GetHighUtilityItemsetsJsonAsync()
         {
-            var response = await _httpClient.GetAsync("high-utility-itemsets");
-            if (response.IsSuccessStatusCode == false)
+            try
+            {
+                var response = await _httpClient.GetAsync("high-utility-itemsets");
+                if (response.IsSuccessStatusCode == false)
+                {
+                    return "{\"itemsets\":[]}";
+                }
+                return await response.Content.ReadAsStringAsync();
+            }
+            catch
             {
                 return "{\"itemsets\":[]}";
             }
-            return await response.Content.ReadAsStringAsync();
         }
 
         public async Task<List<SemanticSearchResultItemDto>> SearchSemanticAsync(string query, List<DTOs.Requests.SemanticSearchJobItemDto> jobs)
@@ -189,7 +359,10 @@ namespace RecruitmentBackend.Services
                     Query = query,
                     Jobs = jobs
                 };
-                var jsonContent = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
+                var jsonContent = new StringContent(
+                    JsonSerializer.Serialize(payload, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }),
+                    Encoding.UTF8,
+                    "application/json");
                 var response = await _httpClient.PostAsync("semantic-search", jsonContent);
                 if (response.IsSuccessStatusCode == false)
                 {

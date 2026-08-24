@@ -10,6 +10,11 @@ import { appTheme } from "../constants/theme";
 import { SideNav } from "./components/SideNav";
 import { NotificationPopover } from "./components/NotificationPopover";
 import { ProfileDropdown } from "./components/ProfileDropdown";
+import {
+  REALTIME_NOTIFICATION_EVENT,
+  REALTIME_RESOURCE_EVENT,
+  type RealtimeResourceEventDetail,
+} from "../hooks/useRealtimeRefresh";
 
 const { Header, Content } = Layout;
 const { Text } = Typography;
@@ -21,11 +26,11 @@ const BREADCRUMB_MAP: Record<string, { group: string; label: string }> = {
   "/admin/users": { group: "Quản lý Nhân sự", label: "Quản lý người dùng" },
   "/admin/recruiter-performance": { group: "Quản lý Nhân sự", label: "Hiệu suất Recruiter" },
   "/admin/roles": { group: "Quản lý Nhân sự", label: "Vai trò & Phân quyền" },
-  "/admin/organization": { group: "Cơ cấu Tổ chức", label: "Danh mục Quản trị Tổ chức" },
-  "/admin/branches": { group: "Cơ cấu Tổ chức", label: "Chi nhánh" },
-  "/admin/categories": { group: "Cơ cấu Tổ chức", label: "Lĩnh vực ngành nghề" },
-  "/admin/job-levels": { group: "Cơ cấu Tổ chức", label: "Cấp bậc công việc" },
-  "/admin/job-positions": { group: "Cơ cấu Tổ chức", label: "Vị trí công việc" },
+  "/admin/organization": { group: "Dữ liệu tuyển dụng", label: "Danh mục tuyển dụng" },
+  "/admin/branches": { group: "Dữ liệu tuyển dụng", label: "Chi nhánh" },
+  "/admin/categories": { group: "Dữ liệu tuyển dụng", label: "Lĩnh vực ngành nghề" },
+  "/admin/job-levels": { group: "Dữ liệu tuyển dụng", label: "Cấp bậc công việc" },
+  "/admin/job-positions": { group: "Dữ liệu tuyển dụng", label: "Vị trí công việc" },
   "/admin/audit-logs": { group: "Hệ thống & Bảo mật", label: "Nhật ký bảo mật" },
   "/admin/settings": { group: "Hệ thống & Bảo mật", label: "Cài đặt hệ thống" },
   "/admin/profile": { group: "Cá nhân", label: "Thông tin tài khoản Admin" },
@@ -35,6 +40,7 @@ const BREADCRUMB_MAP: Record<string, { group: string; label: string }> = {
   "/recruiter/applications": { group: "Recruiter Workspace", label: "Quản lý Chiến dịch Tuyển dụng" },
   "/recruiter/schedules": { group: "Recruiter Workspace", label: "Lịch phỏng vấn" },
   "/recruiter/talent-pool": { group: "Recruiter Workspace", label: "Kho ứng viên tiềm năng" },
+  "/recruiter/candidate-search": { group: "Recruiter Workspace", label: "Tìm ứng viên" },
   "/recruiter/email-logs": { group: "Recruiter Workspace", label: "Lịch sử Email" },
   "/recruiter/profile": { group: "Cá nhân", label: "Thông tin tài khoản" },
 };
@@ -60,17 +66,20 @@ export default function MainLayout() {
     [notifications]
   );
 
-  const fetchNotifications = async () => {
+  const fetchNotifications = async (showLoading = true) => {
     try {
-      setLoadingNotifs(true);
+      if (showLoading) setLoadingNotifs(true);
       const res = await axiosClient.get("/Notifications");
       if (Array.isArray(res.data)) {
-        setNotifications(res.data);
+        // Chỉ cập nhật state khi dữ liệu thay đổi để tránh re-render toàn layout mỗi 30 giây
+        setNotifications((prev) =>
+          JSON.stringify(prev) === JSON.stringify(res.data) ? prev : res.data
+        );
       }
     } catch {
       // Silent error
     } finally {
-      setLoadingNotifs(false);
+      if (showLoading) setLoadingNotifs(false);
     }
   };
 
@@ -113,10 +122,11 @@ export default function MainLayout() {
   };
 
   useEffect(() => {
-    fetchNotifications();
-    const interval = setInterval(fetchNotifications, 30000);
+    void fetchNotifications(true);
+    const interval = window.setInterval(() => void fetchNotifications(false), 30000);
 
-    let connection: any = null;
+    let notificationConnection: any = null;
+    let applicationConnection: any = null;
     let cancelled = false;
 
     const user = authService.getCurrentUser();
@@ -128,10 +138,11 @@ export default function MainLayout() {
           const signalR = await import("@microsoft/signalr");
           if (cancelled) return;
 
-          const apiUrl = import.meta.env.VITE_API_URL || "https://recruitinsightai.com/api";
-          const hubUrl = apiUrl.replace("/api", "/hubs/notifications");
+          const apiUrl = import.meta.env.VITE_API_URL || "/api";
+          const baseUrl = apiUrl.replace(/\/api\/?$/, "");
+          const hubUrl = `${baseUrl}/hubs/notifications`;
 
-          connection = new signalR.HubConnectionBuilder()
+          notificationConnection = new signalR.HubConnectionBuilder()
             .withUrl(hubUrl, {
               accessTokenFactory: () => localStorage.getItem("token") || ""
             })
@@ -139,10 +150,8 @@ export default function MainLayout() {
             .configureLogging(signalR.LogLevel.Warning)
             .build();
 
-          await connection.start();
-          await connection.invoke("JoinGroup", accountId);
-
-          connection.on("ReceiveNotification", (newNotif: any) => {
+          notificationConnection.on("ReceiveNotification", (newNotif: any) => {
+            window.dispatchEvent(new CustomEvent("recruitment:dashboard-refresh", { detail: newNotif }));
             const formattedNotif = {
               id: newNotif.id || newNotif.NotificationID,
               title: newNotif.title || newNotif.Title,
@@ -152,7 +161,12 @@ export default function MainLayout() {
               createdAt: newNotif.createdAt || newNotif.CreatedAt || new Date().toISOString()
             };
 
-            setNotifications((prev) => [formattedNotif, ...prev]);
+            window.dispatchEvent(new CustomEvent(REALTIME_NOTIFICATION_EVENT, { detail: formattedNotif }));
+            setNotifications((prev) =>
+              prev.some((item) => item.id === formattedNotif.id)
+                ? prev
+                : [formattedNotif, ...prev]
+            );
 
             antdNotification.info({
               message: formattedNotif.title,
@@ -168,6 +182,37 @@ export default function MainLayout() {
               },
             });
           });
+
+          notificationConnection.on("MetadataChanged", (detail: RealtimeResourceEventDetail) => {
+            window.dispatchEvent(new CustomEvent(REALTIME_RESOURCE_EVENT, { detail }));
+          });
+
+          notificationConnection.onreconnected(() => {
+            void notificationConnection.invoke("JoinGroup", accountId);
+            void fetchNotifications(false);
+          });
+
+          await notificationConnection.start();
+          await notificationConnection.invoke("JoinGroup", accountId);
+
+          applicationConnection = new signalR.HubConnectionBuilder()
+            .withUrl(`${baseUrl}/hubs/ai-evaluation`, {
+              accessTokenFactory: () => localStorage.getItem("token") || ""
+            })
+            .withAutomaticReconnect()
+            .configureLogging(signalR.LogLevel.Warning)
+            .build();
+
+          const dispatchApplicationChange = (detail: RealtimeResourceEventDetail) => {
+            const eventDetail = { ...detail, resource: "applications" };
+            window.dispatchEvent(new CustomEvent(REALTIME_RESOURCE_EVENT, { detail: eventDetail }));
+            window.dispatchEvent(new CustomEvent("recruitment:dashboard-refresh", { detail: eventDetail }));
+          };
+
+          applicationConnection.on("ApplicationCreated", dispatchApplicationChange);
+          applicationConnection.on("ApplicationStatusChanged", dispatchApplicationChange);
+          applicationConnection.on("ApplicationAnalysisChanged", dispatchApplicationChange);
+          await applicationConnection.start();
         } catch (err) {
           console.error("Lỗi kết nối SignalR (MainLayout):", err);
         }
@@ -176,8 +221,9 @@ export default function MainLayout() {
 
     return () => {
       cancelled = true;
-      clearInterval(interval);
-      connection?.stop();
+      window.clearInterval(interval);
+      notificationConnection?.stop();
+      applicationConnection?.stop();
     };
   }, []);
 
@@ -193,16 +239,26 @@ export default function MainLayout() {
     const user = authService.getCurrentUser();
     setCurrentUser(user);
 
-    if (isAdminRoute) {
-      jobService
+    if (!isAdminRoute) return;
+
+    const refreshPendingCount = () => {
+      void jobService
         .getAdminJobs()
         .then((data: any) => {
           const list = Array.isArray(data) ? data : data?.$values || [];
-          const count = list.filter((j: any) => j.status === "Pending").length;
-          setPendingCount(count);
+          setPendingCount(list.filter((job: any) => job.status === "Pending").length);
         })
         .catch((err) => console.error("Lỗi khi tải số tin chờ duyệt:", err));
-    }
+    };
+
+    const handleResourceChanged = (event: Event) => {
+      const detail = (event as CustomEvent<RealtimeResourceEventDetail>).detail;
+      if (detail?.resource === "jobs") refreshPendingCount();
+    };
+
+    refreshPendingCount();
+    window.addEventListener(REALTIME_RESOURCE_EVENT, handleResourceChanged);
+    return () => window.removeEventListener(REALTIME_RESOURCE_EVENT, handleResourceChanged);
   }, [isAdminRoute]);
 
   // Global Ctrl+K shortcut
@@ -245,6 +301,32 @@ export default function MainLayout() {
         display: inline-flex !important;
       }
     }
+    @media (max-width: 768px) {
+      .main-content-responsive {
+        margin: 12px 16px !important;
+      }
+    }
+    @media (max-width: 640px) {
+      .main-header-responsive {
+        padding: 0 8px !important;
+      }
+      .main-breadcrumb-group {
+        display: none !important;
+      }
+      .main-header-actions {
+        gap: 4px !important;
+      }
+      .admin-header-search {
+        width: 36px;
+        padding: 0 !important;
+        justify-content: center !important;
+        gap: 0 !important;
+      }
+      .admin-header-search .admin-search-label,
+      .admin-header-search .admin-search-kbd {
+        display: none !important;
+      }
+    }
   `;
 
   return (
@@ -262,6 +344,7 @@ export default function MainLayout() {
 
       <Layout style={{ backgroundColor: appTheme.colors.background }}>
         <Header
+          className="main-header-responsive"
           style={{
             background: "#FFFFFF",
             padding: "0 24px",
@@ -284,6 +367,7 @@ export default function MainLayout() {
             />
 
             <Breadcrumb
+              className="main-breadcrumb-group"
               items={[
                 { title: <Text type="secondary" style={{ fontSize: 13 }}>{currentBreadcrumb.group}</Text> },
                 { title: <Text strong style={{ fontSize: 14, color: "#0F172A" }}>{currentBreadcrumb.label}</Text> },
@@ -292,9 +376,10 @@ export default function MainLayout() {
           </div>
 
           {/* Header Right */}
-          <div style={{ display: "flex", alignItems: "center", gap: 16, flexShrink: 0 }}>
+          <div className="main-header-actions" style={{ display: "flex", alignItems: "center", gap: 16, flexShrink: 0 }}>
             {isAdminRoute && (
               <Button
+                className="admin-header-search"
                 onClick={() => setSearchOpen(true)}
                 style={{
                   display: "inline-flex",
@@ -313,16 +398,17 @@ export default function MainLayout() {
               >
                 <Space size={6} align="center" style={{ lineHeight: 1 }}>
                   <SearchOutlined style={{ color: "#94A3B8", fontSize: 14 }} />
-                  <span style={{ fontSize: 13, color: "#64748B" }}>Tìm kiếm...</span>
+                  <span className="admin-search-label" style={{ fontSize: 13, color: "#64748B" }}>Tìm kiếm...</span>
                 </Space>
                 <Tag
+                  className="admin-search-kbd"
                   bordered={false}
                   style={{
                     margin: 0,
                     fontSize: 10,
                     fontWeight: 700,
                     padding: "2px 6px",
-                    borderRadius: 4,
+                    borderRadius: 8,
                     background: "#E2E8F0",
                     color: "#475569",
                   }}
@@ -344,7 +430,7 @@ export default function MainLayout() {
           </div>
         </Header>
 
-        <Content style={{ margin: "24px 32px", background: "transparent", minHeight: 280 }}>
+        <Content className="main-content-responsive" style={{ margin: "24px 32px", background: "transparent", minHeight: 280 }}>
           <Outlet />
         </Content>
 

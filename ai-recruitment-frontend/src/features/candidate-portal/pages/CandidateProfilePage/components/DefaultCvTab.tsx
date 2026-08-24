@@ -116,7 +116,7 @@ export const DefaultCvTab: React.FC<DefaultCvTabProps> = ({
             showUploadList={false}
             beforeUpload={() => false}
             onChange={onUpload}
-            accept=".pdf,.doc,.docx"
+            accept=".pdf,.docx,.png,.jpg,.jpeg,.webp"
             style={{ borderRadius: 12, border: "2px dashed #CBD5E1", background: "#F8FAFC", height: "180px", padding: "16px 24px" }}
           >
             <p className="ant-upload-drag-icon" style={{ marginBottom: 8 }}>
@@ -126,7 +126,7 @@ export const DefaultCvTab: React.FC<DefaultCvTabProps> = ({
               Click để chọn file hoặc kéo thả vào đây
             </p>
             <p className="ant-upload-hint" style={{ fontSize: 11, color: "#94A3B8" }}>
-              Hỗ trợ PDF, DOC, DOCX dưới 10MB
+              Hỗ trợ PDF, DOCX, PNG, JPG, WEBP dưới 10MB
             </p>
           </Dragger>
         </Col>
@@ -146,7 +146,7 @@ export const DefaultCvTab: React.FC<DefaultCvTabProps> = ({
         >
           <iframe
             src={defaultCvUrl}
-            title="CV Preview"
+            title="Xem trước CV"
             width="100%"
             height="700px"
             style={{ border: "none", borderRadius: "0 0 8px 8px" }}

@@ -26,7 +26,6 @@ function CandidateComparisonPage() {
   return (
     <PageContainer
       title="So sánh ứng viên"
-      subtitle="Đặt các hồ sơ đã chọn cạnh nhau để đánh giá tổng quan và năng lực."
       extra={backButton}
     >
       {loading ? (

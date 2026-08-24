@@ -7,36 +7,43 @@ import {
   Alert,
   Button,
   Card,
+  Collapse,
   Col,
   Descriptions,
   Input,
   Progress,
   Row,
   Select,
+  Segmented,
   Space,
   Spin,
   Tag,
   Timeline,
   Tooltip,
   Typography,
+  Form,
+  InputNumber,
   Skeleton,
 } from "antd";
 import {
   ArrowLeftOutlined,
+  BarChartOutlined,
   CheckCircleOutlined,
   DownloadOutlined,
   LockOutlined,
   PlusOutlined,
-  RobotOutlined,
   SendOutlined,
   TrophyOutlined,
   UserOutlined,
   SearchOutlined,
 
 } from "@ant-design/icons";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import PageContainer from "../../../../components/common/PageContainer";
 import { useTalentPoolDetail } from "./hooks/useTalentPoolDetail";
+import { getApplicationStatusLabel, getSourcingPriorityLabel, getSourcingStageLabel } from "../../../../utils/statusLabels";
+import { talentPoolService } from "../../../talent-pool/services/talentPoolService";
+import { useRecruitmentMetadata } from "../../hooks/useRecruitmentMetadata";
 
 const { Text, Title, Paragraph } = Typography;
 
@@ -77,15 +84,59 @@ export default function TalentPoolDetailPage() {
     filterJobLevel,
     setFilterJobLevel,
     handleSelectIndustry,
+    clearJobFilters,
+    jobFilterCount,
   } = useTalentPoolDetail();
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [workspaceSection, setWorkspaceSection] = useState<"profile" | "matching">("profile");
+  const [profileForm] = Form.useForm();
+  const { categories: profileCategories, positions: profilePositions, levels: profileLevels } = useRecruitmentMetadata();
+
+  const profileCategoryOptions = useMemo(() => {
+    const byId = new Map(profileCategories.map((item) => [item.id, item]));
+    return profileCategories.filter((item) => item.isActive !== false).map((item) => ({
+      value: item.name,
+      label: item.parentId && byId.get(item.parentId)
+        ? `${byId.get(item.parentId)!.name} · ${item.name}`
+        : item.name,
+    }));
+  }, [profileCategories]);
+
+  const profilePositionOptions = useMemo(() =>
+    profilePositions.filter((item) => item.isActive !== false).map((item) => ({ value: item.name, label: item.name })),
+  [profilePositions]);
+
+  const profileLevelOptions = useMemo(() =>
+    profileLevels
+      .filter((item) => item.isActive !== false && Boolean(item.parentId))
+      .map((item) => ({ value: item.name, label: item.name })),
+  [profileLevels]);
+
+  const parseList = (value?: string) => {
+    try {
+      const parsed = value ? JSON.parse(value) : [];
+      return Array.isArray(parsed) ? parsed.filter((item) => typeof item === "string") : [];
+    } catch { return []; }
+  };
 
   const industries = useMemo(() => {
-    return categories.filter((c) => !c.parentId);
-  }, [categories]);
+    const usedRootIds = new Set(
+      openJobs
+        .map((job) => categories.find((category) => category.id === job.category?.id))
+        .filter(Boolean)
+        .map((category) => category!.parentId || category!.id),
+    );
+    return categories.filter((category) => !category.parentId && usedRootIds.has(category.id));
+  }, [categories, openJobs]);
 
   const sectors = useMemo(() => {
-    return categories.filter((c) => c.parentId && (!filterJobIndustry || c.parentId === filterJobIndustry));
-  }, [categories, filterJobIndustry]);
+    const usedCategoryIds = new Set(openJobs.map((job) => job.category?.id).filter(Boolean));
+    return categories.filter((category) =>
+      category.parentId &&
+      usedCategoryIds.has(category.id) &&
+      (!filterJobIndustry || category.parentId === filterJobIndustry),
+    );
+  }, [categories, filterJobIndustry, openJobs]);
 
   const branches = useMemo(() => {
     const unique = new Map<string, string>();
@@ -97,9 +148,14 @@ export default function TalentPoolDetailPage() {
     return Array.from(unique.entries()).map(([id, name]) => ({ id, name }));
   }, [openJobs]);
 
+  const sourcingDomains = parseList(candidate?.domainJson);
+  const sourcingPositions = parseList(candidate?.targetPositionsJson);
+  const sourcingTags = parseList(candidate?.tagsJson);
+  const hasSourcingContext = sourcingDomains.length > 0 || sourcingPositions.length > 0 || sourcingTags.length > 0;
+
   if (loading && !detail) {
     return (
-      <PageContainer title="Chi tiết Ứng viên" subtitle="Đang tải thông tin ứng viên...">
+      <PageContainer title="Chi tiết ứng viên">
         <Card style={{ borderRadius: 16, border: "1px solid #E2E8F0", padding: 24 }}>
           <Skeleton active paragraph={{ rows: 10 }} />
         </Card>
@@ -109,8 +165,8 @@ export default function TalentPoolDetailPage() {
 
   if (!detail || !candidate) {
     return (
-      <PageContainer title="Chi tiết Ứng viên" subtitle="Không tìm thấy dữ liệu ứng viên.">
-        <Alert type="warning" showIcon message="Không tìm thấy ứng viên trong Talent Pool." />
+      <PageContainer title="Chi tiết ứng viên">
+        <Alert type="warning" showIcon message="Không tìm thấy ứng viên trong kho ứng viên tiềm năng." />
       </PageContainer>
     );
   }
@@ -118,7 +174,6 @@ export default function TalentPoolDetailPage() {
   return (
     <PageContainer
       title={`Chi tiết ứng viên: ${candidate?.fullName || ""}`}
-      subtitle="Quản lý thông tin ứng viên, xem lịch sử tương tác và đối sánh năng lực với các vị trí tuyển dụng."
       extra={
         <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)}>
           Quay lại
@@ -128,6 +183,14 @@ export default function TalentPoolDetailPage() {
       <Row gutter={[24, 24]}>
         <Col xs={24} lg={15}>
           <Card style={{ borderRadius: 12 }}>
+            <Segmented
+              block
+              value={workspaceSection}
+              onChange={(value) => setWorkspaceSection(value as "profile" | "matching")}
+              options={[{ label: "Hồ sơ & sourcing", value: "profile" }, { label: "Đối sánh & mời", value: "matching" }]}
+              style={{ marginBottom: 20 }}
+            />
+            {workspaceSection === "profile" ? <>
             <Title level={5}>Ứng viên này sở hữu các kỹ năng:</Title>
 
             <Space
@@ -149,21 +212,92 @@ export default function TalentPoolDetailPage() {
               )}
             </Space>
 
+            <Card size="small" style={{ marginTop: 20, borderRadius: 12, background: "#F8FAFC" }}>
+              <Title level={5} style={{ marginTop: 0, marginBottom: 4 }}>Thông tin sourcing</Title>
+              <Text type="secondary" style={{ display: "block", marginBottom: 12 }}>
+                Context do HR ghi nhận để phân loại, tìm lại và cấp dữ liệu cho hệ thống đề xuất.
+              </Text>
+              {!hasSourcingContext && (
+                <Alert
+                  type="info"
+                  showIcon
+                  style={{ marginBottom: 14 }}
+                  message="Ứng viên chưa có context sourcing"
+                  description="Hãy nhập ít nhất một lĩnh vực hoặc vị trí mục tiêu bên dưới để HR có thể phân loại và hệ thống có cơ sở đề xuất job."
+                />
+              )}
+              {hasSourcingContext && (
+                <Space wrap size={[6, 6]} style={{ marginBottom: 14 }}>
+                  {sourcingDomains.map((value) => <Tag color="blue" key={`domain-${value}`}>{value}</Tag>)}
+                  {sourcingPositions.map((value) => <Tag color="purple" key={`position-${value}`}>{value}</Tag>)}
+                  {sourcingTags.map((value) => <Tag key={`tag-${value}`}>{value}</Tag>)}
+                  {candidate.sourcingStage && <Tag color="gold">Giai đoạn: {getSourcingStageLabel(candidate.sourcingStage)}</Tag>}
+                  {candidate.sourcingPriority && <Tag color={candidate.sourcingPriority === "High" ? "red" : "default"}>Ưu tiên: {getSourcingPriorityLabel(candidate.sourcingPriority)}</Tag>}
+                </Space>
+              )}
+              <Collapse
+                ghost
+                defaultActiveKey={hasSourcingContext ? [] : ["edit-sourcing"]}
+                style={{ margin: "0 -8px" }}
+                items={[{
+                  key: "edit-sourcing",
+                  label: hasSourcingContext ? "Chỉnh sửa phân loại sourcing" : "Bổ sung thông tin sourcing",
+                  children: (
+              <Form
+                form={profileForm}
+                layout="vertical"
+                initialValues={{
+                  domains: parseList(candidate.domainJson),
+                  targetPositions: parseList(candidate.targetPositionsJson),
+                  tags: parseList(candidate.tagsJson),
+                  jobLevel: candidate.jobLevel,
+                  sourcingPriority: candidate.sourcingPriority || "Normal",
+                  sourcingStage: candidate.sourcingStage || "Saved",
+                  expectedSalary: candidate.expectedSalary,
+                }}
+                onFinish={async (values) => {
+                  setProfileSaving(true);
+                  try {
+                    await talentPoolService.updateTalentPoolProfile(candidate.talentPoolCandidateId, values);
+                    window.location.reload();
+                  } finally { setProfileSaving(false); }
+                }}
+              >
+                <Row gutter={[12, 0]}>
+                  <Col xs={24} md={12}><Form.Item label="Lĩnh vực" name="domains"><Select mode="multiple" showSearch optionFilterProp="label" options={profileCategoryOptions} placeholder="Chọn lĩnh vực trong danh mục hệ thống" /></Form.Item></Col>
+                  <Col xs={24} md={12}><Form.Item label="Vị trí mục tiêu" name="targetPositions"><Select mode="multiple" showSearch optionFilterProp="label" options={profilePositionOptions} placeholder="Chọn vị trí trong danh mục hệ thống" /></Form.Item></Col>
+                   <Col xs={12} md={6}><Form.Item label="Cấp bậc" name="jobLevel"><Select allowClear options={profileLevelOptions} placeholder="Chọn cấp bậc" /></Form.Item></Col>
+                  <Col xs={12} md={6}><Form.Item label="Ưu tiên" name="sourcingPriority"><Select options={[{label:"Thấp",value:"Low"},{label:"Bình thường",value:"Normal"},{label:"Cao",value:"High"}]} /></Form.Item></Col>
+                  <Col xs={12} md={6}><Form.Item label="Giai đoạn" name="sourcingStage" extra="Tiến độ HR xử lý hồ sơ, không phải trạng thái ứng tuyển."><Select options={["Saved", "Reviewed", "ContactPlanned", "Contacted", "Responded", "Interested", "Screening", "Interview", "Archived", "NotSuitable"].map(value => ({ label: getSourcingStageLabel(value), value, title: getSourcingStageLabel(value) }))} /></Form.Item></Col>
+                  <Col xs={12} md={6}><Form.Item label="Lương kỳ vọng" name="expectedSalary"><InputNumber min={0} style={{ width: "100%" }} /></Form.Item></Col>
+                  <Col xs={24}><Form.Item label="Tag" name="tags"><Select mode="tags" placeholder="Ví dụ: Có thể nhận việc trong 30 ngày" /></Form.Item></Col>
+                </Row>
+                <Button type="primary" htmlType="submit" loading={profileSaving}>Lưu thông tin sourcing</Button>
+              </Form>
+                  ),
+                }]}
+              />
+            </Card>
+
+            </> : <>
             <div
               style={{
                 marginTop: 24,
-                background: "#f0fdf4",
-                border: "1px solid #bbf7d0",
-                borderRadius: 8,
+                background: "#FFFFFF",
+                border: "1px solid #E2E8F0",
+                borderRadius: 12,
                 padding: 16,
               }}
             >
               <Space style={{ marginBottom: 12 }}>
-                <RobotOutlined style={{ color: "#16a34a" }} />
-                <Text strong style={{ color: "#16a34a" }}>
-                  AI Phân tích & Đề xuất
+                <BarChartOutlined style={{ color: "#2563EB" }} />
+                <Text strong style={{ color: "#0F172A" }}>
+                  Phân tích phù hợp
                 </Text>
               </Space>
+              <Text type="secondary" style={{ display: "block", fontSize: 12, marginBottom: 12 }}>
+                Điểm đề xuất kết hợp kỹ năng hồ sơ, yêu cầu tin tuyển dụng và luật đối sánh của hệ thống; đây không phải cam kết tuyển dụng.
+              </Text>
 
               {suggestionLoading ? (
                 <div style={{ textAlign: "center", padding: 24 }}>
@@ -186,16 +320,21 @@ export default function TalentPoolDetailPage() {
                         <Col flex="auto">
                           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
                             <Text strong style={{ color: "#0F172A", fontSize: 14 }}>{job.jobTitle}</Text>
-                            <Tag color="green" style={{ margin: 0, borderRadius: 4 }}>{job.matchScore}% khớp</Tag>
+                            <Tag color="green" style={{ margin: 0, borderRadius: 8 }}>Bao phủ {job.matchScore}% kỹ năng</Tag>
                           </div>
                           <div style={{ fontSize: 12, color: "#64748B", display: "flex", flexWrap: "wrap", gap: "4px 12px", marginBottom: 6 }}>
-                            <span>🏢 {job.branchName}</span>
-                            {job.salaryRange && <span>💵 {job.salaryRange}</span>}
-                            {job.deadline && <span>📅 Hạn: {new Date(job.deadline).toLocaleDateString("vi-VN")}</span>}
+                            <span>{job.branchName}</span>
+                            {job.salaryRange && <span>{job.salaryRange}</span>}
+                            {job.deadline && <span>Hạn: {new Date(job.deadline).toLocaleDateString("vi-VN")}</span>}
                           </div>
                           <Text type="secondary" style={{ fontSize: 12, display: "block" }}>
-                            💡 {job.reason}
+                            {job.reason}
                           </Text>
+                          {(job.matchedSkills || []).length > 0 && (
+                            <Space wrap size={[4, 4]} style={{ marginTop: 8 }}>
+                              {(job.matchedSkills || []).slice(0, 5).map((skill: string) => <Tag color="blue" key={`${job.jobId}-matched-${skill}`}>{skill}</Tag>)}
+                            </Space>
+                          )}
                         </Col>
 
                         <Col>
@@ -213,19 +352,35 @@ export default function TalentPoolDetailPage() {
                   ))}
                 </Space>
               ) : (
-                <Text type="secondary">Chưa tìm thấy job đang mở phù hợp với ứng viên này.</Text>
+                <Alert
+                  type="info"
+                  showIcon
+                  message="Chưa có đề xuất nổi bật"
+                  description="Bạn vẫn có thể chọn một tin đang mở ở khu vực tìm kiếm bên dưới để xem đối sánh."
+                />
               )}
             </div>
 
-            <div style={{ marginTop: 20 }}>
-              <Text strong style={{ display: "block", marginBottom: 12 }}>
-                Hoặc tìm kiếm vị trí tuyển dụng khác trong hệ thống:
-              </Text>
+            <Card size="small" style={{ marginTop: 20, borderRadius: 12, border: "1px solid #E2E8F0" }}>
+              <Row justify="space-between" align="middle" style={{ marginBottom: 12 }}>
+                <Col>
+                  <Text strong style={{ display: "block" }}>Chọn tin tuyển dụng khác</Text>
+                  <Text type="secondary" style={{ fontSize: 12 }}>Chỉ hiển thị tin đang mở của tài khoản HR này.</Text>
+                </Col>
+                <Col>
+                  <Space size="small">
+                    <Tag color={jobFilterCount.visible > 0 ? "blue" : "default"}>
+                      {jobFilterCount.visible}/{jobFilterCount.total} tin
+                    </Tag>
+                    <Button type="link" size="small" onClick={clearJobFilters}>Xóa lọc</Button>
+                  </Space>
+                </Col>
+              </Row>
 
               <Row gutter={[12, 12]} style={{ marginBottom: 12 }}>
                 <Col xs={24} sm={8}>
                   <Select
-                    placeholder="Ngành nghề"
+                    placeholder="Nhóm ngành"
                     style={{ width: "100%" }}
                     allowClear
                     value={filterJobIndustry}
@@ -235,7 +390,7 @@ export default function TalentPoolDetailPage() {
                 </Col>
                 <Col xs={24} sm={8}>
                   <Select
-                    placeholder="Lĩnh vực"
+                    placeholder="Lĩnh vực / chuyên môn"
                     style={{ width: "100%" }}
                     allowClear
                     value={filterJobSector}
@@ -246,7 +401,7 @@ export default function TalentPoolDetailPage() {
                 </Col>
                 <Col xs={24} sm={8}>
                   <Select
-                    placeholder="Chi nhánh"
+                    placeholder="Chi nhánh làm việc"
                     style={{ width: "100%" }}
                     allowClear
                     value={filterJobBranch}
@@ -259,7 +414,7 @@ export default function TalentPoolDetailPage() {
               <Row gutter={[12, 12]} style={{ marginBottom: 12 }}>
                 <Col xs={24} sm={16}>
                   <Input
-                    placeholder="Tìm theo tên vị trí..."
+                    placeholder="Tìm vị trí, kỹ năng, mô tả..."
                     prefix={<SearchOutlined />}
                     value={searchJobQuery}
                     onChange={(e) => setSearchJobQuery(e.target.value)}
@@ -268,7 +423,7 @@ export default function TalentPoolDetailPage() {
                 </Col>
                 <Col xs={24} sm={8}>
                   <Select
-                    placeholder="Cấp bậc"
+                    placeholder="Cấp bậc tuyển dụng"
                     style={{ width: "100%" }}
                     allowClear
                     value={filterJobLevel}
@@ -293,7 +448,7 @@ export default function TalentPoolDetailPage() {
                   </Select.Option>
                 ))}
               </Select>
-            </div>
+            </Card>
 
             {/* AI Match Preview Panel */}
             {selectedJobId && (() => {
@@ -322,6 +477,10 @@ export default function TalentPoolDetailPage() {
               const matched = jobSkills.filter(s => candidateSkillsSet.has(s.toLowerCase().trim()));
               const missing = jobSkills.filter(s => !candidateSkillsSet.has(s.toLowerCase().trim()));
               const scoreVal = selectedSuggested ? selectedSuggested.matchScore : Math.round((matched.length / Math.max(1, jobSkills.length)) * 100);
+              const selectedReason = selectedSuggested?.reason || "Điểm được tính từ các kỹ năng có thể đối chiếu trực tiếp với yêu cầu tin tuyển dụng.";
+              const jobRequirements = (selectedJob.requirements || "").trim();
+              const contextDomains = parseList(candidate.domainJson);
+              const contextPositions = parseList(candidate.targetPositionsJson);
 
               return (
                 <div style={{
@@ -341,13 +500,38 @@ export default function TalentPoolDetailPage() {
                     />
                     <div>
                       <Text strong style={{ fontSize: 13, color: "#0F172A", display: "block" }}>
-                        Báo cáo so khớp AI cho vị trí:
+                        Kết quả đối sánh cho vị trí:
                       </Text>
                       <Text strong style={{ color: "#2563EB", fontSize: 15 }}>
                         {selectedJob.position?.name}
                       </Text>
+                      <Text type="secondary" style={{ display: "block", fontSize: 12, marginTop: 4 }}>
+                        {selectedJob.branch?.name || "Chưa cập nhật chi nhánh"}
+                        {selectedJob.jobLevel?.name ? ` · ${selectedJob.jobLevel.name}` : ""}
+                      </Text>
                     </div>
                   </div>
+
+                  <Alert
+                    type="info"
+                    showIcon
+                    style={{ marginBottom: 16 }}
+                    message="Cơ sở đối sánh"
+                    description={
+                      <div>
+                        <div style={{ marginBottom: 6 }}>{selectedReason}</div>
+                        {contextDomains.length > 0 && <div><Text type="secondary">Lĩnh vực sourcing: </Text>{contextDomains.join(", ")}</div>}
+                        {contextPositions.length > 0 && <div><Text type="secondary">Vị trí mục tiêu: </Text>{contextPositions.join(", ")}</div>}
+                      </div>
+                    }
+                  />
+
+                  {jobRequirements && (
+                    <div style={{ marginBottom: 14 }}>
+                      <Text type="secondary" style={{ fontSize: 13 }}>Tóm tắt yêu cầu tin tuyển dụng: </Text>
+                      <Text style={{ fontSize: 13 }}>{jobRequirements.length > 260 ? `${jobRequirements.slice(0, 260)}…` : jobRequirements}</Text>
+                    </div>
+                  )}
 
                   <div style={{ marginBottom: 12 }}>
                     <Space size={4} style={{ display: "flex", marginBottom: 4 }}>
@@ -413,6 +597,7 @@ export default function TalentPoolDetailPage() {
                 Gửi Lời Mời Ngay
               </Button>
             </div>
+            </>}
           </Card>
         </Col>
 
@@ -420,7 +605,7 @@ export default function TalentPoolDetailPage() {
           <Space direction="vertical" size="large" style={{ width: "100%" }}>
             <Card title="Thông tin tóm tắt" style={{ borderRadius: 12 }}>
               <Space align="start" size="large" style={{ width: "100%" }}>
-                <Avatar size={72} icon={<UserOutlined />} style={{ backgroundColor: "#1677ff" }} />
+                <Avatar size={72} icon={<UserOutlined />} style={{ backgroundColor: "#2563EB" }} />
 
                 <div style={{ flex: 1 }}>
                   <Title level={4} style={{ marginBottom: 4, marginTop: 0 }}>
@@ -484,7 +669,7 @@ export default function TalentPoolDetailPage() {
                 disabled={!candidate.latestCvUrl}
                 onClick={() => {
                   if (candidate.latestCvUrl) {
-                    const url = candidate.latestCvUrl.replace(/https?:\/\/localhost:(7006|5286)/gi, "https://recruitinsightai.com");
+                    const url = candidate.latestCvUrl.replace(/https?:\/\/localhost:(7006|5286)/gi, window.location.origin);
                     window.open(url, "_blank");
                   }
                 }}
@@ -540,22 +725,18 @@ export default function TalentPoolDetailPage() {
                               </Text>
                             </div>
                             <div style={{ marginTop: 4, display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 6 }}>
-                              <Tag color="blue" style={{ fontSize: 10, margin: 0, padding: "0 4px", borderRadius: 4 }}>
+                              <Tag color="blue" style={{ fontSize: 10, margin: 0, padding: "0 4px", borderRadius: 8 }}>
                                 {interaction.type === "HrNote" ? "Ghi chú HR" :
                                   interaction.type === "Invited" ? "Đã mời ứng tuyển" :
                                     interaction.type === "EmailSent" ? "Đã gửi Email" :
                                       interaction.type === "Rejected" ? "Từ chối" : interaction.type}
                               </Tag>
                               {interaction.aiScore !== null && interaction.aiScore !== undefined && (
-                                <Tag color="green" style={{ fontSize: 10, margin: 0, padding: "0 4px", borderRadius: 4 }}>AI: {interaction.aiScore}/100</Tag>
+                                <Tag color="green" style={{ fontSize: 10, margin: 0, padding: "0 4px", borderRadius: 8 }}>AI: {interaction.aiScore}/100</Tag>
                               )}
                               {interaction.statusSnapshot && (
-                                <Tag style={{ fontSize: 10, margin: 0, padding: "0 4px", borderRadius: 4 }}>
-                                  {interaction.statusSnapshot === "Applied" ? "Mới nộp" :
-                                    interaction.statusSnapshot === "Reviewing" ? "Đang xem xét" :
-                                      interaction.statusSnapshot === "Interview" ? "Phỏng vấn" :
-                                        interaction.statusSnapshot === "Offer" ? "Nhận việc (Offer)" :
-                                          interaction.statusSnapshot === "Rejected" ? "Đã từ chối" : interaction.statusSnapshot}
+                                <Tag style={{ fontSize: 10, margin: 0, padding: "0 4px", borderRadius: 8 }}>
+                                  {getApplicationStatusLabel(interaction.statusSnapshot)}
                                 </Tag>
                               )}
                             </div>

@@ -1,77 +1,71 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Request, HTTPException
 from dtos.request_dtos import SkillUpdateRequest, AprioriTrainRequest, SkillRecommendRequest, HUIMTrainRequest
 import nlp_processor
 from utils.logger import logger
-import os
-import json
+from utils.rate_limiter import check_ip_rate_limit
+from utils.error_handler import get_user_friendly_error_message
+from starlette.concurrency import run_in_threadpool
 
 router = APIRouter()
 
 @router.post("/refresh-config")
-async def refresh_config():
+async def refresh_config(req: Request):
     try:
-        count = nlp_processor.reload_knowledge_base()
+        check_ip_rate_limit(req, cooldown_seconds=2.0, max_requests_per_minute=20)
+        count = await run_in_threadpool(nlp_processor.reload_knowledge_base)
         return {"status": "success", "total_skills": count}
+    except HTTPException as he:
+        raise he
     except Exception as e:
-        logger.error(f"Loi lam moi cau hinh: {e}")
-        return {"status": "error", "message": str(e)}
+        msg = get_user_friendly_error_message(e, "Không thể làm mới cấu hình kỹ năng lúc này.")
+        return {"status": "error", "message": msg}
 
 
 @router.post("/update-skills")
-async def update_skills(request: SkillUpdateRequest):
-    try:
-        existing_skills = set()
-        if os.path.exists("skills.json"):
-            try:
-                with open("skills.json", "r", encoding="utf-8") as f:
-                    data = json.load(f)
-                    if isinstance(data, list):
-                        existing_skills = set(s.lower().strip() for s in data if s.strip())
-            except Exception as read_err:
-                logger.error(f"Loi doc skills.json: {read_err}")
-
-        new_skills = set(s.lower().strip() for s in request.skills if s.strip())
-        merged = sorted(existing_skills | new_skills)
-        added_count = len(merged) - len(existing_skills)
-
-        with open("skills.json", "w", encoding="utf-8") as f:
-            json.dump(merged, f, ensure_ascii=False, indent=2)
-
-        count = nlp_processor.reload_knowledge_base()
-        
-        return {
-            "status": "success", 
-            "message": f"Da dong bo thanh cong. Them {added_count} ky nang moi. Tong so: {count}.",
-            "total_skills": count,
-            "added_count": added_count
-        }
-    except Exception as e:
-        logger.error(f"Loi khi cap nhat ky nang: {e}")
-        return {"status": "error", "message": str(e)}
+async def update_skills(request: SkillUpdateRequest, req: Request):
+    raise HTTPException(
+        status_code=409,
+        detail="Không nhận tự động kỹ năng do AI trích xuất. Kỹ năng mới phải qua hàng chờ và được duyệt trong taxonomy."
+    )
 
 
 @router.post("/train-apriori")
-async def train_apriori(request: AprioriTrainRequest):
+async def train_apriori(request: AprioriTrainRequest, req: Request):
     try:
+        check_ip_rate_limit(req, cooldown_seconds=0.0, max_requests_per_minute=60)
         from services import apriori_service
-        rules = apriori_service.train_and_save_rules(
+        rules = await run_in_threadpool(
+            apriori_service.train_and_save_rules,
             transactions_list=request.transactions,
             min_support=request.min_support,
-            min_confidence=request.min_confidence
+            min_confidence=request.min_confidence,
+            domain=request.domain,
+            taxonomy_skills=request.taxonomy_skills,
+            taxonomy_aliases=request.taxonomy_aliases,
+            dataset_id=request.dataset_id,
+            min_support_count=request.min_support_count or 2,
+            reset_models=request.reset_models
         )
+        metadata = apriori_service.get_last_training_metadata()
+        if metadata.get("status") == "skipped":
+            return {"status": "skipped", "message": metadata.get("reason", "Đã bỏ qua huấn luyện."), "rules_count": 0, "metadata": metadata}
         return {
             "status": "success",
-            "message": f"Huan luyen Apriori thanh cong. Khai pha duoc {len(rules)} luat kết hợp.",
-            "rules_count": len(rules)
+            "message": f"Huấn luyện Apriori thành công. Khai phá được {len(rules)} luật kết hợp.",
+            "rules_count": len(rules),
+            "metadata": metadata
         }
+    except HTTPException as he:
+        raise he
     except Exception as e:
-        logger.error(f"Loi khi huan luyen Apriori: {e}")
-        return {"status": "error", "message": str(e)}
+        msg = get_user_friendly_error_message(e, "Không thể huấn luyện thuật toán Apriori lúc này.")
+        return {"status": "error", "message": msg}
 
 
 @router.post("/recommend-skills")
-async def recommend_skills(request: SkillRecommendRequest):
+async def recommend_skills(request: SkillRecommendRequest, req: Request):
     try:
+        check_ip_rate_limit(req, cooldown_seconds=0.0, max_requests_per_minute=60)
         from services import apriori_service
         recommended = apriori_service.get_recommended_skills(
             current_skills=request.current_skills,
@@ -81,29 +75,27 @@ async def recommend_skills(request: SkillRecommendRequest):
             "status": "success",
             "recommended_skills": recommended
         }
+    except HTTPException as he:
+        raise he
     except Exception as e:
-        logger.error(f"Loi khi goi y ky nang: {e}")
-        return {"status": "error", "message": str(e)}
+        msg = get_user_friendly_error_message(e, "Không thể gợi ý kỹ năng lúc này.")
+        return {"status": "error", "message": msg}
 
 
 @router.get("/association-rules")
 async def get_association_rules():
     try:
-        rules_path = "association_rules.json"
-        if not os.path.exists(rules_path):
-            return {"status": "success", "rules": []}
-            
-        with open(rules_path, "r", encoding="utf-8") as f:
-            rules = json.load(f)
-        return {"status": "success", "rules": rules}
+        from services import apriori_service
+        return {"status": "success", "rules": apriori_service.get_all_rules()}
     except Exception as e:
-        logger.error(f"Loi khi lay danh sach luat ket hop: {e}")
-        return {"status": "error", "message": str(e)}
+        msg = get_user_friendly_error_message(e, "Không thể lấy danh sách luật kết hợp lúc này.")
+        return {"status": "error", "message": msg}
 
 
 @router.post("/train-huim")
-async def train_huim(request: HUIMTrainRequest):
+async def train_huim(request: HUIMTrainRequest, req: Request):
     try:
+        check_ip_rate_limit(req, cooldown_seconds=0.0, max_requests_per_minute=60)
         from services import huim_service
         tx_list = []
         for tx in request.transactions:
@@ -112,24 +104,38 @@ async def train_huim(request: HUIMTrainRequest):
                 "quantities": tx.quantities
             })
         
-        results = huim_service.train_and_save_huim(
+        results = await run_in_threadpool(
+            huim_service.train_and_save_huim,
             transactions_input=tx_list,
             external_utilities=request.external_utilities,
-            min_utility=request.min_utility
+            min_utility=request.min_utility,
+            domain=request.domain,
+            taxonomy_skills=request.taxonomy_skills,
+            taxonomy_aliases=request.taxonomy_aliases,
+            dataset_id=request.dataset_id,
+            min_support_count=request.min_support_count or 2,
+            reset_models=request.reset_models
         )
+        metadata = huim_service.get_last_training_metadata()
+        if metadata.get("status") == "skipped":
+            return {"status": "skipped", "message": metadata.get("reason", "Đã bỏ qua huấn luyện."), "results_count": 0, "metadata": metadata}
         return {
             "status": "success",
-            "message": f"Huan luyen HUIM (Two-Phase) thanh cong. Khai pha duoc {len(results)} tap ky nang co loi ich cao.",
-            "results_count": len(results)
+            "message": f"Huấn luyện HUIM (Two-Phase) thành công. Khai phá được {len(results)} tập kỹ năng có lợi ích cao.",
+            "results_count": len(results),
+            "metadata": metadata
         }
+    except HTTPException as he:
+        raise he
     except Exception as e:
-        logger.error(f"Loi khi huan luyen HUIM: {e}")
-        return {"status": "error", "message": str(e)}
+        msg = get_user_friendly_error_message(e, "Không thể huấn luyện thuật toán HUIM lúc này.")
+        return {"status": "error", "message": msg}
 
 
 @router.post("/recommend-high-utility-skills")
-async def recommend_high_utility_skills(request: SkillRecommendRequest):
+async def recommend_high_utility_skills(request: SkillRecommendRequest, req: Request):
     try:
+        check_ip_rate_limit(req, cooldown_seconds=0.0, max_requests_per_minute=60)
         from services import huim_service
         recommended = huim_service.get_recommended_huim_skills(
             current_skills=request.current_skills,
@@ -139,21 +145,18 @@ async def recommend_high_utility_skills(request: SkillRecommendRequest):
             "status": "success",
             "recommended_skills": recommended
         }
+    except HTTPException as he:
+        raise he
     except Exception as e:
-        logger.error(f"Loi khi goi y ky nang HUIM: {e}")
-        return {"status": "error", "message": str(e)}
+        msg = get_user_friendly_error_message(e, "Không thể gợi ý tập kỹ năng lợi ích cao lúc này.")
+        return {"status": "error", "message": msg}
 
 
 @router.get("/high-utility-itemsets")
 async def get_high_utility_itemsets():
     try:
-        huim_path = "high_utility_itemsets.json"
-        if not os.path.exists(huim_path):
-            return {"status": "success", "itemsets": []}
-            
-        with open(huim_path, "r", encoding="utf-8") as f:
-            itemsets = json.load(f)
-        return {"status": "success", "itemsets": itemsets}
+        from services import huim_service
+        return {"status": "success", "itemsets": huim_service.get_all_itemsets()}
     except Exception as e:
-        logger.error(f"Loi khi lay danh sach tap ky nang loi ich cao: {e}")
-        return {"status": "error", "message": str(e)}
+        msg = get_user_friendly_error_message(e, "Không thể lấy danh sách tập kỹ năng lợi ích cao.")
+        return {"status": "error", "message": msg}

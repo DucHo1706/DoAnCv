@@ -18,6 +18,7 @@ export default function CandidateJobDetailPage() {
     isAiPreviewModalOpen,
     setIsAiPreviewModalOpen,
     handleApplyWithAI,
+    handleViewAppliedAiEvaluation,
     showApplyModal,
     handleCancelApplyModal,
     handleDirectApply,
@@ -29,6 +30,12 @@ export default function CandidateJobDetailPage() {
     defaultCvName,
     useDefaultCv,
     setUseDefaultCv,
+    savedCvs,
+    selectedSavedCvId,
+    setSelectedSavedCvId,
+    builderDocuments,
+    selectedBuilderDocumentId,
+    setSelectedBuilderDocumentId,
   } = useJobDetail();
 
   if (loading) {
@@ -73,6 +80,7 @@ export default function CandidateJobDetailPage() {
           appliedApplication={appliedApplication}
           showApplyModal={showApplyModal}
           handleApplyWithAI={handleApplyWithAI}
+          handleViewAppliedAiEvaluation={handleViewAppliedAiEvaluation}
           relatedJobs={relatedJobs}
         />
 
@@ -88,12 +96,22 @@ export default function CandidateJobDetailPage() {
           defaultCvName={defaultCvName}
           useDefaultCv={useDefaultCv}
           setUseDefaultCv={setUseDefaultCv}
+          savedCvs={savedCvs}
+          selectedSavedCvId={selectedSavedCvId}
+          setSelectedSavedCvId={setSelectedSavedCvId}
+          builderDocuments={builderDocuments}
+          selectedBuilderDocumentId={selectedBuilderDocumentId}
+          setSelectedBuilderDocumentId={setSelectedBuilderDocumentId}
         />
 
         {/* 3. Modal thông báo thành công */}
         <ApplySuccessModal
           open={isApplySuccessModalOpen}
           onCancel={() => setIsApplySuccessModalOpen(false)}
+          onContinueBrowsing={() => {
+            setIsApplySuccessModalOpen(false);
+            navigate("/jobs");
+          }}
         />
 
         {/* 4. AI CV Analysis & Preview Modal */}

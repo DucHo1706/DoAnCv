@@ -19,13 +19,18 @@ namespace RecruitmentBackend.Data
         public DbSet<JobLevel> JobLevels { get; set; }
         public DbSet<Position> Positions { get; set; }
         public DbSet<Skill> Skills { get; set; }
+        public DbSet<SkillAlias> SkillAliases { get; set; }
 
         // 3. Module Recruitment
         public DbSet<JobPosting> JobPostings { get; set; }
         public DbSet<CandidateCV> CandidateCVs { get; set; }
+        public DbSet<CandidateCvDomain> CandidateCvDomains { get; set; }
+        public DbSet<CvBuilderDocument> CvBuilderDocuments { get; set; }
         public DbSet<Application> Applications { get; set; }
+        public DbSet<ApplicationStatusHistory> ApplicationStatusHistories { get; set; }
         public DbSet<AIEvaluation> AIEvaluations { get; set; }
         public DbSet<JobCriterion> JobCriteria { get; set; }
+        public DbSet<CriterionGroup> CriterionGroups { get; set; }
         public DbSet<ChatMessage> ChatMessages { get; set; }
         public DbSet<TalentPoolCandidate> TalentPoolCandidates { get; set; }
         public DbSet<TalentPoolInteraction> TalentPoolInteractions { get; set; }
@@ -50,6 +55,24 @@ namespace RecruitmentBackend.Data
                 .HasForeignKey<AIEvaluation>(ai => ai.ApplicationID)
                 .OnDelete(DeleteBehavior.Cascade); // Nếu xóa đơn ứng tuyển thì tự động xóa luôn kết quả đánh giá AI
 
+            modelBuilder.Entity<CandidateCvDomain>()
+                .HasIndex(x => new { x.CVID, x.Domain })
+                .IsUnique();
+
+            modelBuilder.Entity<CandidateCvDomain>()
+                .Property(x => x.Confidence)
+                .HasPrecision(5, 2);
+
+            modelBuilder.Entity<TalentPoolCandidate>()
+                .Property(x => x.ExpectedSalary)
+                .HasPrecision(18, 2);
+
+            modelBuilder.Entity<CandidateCvDomain>()
+                .HasOne(x => x.CandidateCV)
+                .WithMany()
+                .HasForeignKey(x => x.CVID)
+                .OnDelete(DeleteBehavior.Cascade);
+
             // Liên kết 1-1 giữa Application và InterviewSchedule
             modelBuilder.Entity<Application>()
                 .HasOne(a => a.InterviewSchedule)
@@ -70,15 +93,64 @@ namespace RecruitmentBackend.Data
             modelBuilder.Entity<TalentPoolCandidate>()
                 .HasIndex(talentPoolCandidate => talentPoolCandidate.CandidateID)
                 .IsUnique(false);
+            modelBuilder.Entity<TalentPoolCandidate>()
+                .HasIndex(talentPoolCandidate => new { talentPoolCandidate.RecruiterID, talentPoolCandidate.CandidateID })
+                .IsUnique()
+                .HasFilter("[RecruiterID] IS NOT NULL");
 
             // Tạo Index tối ưu hóa truy vấn tìm kiếm/lọc thống kê (Performance Optimization)
             modelBuilder.Entity<JobPosting>()
                 .HasIndex(j => j.Status);
+            modelBuilder.Entity<CriterionGroup>()
+                .HasIndex(group => group.Name)
+                .IsUnique();
+            modelBuilder.Entity<CriterionGroup>().HasData(
+                new CriterionGroup { CriterionGroupID = "criterion-skill", Name = "Kỹ năng", EvaluationMode = "SKILL", DisplayOrder = 10, CreatedAt = new DateTime(2026, 1, 1), UpdatedAt = new DateTime(2026, 1, 1) },
+                new CriterionGroup { CriterionGroupID = "criterion-total-experience", Name = "Tổng kinh nghiệm liên quan", EvaluationMode = "TOTAL_EXPERIENCE", DisplayOrder = 20, CreatedAt = new DateTime(2026, 1, 1), UpdatedAt = new DateTime(2026, 1, 1) },
+                new CriterionGroup { CriterionGroupID = "criterion-skill-experience", Name = "Kinh nghiệm theo kỹ năng", EvaluationMode = "SKILL_EXPERIENCE", DisplayOrder = 30, CreatedAt = new DateTime(2026, 1, 1), UpdatedAt = new DateTime(2026, 1, 1) },
+                new CriterionGroup { CriterionGroupID = "criterion-education", Name = "Học vấn", EvaluationMode = "EDUCATION", DisplayOrder = 40, CreatedAt = new DateTime(2026, 1, 1), UpdatedAt = new DateTime(2026, 1, 1) },
+                new CriterionGroup { CriterionGroupID = "criterion-certification", Name = "Chứng chỉ", EvaluationMode = "CERTIFICATION", DisplayOrder = 50, CreatedAt = new DateTime(2026, 1, 1), UpdatedAt = new DateTime(2026, 1, 1) },
+                new CriterionGroup { CriterionGroupID = "criterion-language", Name = "Ngoại ngữ", EvaluationMode = "LANGUAGE", DisplayOrder = 60, CreatedAt = new DateTime(2026, 1, 1), UpdatedAt = new DateTime(2026, 1, 1) },
+                new CriterionGroup { CriterionGroupID = "criterion-location", Name = "Địa điểm / hình thức làm việc", EvaluationMode = "LOCATION_WORK_MODE", DisplayOrder = 70, CreatedAt = new DateTime(2026, 1, 1), UpdatedAt = new DateTime(2026, 1, 1) },
+                new CriterionGroup { CriterionGroupID = "criterion-custom", Name = "Tiêu chí riêng", EvaluationMode = "CUSTOM", DisplayOrder = 80, CreatedAt = new DateTime(2026, 1, 1), UpdatedAt = new DateTime(2026, 1, 1) }
+            );
             modelBuilder.Entity<JobPosting>()
                 .HasIndex(j => j.CreatedAt);
+            modelBuilder.Entity<JobPosting>()
+                .Property(j => j.RecruiterID)
+                .HasMaxLength(450);
+            modelBuilder.Entity<JobPosting>()
+                .Property(j => j.BranchID)
+                .HasMaxLength(450);
+            modelBuilder.Entity<JobPosting>()
+                .Property(j => j.PositionID)
+                .HasMaxLength(450);
+            modelBuilder.Entity<JobPosting>()
+                .HasIndex(j => j.RecruiterID);
+            modelBuilder.Entity<JobPosting>()
+                .HasIndex(j => j.BranchID);
 
             modelBuilder.Entity<Application>()
                 .HasIndex(a => a.AppliedAt);
+
+            modelBuilder.Entity<ApplicationStatusHistory>()
+                .HasOne(history => history.Application)
+                .WithMany(application => application.StatusHistory)
+                .HasForeignKey(history => history.ApplicationID)
+                .OnDelete(DeleteBehavior.Cascade);
+            modelBuilder.Entity<ApplicationStatusHistory>()
+                .HasIndex(history => new { history.ApplicationID, history.ChangedAtUtc });
+            modelBuilder.Entity<ApplicationStatusHistory>()
+                .HasIndex(history => new { history.ChangedAtUtc, history.ToStatus });
+
+            modelBuilder.Entity<CvBuilderDocument>()
+                .HasIndex(document => new { document.CandidateID, document.UpdatedAt });
+            modelBuilder.Entity<CvBuilderDocument>()
+                .Property(document => document.ContentJson)
+                .HasColumnType("nvarchar(max)");
+            modelBuilder.Entity<CvBuilderDocument>()
+                .Property(document => document.SettingsJson)
+                .HasColumnType("nvarchar(max)");
 
             modelBuilder.Entity<AuditLog>()
                 .HasIndex(al => al.CreatedAt);
@@ -103,6 +175,28 @@ namespace RecruitmentBackend.Data
             modelBuilder.Entity<JobPosting>()
                 .Property(j => j.SalaryMax)
                 .HasColumnType("decimal(18,2)");
+
+            modelBuilder.Entity<JobPosting>()
+                .HasOne(job => job.RepostedFromJob)
+                .WithMany(job => job.RepostedJobs)
+                .HasForeignKey(job => job.RepostedFromJobID)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<SkillAlias>()
+                .HasOne(alias => alias.Skill)
+                .WithMany(skill => skill.Aliases)
+                .HasForeignKey(alias => alias.SkillID)
+                .OnDelete(DeleteBehavior.Cascade);
+            modelBuilder.Entity<SkillAlias>()
+                .HasIndex(alias => alias.NormalizedAlias)
+                .IsUnique();
+            modelBuilder.Entity<SkillAlias>()
+                .HasIndex(alias => alias.SkillID);
+
+            modelBuilder.Entity<JobPosting>()
+                .HasIndex(job => new { job.CampaignGroupID, job.RecruitmentRound })
+                .IsUnique()
+                .HasFilter("[CampaignGroupID] IS NOT NULL");
 
             // Seed 3 vai trò mặc định (giữ nguyên dữ liệu như bản in-memory cũ)
             var seedCreatedAt = new DateTime(2026, 1, 1);

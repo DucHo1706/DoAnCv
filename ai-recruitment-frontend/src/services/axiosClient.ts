@@ -1,11 +1,14 @@
 import axios from "axios";
 
+declare module "axios" {
+  export interface AxiosRequestConfig {
+    skipAuthRedirect?: boolean;
+  }
+}
+
 const getBaseApiUrl = () => {
   if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
-  if (typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")) {
-    return "http://localhost:5000/api";
-  }
-  return "https://recruitinsightai.com/api";
+  return "/api";
 };
 
 const axiosClient = axios.create({
@@ -39,6 +42,12 @@ axiosClient.interceptors.response.use(
       // Clear stored authentication data
       localStorage.removeItem("token");
       localStorage.removeItem("user");
+
+      // Một số trang công khai chỉ thử tải thêm dữ liệu cá nhân nếu có token.
+      // Token cũ không được phép ép khách rời khỏi trang công khai.
+      if (error?.config?.skipAuthRedirect === true) {
+        return Promise.reject(error);
+      }
 
       // Redirect to login page with original redirect path
       const currentPath = window.location.pathname;

@@ -5,8 +5,7 @@ import { branchService } from "../../../../services/jobService";
 function BranchManagementPage() {
   return (
     <SystemCategoryManager
-      title="Quản lý Chi Nhánh"
-      subtitle=""
+      title="Quản lý chi nhánh"
       entityName="Chi nhánh"
       icon={<EnvironmentOutlined />}
       fetchApi={branchService.getBranches}

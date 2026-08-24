@@ -144,6 +144,46 @@ namespace RecruitmentBackend.Migrations
                     b.ToTable("Applications");
                 });
 
+            modelBuilder.Entity("RecruitmentBackend.Models.ApplicationStatusHistory", b =>
+                {
+                    b.Property<string>("ApplicationStatusHistoryID")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("ApplicationID")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("ChangedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ChangedByAccountID")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("FromStatus")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("ToStatus")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.HasKey("ApplicationStatusHistoryID");
+
+                    b.HasIndex("ApplicationID", "ChangedAtUtc");
+
+                    b.HasIndex("ChangedAtUtc", "ToStatus");
+
+                    b.ToTable("ApplicationStatusHistories");
+                });
+
             modelBuilder.Entity("RecruitmentBackend.Models.AuditLog", b =>
                 {
                     b.Property<string>("AuditLogID")
@@ -236,6 +276,21 @@ namespace RecruitmentBackend.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<bool>("RecruiterContactAllowed")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("RecruiterCvAllowed")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("RecruiterDiscoveryEnabled")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("RecruiterDiscoveryExpiresAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("RecruiterDiscoveryUpdatedAt")
+                        .HasColumnType("datetime2");
+
                     b.HasKey("CandidateID");
 
                     b.HasIndex("AccountID")
@@ -283,6 +338,12 @@ namespace RecruitmentBackend.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("SourceDocumentId")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("SourceType")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("University")
                         .HasColumnType("nvarchar(max)");
 
@@ -292,6 +353,22 @@ namespace RecruitmentBackend.Migrations
                     b.HasKey("CVID");
 
                     b.ToTable("CandidateCVs");
+                });
+
+            modelBuilder.Entity("RecruitmentBackend.Models.CandidateCvDomain", b =>
+                {
+                    b.Property<int>("Id").ValueGeneratedOnAdd().HasColumnType("int");
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    b.Property<string>("CVID").IsRequired().HasColumnType("nvarchar(450)");
+                    b.Property<decimal>("Confidence").HasColumnType("decimal(18,2)");
+                    b.Property<string>("Domain").IsRequired().HasMaxLength(100).HasColumnType("nvarchar(100)");
+                    b.Property<string>("EvidenceJson").IsRequired().HasColumnType("nvarchar(max)");
+                    b.Property<bool>("IsConfirmed").HasColumnType("bit");
+                    b.Property<string>("Source").IsRequired().HasMaxLength(40).HasColumnType("nvarchar(40)");
+                    b.Property<DateTime>("UpdatedAt").HasColumnType("datetime2");
+                    b.HasKey("Id");
+                    b.HasIndex("CVID", "Domain").IsUnique();
+                    b.ToTable("CandidateCvDomains");
                 });
 
             modelBuilder.Entity("RecruitmentBackend.Models.Category", b =>
@@ -352,6 +429,165 @@ namespace RecruitmentBackend.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("ChatMessages");
+                });
+
+            modelBuilder.Entity("RecruitmentBackend.Models.CriterionGroup", b =>
+                {
+                    b.Property<string>("CriterionGroupID")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("int");
+
+                    b.Property<string>("EvaluationMode")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("CriterionGroupID");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("CriterionGroups");
+
+                    b.HasData(
+                        new
+                        {
+                            CriterionGroupID = "criterion-skill",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            DisplayOrder = 10,
+                            EvaluationMode = "SKILL",
+                            IsActive = true,
+                            Name = "Kỹ năng",
+                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
+                        },
+                        new
+                        {
+                            CriterionGroupID = "criterion-total-experience",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            DisplayOrder = 20,
+                            EvaluationMode = "TOTAL_EXPERIENCE",
+                            IsActive = true,
+                            Name = "Tổng kinh nghiệm liên quan",
+                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
+                        },
+                        new
+                        {
+                            CriterionGroupID = "criterion-skill-experience",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            DisplayOrder = 30,
+                            EvaluationMode = "SKILL_EXPERIENCE",
+                            IsActive = true,
+                            Name = "Kinh nghiệm theo kỹ năng",
+                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
+                        },
+                        new
+                        {
+                            CriterionGroupID = "criterion-education",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            DisplayOrder = 40,
+                            EvaluationMode = "EDUCATION",
+                            IsActive = true,
+                            Name = "Học vấn",
+                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
+                        },
+                        new
+                        {
+                            CriterionGroupID = "criterion-certification",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            DisplayOrder = 50,
+                            EvaluationMode = "CERTIFICATION",
+                            IsActive = true,
+                            Name = "Chứng chỉ",
+                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
+                        },
+                        new
+                        {
+                            CriterionGroupID = "criterion-language",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            DisplayOrder = 60,
+                            EvaluationMode = "LANGUAGE",
+                            IsActive = true,
+                            Name = "Ngoại ngữ",
+                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
+                        },
+                        new
+                        {
+                            CriterionGroupID = "criterion-location",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            DisplayOrder = 70,
+                            EvaluationMode = "LOCATION_WORK_MODE",
+                            IsActive = true,
+                            Name = "Địa điểm / hình thức làm việc",
+                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
+                        },
+                        new
+                        {
+                            CriterionGroupID = "criterion-custom",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            DisplayOrder = 80,
+                            EvaluationMode = "CUSTOM",
+                            IsActive = true,
+                            Name = "Tiêu chí riêng",
+                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
+                        });
+                });
+
+            modelBuilder.Entity("RecruitmentBackend.Models.CvBuilderDocument", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("CandidateID")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("ContentJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsDefault")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("SettingsJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CandidateID", "UpdatedAt");
+
+                    b.ToTable("CvBuilderDocuments");
                 });
 
             modelBuilder.Entity("RecruitmentBackend.Models.EmailLog", b =>
@@ -447,13 +683,54 @@ namespace RecruitmentBackend.Migrations
                     b.Property<string>("CriterionID")
                         .HasColumnType("nvarchar(450)");
 
+                    b.Property<string>("CriterionGroupId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("CriterionType")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("int");
+
+                    b.Property<string>("EvaluationGuidance")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("EvidenceSources")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
                     b.Property<string>("JobID")
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
+                    b.Property<int?>("MinDurationMonths")
+                        .HasColumnType("int");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Operator")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("PriorityLevel")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("TargetValue")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<int>("Weight")
                         .HasColumnType("int");
@@ -502,7 +779,12 @@ namespace RecruitmentBackend.Migrations
 
                     b.Property<string>("BranchID")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("CampaignGroupID")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("CategoryID")
                         .HasColumnType("nvarchar(450)");
@@ -533,15 +815,24 @@ namespace RecruitmentBackend.Migrations
 
                     b.Property<string>("PositionID")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("RecruiterID")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<int>("RecruitmentRound")
+                        .HasColumnType("int");
 
                     b.Property<string>("RejectReason")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("RepostedFromJobID")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<decimal>("SalaryMax")
                         .HasColumnType("decimal(18,2)");
@@ -561,13 +852,23 @@ namespace RecruitmentBackend.Migrations
 
                     b.HasKey("JobID");
 
+                    b.HasIndex("BranchID");
+
                     b.HasIndex("CategoryID");
 
                     b.HasIndex("CreatedAt");
 
                     b.HasIndex("JobLevelID");
 
+                    b.HasIndex("RecruiterID");
+
+                    b.HasIndex("RepostedFromJobID");
+
                     b.HasIndex("Status");
+
+                    b.HasIndex("CampaignGroupID", "RecruitmentRound")
+                        .IsUnique()
+                        .HasFilter("[CampaignGroupID] IS NOT NULL");
 
                     b.ToTable("JobPostings");
                 });
@@ -775,6 +1076,37 @@ namespace RecruitmentBackend.Migrations
                     b.ToTable("Skills");
                 });
 
+            modelBuilder.Entity("RecruitmentBackend.Models.SkillAlias", b =>
+                {
+                    b.Property<int>("SkillAliasID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("SkillAliasID"));
+
+                    b.Property<string>("Alias")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("NormalizedAlias")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
+                    b.Property<int>("SkillID")
+                        .HasColumnType("int");
+
+                    b.HasKey("SkillAliasID");
+
+                    b.HasIndex("NormalizedAlias")
+                        .IsUnique();
+
+                    b.HasIndex("SkillID");
+
+                    b.ToTable("SkillAliases");
+                });
+
             modelBuilder.Entity("RecruitmentBackend.Models.TalentPoolCandidate", b =>
                 {
                     b.Property<string>("TalentPoolCandidateID")
@@ -783,6 +1115,10 @@ namespace RecruitmentBackend.Migrations
                     b.Property<string>("CandidateID")
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime?>("AvailableFrom").HasColumnType("datetime2");
+
+                    b.Property<string>("DomainJson").IsRequired().HasColumnType("nvarchar(max)");
 
                     b.Property<string>("CurrentAvailabilityStatus")
                         .IsRequired()
@@ -798,6 +1134,8 @@ namespace RecruitmentBackend.Migrations
 
                     b.Property<int>("HighestAiScore")
                         .HasColumnType("int");
+
+                    b.Property<decimal?>("ExpectedSalary").HasColumnType("decimal(18,2)");
 
                     b.Property<string>("HighestScoreJobTitle")
                         .IsRequired()
@@ -828,9 +1166,22 @@ namespace RecruitmentBackend.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("RecruiterID")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("JobLevel").HasColumnType("nvarchar(max)");
+                    b.Property<string>("SourcingPriority").IsRequired().HasColumnType("nvarchar(max)");
+                    b.Property<string>("SourcingStage").IsRequired().HasColumnType("nvarchar(max)");
+                    b.Property<string>("TagsJson").IsRequired().HasColumnType("nvarchar(max)");
+                    b.Property<string>("TargetPositionsJson").IsRequired().HasColumnType("nvarchar(max)");
+
                     b.HasKey("TalentPoolCandidateID");
 
                     b.HasIndex("CandidateID");
+
+                    b.HasIndex("RecruiterID", "CandidateID")
+                        .IsUnique()
+                        .HasFilter("[RecruiterID] IS NOT NULL");
 
                     b.ToTable("TalentPoolCandidates");
                 });
@@ -905,6 +1256,17 @@ namespace RecruitmentBackend.Migrations
                     b.Navigation("JobPosting");
                 });
 
+            modelBuilder.Entity("RecruitmentBackend.Models.ApplicationStatusHistory", b =>
+                {
+                    b.HasOne("RecruitmentBackend.Models.Application", "Application")
+                        .WithMany("StatusHistory")
+                        .HasForeignKey("ApplicationID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Application");
+                });
+
             modelBuilder.Entity("RecruitmentBackend.Models.Candidate", b =>
                 {
                     b.HasOne("RecruitmentBackend.Models.Account", "Account")
@@ -968,9 +1330,16 @@ namespace RecruitmentBackend.Migrations
                         .WithMany()
                         .HasForeignKey("JobLevelID");
 
+                    b.HasOne("RecruitmentBackend.Models.JobPosting", "RepostedFromJob")
+                        .WithMany("RepostedJobs")
+                        .HasForeignKey("RepostedFromJobID")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.Navigation("Category");
 
                     b.Navigation("JobLevel");
+
+                    b.Navigation("RepostedFromJob");
                 });
 
             modelBuilder.Entity("RecruitmentBackend.Models.Notification", b =>
@@ -1034,6 +1403,27 @@ namespace RecruitmentBackend.Migrations
                     b.Navigation("JobPosting");
                 });
 
+            modelBuilder.Entity("RecruitmentBackend.Models.CandidateCvDomain", b =>
+                {
+                    b.HasOne("RecruitmentBackend.Models.CandidateCV", "CandidateCV")
+                        .WithMany()
+                        .HasForeignKey("CVID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                    b.Navigation("CandidateCV");
+                });
+
+            modelBuilder.Entity("RecruitmentBackend.Models.SkillAlias", b =>
+                {
+                    b.HasOne("RecruitmentBackend.Models.Skill", "Skill")
+                        .WithMany("Aliases")
+                        .HasForeignKey("SkillID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Skill");
+                });
+
             modelBuilder.Entity("RecruitmentBackend.Models.Account", b =>
                 {
                     b.Navigation("Candidate")
@@ -1049,6 +1439,8 @@ namespace RecruitmentBackend.Migrations
                         .IsRequired();
 
                     b.Navigation("InterviewSchedule");
+
+                    b.Navigation("StatusHistory");
                 });
 
             modelBuilder.Entity("RecruitmentBackend.Models.Category", b =>
@@ -1066,11 +1458,18 @@ namespace RecruitmentBackend.Migrations
             modelBuilder.Entity("RecruitmentBackend.Models.JobPosting", b =>
                 {
                     b.Navigation("Criteria");
+
+                    b.Navigation("RepostedJobs");
                 });
 
             modelBuilder.Entity("RecruitmentBackend.Models.Recruiter", b =>
                 {
                     b.Navigation("RecruiterBranches");
+                });
+
+            modelBuilder.Entity("RecruitmentBackend.Models.Skill", b =>
+                {
+                    b.Navigation("Aliases");
                 });
 #pragma warning restore 612, 618
         }

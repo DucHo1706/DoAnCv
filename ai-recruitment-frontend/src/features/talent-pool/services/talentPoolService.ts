@@ -17,6 +17,14 @@ export interface TalentPoolCandidateDto {
   source?: string;
   isInviteLocked: boolean;
   inviteLockReason?: string;
+  domainJson?: string;
+  targetPositionsJson?: string;
+  jobLevel?: string;
+  sourcingPriority?: string;
+  sourcingStage?: string;
+  tagsJson?: string;
+  expectedSalary?: number;
+  availableFrom?: string;
 }
 
 export interface TalentPoolInteractionDto {
@@ -47,6 +55,10 @@ export interface TalentPoolSuggestedJobDto {
   jobTitle: string;
   branchName: string;
   matchScore: number;
+  matchedSkills?: string[];
+  missingSkills?: string[];
+  jobSkillCount?: number;
+  scoreMethod?: string;
   reason: string;
   salaryRange?: string;
   deadline?: string;
@@ -57,6 +69,54 @@ export interface TalentPoolInviteSuggestionDto {
   lockReason?: string;
   candidate: TalentPoolCandidateDto;
   suggestedJobs: TalentPoolSuggestedJobDto[];
+}
+
+export interface UpdateTalentPoolProfileRequest {
+  domains: string[];
+  targetPositions: string[];
+  jobLevel?: string;
+  sourcingPriority: string;
+  sourcingStage: string;
+  tags: string[];
+  expectedSalary?: number;
+  availableFrom?: string;
+}
+
+export interface CandidateDiscoverySearchParams {
+  keyword?: string;
+  skill?: string;
+  minYearsOfExperience?: number;
+  minAiScore?: number;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface CandidateDiscoveryResultDto {
+  candidateId: string;
+  displayName: string;
+  major?: string;
+  address?: string;
+  yearsOfExperience?: number;
+  highestAiScore?: number;
+  skillsJson: string;
+  contactAllowed: boolean;
+  cvAllowed: boolean;
+  latestCvUrl?: string;
+  profileDomains?: string[];
+  profilePositions?: string[];
+  publicCvs: CandidatePublicCvDto[];
+  alreadyInTalentPool: boolean;
+}
+
+export interface CandidatePublicCvDto {
+  cvId: string;
+  displayName: string;
+  sourceLabel: string;
+  createdAt: string;
+  isApplicationSnapshot: boolean;
+  fileUrl?: string;
+  builderContentJson?: string;
+  builderSettingsJson?: string;
 }
 
 export const talentPoolService = {
@@ -84,6 +144,36 @@ export const talentPoolService = {
       `/TalentPool/${talentPoolCandidateId}/invite-suggestions`
     );
 
+    return response.data;
+  },
+
+  async updateTalentPoolProfile(talentPoolCandidateId: string, request: UpdateTalentPoolProfileRequest) {
+    const response = await axiosClient.put(`/TalentPool/${talentPoolCandidateId}/profile`, request);
+    return response.data;
+  },
+
+  async removeTalentPoolCandidate(talentPoolCandidateId: string) {
+    const response = await axiosClient.delete(`/TalentPool/${talentPoolCandidateId}`);
+    return response.data;
+  },
+
+  async searchDiscoverableCandidates(params: CandidateDiscoverySearchParams) {
+    const response = await axiosClient.get<{ total: number; page: number; pageSize: number; items: CandidateDiscoveryResultDto[] }>(
+      "/TalentPool/search",
+      { params }
+    );
+    return response.data;
+  },
+
+  async getDiscoverableCandidateDetail(candidateId: string) {
+    const response = await axiosClient.get<CandidateDiscoveryResultDto>(
+      `/TalentPool/discoverable/${candidateId}`
+    );
+    return response.data;
+  },
+
+  async saveDiscoverableCandidate(candidateId: string, request: UpdateTalentPoolProfileRequest) {
+    const response = await axiosClient.post(`/TalentPool/discoverable/${candidateId}/save`, request);
     return response.data;
   },
 };

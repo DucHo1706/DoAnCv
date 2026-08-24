@@ -18,7 +18,7 @@ import TableToolbar from "../../../components/common/TableToolbar";
 
 interface SystemCategoryManagerProps {
   title: string;
-  subtitle: string;
+  subtitle?: string;
   entityName: string; // VD: "Chi nhánh", "Lĩnh vực"
   icon: React.ReactNode;
   fetchApi: () => Promise<any[]>;
@@ -121,7 +121,7 @@ export default function SystemCategoryManager({
       key: "name",
       render: (text: string) => (
         <Typography.Text strong>
-          <span style={{ marginRight: 6, color: "#1677ff" }}>{icon}</span>
+          <span style={{ marginRight: 6, color: "#2563EB" }}>{icon}</span>
           {text}
         </Typography.Text>
       ),
@@ -148,7 +148,7 @@ export default function SystemCategoryManager({
           <Button
             icon={<EditOutlined />}
             type="text"
-            style={{ color: "#1677ff", background: "#e6f4ff" }}
+            style={{ color: "#2563EB", background: "#EFF6FF" }}
             onClick={() => handleOpenEdit(record)}
           >
             Sửa
@@ -169,7 +169,7 @@ export default function SystemCategoryManager({
               danger={record.isActive}
               style={
                 !record.isActive
-                  ? { color: "#52c41a", background: "#f6ffed" }
+                  ? { color: "#10B981", background: "#ECFDF5" }
                   : { background: "#fff2f0" }
               }
             >
@@ -198,6 +198,7 @@ export default function SystemCategoryManager({
           onSearchChange={setSearchText}
         />
         <Table
+          scroll={{ x: "max-content" }}
           columns={columns}
           dataSource={filteredData}
           rowKey="id"

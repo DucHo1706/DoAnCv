@@ -32,6 +32,19 @@ namespace RecruitmentBackend.Models
         public DateTime CreatedAt { get; set; } = DateTime.Now;
         public int ViewCount { get; set; } = 0;
 
+        [MaxLength(450)]
+        public string? RepostedFromJobID { get; set; }
+
+        [MaxLength(450)]
+        public string? CampaignGroupID { get; set; }
+
+        public int RecruitmentRound { get; set; } = 1;
+
+        [ForeignKey(nameof(RepostedFromJobID))]
+        public virtual JobPosting? RepostedFromJob { get; set; }
+
+        public virtual ICollection<JobPosting> RepostedJobs { get; set; } = new List<JobPosting>();
+
         public string? CategoryID { get; set; }
         [ForeignKey("CategoryID")]
         public virtual Category? Category { get; set; }

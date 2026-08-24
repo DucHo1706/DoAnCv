@@ -22,7 +22,6 @@ import AiDetailedTabs from "../../../../components/ai-report/AiDetailedTabs";
 import CompetencyTab from "../../../../components/ai-report/CompetencyTab";
 import StarOptimizationTab from "../../../../components/ai-report/StarOptimizationTab";
 import LanguageReviewTab from "../../../../components/ai-report/LanguageReviewTab";
-import InterviewQuestionsTab from "../../../../components/ai-report/InterviewQuestionsTab";
 import { appTheme } from "../../../../constants/theme";
 import AiCoreIcon from "../../../../components/common/AiCoreIcon";
 import { useCandidateDetail } from "./hooks/useCandidateDetail";
@@ -35,12 +34,8 @@ export default function CandidateDetailPage() {
     navigate,
     candidate,
     loading,
-    reEvaluating,
-    evalProgress,
-    evalStatusText,
     parsed,
     handleExportPDF,
-    handleReEvaluate,
   } = useCandidateDetail();
 
   if (loading) {
@@ -73,14 +68,13 @@ export default function CandidateDetailPage() {
   return (
     <PageContainer
       title={candidate.candidateName}
-      subtitle={`Hồ sơ chi tiết cho vị trí ${candidate.jobTitle}`}
       extra={
         <Space size="middle">
           <Button
             icon={<ArrowLeftOutlined />}
             onClick={() => navigate(-1)}
             style={{
-              borderRadius: 10,
+              borderRadius: 12,
               fontFamily: appTheme.font.family,
             }}
           >
@@ -88,29 +82,13 @@ export default function CandidateDetailPage() {
           </Button>
           <Button
             type="primary"
-            ghost
-            icon={<AiCoreIcon size={16} style={{ verticalAlign: "middle" }} />}
-            loading={reEvaluating}
-            onClick={handleReEvaluate}
-            style={{
-              borderColor: appTheme.colors.primary,
-              color: appTheme.colors.primary,
-              borderRadius: 10,
-              fontWeight: 600,
-              fontFamily: appTheme.font.family,
-            }}
-          >
-            Yêu cầu AI phân tích lại
-          </Button>
-          <Button
-            type="primary"
             icon={<DownloadOutlined />}
-            href={candidate.cvUrl ? candidate.cvUrl.replace(/https?:\/\/localhost:(7006|5286)/gi, "https://recruitinsightai.com") : "#"}
+            href={candidate.cvUrl ? candidate.cvUrl.replace(/https?:\/\/localhost:(7006|5286)/gi, window.location.origin) : "#"}
             target="_blank"
             style={{
               background: appTheme.colors.primary,
               borderColor: appTheme.colors.primary,
-              borderRadius: 10,
+              borderRadius: 12,
               fontWeight: 600,
               fontFamily: appTheme.font.family,
             }}
@@ -175,7 +153,7 @@ export default function CandidateDetailPage() {
                         background: bg,
                         color: color,
                         border: `1px solid ${border}`,
-                        borderRadius: 6,
+                        borderRadius: 8,
                         padding: "3px 10px",
                         fontWeight: 600,
                       }}
@@ -185,7 +163,7 @@ export default function CandidateDetailPage() {
                   );
                 })()}
               </Descriptions.Item>
-              <Descriptions.Item label="Fit Score" span={2}>
+              <Descriptions.Item label="Điểm phù hợp" span={2}>
                 {(() => {
                   let color = appTheme.colors.error;
                   let bg = "#FEF2F2";
@@ -207,7 +185,7 @@ export default function CandidateDetailPage() {
                         color: color,
                         border: `1px solid ${border}`,
                         fontWeight: 700,
-                        borderRadius: 6,
+                        borderRadius: 8,
                         padding: "3px 10px",
                       }}
                     >
@@ -218,40 +196,14 @@ export default function CandidateDetailPage() {
               </Descriptions.Item>
             </Descriptions>
 
-            {reEvaluating && evalProgress !== null && (
-              <Card
-                style={{
-                  marginTop: 20,
-                  borderRadius: 14,
-                  background: "#EFF6FF",
-                  border: "1px solid #BFDBFE",
-                  boxShadow: "0 4px 12px rgba(37, 99, 235, 0.08)"
-                }}
-              >
-                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span style={{ fontWeight: 650, color: "#1E40AF", display: "inline-flex", alignItems: "center", gap: 6 }}>
-                      <AiCoreIcon spin size={16} /> Tiến trình phân tích AI thời gian thực (Real-time)
-                    </span>
-                    <span style={{ fontWeight: 700, color: "#2563EB" }}>{evalProgress}%</span>
-                  </div>
-                  <Progress percent={evalProgress} strokeColor="#2563EB" status="active" showInfo={false} />
-                  <Text style={{ fontSize: 13, color: "#475569", fontStyle: "italic" }}>
-                    {evalStatusText || "Đang xử lý hồ sơ..."}
-                  </Text>
-                </div>
-              </Card>
-            )}
-
-            {!parsed && !reEvaluating && (
+            {!parsed && (
               <div style={{ marginTop: 20 }}>
                 <Alert
-                  message="Báo cáo AI chưa được nâng cấp"
+                  message="Báo cáo AI phiên bản cũ"
                   description={
                     <div>
                       <Paragraph style={{ marginBottom: 12, color: "#475569", fontFamily: appTheme.font.family }}>
-                        Hồ sơ này được AI chấm bằng phiên bản cũ, chỉ có nhận xét tổng quát. Bấm nút
-                        bên dưới để AI phân tích lại đầy đủ với 4 báo cáo chi tiết.
+                        Hồ sơ này được AI chấm bằng phiên bản cũ nên chỉ có nhận xét tổng quát. Kết quả được giữ nguyên theo CV tại thời điểm ứng tuyển.
                       </Paragraph>
                       <Paragraph
                         style={{
@@ -327,25 +279,6 @@ export default function CandidateDetailPage() {
                           }
                         })()}
                       </Paragraph>
-                      <Button
-                        type="primary"
-                        size="large"
-                        icon={<AiCoreIcon size={16} style={{ filter: "brightness(0) invert(1)", verticalAlign: "middle" }} />}
-                        loading={reEvaluating}
-                        onClick={handleReEvaluate}
-                        style={{
-                          background: appTheme.colors.primary,
-                          borderColor: appTheme.colors.primary,
-                          borderRadius: 12,
-                          fontWeight: 600,
-                          height: 44,
-                          padding: "0 28px",
-                          boxShadow: "0 4px 12px rgba(37, 99, 235, 0.2)",
-                          fontFamily: appTheme.font.family,
-                        }}
-                      >
-                        🚀 Nâng cấp báo cáo AI chi tiết ngay
-                      </Button>
                     </div>
                   }
                   type="warning"
@@ -370,7 +303,7 @@ export default function CandidateDetailPage() {
                     type="primary"
                     icon={<DownloadOutlined />}
                     onClick={handleExportPDF}
-                    style={{ borderRadius: 10, fontWeight: 600, background: appTheme.colors.primary, borderColor: appTheme.colors.primary }}
+                    style={{ borderRadius: 12, fontWeight: 600, background: appTheme.colors.primary, borderColor: appTheme.colors.primary }}
                   >
                     Xuất báo cáo PDF
                   </Button>
@@ -385,6 +318,7 @@ export default function CandidateDetailPage() {
               >
                 <AiDetailedTabs
                   parsedAnalysis={parsed}
+                  showLearningPath={false}
                 />
               </Card>
 
@@ -401,7 +335,7 @@ export default function CandidateDetailPage() {
 
                 <div style={{ marginBottom: "24px", background: "#F8FAFC", padding: "16px 20px", borderRadius: "12px", border: "1px solid #E2E8F0" }}>
                   <h3 style={{ margin: "0 0 12px", fontSize: "15px", fontWeight: 700, color: "#0F172A" }}>THÔNG TIN HỒ SƠ</h3>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px 24px", fontSize: "14px" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "10px 24px", fontSize: "14px" }}>
                     <div><strong>Ứng viên:</strong> {candidate.candidateName}</div>
                     <div><strong>Email:</strong> {candidate.email}</div>
                     <div><strong>Vị trí ứng tuyển:</strong> {candidate.jobTitle}</div>
@@ -430,12 +364,6 @@ export default function CandidateDetailPage() {
                   <LanguageReviewTab languageReview={parsed.language_review || {}} />
                 </div>
 
-                <div style={{ marginTop: "34px", pageBreakBefore: "always" }}>
-                  <h2 style={{ fontSize: "16px", color: "#1E3A8A", borderBottom: "1px solid #E2E8F0", paddingBottom: "6px", fontWeight: 700 }}>
-                    4. GỢI Ý PHỎNG VẤN
-                  </h2>
-                  <InterviewQuestionsTab interviewQuestions={parsed.mock_interview || []} />
-                </div>
               </div>
             </>
           )}

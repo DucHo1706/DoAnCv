@@ -3,10 +3,18 @@ import { message } from "antd";
 import dashboardService, { emptyHrDashboardStats } from "../../../../../services/dashboardService";
 import type { HrDashboardStats } from "../../../../../services/dashboardService";
 
-export function useRecruiterDashboard() {
+export interface RecruiterDashboardFilters {
+  categoryId?: string | null;
+  positionId?: string | null;
+  jobLevelId?: string | null;
+  branchId?: string | null;
+  jobId?: string | null;
+}
+
+export function useRecruiterDashboard(filters: RecruiterDashboardFilters = {}) {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<HrDashboardStats>(emptyHrDashboardStats);
-  const [selectedJob, setSelectedJob] = useState<string | null>(null);
+  const [selectedTimeRange, setSelectedTimeRange] = useState<string>("month");
 
   const carouselRef = useRef<any>(null);
   const [isAutoSlide, setIsAutoSlide] = useState(true);
@@ -17,36 +25,41 @@ export function useRecruiterDashboard() {
       setLoading(true);
       try {
         const dashboardStats = await dashboardService.getHrDashboardStats({
-          jobId: selectedJob,
+          ...filters,
+          timeRange: selectedTimeRange,
         });
         setStats(dashboardStats);
       } catch (error) {
-        message.error("Lỗi khi tải dữ liệu thống kê tuyển dụng");
-        setStats(emptyHrDashboardStats);
+        const apiError = error as {
+          response?: { status?: number; data?: { message?: string } };
+          message?: string;
+        };
+        const status = apiError.response?.status;
+        const serverMessage = apiError.response?.data?.message;
+        const detail = serverMessage || (status ? `HTTP ${status}` : apiError.message);
+        console.error("Không tải được Tổng quan tuyển dụng", error);
+        message.error(detail ? `Không tải được Tổng quan tuyển dụng: ${detail}` : "Không tải được Tổng quan tuyển dụng.");
+        // Giữ số liệu hiện tại khi một lần đổi bộ lọc thất bại, tránh làm
+        // toàn bộ dashboard nhấp nháy về trạng thái rỗng gây hiểu nhầm.
       } finally {
         setLoading(false);
       }
     };
 
     fetchHrStats();
-  }, [selectedJob]);
+    const refreshOnRecruitmentEvent = () => { fetchHrStats(); };
+    window.addEventListener("recruitment:dashboard-refresh", refreshOnRecruitmentEvent);
+    return () => window.removeEventListener("recruitment:dashboard-refresh", refreshOnRecruitmentEvent);
+  }, [filters.categoryId, filters.positionId, filters.jobLevelId, filters.branchId, filters.jobId, selectedTimeRange]);
 
   const getFitScoreColor = (score: number) => {
-    if (score < 50) return "#ff4d4f";
-    if (score >= 50 && score <= 70) return "#faad14";
-    return "#52c41a";
+    if (score < 50) return "#EF4444";
+    if (score >= 50 && score <= 70) return "#F59E0B";
+    return "#10B981";
   };
 
   const getAverageFitScoreColor = (score: number) => {
     return getFitScoreColor(score);
-  };
-
-  const handleChangeSelectedJob = (value?: string | number) => {
-    if (value !== undefined && value !== null) {
-      setSelectedJob(String(value));
-    } else {
-      setSelectedJob(null);
-    }
   };
 
   const carouselTitles = [
@@ -100,8 +113,8 @@ export function useRecruiterDashboard() {
   };
 
   const getFitScoreColumnColor = (range: string) => {
-    if (range === "Trên 85") return "#52c41a";
-    if (range === "70-85") return "#1677ff";
+    if (range === "Trên 85") return "#10B981";
+    if (range === "70-85") return "#2563EB";
     if (range === "50-70") return "#91caff";
     return "#d9d9d9";
   };
@@ -128,8 +141,8 @@ export function useRecruiterDashboard() {
   return {
     loading,
     stats,
-    selectedJob,
-    setSelectedJob,
+    selectedTimeRange,
+    setSelectedTimeRange,
     carouselRef,
     isAutoSlide,
     setIsAutoSlide,
@@ -141,7 +154,6 @@ export function useRecruiterDashboard() {
     handleCarouselAfterChange,
     getFitScoreColor,
     getAverageFitScoreColor,
-    handleChangeSelectedJob,
     carouselTitles,
     getTopSkillData,
     getFitScoreColumnColor,

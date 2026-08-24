@@ -18,18 +18,29 @@ namespace RecruitmentBackend.Controllers
         }
 
         [HttpGet("admin-stats")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetAdminDashboardStats(
             [FromQuery] string? categoryId,
+            [FromQuery] string? positionId,
+            [FromQuery] string? jobLevelId,
+            [FromQuery] string? branchId,
+            [FromQuery] string? jobId,
             [FromQuery] DateTime? fromDate,
             [FromQuery] DateTime? toDate)
         {
-            var result = await _dashboardService.GetAdminDashboardStatsAsync(categoryId, fromDate, toDate);
+            var result = await _dashboardService.GetAdminDashboardStatsAsync(categoryId, positionId, jobLevelId, branchId, jobId, fromDate, toDate);
             return Ok(result);
         }
 
         [HttpGet("hr-stats")]
-        [Authorize]
-        public async Task<IActionResult> GetHrDashboardStats([FromQuery] string? jobId, [FromQuery] string? timeRange)
+        [Authorize(Roles = "Recruiter")]
+        public async Task<IActionResult> GetHrDashboardStats(
+            [FromQuery] string? categoryId,
+            [FromQuery] string? positionId,
+            [FromQuery] string? jobLevelId,
+            [FromQuery] string? branchId,
+            [FromQuery] string? jobId,
+            [FromQuery] string? timeRange)
         {
             var accountId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
@@ -42,7 +53,7 @@ namespace RecruitmentBackend.Controllers
                 });
             }
 
-            var result = await _dashboardService.GetHrDashboardStatsAsync(accountId, jobId, timeRange);
+            var result = await _dashboardService.GetHrDashboardStatsAsync(accountId, categoryId, positionId, jobLevelId, branchId, jobId, timeRange);
             return Ok(result);
         }
 
@@ -55,6 +66,7 @@ namespace RecruitmentBackend.Controllers
         }
 
         [HttpGet("simulator-candidates")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetSimulatorCandidates()
         {
             var result = await _dashboardService.GetSimulatorCandidatesAsync();

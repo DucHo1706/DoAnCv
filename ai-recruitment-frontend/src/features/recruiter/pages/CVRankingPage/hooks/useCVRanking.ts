@@ -37,7 +37,7 @@ export function useCVRanking() {
 
         const [jobData, applicationData] = await Promise.all([
           jobService.getMyJobs(),
-          recruitmentService.getHrApplications(),
+          recruitmentService.getHrApplications(false),
         ]);
 
         const normalizedJobs = Array.isArray(jobData)

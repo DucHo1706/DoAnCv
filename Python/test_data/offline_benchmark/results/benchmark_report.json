@@ -1,0 +1,443 @@
+{
+  "metadata": {
+    "schema_version": 3,
+    "dataset_kind": "synthetic_offline_benchmark",
+    "notice": "Dữ liệu hư cấu chỉ dùng để kiểm thử độ bao phủ và tính nhất quán của thuật toán; không đại diện cho phân bố thị trường lao động.",
+    "reference_date": "2026-08-21",
+    "generated_on": "2026-08-22",
+    "domain_count": 8,
+    "position_count": 54,
+    "level_count": 3,
+    "job_count": 162,
+    "cv_count": 1170,
+    "pair_count": 3510,
+    "scenario_count": 3,
+    "case_type_count": 5,
+    "case_counts": {
+      "strong_documented": 234,
+      "preferred_skill_gap": 234,
+      "experience_below_requirement": 234,
+      "transferable_education": 234,
+      "language_needs_verification": 234
+    },
+    "min_distinct_candidates_per_job": 15,
+    "max_distinct_candidates_per_job": 40,
+    "runner": "run_offline_algorithm_benchmark.py",
+    "uses_backend": false,
+    "uses_database": false,
+    "uses_network": false,
+    "uses_gemini": false
+  },
+  "coverage": {
+    "domain_count": 8,
+    "job_count": 162,
+    "cv_count": 1170,
+    "pair_count": 3510,
+    "position_count": 54,
+    "level_count": 3,
+    "taxonomy_size": 430,
+    "it_cv_share": 0.4615,
+    "candidate_case_counts": {
+      "strong_documented": 234,
+      "preferred_skill_gap": 234,
+      "experience_below_requirement": 234,
+      "transferable_education": 234,
+      "language_needs_verification": 234
+    },
+    "min_distinct_candidates_per_job": 15,
+    "max_distinct_candidates_per_job": 40,
+    "jobs_by_domain": {
+      "Công nghệ thông tin": 36,
+      "Marketing": 18,
+      "Nhân sự và Hành chính": 18,
+      "Tài chính và Kế toán": 18,
+      "Kinh doanh và Chăm sóc khách hàng": 18,
+      "Logistics và Chuỗi cung ứng": 18,
+      "Y tế và Dược": 18,
+      "Giáo dục và Đào tạo": 18
+    },
+    "cvs_by_domain": {
+      "Công nghệ thông tin": 540,
+      "Marketing": 90,
+      "Nhân sự và Hành chính": 90,
+      "Tài chính và Kế toán": 90,
+      "Kinh doanh và Chăm sóc khách hàng": 90,
+      "Logistics và Chuỗi cung ứng": 90,
+      "Y tế và Dược": 90,
+      "Giáo dục và Đào tạo": 90
+    },
+    "positions_by_domain": {
+      "Công nghệ thông tin": 12,
+      "Marketing": 6,
+      "Nhân sự và Hành chính": 6,
+      "Tài chính và Kế toán": 6,
+      "Kinh doanh và Chăm sóc khách hàng": 6,
+      "Logistics và Chuỗi cung ứng": 6,
+      "Y tế và Dược": 6,
+      "Giáo dục và Đào tạo": 6
+    },
+    "levels_by_domain": {
+      "Công nghệ thông tin": 3,
+      "Marketing": 3,
+      "Nhân sự và Hành chính": 3,
+      "Tài chính và Kế toán": 3,
+      "Kinh doanh và Chăm sóc khách hàng": 3,
+      "Logistics và Chuỗi cung ứng": 3,
+      "Y tế và Dược": 3,
+      "Giáo dục và Đào tạo": 3
+    },
+    "jd_min_words": 993,
+    "jd_mean_words": 1014.5
+  },
+  "matching": {
+    "pair_count": 3510,
+    "scenario_metrics": {
+      "strong_same_role": {
+        "count": 1170,
+        "score_min": 92,
+        "score_mean": 95.83,
+        "score_median": 95.0,
+        "score_p95": 100.0,
+        "score_max": 100,
+        "latency_p50_ms": 4.5,
+        "latency_p95_ms": 6.547
+      },
+      "partial_same_domain": {
+        "count": 1170,
+        "score_min": 41,
+        "score_mean": 48.81,
+        "score_median": 49.0,
+        "score_p95": 59.0,
+        "score_max": 66,
+        "latency_p50_ms": 7.992,
+        "latency_p95_ms": 10.695
+      },
+      "negative_cross_domain": {
+        "count": 1170,
+        "score_min": 18,
+        "score_mean": 25.93,
+        "score_median": 25.0,
+        "score_p95": 35.0,
+        "score_max": 41,
+        "latency_p50_ms": 9.152,
+        "latency_p95_ms": 12.416
+      }
+    },
+    "strict_monotonic_count": 1164,
+    "strict_monotonic_rate": 0.9949,
+    "monotonic_failures": [
+      {
+        "cv_id": "cv--healthcare-pharmacy--registered-nurse--junior--v4",
+        "strong_same_role": 92,
+        "partial_same_domain": 41,
+        "negative_cross_domain": 41
+      },
+      {
+        "cv_id": "cv--healthcare-pharmacy--registered-nurse--middle--v4",
+        "strong_same_role": 92,
+        "partial_same_domain": 41,
+        "negative_cross_domain": 41
+      },
+      {
+        "cv_id": "cv--healthcare-pharmacy--registered-nurse--senior--v4",
+        "strong_same_role": 92,
+        "partial_same_domain": 41,
+        "negative_cross_domain": 41
+      },
+      {
+        "cv_id": "cv--healthcare-pharmacy--medical-representative--junior--v4",
+        "strong_same_role": 92,
+        "partial_same_domain": 41,
+        "negative_cross_domain": 41
+      },
+      {
+        "cv_id": "cv--healthcare-pharmacy--medical-representative--middle--v4",
+        "strong_same_role": 92,
+        "partial_same_domain": 41,
+        "negative_cross_domain": 41
+      },
+      {
+        "cv_id": "cv--healthcare-pharmacy--medical-representative--senior--v4",
+        "strong_same_role": 92,
+        "partial_same_domain": 41,
+        "negative_cross_domain": 41
+      }
+    ],
+    "parser_metrics": {
+      "cv_count": 1170,
+      "min_words": 1791,
+      "mean_words": 1876.7,
+      "min_characters": 8336,
+      "mean_characters": 8856.8,
+      "min_recognized_sections": 9,
+      "mean_recognized_sections": 9.0,
+      "mean_skill_recall": 1.0,
+      "timeline_exact_count": 1170,
+      "timeline_insufficient_count": 0,
+      "unexpected_skill_count": 798
+    }
+  },
+  "mining": {
+    "domain_count": 8,
+    "all_domains_passed": true,
+    "elapsed_ms": 1020.646,
+    "domains": [
+      {
+        "domain_code": "education-training",
+        "domain_name": "Giáo dục và Đào tạo",
+        "transaction_count": 90,
+        "taxonomy_size": 27,
+        "apriori": {
+          "min_support": 0.25,
+          "min_confidence": 0.65,
+          "frequent_itemset_count": 7,
+          "rule_count": 12,
+          "support_error_count": 0,
+          "confidence_error_count": 0,
+          "elapsed_ms": 0.365
+        },
+        "huim": {
+          "utility_kind": "trọng số hư cấu 1-5 chỉ để kiểm tra phép tính",
+          "min_utility": 360.0,
+          "itemset_count": 212,
+          "exact_utility_error_count": 0,
+          "elapsed_ms": 28.088
+        },
+        "foreign_item_count": 0,
+        "passed": true
+      },
+      {
+        "domain_code": "finance-accounting",
+        "domain_name": "Tài chính và Kế toán",
+        "transaction_count": 90,
+        "taxonomy_size": 27,
+        "apriori": {
+          "min_support": 0.25,
+          "min_confidence": 0.65,
+          "frequent_itemset_count": 7,
+          "rule_count": 12,
+          "support_error_count": 0,
+          "confidence_error_count": 0,
+          "elapsed_ms": 2.437
+        },
+        "huim": {
+          "utility_kind": "trọng số hư cấu 1-5 chỉ để kiểm tra phép tính",
+          "min_utility": 360.0,
+          "itemset_count": 187,
+          "exact_utility_error_count": 0,
+          "elapsed_ms": 37.906
+        },
+        "foreign_item_count": 0,
+        "passed": true
+      },
+      {
+        "domain_code": "healthcare-pharmacy",
+        "domain_name": "Y tế và Dược",
+        "transaction_count": 90,
+        "taxonomy_size": 27,
+        "apriori": {
+          "min_support": 0.25,
+          "min_confidence": 0.65,
+          "frequent_itemset_count": 7,
+          "rule_count": 12,
+          "support_error_count": 0,
+          "confidence_error_count": 0,
+          "elapsed_ms": 0.392
+        },
+        "huim": {
+          "utility_kind": "trọng số hư cấu 1-5 chỉ để kiểm tra phép tính",
+          "min_utility": 360.0,
+          "itemset_count": 215,
+          "exact_utility_error_count": 0,
+          "elapsed_ms": 34.622
+        },
+        "foreign_item_count": 0,
+        "passed": true
+      },
+      {
+        "domain_code": "human-resources-administration",
+        "domain_name": "Nhân sự và Hành chính",
+        "transaction_count": 90,
+        "taxonomy_size": 26,
+        "apriori": {
+          "min_support": 0.25,
+          "min_confidence": 0.65,
+          "frequent_itemset_count": 15,
+          "rule_count": 28,
+          "support_error_count": 0,
+          "confidence_error_count": 0,
+          "elapsed_ms": 0.69
+        },
+        "huim": {
+          "utility_kind": "trọng số hư cấu 1-5 chỉ để kiểm tra phép tính",
+          "min_utility": 360.0,
+          "itemset_count": 175,
+          "exact_utility_error_count": 0,
+          "elapsed_ms": 34.513
+        },
+        "foreign_item_count": 0,
+        "passed": true
+      },
+      {
+        "domain_code": "information-technology",
+        "domain_name": "Công nghệ thông tin",
+        "transaction_count": 540,
+        "taxonomy_size": 48,
+        "apriori": {
+          "min_support": 0.25,
+          "min_confidence": 0.65,
+          "frequent_itemset_count": 7,
+          "rule_count": 12,
+          "support_error_count": 0,
+          "confidence_error_count": 0,
+          "elapsed_ms": 1.831
+        },
+        "huim": {
+          "utility_kind": "trọng số hư cấu 1-5 chỉ để kiểm tra phép tính",
+          "min_utility": 2160.0,
+          "itemset_count": 23,
+          "exact_utility_error_count": 0,
+          "elapsed_ms": 734.154
+        },
+        "foreign_item_count": 0,
+        "passed": true
+      },
+      {
+        "domain_code": "logistics-supply-chain",
+        "domain_name": "Logistics và Chuỗi cung ứng",
+        "transaction_count": 90,
+        "taxonomy_size": 27,
+        "apriori": {
+          "min_support": 0.25,
+          "min_confidence": 0.65,
+          "frequent_itemset_count": 7,
+          "rule_count": 12,
+          "support_error_count": 0,
+          "confidence_error_count": 0,
+          "elapsed_ms": 0.384
+        },
+        "huim": {
+          "utility_kind": "trọng số hư cấu 1-5 chỉ để kiểm tra phép tính",
+          "min_utility": 360.0,
+          "itemset_count": 141,
+          "exact_utility_error_count": 0,
+          "elapsed_ms": 32.456
+        },
+        "foreign_item_count": 0,
+        "passed": true
+      },
+      {
+        "domain_code": "marketing",
+        "domain_name": "Marketing",
+        "transaction_count": 90,
+        "taxonomy_size": 27,
+        "apriori": {
+          "min_support": 0.25,
+          "min_confidence": 0.65,
+          "frequent_itemset_count": 7,
+          "rule_count": 12,
+          "support_error_count": 0,
+          "confidence_error_count": 0,
+          "elapsed_ms": 0.387
+        },
+        "huim": {
+          "utility_kind": "trọng số hư cấu 1-5 chỉ để kiểm tra phép tính",
+          "min_utility": 360.0,
+          "itemset_count": 167,
+          "exact_utility_error_count": 0,
+          "elapsed_ms": 25.973
+        },
+        "foreign_item_count": 0,
+        "passed": true
+      },
+      {
+        "domain_code": "sales-customer-success",
+        "domain_name": "Kinh doanh và Chăm sóc khách hàng",
+        "transaction_count": 90,
+        "taxonomy_size": 27,
+        "apriori": {
+          "min_support": 0.25,
+          "min_confidence": 0.65,
+          "frequent_itemset_count": 7,
+          "rule_count": 12,
+          "support_error_count": 0,
+          "confidence_error_count": 0,
+          "elapsed_ms": 0.237
+        },
+        "huim": {
+          "utility_kind": "trọng số hư cấu 1-5 chỉ để kiểm tra phép tính",
+          "min_utility": 360.0,
+          "itemset_count": 192,
+          "exact_utility_error_count": 0,
+          "elapsed_ms": 24.271
+        },
+        "foreign_item_count": 0,
+        "passed": true
+      }
+    ]
+  },
+  "checks": [
+    {
+      "name": "Ít nhất 8 ngành",
+      "passed": true,
+      "actual": 8
+    },
+    {
+      "name": "CNTT có ít nhất 12 vị trí",
+      "passed": true,
+      "actual": 12
+    },
+    {
+      "name": "CNTT chiếm ít nhất 40% CV",
+      "passed": true,
+      "actual": 0.4615
+    },
+    {
+      "name": "Mỗi JD được đối sánh với ít nhất 15 CV",
+      "passed": true,
+      "actual": 15
+    },
+    {
+      "name": "Có đủ 5 kịch bản bằng chứng CV",
+      "passed": true,
+      "actual": 5
+    },
+    {
+      "name": "Mỗi CV có ít nhất 900 từ",
+      "passed": true,
+      "actual": 1791
+    },
+    {
+      "name": "Mỗi JD có ít nhất 800 từ",
+      "passed": true,
+      "actual": 993
+    },
+    {
+      "name": "Mỗi CV nhận diện ít nhất 7 section",
+      "passed": true,
+      "actual": 9
+    },
+    {
+      "name": "Trích xuất đủ kỹ năng fixture",
+      "passed": true,
+      "actual": 1.0
+    },
+    {
+      "name": "Timeline đúng cho toàn bộ CV",
+      "passed": true,
+      "actual": "1170/1170"
+    },
+    {
+      "name": "Ít nhất 95% CV giữ đúng thứ tự ba kịch bản",
+      "passed": true,
+      "actual": 0.9949
+    },
+    {
+      "name": "Apriori/HUIM đúng phép tính và tách domain",
+      "passed": true,
+      "actual": true
+    }
+  ],
+  "passed": true,
+  "elapsed_ms": 165271.762
+}

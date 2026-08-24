@@ -15,8 +15,13 @@ namespace RecruitmentBackend.Interfaces
         Task<object?> GetPublishedJobByIdAsync(string jobId);
         Task<IEnumerable<object>> GetTrendingCategoriesAsync(int limit = 8);
         Task<IEnumerable<object>> GetJobsByRecruiterAsync(string accountId);
+        Task<IReadOnlyList<RecruiterCampaignSummaryDto>> GetRecruiterCampaignSummariesAsync(string accountId);
         Task<string> CreatePendingJobAsync(CreateJobRequest request, string accountId);
-        Task<object> ReviewJobAsync(string jobId);
+        Task<(bool Success, string Message, string? JobId, int? RecruitmentRound)> RepostJobAsync(string sourceJobId, RepostJobRequest request, string accountId);
+        Task<(bool Success, string Message)> UpdateRecruiterJobAsync(string jobId, CreateJobRequest request, string accountId);
+        Task<(bool Success, string Message)> ArchiveJobAsync(string jobId, string accountId, bool isAdmin);
+        Task<(bool Success, string Message)> RestoreArchivedJobAsync(string jobId, string accountId, bool isAdmin);
+        Task<object?> ReviewJobAsync(string jobId, string accountId, bool isAdmin);
         Task<bool> ApproveJobAndSyncAiAsync(string jobId);
         Task<bool> RejectJobAsync(string jobId, string reason);
         Task<bool> FlagJobAsync(string jobId, string reason);

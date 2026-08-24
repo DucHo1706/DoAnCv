@@ -15,6 +15,7 @@ import {
   ApartmentOutlined,
   SecurityScanOutlined,
   SettingOutlined,
+  SearchOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
 } from "@ant-design/icons";
@@ -123,6 +124,11 @@ export function SideNav({
           label: <Link to="/recruiter/talent-pool">Kho ứng viên tiềm năng</Link>,
         },
         {
+          key: "/recruiter/candidate-search",
+          icon: <SearchOutlined style={{ color: "#0EA5E9", fontSize: 16 }} />,
+          label: <Link to="/recruiter/candidate-search">Tìm ứng viên</Link>,
+        },
+        {
           key: "/recruiter/email-logs",
           icon: <MailOutlined style={{ color: "#EC4899", fontSize: 16 }} />,
           label: <Link to="/recruiter/email-logs">Lịch sử Email</Link>,
@@ -201,7 +207,7 @@ export function SideNav({
         {
           key: "/admin/organization",
           icon: <ApartmentOutlined style={{ color: "#818CF8", fontSize: 16 }} />,
-          label: <Link to="/admin/organization">Cơ cấu tổ chức</Link>,
+          label: <Link to="/admin/organization">Danh mục tuyển dụng</Link>,
         },
       ],
     },
@@ -226,8 +232,20 @@ export function SideNav({
   const menuItems = isAdminRoute ? adminMenuItems : hrMenuItems;
 
   let selectedMenuKey = location.pathname;
-  if (location.pathname.startsWith("/recruiter/ranking")) {
+  if (
+    location.pathname.startsWith("/recruiter/applications") ||
+    location.pathname.startsWith("/recruiter/ranking") ||
+    location.pathname.startsWith("/recruiter/candidates/")
+  ) {
     selectedMenuKey = "/recruiter/applications";
+  } else if (location.pathname.startsWith("/recruiter/jobs/")) {
+    selectedMenuKey = "/recruiter/jobs";
+  } else if (location.pathname.startsWith("/recruiter/talent-pool/")) {
+    selectedMenuKey = "/recruiter/talent-pool";
+  } else if (location.pathname.startsWith("/recruiter/candidate-search/")) {
+    selectedMenuKey = "/recruiter/candidate-search";
+  } else if (location.pathname.startsWith("/admin/jobs/")) {
+    selectedMenuKey = "/admin/approval";
   }
 
   const sidebarContent = (
@@ -292,7 +310,7 @@ export function SideNav({
   return (
     <>
       <Sider
-        width={260}
+        width="min(260px, calc(100vw - 24px))"
         collapsedWidth={80}
         collapsed={collapsed}
         className="admin-custom-sider main-sider-responsive"

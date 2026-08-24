@@ -10,9 +10,12 @@ import {
   CloseOutlined,
   LockOutlined,
   UnlockOutlined,
+  InboxOutlined,
+  UndoOutlined,
 } from "@ant-design/icons";
 import AppPagination from "../../../../../components/common/AppPagination";
 import EmptyState from "../../../../../components/common/EmptyState";
+import { resolveJobLifecycle } from "../../../../../utils/jobLifecycle";
 
 const { Text, Title } = Typography;
 
@@ -35,6 +38,8 @@ interface JobGridViewProps {
   onApproveJob: (item: any) => void;
   onOpenReject: (item: any) => void;
   onToggleStatus: (item: any) => void;
+  onArchive: (item: any) => void;
+  onRestore: (item: any) => void;
 }
 
 export function JobGridView({
@@ -48,6 +53,8 @@ export function JobGridView({
   onApproveJob,
   onOpenReject,
   onToggleStatus,
+  onArchive,
+  onRestore,
   approvingId,
 }: JobGridViewProps) {
   if (loading) {
@@ -101,24 +108,36 @@ export function JobGridView({
                     {item.title}
                   </Title>
 
-                  {item.raw.status === "Published" ? (
-                    <Tag color="success" style={{ borderRadius: 6, fontWeight: 700 }}>
-                      Đang chạy
+                  {resolveJobLifecycle(item.raw) === "Expired" ? (
+                    <Tag color="error" style={{ borderRadius: 8, fontWeight: 700 }}>
+                      Đã duyệt · Hết hạn
+                    </Tag>
+                  ) : resolveJobLifecycle(item.raw) === "Scheduled" ? (
+                    <Tag color="processing" style={{ borderRadius: 8, fontWeight: 700 }}>
+                      Đã duyệt · Sắp mở
+                    </Tag>
+                  ) : resolveJobLifecycle(item.raw) === "Recruiting" ? (
+                    <Tag color="success" style={{ borderRadius: 8, fontWeight: 700 }}>
+                      Đang tuyển
                     </Tag>
                   ) : item.raw.status === "Closed" ? (
-                    <Tag color="default" style={{ borderRadius: 6 }}>
+                    <Tag color="default" style={{ borderRadius: 8 }}>
                       Đã đóng
                     </Tag>
                   ) : item.raw.status === "Rejected" ? (
                     <Tooltip title={item.raw.rejectReason || "Không có lý do cụ thể"}>
-                      <Tag color="error" style={{ borderRadius: 6, fontWeight: 700, cursor: "help" }}>
+                      <Tag color="error" style={{ borderRadius: 8, fontWeight: 700, cursor: "help" }}>
                         Đã từ chối
                       </Tag>
                     </Tooltip>
+                  ) : item.raw.status === "Archived" ? (
+                    <Tag icon={<InboxOutlined />} color="default" style={{ borderRadius: 8 }}>
+                      Đã lưu trữ
+                    </Tag>
                   ) : (
                     <Tag
                       color="warning"
-                      style={{ borderRadius: 6, fontWeight: 800, backgroundColor: "#FFF7ED", color: "#C2410C" }}
+                      style={{ borderRadius: 8, fontWeight: 800, backgroundColor: "#FFF7ED", color: "#C2410C" }}
                     >
                       Chờ duyệt
                     </Tag>
@@ -162,7 +181,11 @@ export function JobGridView({
                   Chi tiết
                 </Button>
 
-                {item.raw.status === "Pending" ? (
+                {item.raw.status === "Archived" ? (
+                  <Popconfirm title="Khôi phục và chuyển tin về chờ duyệt?" onConfirm={() => onRestore(item)} okText="Khôi phục" cancelText="Hủy">
+                    <Button icon={<UndoOutlined />}>Khôi phục</Button>
+                  </Popconfirm>
+                ) : item.raw.status === "Pending" ? (
                   <Space size={8}>
                     <Button danger icon={<CloseOutlined />} onClick={() => onOpenReject(item)}>
                       Từ chối
@@ -179,23 +202,18 @@ export function JobGridView({
                     </Button>
                   </Space>
                 ) : (
-                  <Popconfirm
-                    title={
-                      item.raw.status === "Published"
-                        ? "Bạn có chắc muốn tạm ẩn tin này?"
-                        : "Bạn có chắc muốn mở lại tin này?"
-                    }
-                    onConfirm={() => onToggleStatus(item)}
-                    okText="Đồng ý"
-                    cancelText="Hủy"
-                  >
-                    <Button
-                      icon={item.raw.status === "Published" ? <LockOutlined /> : <UnlockOutlined />}
-                      danger={item.raw.status === "Published"}
-                    >
-                      {item.raw.status === "Published" ? "Tạm ẩn" : "Mở lại"}
-                    </Button>
-                  </Popconfirm>
+                  <Space size={8}>
+                    {(item.raw.status === "Published" || item.raw.status === "Closed") && resolveJobLifecycle(item.raw) !== "Expired" && (
+                      <Popconfirm title={item.raw.status === "Published" ? "Tạm ẩn tin này?" : "Mở lại tin này?"} onConfirm={() => onToggleStatus(item)} okText="Đồng ý" cancelText="Hủy">
+                        <Button icon={item.raw.status === "Published" ? <LockOutlined /> : <UnlockOutlined />} danger={item.raw.status === "Published"}>
+                          {item.raw.status === "Published" ? "Tạm ẩn" : "Mở lại"}
+                        </Button>
+                      </Popconfirm>
+                    )}
+                    <Popconfirm title="Lưu trữ tin này?" onConfirm={() => onArchive(item)} okText="Lưu trữ" cancelText="Hủy">
+                      <Button icon={<InboxOutlined />}>Lưu trữ</Button>
+                    </Popconfirm>
+                  </Space>
                 )}
               </div>
             </Card>

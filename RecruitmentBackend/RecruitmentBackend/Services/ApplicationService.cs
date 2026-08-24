@@ -5,6 +5,7 @@ using RecruitmentBackend.Controllers;
 using RecruitmentBackend.Data;
 using RecruitmentBackend.DTOs.Responses;
 using RecruitmentBackend.Interfaces;
+using RecruitmentBackend.Utilities;
 using RecruitmentBackend.Models;
 using RecruitmentBackend.Constants;
 using RecruitmentBackend.DTOs.Requests;
@@ -13,6 +14,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Security.Claims;
+using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -29,19 +31,274 @@ namespace RecruitmentBackend.Services
         private readonly IServiceScopeFactory _serviceScopeFactory;
         private readonly IHubContext<AIEvaluationHub> _hubContext;
         private readonly INotificationService _notificationService;
+        private readonly IAiService _aiService;
+        private readonly IHttpClientFactory _httpClientFactory;
 
         public ApplicationService(
             AppDbContext context,
             IFileService fileService,
             IServiceScopeFactory serviceScopeFactory,
             IHubContext<AIEvaluationHub> hubContext,
-            INotificationService notificationService)
+            INotificationService notificationService,
+            IAiService aiService,
+            IHttpClientFactory httpClientFactory)
         {
             _context = context;
             _fileService = fileService;
             _serviceScopeFactory = serviceScopeFactory;
             _hubContext = hubContext;
             _notificationService = notificationService;
+            _aiService = aiService;
+            _httpClientFactory = httpClientFactory;
+        }
+
+        public async Task<(bool IsSuccess, string Message, object Data)> RetryAiEvaluationAsync(
+            string applicationId,
+            ClaimsPrincipal user)
+        {
+            var accountId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrWhiteSpace(accountId))
+                return (false, "Không xác định được tài khoản đang đăng nhập.", null);
+
+            var applicationData = await (
+                from application in _context.Applications
+                join cv in _context.CandidateCVs on application.CVID equals cv.CVID
+                join candidate in _context.Candidates on cv.CandidateID equals candidate.CandidateID
+                where application.ApplicationID == applicationId && candidate.AccountID == accountId
+                select new { application, cv }
+            ).FirstOrDefaultAsync();
+
+            if (applicationData == null)
+                return (false, "Không tìm thấy hồ sơ ứng tuyển hoặc bạn không có quyền thao tác.", null);
+
+            var evaluation = await _context.AIEvaluations
+                .FirstOrDefaultAsync(item => item.ApplicationID == applicationId);
+            if (evaluation != null
+                && !string.Equals(evaluation.Classification, "AI_ERROR", StringComparison.OrdinalIgnoreCase)
+                && HasCompleteDetailedAnalysis(evaluation.Reason))
+                return (false, "Hồ sơ đã có kết quả AI và không cần phân tích lại.", null);
+
+            byte[] fileBytes = Array.Empty<byte>();
+            var fileName = "CV.pdf";
+            var contentType = "application/pdf";
+            var structuredText = applicationData.cv.SourceType == "CvBuilder"
+                ? applicationData.cv.RawText
+                : null;
+
+            if (string.IsNullOrWhiteSpace(structuredText))
+            {
+                if (string.IsNullOrWhiteSpace(applicationData.cv.FilePath)
+                    || !Uri.TryCreate(applicationData.cv.FilePath, UriKind.Absolute, out var fileUri))
+                {
+                    return (false, "Không tìm thấy tệp CV đã nộp để chạy lại phân tích.", null);
+                }
+
+                try
+                {
+                    var client = _httpClientFactory.CreateClient();
+                    fileBytes = await client.GetByteArrayAsync(fileUri);
+                    fileName = CvFileNameHelper.GetDisplayName(fileUri.LocalPath, "CV.pdf");
+                    contentType = Path.GetExtension(fileName).ToLowerInvariant() switch
+                    {
+                        ".docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                        ".png" => "image/png",
+                        ".jpg" or ".jpeg" => "image/jpeg",
+                        ".webp" => "image/webp",
+                        _ => "application/pdf"
+                    };
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Không tải được CV để phân tích lại {applicationId}: {ex.Message}");
+                    return (false, "Không tải được tệp CV đã nộp. Vui lòng liên hệ nhà tuyển dụng để được hỗ trợ.", null);
+                }
+            }
+            else
+            {
+                fileBytes = new byte[] { 0 };
+                fileName = "CV-truc-tuyen.pdf";
+            }
+
+            if (evaluation != null)
+            {
+                _context.AIEvaluations.Remove(evaluation);
+                await _context.SaveChangesAsync();
+            }
+
+            var bytesForAi = fileBytes;
+            var textForAi = structuredText;
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    using var scope = _serviceScopeFactory.CreateScope();
+                    var aiEvaluationService = scope.ServiceProvider.GetRequiredService<IAiEvaluationService>();
+                    await aiEvaluationService.RunAiEvaluationInBackgroundAsync(
+                        applicationId, bytesForAi, fileName, contentType, textForAi);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Lỗi chạy lại AI cho {applicationId}: {ex.Message}");
+                }
+            });
+
+            return (true, "Hệ thống đã bắt đầu phân tích lại hồ sơ. Bạn không cần nộp CV lần nữa.", new
+            {
+                applicationId,
+                aiStatus = "Processing"
+            });
+        }
+
+        public async Task<(bool IsSuccess, string Message, object Data)> WithdrawApplicationAsync(
+            string applicationId,
+            ClaimsPrincipal user)
+        {
+            var accountId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrWhiteSpace(accountId))
+                return (false, "Không xác định được tài khoản đang đăng nhập.", null);
+
+            var applicationData = await (
+                from item in _context.Applications
+                join cv in _context.CandidateCVs on item.CVID equals cv.CVID
+                join candidate in _context.Candidates on cv.CandidateID equals candidate.CandidateID
+                where item.ApplicationID == applicationId && candidate.AccountID == accountId
+                select new { Application = item, Snapshot = cv }
+            ).FirstOrDefaultAsync();
+
+            if (applicationData == null)
+                return (false, "Không tìm thấy hồ sơ ứng tuyển hoặc bạn không có quyền rút hồ sơ này.", null);
+
+            var application = applicationData.Application;
+
+            if (!string.Equals(application.Status, "Applied", StringComparison.OrdinalIgnoreCase))
+                return (false, "Chỉ có thể rút hồ sơ khi đang ở trạng thái Đã nộp và HR chưa bắt đầu xử lý.", null);
+
+            var hasInterview = await _context.InterviewSchedules
+                .AnyAsync(item => item.ApplicationID == applicationId);
+            var hasHrInteraction = await _context.TalentPoolInteractions
+                .AnyAsync(item => item.ApplicationID == applicationId);
+            if (hasInterview || hasHrInteraction)
+                return (false, "Hồ sơ đã được nhà tuyển dụng xử lý nên không thể rút để nộp lại.", null);
+
+            _context.Applications.Remove(application);
+            await _context.SaveChangesAsync();
+
+            // CandidateCV được tạo riêng cho mỗi lần nộp. Xóa snapshot sau khi đã
+            // xóa đơn, nhưng giữ nguyên CvBuilderDocument/ hồ sơ gốc để nộp lại.
+            var snapshotStillUsed = await _context.Applications
+                .AnyAsync(item => item.CVID == applicationData.Snapshot.CVID);
+            if (!snapshotStillUsed)
+            {
+                _context.CandidateCVs.Remove(applicationData.Snapshot);
+                await _context.SaveChangesAsync();
+            }
+
+            return (true, "Đã rút hồ sơ ứng tuyển. Bạn có thể chọn CV và nộp lại cho vị trí này.", new
+            {
+                applicationId,
+                jobId = application.JobID
+            });
+        }
+
+        private static bool HasCompleteDetailedAnalysis(string? reason)
+        {
+            if (string.IsNullOrWhiteSpace(reason)) return false;
+            try
+            {
+                using var document = JsonDocument.Parse(reason);
+                var root = document.RootElement;
+                return root.ValueKind == JsonValueKind.Object
+                    && root.TryGetProperty("analysis_version", out var analysisVersion)
+                    && analysisVersion.ValueKind == JsonValueKind.Number
+                    && analysisVersion.TryGetInt32(out var version)
+                    && version >= 4
+                    && root.TryGetProperty("score_analysis", out var scoreAnalysis)
+                    && scoreAnalysis.ValueKind == JsonValueKind.Object
+                    && root.TryGetProperty("criteria_results", out var criteriaResults)
+                    && criteriaResults.ValueKind == JsonValueKind.Array
+                    && root.TryGetProperty("optimization_tips", out var optimizationTips)
+                    && optimizationTips.ValueKind == JsonValueKind.Array
+                    && optimizationTips.GetArrayLength() > 0
+                    && root.TryGetProperty("language_review", out var languageReview)
+                    && languageReview.ValueKind == JsonValueKind.Object
+                    && (!languageReview.TryGetProperty("insufficient_data", out var insufficientData)
+                        || insufficientData.ValueKind != JsonValueKind.True)
+                    && (!languageReview.TryGetProperty("is_fallback", out var languageFallback)
+                        || languageFallback.ValueKind != JsonValueKind.True)
+                    && root.TryGetProperty("mock_interview", out var studyPlan)
+                    && studyPlan.ValueKind == JsonValueKind.Array
+                    && studyPlan.GetArrayLength() > 0;
+            }
+            catch (JsonException)
+            {
+                return false;
+            }
+        }
+
+        private static readonly HashSet<string> AllowedCvExtensions = new(StringComparer.OrdinalIgnoreCase)
+        {
+            ".pdf", ".docx", ".png", ".jpg", ".jpeg", ".webp"
+        };
+
+        private static string? ValidateCvFile(byte[] bytes, string fileName)
+        {
+            if (bytes.Length == 0) return "Tệp CV đang trống.";
+            if (bytes.Length > 10 * 1024 * 1024) return "Tệp CV vượt quá dung lượng tối đa 10 MB.";
+            var extension = Path.GetExtension(fileName);
+            if (!AllowedCvExtensions.Contains(extension))
+                return "Định dạng tệp không được hỗ trợ. Vui lòng dùng PDF, DOCX, PNG, JPG hoặc WEBP.";
+
+            bool signatureMatches = extension.ToLowerInvariant() switch
+            {
+                ".pdf" => bytes.Length >= 5 && bytes.AsSpan(0, 5).SequenceEqual("%PDF-"u8),
+                ".docx" => bytes.Length >= 2 && bytes[0] == (byte)'P' && bytes[1] == (byte)'K',
+                ".png" => bytes.Length >= 8 && bytes.AsSpan(0, 8).SequenceEqual(new byte[] { 137, 80, 78, 71, 13, 10, 26, 10 }),
+                ".jpg" or ".jpeg" => bytes.Length >= 3 && bytes[0] == 0xFF && bytes[1] == 0xD8 && bytes[2] == 0xFF,
+                ".webp" => bytes.Length >= 12 && bytes.AsSpan(0, 4).SequenceEqual("RIFF"u8) && bytes.AsSpan(8, 4).SequenceEqual("WEBP"u8),
+                _ => false
+            };
+            return signatureMatches ? null : "Nội dung tệp không đúng với định dạng được khai báo hoặc tệp đã bị hỏng.";
+        }
+
+        private static string BuildCvBuilderText(string contentJson)
+        {
+            using var document = JsonDocument.Parse(contentJson);
+            var output = new StringBuilder();
+            AppendBuilderValue(document.RootElement, output, null);
+            return output.ToString().Trim();
+        }
+
+        private static void AppendBuilderValue(JsonElement element, StringBuilder output, string? label)
+        {
+            if (element.ValueKind == JsonValueKind.Object)
+            {
+                foreach (var property in element.EnumerateObject())
+                {
+                    // Dữ liệu trình bày của CV Builder không phải nội dung nghề nghiệp và
+                    // tuyệt đối không được đưa chuỗi base64/icon vào pipeline chấm điểm AI.
+                    if (property.Name.Equals("avatarDataUrl", StringComparison.OrdinalIgnoreCase)
+                        || property.Name.Equals("imageDataUrl", StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+                    AppendBuilderValue(property.Value, output, property.Name);
+                }
+                return;
+            }
+
+            if (element.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var item in element.EnumerateArray())
+                {
+                    AppendBuilderValue(item, output, label);
+                }
+                return;
+            }
+
+            if (element.ValueKind != JsonValueKind.String) return;
+            var value = element.GetString()?.Trim();
+            if (string.IsNullOrWhiteSpace(value)) return;
+            output.AppendLine(string.IsNullOrWhiteSpace(label) ? value : $"{label}: {value}");
         }
 
         public async Task<(bool IsSuccess, string Message, object Data)> ApplyJobAsync(ApplyJobRequest request, ClaimsPrincipal user)
@@ -58,6 +315,7 @@ namespace RecruitmentBackend.Services
 
                 // 2. Lấy thông tin ứng viên
                 var candidate = await _context.Candidates
+                    .AsNoTracking()
                     .FirstOrDefaultAsync(candidateItem => candidateItem.AccountID == accountId);
 
                 if (candidate == null)
@@ -71,6 +329,22 @@ namespace RecruitmentBackend.Services
                 if (job == null)
                 {
                     return (false, "Công việc bạn ứng tuyển không tồn tại hoặc đã hết hạn.", null);
+                }
+
+                DateTime todayVietnam = JobLifecyclePolicy.TodayVietnam;
+                if (job.Status != "Published")
+                {
+                    return (false, "Tin tuyển dụng hiện không mở nhận hồ sơ.", null);
+                }
+
+                if (job.StartDate.HasValue && job.StartDate.Value.Date > todayVietnam)
+                {
+                    return (false, $"Tin tuyển dụng sẽ bắt đầu nhận hồ sơ từ ngày {job.StartDate.Value:dd/MM/yyyy}.", null);
+                }
+
+                if (job.Deadline.Date < todayVietnam)
+                {
+                    return (false, $"Tin tuyển dụng đã hết hạn nhận hồ sơ từ ngày {job.Deadline:dd/MM/yyyy}.", null);
                 }
 
                 // 4. Kiểm tra ứng viên đã nộp CV cho tin tuyển dụng này chưa
@@ -105,7 +379,7 @@ namespace RecruitmentBackend.Services
 
                 // 5. Kiểm tra tin tuyển dụng có tiêu chí đánh giá chưa
                 var jobCriteria = await _context.JobCriteria
-                    .Where(jobCriterion => jobCriterion.JobID == request.JobId)
+                    .Where(jobCriterion => jobCriterion.JobID == request.JobId && jobCriterion.IsActive)
                     .ToListAsync();
 
                 if (jobCriteria == null || jobCriteria.Count == 0)
@@ -118,18 +392,39 @@ namespace RecruitmentBackend.Services
                 string originalFileName;
                 string contentType;
                 string cvUrl;
+                CvBuilderDocument? sourceBuilderDocument = null;
+                string? structuredCvText = null;
 
-                if (request.UseDefaultCv)
+                var useStoredCv = request.UseDefaultCv || !string.IsNullOrWhiteSpace(request.SavedCvId);
+                if (useStoredCv)
                 {
-                    if (string.IsNullOrEmpty(candidate.DefaultCvUrl))
+                    CandidateCV? selectedStoredCv = null;
+                    if (!string.IsNullOrWhiteSpace(request.SavedCvId))
+                    {
+                        selectedStoredCv = await _context.CandidateCVs.AsNoTracking()
+                            .FirstOrDefaultAsync(item => item.CVID == request.SavedCvId && item.CandidateID == candidate.CandidateID);
+                        if (selectedStoredCv == null || string.IsNullOrWhiteSpace(selectedStoredCv.FilePath))
+                        {
+                            return (false, "Không tìm thấy CV đã lưu hoặc bạn không có quyền sử dụng CV này.", null);
+                        }
+                    }
+
+                    if (selectedStoredCv == null && string.IsNullOrEmpty(candidate.DefaultCvUrl))
                     {
                         return (false, "Bạn chưa tải lên CV mặc định trong hồ sơ cá nhân.", null);
                     }
-                    cvUrl = candidate.DefaultCvUrl;
-                    originalFileName = candidate.DefaultCvName ?? "CV_MacDinh.pdf";
-                    contentType = originalFileName.EndsWith(".docx", StringComparison.OrdinalIgnoreCase) 
-                        ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document" 
-                        : "application/pdf";
+                    cvUrl = selectedStoredCv?.FilePath ?? candidate.DefaultCvUrl!;
+                    originalFileName = selectedStoredCv == null
+                        ? CvFileNameHelper.GetDisplayName(candidate.DefaultCvName ?? cvUrl, "CV_MacDinh.pdf")
+                        : CvFileNameHelper.GetDisplayName(cvUrl, "CV.pdf");
+                    contentType = Path.GetExtension(originalFileName).ToLowerInvariant() switch
+                    {
+                        ".docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                        ".png" => "image/png",
+                        ".jpg" or ".jpeg" => "image/jpeg",
+                        ".webp" => "image/webp",
+                        _ => "application/pdf"
+                    };
 
                     // Trích xuất tên file nguyên bản
                     string fileNameOnly = Path.GetFileName(cvUrl);
@@ -197,9 +492,61 @@ namespace RecruitmentBackend.Services
                         cvFileBytes = memoryStream.ToArray();
                     }
 
-                    originalFileName = request.CvFile.FileName;
+                    if (!string.IsNullOrWhiteSpace(request.CvBuilderDocumentId))
+                    {
+                        sourceBuilderDocument = await _context.CvBuilderDocuments
+                            .AsNoTracking()
+                            .FirstOrDefaultAsync(document =>
+                                document.Id == request.CvBuilderDocumentId
+                                && document.CandidateID == candidate.CandidateID);
+
+                        if (sourceBuilderDocument == null)
+                        {
+                            return (false, "Không tìm thấy CV trực tuyến hoặc bạn không có quyền sử dụng CV này.", null);
+                        }
+
+                        var builderDisplayName = CvFileNameHelper.GetDisplayName(sourceBuilderDocument.Name, "CV");
+                        originalFileName = Path.ChangeExtension(builderDisplayName, ".pdf");
+                        structuredCvText = BuildCvBuilderText(sourceBuilderDocument.ContentJson);
+                        if (structuredCvText.Length < 80)
+                        {
+                            return (false, "CV trực tuyến chưa có đủ nội dung để ứng tuyển. Vui lòng bổ sung thông tin cá nhân, kỹ năng hoặc kinh nghiệm.", null);
+                        }
+                    }
+                    else
+                    {
+                        originalFileName = request.CvFile.FileName;
+                    }
                     contentType = request.CvFile.ContentType;
-                    cvUrl = await _fileService.SaveFileAsync(request.CvFile);
+                    cvUrl = string.Empty;
+                }
+
+                var fileValidationError = ValidateCvFile(cvFileBytes, originalFileName);
+                if (fileValidationError != null)
+                {
+                    return (false, fileValidationError, null);
+                }
+
+                try
+                {
+                    if (sourceBuilderDocument == null)
+                    {
+                        var cvValidation = await _aiService.ValidateCvAsync(cvFileBytes, originalFileName, contentType);
+                        if (!cvValidation.IsValid)
+                        {
+                            return (false, cvValidation.Message, null);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Lỗi kiểm tra CV trước khi nộp: {ex.Message}");
+                    return (false, "Chưa thể kiểm tra nội dung CV lúc này. Vui lòng thử lại sau.", null);
+                }
+
+                if (!useStoredCv)
+                {
+                    cvUrl = await _fileService.SaveFileAsync(request.CvFile!);
                 }
 
                 // 7. Lưu thông tin CV vào database trước
@@ -208,7 +555,7 @@ namespace RecruitmentBackend.Services
                     CVID = Guid.NewGuid().ToString(),
                     CandidateID = candidate.CandidateID,
                     FilePath = cvUrl,
-                    RawText = "",
+                    RawText = structuredCvText ?? "",
                     ExtractedEmail = null,
                     ExtractedPhone = null,
                     CVExtractedSkills = "[]",
@@ -217,6 +564,10 @@ namespace RecruitmentBackend.Services
                     University = null,
                     YearsOfExperience = 0,
                     Certificates = "[]",
+                    SourceType = sourceBuilderDocument != null
+                        ? "CvBuilder"
+                        : useStoredCv ? "Stored" : "Uploaded",
+                    SourceDocumentId = sourceBuilderDocument?.Id,
                     CreatedAt = DateTime.Now
                 };
 
@@ -233,8 +584,30 @@ namespace RecruitmentBackend.Services
                 };
 
                 _context.Applications.Add(newApplication);
+                _context.ApplicationStatusHistories.Add(new ApplicationStatusHistory
+                {
+                    ApplicationID = newApplication.ApplicationID,
+                    FromStatus = string.Empty,
+                    ToStatus = ApplicationStatuses.Applied,
+                    ChangedAtUtc = DateTime.UtcNow,
+                    ChangedByAccountID = accountId,
+                    Source = "ApplicationCreated"
+                });
 
                 await _context.SaveChangesAsync();
+
+                try
+                {
+                    await _hubContext.Clients.All.SendAsync("ApplicationCreated", new
+                    {
+                        applicationId = newApplication.ApplicationID,
+                        jobId = newApplication.JobID
+                    });
+                }
+                catch (Exception signalRException)
+                {
+                    Console.WriteLine("Không thể phát sự kiện hồ sơ mới: " + signalRException.Message);
+                }
 
                 // 9.5. Send notification to Recruiter
                 try
@@ -248,8 +621,8 @@ namespace RecruitmentBackend.Services
 
                         await _notificationService.CreateNotificationAsync(
                             recruiter.AccountID,
-                            "Đơn ứng tuyển mới",
-                            $"Ứng viên {candidate.FullName} đã nộp hồ sơ cho công việc {positionName}",
+                            $"Ứng viên mới: {candidate.FullName}",
+                            $"{candidate.FullName} đã ứng tuyển vị trí {positionName}, đợt {job.RecruitmentRound}. Mở chiến dịch để xem hồ sơ và kết quả phân tích.",
                             $"/recruiter/applications/{job.JobID}"
                         );
                     }
@@ -273,7 +646,8 @@ namespace RecruitmentBackend.Services
                             applicationIdForAi,
                             cvFileBytes,
                             originalFileName,
-                            contentType
+                            contentType,
+                            structuredCvText
                         );
                     }
                     catch (Exception ex)
@@ -301,13 +675,17 @@ namespace RecruitmentBackend.Services
             }
         }
 
-        public async Task<(bool IsSuccess, string Message, object Data)> GetHrApplicationsAsync(ClaimsPrincipal user)
+        public async Task<(bool IsSuccess, string Message, object Data)> GetHrApplicationsAsync(
+            ClaimsPrincipal user,
+            bool includeAiDetails = true,
+            string? applicationId = null,
+            string? jobId = null)
         {
             try
             {
                 string accountId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
-                var recruiter = await _context.Recruiters.FirstOrDefaultAsync(r => r.AccountID == accountId);
+                var recruiter = await _context.Recruiters.AsNoTracking().FirstOrDefaultAsync(r => r.AccountID == accountId);
 
                 if (recruiter == null)
                 {
@@ -315,20 +693,23 @@ namespace RecruitmentBackend.Services
                 }
 
                 var branchIds = await _context.RecruiterBranches
+                    .AsNoTracking()
                     .Where(rb => rb.RecruiterID == recruiter.RecruiterID)
                     .Select(rb => rb.BranchID)
                     .ToListAsync();
 
                 var rawApplications = await (
-                    from app in _context.Applications
-                    join job in _context.JobPostings on app.JobID equals job.JobID
-                    where job.RecruiterID == recruiter.RecruiterID || string.IsNullOrEmpty(job.RecruiterID) || branchIds.Contains(job.BranchID)
-                    join cv in _context.CandidateCVs on app.CVID equals cv.CVID
-                    join cand in _context.Candidates on cv.CandidateID equals cand.CandidateID
-                    join acc in _context.Accounts on cand.AccountID equals acc.AccountID
-                    join ai in _context.AIEvaluations on app.ApplicationID equals ai.ApplicationID into aiGrp
+                    from app in _context.Applications.AsNoTracking()
+                    join job in _context.JobPostings.AsNoTracking() on app.JobID equals job.JobID
+                     where (job.RecruiterID == recruiter.RecruiterID || string.IsNullOrEmpty(job.RecruiterID) || branchIds.Contains(job.BranchID))
+                         && (applicationId == null || app.ApplicationID == applicationId)
+                         && (jobId == null || app.JobID == jobId)
+                    join cv in _context.CandidateCVs.AsNoTracking() on app.CVID equals cv.CVID
+                    join cand in _context.Candidates.AsNoTracking() on cv.CandidateID equals cand.CandidateID
+                    join acc in _context.Accounts.AsNoTracking() on cand.AccountID equals acc.AccountID
+                    join ai in _context.AIEvaluations.AsNoTracking() on app.ApplicationID equals ai.ApplicationID into aiGrp
                     from ai in aiGrp.DefaultIfEmpty()
-                    join pos in _context.Positions on job.PositionID equals pos.PositionID into posGrp
+                    join pos in _context.Positions.AsNoTracking() on job.PositionID equals pos.PositionID into posGrp
                     from pos in posGrp.DefaultIfEmpty()
                     orderby ai != null ? ai.FitScore : 0m descending
                     select new
@@ -347,11 +728,11 @@ namespace RecruitmentBackend.Services
                         phone = cand.Phone,
                         cvUrl = cv.FilePath,
                         aiScore = ai != null ? ai.FitScore : 0,
-                        aiReason = ai != null ? ai.Reason : "Chưa có đánh giá",
-                        matchedSkills = ai != null ? ai.MatchedSkills : "[]",
-                        missingSkills = ai != null ? ai.MissingSkills : "[]",
+                        aiReason = includeAiDetails && ai != null ? ai.Reason : null,
+                        matchedSkills = includeAiDetails && ai != null ? ai.MatchedSkills : null,
+                        missingSkills = includeAiDetails && ai != null ? ai.MissingSkills : null,
                         classification = ai != null ? ai.Classification : null,
-                        criteriaResultsJson = ai != null ? ai.CriteriaResultsJson : null
+                        criteriaResultsJson = includeAiDetails && ai != null ? ai.CriteriaResultsJson : null
                     }
                 ).ToListAsync();
 
@@ -439,7 +820,7 @@ namespace RecruitmentBackend.Services
                         aiReason = application.aiReason,
                         matchedSkills = matchedSkillsList,
                         missingSkills = missingSkillsList,
-                        classification = application.classification,
+                        classification = NormalizeClassification(application.classification),
                         criteriaResults = criteriaResults
                     };
 
@@ -474,13 +855,13 @@ namespace RecruitmentBackend.Services
                 }
 
                 var rawApplications = await (
-                    from app in _context.Applications
-                    join cv in _context.CandidateCVs on app.CVID equals cv.CVID
+                    from app in _context.Applications.AsNoTracking()
+                    join cv in _context.CandidateCVs.AsNoTracking() on app.CVID equals cv.CVID
                     where cv.CandidateID == candidate.CandidateID
-                    join job in _context.JobPostings on app.JobID equals job.JobID
-                    join ai in _context.AIEvaluations on app.ApplicationID equals ai.ApplicationID into aiGrp
+                    join job in _context.JobPostings.AsNoTracking() on app.JobID equals job.JobID
+                    join ai in _context.AIEvaluations.AsNoTracking() on app.ApplicationID equals ai.ApplicationID into aiGrp
                     from ai in aiGrp.DefaultIfEmpty()
-                    join pos in _context.Positions on job.PositionID equals pos.PositionID into posGrp
+                    join pos in _context.Positions.AsNoTracking() on job.PositionID equals pos.PositionID into posGrp
                     from pos in posGrp.DefaultIfEmpty()
                     orderby app.AppliedAt descending
                     select new
@@ -502,6 +883,24 @@ namespace RecruitmentBackend.Services
                         criteriaResultsJson = ai != null ? ai.CriteriaResultsJson : null
                     }
                 ).ToListAsync();
+
+                var applicationIds = rawApplications.Select(item => item.id).ToList();
+                var schedulesByApplicationId = await _context.InterviewSchedules
+                    .AsNoTracking()
+                    .Where(schedule => applicationIds.Contains(schedule.ApplicationID))
+                    .ToDictionaryAsync(schedule => schedule.ApplicationID);
+
+                var rejectionRows = await _context.TalentPoolInteractions
+                    .AsNoTracking()
+                    .Where(interaction => interaction.ApplicationID != null
+                        && applicationIds.Contains(interaction.ApplicationID)
+                        && interaction.Type == "Rejected")
+                    .OrderByDescending(interaction => interaction.CreatedAt)
+                    .Select(interaction => new { ApplicationID = interaction.ApplicationID!, interaction.Content, interaction.CreatedAt })
+                    .ToListAsync();
+                var rejectionByApplicationId = rejectionRows
+                    .GroupBy(interaction => interaction.ApplicationID)
+                    .ToDictionary(group => group.Key, group => group.First().Content);
 
                 var applications = new List<object>();
 
@@ -589,13 +988,8 @@ namespace RecruitmentBackend.Services
                         classification = application.classification;
                     }
 
-                    // Query real-time details from DB
-                    var schedule = await _context.InterviewSchedules
-                        .FirstOrDefaultAsync(s => s.ApplicationID == application.id);
-
-                    var rejection = await _context.TalentPoolInteractions
-                        .Where(i => i.ApplicationID == application.id && i.Type == "Rejected")
-                        .FirstOrDefaultAsync();
+                    schedulesByApplicationId.TryGetValue(application.id, out var schedule);
+                    rejectionByApplicationId.TryGetValue(application.id, out var rejectionFeedback);
 
                     var applicationItem = new
                     {
@@ -609,12 +1003,14 @@ namespace RecruitmentBackend.Services
                         status = application.status,
                         appliedAt = application.appliedAt,
                         hasAiEvaluation = application.hasAiEvaluation,
+                        aiAnalysisComplete = application.hasAiEvaluation
+                            && HasCompleteDetailedAnalysis(application.aiReason),
                         aiStatus = aiStatus,
                         aiScore = application.aiScore,
                         aiReason = application.aiReason,
                         matchedSkills = matchedSkillsList,
                         missingSkills = missingSkillsList,
-                        classification = classification,
+                        classification = NormalizeClassification(classification),
                         criteriaResults = criteriaResults,
                         interviewSchedule = schedule != null ? new {
                             interviewDate = schedule.InterviewDate,
@@ -624,7 +1020,7 @@ namespace RecruitmentBackend.Services
                             passcode = schedule.Passcode,
                             notes = schedule.Notes
                         } : null,
-                        rejectionFeedback = rejection != null ? rejection.Content : null
+                        rejectionFeedback
                     };
 
                     applications.Add(applicationItem);
@@ -709,7 +1105,21 @@ namespace RecruitmentBackend.Services
                     }
                 }
 
+                string previousStatus = application.Status;
                 application.Status = newStatus;
+
+                if (!string.Equals(previousStatus, newStatus, StringComparison.Ordinal))
+                {
+                    _context.ApplicationStatusHistories.Add(new ApplicationStatusHistory
+                    {
+                        ApplicationID = application.ApplicationID,
+                        FromStatus = previousStatus,
+                        ToStatus = newStatus,
+                        ChangedAtUtc = DateTime.UtcNow,
+                        ChangedByAccountID = accountId,
+                        Source = "RecruiterStatusUpdate"
+                    });
+                }
 
                 await _context.SaveChangesAsync();
 
@@ -753,7 +1163,12 @@ namespace RecruitmentBackend.Services
                 try
                 {
                     await _hubContext.Clients.Group(applicationId).SendAsync("ReceiveStatusUpdate", new { applicationId, status = application.Status });
-                    await _hubContext.Clients.All.SendAsync("ApplicationStatusChanged", new { applicationId, status = application.Status });
+                    await _hubContext.Clients.All.SendAsync("ApplicationStatusChanged", new
+                    {
+                        applicationId,
+                        jobId = application.JobID,
+                        status = application.Status
+                    });
                 }
                 catch {}
 
@@ -869,15 +1284,31 @@ namespace RecruitmentBackend.Services
                     jobTitle = position.PositionName;
                 }
 
+                string previousStatus = application.Status;
                 application.Status = ApplicationStatuses.Rejected;
+                if (!string.Equals(previousStatus, ApplicationStatuses.Rejected, StringComparison.Ordinal))
+                {
+                    _context.ApplicationStatusHistories.Add(new ApplicationStatusHistory
+                    {
+                        ApplicationID = application.ApplicationID,
+                        FromStatus = previousStatus,
+                        ToStatus = ApplicationStatuses.Rejected,
+                        ChangedAtUtc = DateTime.UtcNow,
+                        ChangedByAccountID = accountId,
+                        Source = "RecruiterRejected"
+                    });
+                }
 
                 var talentPoolCandidate = await _context.TalentPoolCandidates
-                    .FirstOrDefaultAsync(poolItem => poolItem.CandidateID == candidate.CandidateID);
+                    .FirstOrDefaultAsync(poolItem =>
+                        poolItem.CandidateID == candidate.CandidateID
+                        && poolItem.RecruiterID == job.RecruiterID);
 
                 if (talentPoolCandidate == null)
                 {
                     talentPoolCandidate = new TalentPoolCandidate();
                     talentPoolCandidate.CandidateID = candidate.CandidateID;
+                    talentPoolCandidate.RecruiterID = job.RecruiterID;
                     await _context.TalentPoolCandidates.AddAsync(talentPoolCandidate);
                 }
 
@@ -981,7 +1412,12 @@ namespace RecruitmentBackend.Services
                 try
                 {
                     await _hubContext.Clients.Group(applicationId).SendAsync("ReceiveStatusUpdate", new { applicationId, status = application.Status });
-                    await _hubContext.Clients.All.SendAsync("ApplicationStatusChanged", new { applicationId, status = application.Status });
+                    await _hubContext.Clients.All.SendAsync("ApplicationStatusChanged", new
+                    {
+                        applicationId,
+                        jobId = application.JobID,
+                        status = application.Status
+                    });
                 }
                 catch {}
 
@@ -999,6 +1435,25 @@ namespace RecruitmentBackend.Services
             {
                 return (false, "Lỗi khi từ chối hồ sơ: " + ex.Message, null);
             }
+        }
+
+        private static string NormalizeClassification(string? classification)
+        {
+            if (string.IsNullOrWhiteSpace(classification))
+            {
+                return "Chưa phân loại";
+            }
+
+            return classification.Trim().ToLowerInvariant() switch
+            {
+                "phu hop" => "Phù hợp",
+                "phù hợp" => "Phù hợp",
+                "nen xem xet" => "Nên xem xét",
+                "nên xem xét" => "Nên xem xét",
+                "chua phu hop" => "Chưa phù hợp",
+                "chưa phù hợp" => "Chưa phù hợp",
+                _ => classification.Trim()
+            };
         }
 
         private static void AddSkillsFromJson(List<string> targetSkills, string sourceText)

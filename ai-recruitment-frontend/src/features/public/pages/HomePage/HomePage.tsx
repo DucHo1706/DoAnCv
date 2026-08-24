@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useMemo } from "react";
-import { Button, Col, Row, Typography, Space, Input, Tag, Spin, Select, Divider, Collapse, Progress, Skeleton, message } from "antd";
+import { Button, Col, Row, Typography, Space, Input, Tag, Select, Divider, Collapse, Progress, Skeleton, message } from "antd";
 import {
   SearchOutlined,
   EnvironmentOutlined,
@@ -7,7 +7,6 @@ import {
   LineChartOutlined,
   SafetyOutlined,
   ArrowRightOutlined,
-  LoadingOutlined,
   ClusterOutlined,
   CodeOutlined,
   BarChartOutlined,
@@ -39,6 +38,15 @@ import type { JobDto } from "../../../../services/jobService";
 const { Title, Paragraph, Text } = Typography;
 const { Option } = Select;
 const { Panel } = Collapse;
+
+const getFeaturedJobTitle = (job: JobDto | any): string =>
+  job?.title || (typeof job?.position === "string" ? job.position : job?.position?.name) || "Vị trí tuyển dụng";
+
+const getFeaturedJobLocation = (job: JobDto | any): string =>
+  job?.location || (typeof job?.branch === "string" ? job.branch : job?.branch?.name) || "Chưa cập nhật";
+
+const getFeaturedJobSalary = (job: JobDto | any): string =>
+  job?.salary || job?.salaryRange || "Thỏa thuận";
 
 // ScrollReveal component for smooth entry staggers
 function ScrollReveal({ children }: { children: React.ReactNode }) {
@@ -214,9 +222,9 @@ function HomePage() {
   const [simulatorCandidate, setSimulatorCandidate] = useState<any>(SIMULATOR_CANDIDATES.tech);
 
   const simulatorItems = [
-    { key: "tech", name: "CÔNG NGHỆ (TECH)", candidate: SIMULATOR_CANDIDATES.tech },
+    { key: "tech", name: "CÔNG NGHỆ", candidate: SIMULATOR_CANDIDATES.tech },
     { key: "marketing", name: "MARKETING", candidate: SIMULATOR_CANDIDATES.marketing },
-    { key: "corp", name: "NHÂN SỰ (HRBP)", candidate: SIMULATOR_CANDIDATES.corp }
+    { key: "corp", name: "NHÂN SỰ", candidate: SIMULATOR_CANDIDATES.corp }
   ];
 
   const getCategoryIcon = (categoryName: string) => {
@@ -274,7 +282,7 @@ function HomePage() {
     // 1. Apply category filter
     if (selectedFilterCategory !== "all") {
       list = list.filter((job) => {
-        const title = (job.position?.name || "").toLowerCase();
+        const title = getFeaturedJobTitle(job).toLowerCase();
         if (selectedFilterCategory === "tech") {
           return (
             title.includes("machine") ||
@@ -366,8 +374,8 @@ function HomePage() {
         .filter(k => k.length > 2 && !["và", "cho", "của", "tại", "với", "đã", "đang", "phát", "triển"].includes(k));
 
       list = list.map((job, idx) => {
-        const title = (job.position?.name || "").toLowerCase();
-        const branchName = (job.branch?.name || "").toLowerCase();
+        const title = getFeaturedJobTitle(job).toLowerCase();
+        const branchName = getFeaturedJobLocation(job).toLowerCase();
         const description = (job.description || "").toLowerCase();
         const requirements = (job.requirements || "").toLowerCase();
         const fullJobText = `${title} ${branchName} ${description} ${requirements}`;
@@ -426,22 +434,23 @@ function HomePage() {
         const hasToken = !!localStorage.getItem("token");
 
         // Execute all initial requests simultaneously in parallel (Promise.all)
-        const [jobsData, statsData, profileData] = await Promise.all([
+        const [jobsData, activeJobCount, profileData] = await Promise.all([
           jobService.getJobs().catch(() => []),
-          axiosClient.get("/Dashboard/admin-stats").catch(() => ({
-            data: {
-              quickMetrics: { totalUsers: 1420, activeJobs: 38, analyzedCvs: 1250, totalCandidateUsers: 890 },
-            },
-          })),
-          hasToken ? axiosClient.get("/profile").catch(() => null) : Promise.resolve(null),
+          jobService.getPublishedJobCount().catch(() => null),
+          hasToken
+            ? axiosClient
+                .get("/profile", { skipAuthRedirect: true })
+                .catch(() => null)
+            : Promise.resolve(null),
         ]);
 
         const jobsArray = Array.isArray(jobsData) ? jobsData : (jobsData as any)?.$values || [];
         setRecentJobs(jobsArray);
 
-        if (statsData?.data?.quickMetrics) {
-          setStats(statsData.data.quickMetrics);
-        }
+        setStats((current: any) => ({
+          ...current,
+          activeJobs: activeJobCount ?? current.activeJobs,
+        }));
 
         if (profileData?.data) {
           setUserProfile(profileData.data);
@@ -461,14 +470,12 @@ function HomePage() {
   };
 
   const customStyles = `
-    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600&display=swap');
-
     .plus-jakarta-sans {
       font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
     }
 
     * {
-      font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     }
 
     .hero-gradient-bg {
@@ -482,7 +489,7 @@ function HomePage() {
       box-shadow: 0 8px 30px rgba(15, 23, 42, 0.06);
       transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
       border: 1px solid #E2E8F0;
-      border-radius: 14px;
+      border-radius: 16px;
     }
     .search-refined:focus-within {
       border-color: #2563EB;
@@ -601,7 +608,7 @@ function HomePage() {
       <style dangerouslySetInnerHTML={{ __html: customStyles }} />
 
       {/* 1. HERO SECTION & AI MATCH SIMULATOR PRO */}
-      <div className="hero-gradient-bg" style={{ padding: "90px 20px 80px", position: "relative", overflow: "hidden" }}>
+      <div className="hero-gradient-bg" style={{ padding: "64px 20px 72px", position: "relative", overflow: "hidden" }}>
         <div style={{ maxWidth: "1300px", margin: "0 auto" }}>
           <Row gutter={[48, 48]} align="middle">
             {/* Left Hero Content */}
@@ -610,7 +617,7 @@ function HomePage() {
                 <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
                   <span style={{ width: 32, height: 2, background: "#2563EB" }}></span>
                   <span style={{ color: "#2563EB", fontSize: 12, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.18em" }}>
-                    Nền tảng Tuyển dụng AI Enterprise
+                    Nền tảng tuyển dụng ứng dụng AI
                   </span>
                 </div>
                 <Title
@@ -625,8 +632,7 @@ function HomePage() {
                   }}
                   className="plus-jakarta-sans hero-title-responsive"
                 >
-                  Nghệ thuật tuyển dụng <br />
-                  <span style={{ color: "#2563EB" }}>Chính xác</span> từ AI.
+                  Tuyển đúng người, nhanh hơn <span style={{ color: "#2563EB" }}>với AI</span>
                 </Title>
                 <Paragraph
                   style={{
@@ -637,7 +643,7 @@ function HomePage() {
                     maxWidth: "500px",
                   }}
                 >
-                  Nền tảng tự động hóa bóc tách CV, đối sánh năng lực ứng viên và quản lý tuyển dụng doanh nghiệp.
+                  Phân tích CV, đối sánh năng lực và giúp HR ưu tiên những ứng viên phù hợp nhất.
                 </Paragraph>
 
                 {/* Search Bar */}
@@ -685,10 +691,8 @@ function HomePage() {
                       fontSize: "14px",
                       fontWeight: 800,
                       borderRadius: "10px",
-                      background: "#0F172A",
-                      borderColor: "#0F172A",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.05em",
+                      background: "#2563EB",
+                      borderColor: "#2563EB",
                     }}
                     onClick={handleSearch}
                   >
@@ -696,34 +700,6 @@ function HomePage() {
                   </Button>
                 </div>
 
-                {/* Hot Tag Hints */}
-                <div style={{ marginTop: 32, display: "flex", alignItems: "center", flexWrap: "wrap", gap: 16 }}>
-                  <Text style={{ fontSize: 11, fontWeight: 800, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.15em" }}>
-                    Từ khóa HOT:
-                  </Text>
-                  <Space wrap size={12}>
-                    {["ML Engineer", "Product Design", "DevOps Cloud", "HRBP Lead"].map((tag) => (
-                      <span
-                        key={tag}
-                        style={{
-                          fontSize: 13,
-                          fontWeight: 700,
-                          color: "#0F172A",
-                          cursor: "pointer",
-                          padding: "4px 10px",
-                          borderRadius: "6px",
-                          background: "#FFFFFF",
-                          border: "1px solid #E2E8F0",
-                          transition: "all 0.2s ease",
-                        }}
-                        className="action-btn"
-                        onClick={() => navigate(`/jobs?keyword=${encodeURIComponent(tag)}`)}
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </Space>
-                </div>
               </div>
             </Col>
 
@@ -735,7 +711,7 @@ function HomePage() {
                   backdropFilter: "blur(24px)",
                   WebkitBackdropFilter: "blur(24px)",
                   border: "1px solid rgba(226, 232, 240, 0.9)",
-                  borderRadius: "24px",
+                  borderRadius: "16px",
                   boxShadow: "0 25px 50px -12px rgba(15, 23, 42, 0.08)",
                   width: "100%",
                   maxWidth: "500px",
@@ -748,7 +724,7 @@ function HomePage() {
                   <Space size={10}>
                     <ClusterOutlined style={{ color: "#2563EB", fontSize: 20 }} />
                     <span style={{ fontSize: 13, fontWeight: 800, color: "#0F172A", textTransform: "uppercase", letterSpacing: "0.08em" }} className="plus-jakarta-sans">
-                      AI MATCH SIMULATOR PRO
+                      Mô phỏng đối sánh AI
                     </span>
                   </Space>
                   <Tag
@@ -763,20 +739,22 @@ function HomePage() {
                       letterSpacing: "0.05em",
                     }}
                   >
-                    REAL-TIME DEMO
+                    Dữ liệu mô phỏng
                   </Tag>
                 </div>
 
                 {/* Requisition Category Tabs */}
                 <div style={{ marginBottom: 24 }}>
                   <span style={{ fontSize: 10, fontWeight: 800, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.1em", display: "block", marginBottom: 12 }}>
-                    CHỌN MẪU HỒ SƠ ỨNG VIÊN ĐỂ BÓC TÁCH:
+                    Chọn nhóm hồ sơ để phân tích
                   </span>
                   <div style={{ display: "flex", gap: 8 }}>
                     {simulatorItems.map((item) => {
                       const isActive = activeCategory === item.key;
                       return (
-                        <div
+                        <button
+                          type="button"
+                          aria-pressed={isActive}
                           key={item.key}
                           onClick={() => {
                             setActiveCategory(item.key);
@@ -793,17 +771,18 @@ function HomePage() {
                             padding: "10px 6px",
                             textAlign: "center",
                             cursor: "pointer",
-                            background: isActive ? "#F8FAFC" : "#FFFFFF",
+                            background: isActive ? "#EFF6FF" : "#FFFFFF",
                             transition: "all 0.2s ease",
+                            fontFamily: "inherit",
                           }}
                         >
                           <div style={{ color: isActive ? "#2563EB" : "#64748B", marginBottom: 4 }}>
                             {getCategoryIcon(item.name)}
                           </div>
                           <span style={{ fontSize: 10, fontWeight: 800, color: isActive ? "#2563EB" : "#0F172A", textTransform: "uppercase" }}>
-                            {item.key}
+                            {item.name}
                           </span>
-                        </div>
+                        </button>
                       );
                     })}
                   </div>
@@ -811,11 +790,9 @@ function HomePage() {
 
                 {/* Candidate Matching Details */}
                 {simulatorLoading ? (
-                  <div style={{ height: "220px", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", background: "#F8FAFC", borderRadius: 16, border: "1px solid #E2E8F0" }}>
-                    <Spin indicator={<LoadingOutlined style={{ fontSize: 32, color: "#2563EB" }} spin />} />
-                    <Text style={{ marginTop: 14, fontSize: 13, color: "#64748B", fontWeight: 600 }}>
-                      Thuật toán AI đang phân tích CV & đối sánh...
-                    </Text>
+                  <div style={{ height: "220px", padding: 24, background: "#F8FAFC", borderRadius: 16, border: "1px solid #E2E8F0" }} aria-live="polite">
+                    <Text strong style={{ display: "block", marginBottom: 18 }}>AI đang phân tích hồ sơ</Text>
+                    <Skeleton active title={{ width: "46%" }} paragraph={{ rows: 4 }} />
                   </div>
                 ) : (
                   <div
@@ -868,7 +845,7 @@ function HomePage() {
                     </div>
 
                     {/* Competency & Risk Flags Section */}
-                    <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: 16, paddingTop: 16, borderTop: "1px solid #E2E8F0" }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 16, paddingTop: 16, borderTop: "1px solid #E2E8F0" }}>
                       {/* NĂNG LỰC CỐT LÕI */}
                       <div>
                         <span style={{ fontSize: 10, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.08em", color: "#10B981", display: "flex", alignItems: "center", gap: 4, marginBottom: 10 }}>
@@ -994,12 +971,12 @@ function HomePage() {
                   </div>
                   <div style={{ display: "flex", gap: 40, marginTop: 32 }}>
                     <div>
-                      <div style={{ fontSize: 32, fontWeight: 800, color: "#0F172A" }}>65%</div>
-                      <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.15em", color: "#64748B", marginTop: 6 }}>Giảm thời gian lọc CV</div>
+                      <div style={{ fontSize: 32, fontWeight: 800, color: "#0F172A" }}>3 lớp</div>
+                      <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.15em", color: "#64748B", marginTop: 6 }}>Trích xuất PDF & OCR</div>
                     </div>
                     <div>
-                      <div style={{ fontSize: 32, fontWeight: 800, color: "#2563EB" }}>98%</div>
-                      <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.15em", color: "#64748B", marginTop: 6 }}>Độ chính xác AI Matching</div>
+                      <div style={{ fontSize: 32, fontWeight: 800, color: "#2563EB" }}>Rõ ràng</div>
+                      <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.15em", color: "#64748B", marginTop: 6 }}>Điểm số có giải thích</div>
                     </div>
                   </div>
                 </div>
@@ -1028,7 +1005,7 @@ function HomePage() {
                       Báo cáo Phân tích Dự báo
                     </Title>
                     <Paragraph style={{ fontSize: 14, color: "#64748B", lineHeight: 1.65, margin: 0 }}>
-                      Khai phá dữ liệu tuyển dụng để dự báo nguồn ứng viên, đo lường tỷ lệ chuyển đổi phỏng vấn và đưa ra **Gợi ý phỏng vấn** chuyên sâu.
+                      Khai phá dữ liệu tuyển dụng để nhận diện nhóm kỹ năng liên quan, theo dõi tỷ lệ chuyển đổi và hỗ trợ ứng viên xây dựng lộ trình ôn tập phù hợp.
                     </Paragraph>
                   </div>
                   <Button
@@ -1401,7 +1378,7 @@ function HomePage() {
                           justifyContent: "center",
                           fontSize: 18
                         }}>
-                          {getJobCategoryIcon(job.position?.name || "")}
+                          {getJobCategoryIcon(getFeaturedJobTitle(job))}
                         </div>
                         {isSmartRecommend && (job as any).isCvMatched ? (
                           <Tag
@@ -1439,17 +1416,17 @@ function HomePage() {
                         style={{ fontSize: "17px", fontWeight: 800, color: "#0F172A", marginBottom: 20, lineHeight: 1.4, flex: 1 }}
                         className="plus-jakarta-sans"
                       >
-                        {job.position?.name || "Vị trí tuyển dụng"}
+                        {getFeaturedJobTitle(job)}
                       </Title>
 
                       <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 24 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 10, color: "#64748B" }}>
                           <EnvironmentOutlined style={{ fontSize: 15 }} />
-                          <span style={{ fontSize: 13 }}>{job.branch?.name || "Hồ Chí Minh, Việt Nam"}</span>
+                          <span style={{ fontSize: 13 }}>{getFeaturedJobLocation(job)}</span>
                         </div>
                         <div style={{ display: "flex", alignItems: "center", gap: 10, color: "#0F172A", fontWeight: 700 }}>
                           <DollarOutlined style={{ fontSize: 15 }} />
-                          <span style={{ fontSize: 13 }}>{job.salaryRange || "Thỏa thuận"}</span>
+                          <span style={{ fontSize: 13 }}>{getFeaturedJobSalary(job)}</span>
                         </div>
                       </div>
 
@@ -1561,7 +1538,7 @@ function HomePage() {
                 key="3"
                 className="faq-panel"
               >
-                Theo thực tế khảo sát, các doanh nghiệp áp dụng giải pháp của chúng tôi ghi nhận thời gian lọc hồ sơ vòng đầu giảm trung bình 65%, đồng thời tỷ lệ chuyển đổi sang phỏng vấn thành công tăng 40%.
+                Hệ thống hỗ trợ tự động hóa bước đọc, đối chiếu và xếp hạng ban đầu. Mức cải thiện thực tế phụ thuộc vào số lượng hồ sơ, tiêu chí tuyển dụng và quy trình của từng doanh nghiệp; kết quả AI vẫn cần được HR xem xét.
               </Panel>
             </Collapse>
           </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { message } from "antd";
 import dayjs from "dayjs";
@@ -13,6 +13,7 @@ import {
   type CandidateRankingSortType,
 } from "../../../../../services/candidateComparisonService";
 import { removeVietnameseTones } from "../../../../../utils/exportUtils";
+import { useRealtimeResourceRefresh } from "../../../../../hooks/useRealtimeRefresh";
 
 export function useCampaignApplications() {
   const navigate = useNavigate();
@@ -27,10 +28,14 @@ export function useCampaignApplications() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterClassification, setFilterClassification] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<string | null>(null);
+  const [filterSkill, setFilterSkill] = useState("");
+  const [minAiScore, setMinAiScore] = useState<number | null>(null);
+  const [minYearsOfExperience, setMinYearsOfExperience] = useState<number | null>(null);
 
   // Modal / Drawer states
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedApp, setSelectedApp] = useState<ApplicationDto | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
   const [viewMode, setViewMode] = useState<"table" | "kanban">("table");
 
   // Ranking & Selection states
@@ -60,7 +65,7 @@ export function useCampaignApplications() {
     { status: "Applied", label: "Mới nộp" },
     { status: "Reviewing", label: "Đang xem xét" },
     { status: "Interview", label: "Phỏng vấn" },
-    { status: "Offer", label: "Nhận việc (Offer)" },
+    { status: "Offer", label: "Đề nghị nhận việc" },
     { status: "Rejected", label: "Đã từ chối" },
   ];
 
@@ -89,12 +94,12 @@ export function useCampaignApplications() {
     }
   };
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async (background = false) => {
     try {
-      setLoading(true);
+      if (!background) setLoading(true);
       setFetchError(null);
       const [appData, jobData] = await Promise.all([
-        recruitmentService.getHrApplications(),
+        recruitmentService.getHrApplications(false, jobId),
         jobService.getMyJobs(),
       ]);
       setApplications(Array.isArray(appData) ? appData : (appData as any)?.$values || []);
@@ -103,63 +108,15 @@ export function useCampaignApplications() {
       console.error(err);
       setFetchError("Không thể tải danh sách ứng viên. Vui lòng kiểm tra kết nối và thử lại.");
     } finally {
-      setLoading(false);
+      if (!background) setLoading(false);
     }
-  };
+  }, [jobId]);
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    void fetchData();
+  }, [fetchData]);
 
-  // Real-time updates via SignalR
-  useEffect(() => {
-    let connection: any = null;
-    let isSubscribed = true;
-
-    const startSignalR = async () => {
-      try {
-        const signalR = await import("@microsoft/signalr");
-        const apiBase = import.meta.env.VITE_API_URL || "https://recruitinsightai.com/api";
-        const hubUrl = apiBase.replace(/\/api\/?$/, "") + "/hubs/ai-evaluation";
-        connection = new signalR.HubConnectionBuilder()
-          .withUrl(hubUrl)
-          .withAutomaticReconnect()
-          .build();
-
-        connection.on("ApplicationStatusChanged", (data: { applicationId: string; status: string }) => {
-          if (!isSubscribed) return;
-          setApplications((prev) =>
-            prev.map((app) => (app.id === data.applicationId ? { ...app, status: data.status } : app))
-          );
-        });
-
-        connection.on("ReceiveResult", () => {
-          if (!isSubscribed) return;
-          recruitmentService
-            .getHrApplications()
-            .then((updatedApps: any) => {
-              if (isSubscribed) {
-                setApplications(Array.isArray(updatedApps) ? updatedApps : (updatedApps as any)?.$values || []);
-              }
-            })
-            .catch((err: any) => console.error("Lỗi cập nhật danh sách sau chấm điểm AI:", err));
-        });
-
-        await connection.start();
-      } catch (err: any) {
-        console.warn("[SignalR] Kết nối SignalR thất bại, sử dụng fallback.", err);
-      }
-    };
-
-    startSignalR();
-
-    return () => {
-      isSubscribed = false;
-      if (connection) {
-        connection.stop().catch((err: any) => console.error("[SignalR] Stop error", err));
-      }
-    };
-  }, []);
+  useRealtimeResourceRefresh(["applications", "jobs"], () => fetchData(true));
 
   // Fetch Rankings for current jobId
   useEffect(() => {
@@ -183,6 +140,9 @@ export function useCampaignApplications() {
           sortBy: CandidateRankingSortType;
           criterionName?: string;
           search?: string;
+          skill?: string;
+          minScore?: number;
+          minYearsOfExperience?: number;
         } = {
           sortBy: selectedSortType,
         };
@@ -193,6 +153,18 @@ export function useCampaignApplications() {
 
         if (searchQuery.trim().length > 0) {
           query.search = searchQuery.trim();
+        }
+
+        if (filterSkill.trim().length > 0) {
+          query.skill = filterSkill.trim();
+        }
+
+        if (minAiScore != null) {
+          query.minScore = minAiScore;
+        }
+
+        if (minYearsOfExperience != null) {
+          query.minYearsOfExperience = minYearsOfExperience;
         }
 
         const response = await candidateComparisonService.getCandidateRankings(jobId, query);
@@ -222,7 +194,7 @@ export function useCampaignApplications() {
     }, 350);
 
     return () => window.clearTimeout(timeoutId);
-  }, [jobId, selectedSortType, selectedCriterion, searchQuery]);
+  }, [jobId, selectedSortType, selectedCriterion, searchQuery, filterSkill, minAiScore, minYearsOfExperience]);
 
   const rankingApplications = useMemo(() => {
     return rankingCandidates.map((candidate) => {
@@ -251,6 +223,10 @@ export function useCampaignApplications() {
         selectedCriterionRank: candidate.selectedCriterionRank,
         aiDataStatus: candidate.aiDataStatus,
         aiDataMessage: candidate.aiDataMessage,
+        degree: candidate.degree,
+        major: candidate.major,
+        university: candidate.university,
+        yearsOfExperience: candidate.yearsOfExperience,
       };
     });
   }, [applications, rankingCandidates]);
@@ -259,6 +235,9 @@ export function useCampaignApplications() {
     setSearchQuery("");
     setFilterClassification(null);
     setFilterStatus(null);
+    setFilterSkill("");
+    setMinAiScore(null);
+    setMinYearsOfExperience(null);
   };
 
   const filteredApplications = useMemo(() => {
@@ -273,6 +252,8 @@ export function useCampaignApplications() {
       const email = (app.email || "").toLowerCase();
       const jobTitle = removeVietnameseTones(app.jobTitle || "");
       const phone = (app.phone || "").toLowerCase();
+      const skills = parseSkills(app.matchedSkills).map(removeVietnameseTones);
+      const normalizedSkillFilter = removeVietnameseTones(filterSkill);
 
       const matchesSearch =
         query === ""
@@ -280,7 +261,8 @@ export function useCampaignApplications() {
           : candName.includes(query) ||
             email.includes(query) ||
             jobTitle.includes(query) ||
-            phone.includes(query);
+            phone.includes(query) ||
+            skills.some((skill) => skill.includes(query));
 
       const matchesClassification = filterClassification
         ? app.classification === filterClassification
@@ -288,9 +270,21 @@ export function useCampaignApplications() {
 
       const matchesStatus = filterStatus ? app.status === filterStatus : true;
 
-      return matchesSearch && matchesClassification && matchesStatus;
+      const matchesSkill = normalizedSkillFilter.length === 0
+        ? true
+        : skills.some((skill) => skill.includes(normalizedSkillFilter));
+
+      const matchesScore = minAiScore == null
+        ? true
+        : app.aiScore != null && app.aiScore >= minAiScore;
+
+      const matchesExperience = minYearsOfExperience == null
+        ? true
+        : app.yearsOfExperience != null && app.yearsOfExperience >= minYearsOfExperience;
+
+      return matchesSearch && matchesClassification && matchesStatus && matchesSkill && matchesScore && matchesExperience;
     });
-  }, [applications, rankingApplications, jobId, searchQuery, filterClassification, filterStatus]);
+  }, [applications, rankingApplications, jobId, searchQuery, filterClassification, filterStatus, filterSkill, minAiScore, minYearsOfExperience]);
 
   // Group into Kanban stages
   const kanbanData = useMemo(() => {
@@ -411,6 +405,11 @@ export function useCampaignApplications() {
       return;
     }
 
+    if (newStatus === "Interview") {
+      openScheduleModal(record);
+      return;
+    }
+
     try {
       await recruitmentService.updateApplicationStatus(record.id, newStatus);
       setApplications((prev) =>
@@ -465,9 +464,20 @@ export function useCampaignApplications() {
     navigate(`/recruiter/ranking/compare?jobId=${encodedJobId}&applicationIds=${encodedAppIds}`);
   };
 
-  const handleViewDetail = (record: ApplicationDto) => {
+  const handleViewDetail = async (record: ApplicationDto) => {
     setSelectedApp(record);
     setIsModalOpen(true);
+    setDetailLoading(true);
+    try {
+      const detail = await recruitmentService.getHrApplicationDetail(record.id);
+      if (detail) {
+        setSelectedApp(detail);
+      }
+    } catch {
+      message.error("Không thể tải chi tiết báo cáo AI. Vui lòng thử lại.");
+    } finally {
+      setDetailLoading(false);
+    }
   };
 
   return {
@@ -483,10 +493,17 @@ export function useCampaignApplications() {
     setFilterClassification,
     filterStatus,
     setFilterStatus,
+    filterSkill,
+    setFilterSkill,
+    minAiScore,
+    setMinAiScore,
+    minYearsOfExperience,
+    setMinYearsOfExperience,
     handleResetFilters,
     isModalOpen,
     setIsModalOpen,
     selectedApp,
+    detailLoading,
     viewMode,
     setViewMode,
     applicationStatusStages,

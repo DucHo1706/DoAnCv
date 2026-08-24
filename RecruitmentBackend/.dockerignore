@@ -1,0 +1,7 @@
+.vs/
+**/bin/
+**/obj/
+**/Uploads/
+**/*.user
+.env
+.git/

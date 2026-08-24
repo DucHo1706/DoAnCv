@@ -59,7 +59,7 @@ export function ProfileDropdown({ currentUser, isAdminRoute }: ProfileDropdownPr
           gap: 10,
           cursor: "pointer",
           padding: "6px 10px",
-          borderRadius: 10,
+          borderRadius: 12,
           transition: "background 0.2s",
         }}
         className="hover-bg-slate"

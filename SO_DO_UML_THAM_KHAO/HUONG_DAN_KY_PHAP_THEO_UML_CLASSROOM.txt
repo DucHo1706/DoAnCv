@@ -1,0 +1,43 @@
+HƯỚNG DẪN DỰNG LẠI SƠ ĐỒ THEO UML @ CLASSROOM (2015)
+
+Tài liệu gốc: 2015_Book_UMLClassroom.pdf
+Tác giả: Martina Seidl, Marion Scholz, Christian Huemer và Gerti Kappel.
+
+1. ACTIVITY DIAGRAM – CHƯƠNG 7, TRANG 141–166
+
+- Initial Node: hình tròn tô đen; mỗi quy trình chỉ cần một điểm bắt đầu rõ ràng.
+- Action: hình chữ nhật bo góc; tên bắt đầu bằng động từ, ví dụ “Kiểm tra tổng trọng số”.
+- Control Flow: đường liền có mũi tên, chỉ hướng thực thi.
+- Decision Node: hình thoi có một luồng vào và nhiều luồng ra.
+- Guard: đặt trên từng nhánh theo dạng [Hợp lệ], [Không hợp lệ], [Phê duyệt], [Từ chối].
+- Merge Node: dùng hình thoi để hợp nhất các nhánh thay thế trước khi tiếp tục.
+- Fork/Join: thanh đậm, chỉ dùng khi các hành động thực sự chạy song song.
+- Activity Final: vòng tròn kép có tâm đen.
+- Activity Partition/Swimlane: chia trách nhiệm theo tác nhân hoặc phân hệ; không dùng lane như một bước xử lý.
+
+2. SEQUENCE DIAGRAM – CHƯƠNG 6, TRANG 107–140
+
+- Participant/Lifeline: tên đối tượng đặt phía trên, đường sống nét đứt kéo xuống.
+- Activation/Execution Specification: thanh hẹp trên lifeline trong thời gian đối tượng đang xử lý.
+- Synchronous Message: đường liền với mũi tên đặc; bên gọi chờ kết quả.
+- Return Message: đường nét đứt; chỉ vẽ khi giá trị trả về giúp làm rõ luồng.
+- Self Message: mũi tên quay về chính lifeline, dùng cho bước validation/xử lý nội bộ.
+- Combined Fragment alt: khung chữ nhật có nhãn “alt”; mỗi operand phải có guard.
+- Combined Fragment opt: dùng cho hành vi tùy chọn, ví dụ gửi lại email.
+- Combined Fragment loop: dùng khi lưu nhiều JobCriteria; guard ghi điều kiện lặp.
+- Thông điệp nên là tên hành động hoặc phương thức, không viết thành đoạn văn dài.
+
+3. QUY TẮC ĐỒNG BỘ
+
+- Tác nhân chính trong đặc tả phải xuất hiện ở Activity partition và Sequence participant.
+- Mỗi bước quan trọng của luồng chính phải có action tương ứng trong Activity và message tương ứng trong Sequence.
+- Mỗi luồng ngoại lệ quan trọng phải xuất hiện dưới dạng guard trong Activity và operand của fragment alt trong Sequence.
+- Hậu điều kiện phải khớp trạng thái kết thúc: Pending, Published, Rejected, Applied, AI_ERROR hoặc trạng thái nghiệp vụ tương ứng.
+- Activity mô tả luồng công việc; Sequence mô tả các đối tượng phối hợp để hiện thực cùng luồng đó.
+
+4. QUY TẮC TRÌNH BÀY TRONG STARUML
+
+- Dùng nền trắng, đường đen/xám, chỉ dùng xanh để nhấn tác nhân hoặc phân hệ chính.
+- Không đưa mô tả dài vào action/message; phần giải thích đặt trong văn bản báo cáo.
+- Xuất SVG để chèn Word, tránh PNG độ phân giải thấp.
+- Kiểm tra sơ đồ ở mức thu phóng Word 100% trước khi đánh số hình.

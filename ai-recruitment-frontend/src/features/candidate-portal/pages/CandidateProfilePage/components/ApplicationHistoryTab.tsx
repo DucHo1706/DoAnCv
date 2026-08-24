@@ -16,6 +16,7 @@ import {
   EnvironmentOutlined
 } from "@ant-design/icons";
 import EmptyState from "../../../../../components/common/EmptyState";
+import { getApplicationStatusLabel as translateApplicationStatus } from "../../../../../utils/statusLabels";
 
 const { Text } = Typography;
 
@@ -23,14 +24,12 @@ interface ApplicationHistoryTabProps {
   loading: boolean;
   applications: any[];
   onViewReport: (app: any) => void;
-  onReEvaluate?: (applicationId: string) => void;
 }
 
 export const ApplicationHistoryTab: React.FC<ApplicationHistoryTabProps> = ({
   loading,
   applications,
   onViewReport,
-  onReEvaluate,
 }) => {
   const [searchText, setSearchText] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -43,17 +42,21 @@ export const ApplicationHistoryTab: React.FC<ApplicationHistoryTabProps> = ({
       case "applied":
         return { text: "Đã gửi hồ sơ (Chờ duyệt)", color: "blue" };
       case "reviewed":
+      case "reviewing":
         return { text: "HR đang xem xét", color: "purple" };
       case "shortlisted":
         return { text: "Hồ sơ đạt yêu cầu", color: "cyan" };
       case "interviewing":
+      case "interview":
         return { text: "Được chọn phỏng vấn", color: "orange" };
       case "accepted":
+      case "offer":
+      case "hired":
         return { text: "Đã nhận việc 🎉", color: "green" };
       case "rejected":
         return { text: "Chưa phù hợp", color: "red" };
       default:
-        return { text: status || "Đã gửi hồ sơ", color: "blue" };
+        return { text: translateApplicationStatus(status), color: "blue" };
     }
   };
 
@@ -342,20 +345,8 @@ export const ApplicationHistoryTab: React.FC<ApplicationHistoryTabProps> = ({
                         {error && (
                           <div style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "flex-end" }}>
                             <Text type="danger" style={{ fontStyle: "italic", fontSize: 13 }}>
-                              Hệ thống AI gặp trục trặc khi đọc file.
+                              Hệ thống chưa thể hoàn tất phân tích CV. Kết quả 0% không phải là điểm đánh giá hồ sơ.
                             </Text>
-                            {onReEvaluate && (
-                              <Button
-                                type="primary"
-                                danger
-                                ghost
-                                size="small"
-                                onClick={() => onReEvaluate(app.id)}
-                                style={{ borderRadius: 8, fontWeight: 600 }}
-                              >
-                                Thử lại đánh giá AI
-                              </Button>
-                            )}
                           </div>
                         )}
                       </div>
@@ -442,7 +433,7 @@ export const ApplicationHistoryTab: React.FC<ApplicationHistoryTabProps> = ({
                                   href={app.interviewSchedule.locationOrLink}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  style={{ borderRadius: 6, fontWeight: 600 }}
+                                  style={{ borderRadius: 8, fontWeight: 600 }}
                                 >
                                   Tham gia phỏng vấn qua Zoom/Meet 🎥
                                 </Button>
@@ -485,7 +476,7 @@ export const ApplicationHistoryTab: React.FC<ApplicationHistoryTabProps> = ({
                                 Cảm ơn bạn đã ứng tuyển vào vị trí này. Rất tiếc, hồ sơ của bạn chưa đáp ứng tối đa các tiêu chí yêu cầu trong đợt tuyển dụng này.
                               </Text>
                               {app.rejectionFeedback && (
-                                <div style={{ marginTop: 8, padding: "8px 12px", background: "rgba(239, 68, 68, 0.03)", borderRadius: 6, borderLeft: "3px solid #EF4444" }}>
+                                <div style={{ marginTop: 8, padding: "8px 12px", background: "rgba(239, 68, 68, 0.03)", borderRadius: 8, borderLeft: "3px solid #EF4444" }}>
                                   <Text strong style={{ fontSize: 12, display: "block", color: "#991B1B" }}>Lý do & lời khuyên từ HR:</Text>
                                   <Text style={{ fontSize: 13, color: "#7F1D1D", whiteSpace: "pre-line" }}>{app.rejectionFeedback}</Text>
                                 </div>
@@ -512,7 +503,7 @@ export const ApplicationHistoryTab: React.FC<ApplicationHistoryTabProps> = ({
                   onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
                   disabled={currentPage === 1}
                   size="small"
-                  style={{ borderRadius: 6 }}
+                  style={{ borderRadius: 8 }}
                 >
                   Trang trước
                 </Button>
@@ -522,7 +513,7 @@ export const ApplicationHistoryTab: React.FC<ApplicationHistoryTabProps> = ({
                     type={currentPage === idx + 1 ? "primary" : "default"}
                     onClick={() => setCurrentPage(idx + 1)}
                     size="small"
-                    style={{ borderRadius: 6 }}
+                    style={{ borderRadius: 8 }}
                   >
                     {idx + 1}
                   </Button>
@@ -531,7 +522,7 @@ export const ApplicationHistoryTab: React.FC<ApplicationHistoryTabProps> = ({
                   onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
                   disabled={currentPage === totalPages}
                   size="small"
-                  style={{ borderRadius: 6 }}
+                  style={{ borderRadius: 8 }}
                 >
                   Trang sau
                 </Button>

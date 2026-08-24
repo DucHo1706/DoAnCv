@@ -1,7 +1,11 @@
-import { useState } from "react";
-import { Modal, Upload, Button, Typography, Space, Alert } from "antd";
+import { useEffect, useState } from "react";
+import { Modal, Upload, Button, Typography, Space, Alert, Radio, Select } from "antd";
 import { CloseOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
+import axiosClient from "../../services/axiosClient";
+import { cvBuilderService, type CvBuilderDocumentSummary } from "../../features/candidate-portal/services/cvBuilderService";
+import type { BuilderSettings, CvBuilderValues } from "../../features/candidate-portal/pages/CvBuilderPage/CvBuilderPage";
+import { buildCvBuilderText } from "../../features/candidate-portal/utils/cvBuilderText";
 
 const { Title, Paragraph } = Typography;
 const { Dragger } = Upload;
@@ -26,10 +30,39 @@ export default function CvAiPreviewModal({
   const navigate = useNavigate();
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [savedCvs, setSavedCvs] = useState<Array<{ id: string; name: string; isDefault: boolean }>>([]);
+  const [builderDocuments, setBuilderDocuments] = useState<CvBuilderDocumentSummary[]>([]);
+  const [source, setSource] = useState<"stored" | "builder" | "upload">("upload");
+  const [savedCvId, setSavedCvId] = useState<string>();
+  const [builderDocumentId, setBuilderDocumentId] = useState<string>();
+  const [analyzing, setAnalyzing] = useState(false);
+
+  useEffect(() => {
+    if (!open || !localStorage.getItem("token")) return;
+    Promise.all([
+      axiosClient.get("/candidate-cvs").catch(() => ({ data: [] })),
+      cvBuilderService.getAll().catch(() => []),
+    ]).then(([savedResponse, builderItems]) => {
+      const savedItems = Array.isArray(savedResponse.data) ? savedResponse.data : savedResponse.data?.$values || [];
+      setSavedCvs(savedItems);
+      setBuilderDocuments(builderItems);
+      if (builderItems.length > 0) {
+        const preferred = builderItems.find((item) => item.isDefault) || builderItems[0];
+        setSource("builder");
+        setBuilderDocumentId(preferred.id);
+      } else if (savedItems.length > 0) {
+        setSource("stored");
+        setSavedCvId(savedItems[0].id);
+      }
+    });
+  }, [open]);
 
   const handleClose = () => {
     setFile(null);
     setError(null);
+    setSavedCvId(undefined);
+    setBuilderDocumentId(undefined);
+    setSource("upload");
     onClose();
   };
 
@@ -62,20 +95,56 @@ export default function CvAiPreviewModal({
   };
 
   const handleAnalyze = async () => {
-    if (!file) {
+    if (source === "upload" && !file) {
       setError("Vui lòng chọn file CV trước khi phân tích.");
       return;
     }
-    handleClose();
-    navigate(`/jobs/${jobId}/cv-analysis`, {
-      state: {
-        file,
-        jobTitle,
-        companyName,
-        jobDescription,
-        triggerAnalysis: true,
-      },
-    });
+    if (source === "stored" && !savedCvId) {
+      setError("Vui lòng chọn một CV đã lưu trên hệ thống.");
+      return;
+    }
+    if (source === "builder" && !builderDocumentId) {
+      setError("Vui lòng chọn một CV trực tuyến đã lưu.");
+      return;
+    }
+    setAnalyzing(true);
+    try {
+      let selectedFile = file;
+      let structuredCvText: string | undefined;
+      if (source === "stored" && savedCvId) {
+        const selected = savedCvs.find((item) => item.id === savedCvId);
+        const response = await axiosClient.get(`/candidate-cvs/${savedCvId}/file`, { responseType: "blob" });
+        selectedFile = new File([response.data], selected?.name || "CV.pdf", { type: response.data.type || "application/pdf" });
+      } else if (source === "builder" && builderDocumentId) {
+        const builderDocument = await cvBuilderService.getById<CvBuilderValues, BuilderSettings>(builderDocumentId);
+        structuredCvText = buildCvBuilderText(builderDocument.content);
+        if (structuredCvText.length < 80) {
+          setError("CV trực tuyến chưa có đủ nội dung để phân tích. Vui lòng bổ sung thông tin trước.");
+          return;
+        }
+        selectedFile = new File(
+          [structuredCvText],
+          `${builderDocument.name || "CV trực tuyến"}.txt`,
+          { type: "text/plain;charset=utf-8" },
+        );
+      }
+      handleClose();
+      navigate(`/jobs/${jobId}/cv-analysis`, {
+        state: {
+          file: selectedFile,
+          jobTitle,
+          companyName,
+          jobDescription,
+          triggerAnalysis: true,
+          structuredCvText,
+          cvBuilderDocumentId: source === "builder" ? builderDocumentId : undefined,
+        },
+      });
+    } catch (requestError: any) {
+      setError(requestError?.response?.data?.message || "Không thể tải CV đã lưu. Vui lòng thử lại.");
+    } finally {
+      setAnalyzing(false);
+    }
   };
 
   return (
@@ -100,6 +169,39 @@ export default function CvAiPreviewModal({
       </div>
 
       <>
+        {(savedCvs.length > 0 || builderDocuments.length > 0) && (
+          <Radio.Group
+            value={source}
+            onChange={(event) => { setSource(event.target.value); setError(null); }}
+            style={{ display: "flex", marginBottom: 16 }}
+          >
+            {savedCvs.length > 0 && (
+              <Radio.Button value="stored" style={{ flex: 1, textAlign: "center" }}>Chọn CV đã lưu</Radio.Button>
+            )}
+            {builderDocuments.length > 0 && (
+              <Radio.Button value="builder" style={{ flex: 1, textAlign: "center" }}>CV trực tuyến</Radio.Button>
+            )}
+            <Radio.Button value="upload" style={{ flex: 1, textAlign: "center" }}>Tải file mới</Radio.Button>
+          </Radio.Group>
+        )}
+        {source === "stored" && savedCvs.length > 0 ? (
+          <Select
+            value={savedCvId}
+            onChange={setSavedCvId}
+            style={{ width: "100%", marginBottom: 16 }}
+            options={savedCvs.map((cv) => ({ value: cv.id, label: `${cv.name}${cv.isDefault ? " · Mặc định" : ""}` }))}
+          />
+        ) : source === "builder" && builderDocuments.length > 0 ? (
+          <Select
+            value={builderDocumentId}
+            onChange={setBuilderDocumentId}
+            style={{ width: "100%", marginBottom: 16 }}
+            options={builderDocuments.map((document) => ({
+              value: document.id,
+              label: `${document.name}${document.isDefault ? " · Mặc định" : ""}`,
+            }))}
+          />
+        ) : (
         <Dragger
           accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
           beforeUpload={beforeUpload}
@@ -131,6 +233,7 @@ export default function CvAiPreviewModal({
             Hỗ trợ PDF, DOC, DOCX, PNG, JPG, JPEG · Tối đa 10MB
           </p>
         </Dragger>
+        )}
         {error && (
           <Alert type="error" message={error} style={{ marginTop: 12, borderRadius: 8 }} showIcon />
         )}
@@ -143,9 +246,10 @@ export default function CvAiPreviewModal({
             type="primary"
             size="large"
             onClick={handleAnalyze}
-            disabled={!file}
+            loading={analyzing}
+            disabled={source === "stored" ? !savedCvId : source === "builder" ? !builderDocumentId : !file}
             style={{
-              background: file ? "linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)" : undefined,
+              background: file ? "#2563EB" : undefined,
               border: "none",
               fontWeight: 600,
               paddingInline: 28,

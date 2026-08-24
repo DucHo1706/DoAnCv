@@ -1,53 +1,162 @@
-version: '3.8'
+name: recruitment
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
 
 services:
-  # 1. AI Service (FastAPI Python)
   ai-service:
     build:
       context: ./Python
       dockerfile: Dockerfile
-    container_name: recruitment_ai_service
-    ports:
-      - "8000:8000"
+    image: recruitment-ai:latest
     environment:
-      - CSHARP_API_URL=http://backend:8080/api
-      # Truyền API keys từ file .env ở máy host vào container
-      - GEMINI_API_KEY=${GEMINI_API_KEY}
-    restart: always
+      CSHARP_API_URL: http://backend:8080/api
+      GEMINI_API_KEY: ${GEMINI_API_KEY:?Missing GEMINI_API_KEY}
+      GEMINI_MODELS: ${GEMINI_MODELS:-gemini-3.6-flash,gemini-3.7-flash,gemini-3.5-flash,gemini-3.5-flash-lite,gemini-3.1-flash-lite}
+      GEMINI_VISION_MODELS: ${GEMINI_VISION_MODELS:-gemini-3.6-flash,gemini-3.7-flash,gemini-3.5-flash,gemini-3.5-flash-lite,gemini-3.1-flash-lite}
+      GEMINI_KEY_COOLDOWN_SECONDS: ${GEMINI_KEY_COOLDOWN_SECONDS:-60}
+      GEMINI_MODEL_KEY_COOLDOWN_SECONDS: ${GEMINI_MODEL_KEY_COOLDOWN_SECONDS:-30}
+      GEMINI_MAX_KEYS_PER_MODEL: ${GEMINI_MAX_KEYS_PER_MODEL:-3}
+      GEMINI_TOTAL_REQUEST_BUDGET_MS: ${GEMINI_TOTAL_REQUEST_BUDGET_MS:-60000}
+      GEMINI_REQUEST_TIMEOUT_MS: ${GEMINI_REQUEST_TIMEOUT_MS:-15000}
+      GEMINI_MIN_REQUEST_TIMEOUT_MS: ${GEMINI_MIN_REQUEST_TIMEOUT_MS:-10000}
+      GEMINI_TARGET_ATTEMPTS_PER_REQUEST: ${GEMINI_TARGET_ATTEMPTS_PER_REQUEST:-4}
+      GEMINI_TRANSIENT_KEYS_BEFORE_MODEL_FAILOVER: ${GEMINI_TRANSIENT_KEYS_BEFORE_MODEL_FAILOVER:-2}
+      LLM_ROUTER_BASE_URL: ${LLM_ROUTER_BASE_URL:-}
+      LLM_ROUTER_API_KEY: ${LLM_ROUTER_API_KEY:-}
+      LLM_ROUTER_MODELS: ${LLM_ROUTER_MODELS:-Gemini,deepseek,ag/gemini-3.5-flash-low}
+      LLM_ROUTER_TIMEOUT_SECONDS: ${LLM_ROUTER_TIMEOUT_SECONDS:-25}
+      LLM_ROUTER_TOTAL_BUDGET_SECONDS: ${LLM_ROUTER_TOTAL_BUDGET_SECONDS:-25}
+      LLM_ROUTER_COOLDOWN_SECONDS: ${LLM_ROUTER_COOLDOWN_SECONDS:-120}
+      MINING_DATA_DIR: /app/runtime-data
+    expose:
+      - "8000"
+    volumes:
+      - ai_runtime_data:/app/runtime-data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    mem_limit: ${AI_MEMORY_LIMIT:-2g}
+    cpus: ${AI_CPU_LIMIT:-1.5}
+    pids_limit: 256
+    logging: *default-logging
+    networks:
+      - internal
 
-  # 2. Backend Service (.NET 8.0 Core Web API)
+  9router:
+    profiles: ["llm-router"]
+    image: ${NINE_ROUTER_IMAGE:-decolua/9router:latest}
+    environment:
+      DATA_DIR: /app/data
+      PORT: "20128"
+      HOSTNAME: 0.0.0.0
+      NODE_ENV: production
+      BASE_URL: http://127.0.0.1:20128
+      NEXT_PUBLIC_BASE_URL: http://127.0.0.1:20128
+      REQUIRE_API_KEY: "true"
+      ENABLE_REQUEST_LOGS: "false"
+      AUTH_COOKIE_SECURE: "false"
+      JWT_SECRET: ${NINE_ROUTER_JWT_SECRET:-}
+      API_KEY_SECRET: ${NINE_ROUTER_API_KEY_SECRET:-}
+      MACHINE_ID_SALT: ${NINE_ROUTER_MACHINE_ID_SALT:-}
+      INITIAL_PASSWORD: ${NINE_ROUTER_INITIAL_PASSWORD:-}
+    ports:
+      - "127.0.0.1:20128:20128"
+    volumes:
+      - nine_router_data:/app/data
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:20128/dashboard').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 45s
+    restart: unless-stopped
+    mem_limit: ${NINE_ROUTER_MEMORY_LIMIT:-1g}
+    cpus: ${NINE_ROUTER_CPU_LIMIT:-1.0}
+    pids_limit: 256
+    logging: *default-logging
+    networks:
+      - internal
+
   backend:
     build:
       context: ./RecruitmentBackend
       dockerfile: Dockerfile
-    container_name: recruitment_backend
-    ports:
-      - "5286:8080" # Cổng HTTP hỗ trợ truy cập trực tiếp từ máy host nếu cần
+    image: recruitment-backend:latest
     environment:
-      - ASPNETCORE_URLS=http://+:8080
-      - ASPNETCORE_ENVIRONMENT=Production
-      - PythonAiApiUrl=http://ai-service:8000
+      ASPNETCORE_URLS: http://+:8080
+      ASPNETCORE_ENVIRONMENT: Production
+      PythonAiApiUrl: http://ai-service:8000
+      ConnectionStrings__DefaultConnection: ${DB_CONNECTION_STRING:?Missing DB_CONNECTION_STRING}
+      Jwt__Key: ${JWT_KEY:?Missing JWT_KEY}
+      EmailSettings__Password: ${EMAIL_PASSWORD:?Missing EMAIL_PASSWORD}
+      EmailSettings__SenderEmail: ${EMAIL_ADDRESS:?Missing EMAIL_ADDRESS}
+      EmailSettings__Username: ${EMAIL_ADDRESS:?Missing EMAIL_ADDRESS}
+      Cloudinary__CloudName: ${CLOUDINARY_CLOUD_NAME:?Missing CLOUDINARY_CLOUD_NAME}
+      Cloudinary__ApiKey: ${CLOUDINARY_API_KEY:?Missing CLOUDINARY_API_KEY}
+      Cloudinary__ApiSecret: ${CLOUDINARY_API_SECRET:?Missing CLOUDINARY_API_SECRET}
+    expose:
+      - "8080"
     volumes:
-      - ./Uploads:/app/Uploads
+      - ${UPLOADS_PATH:-./Uploads}:/app/Uploads
+      - backend_runtime_data:/app/App_Data
     depends_on:
-      - ai-service
-    restart: always
+      ai-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    mem_limit: ${BACKEND_MEMORY_LIMIT:-1g}
+    cpus: ${BACKEND_CPU_LIMIT:-1.0}
+    pids_limit: 256
+    logging: *default-logging
+    networks:
+      - internal
 
-  # 3. Frontend Service (React + Nginx)
   frontend:
     build:
       context: ./ai-recruitment-frontend
       dockerfile: Dockerfile
-    container_name: recruitment_frontend
+    image: recruitment-frontend:latest
     ports:
       - "80:80"
       - "443:443"
     volumes:
       - /etc/letsencrypt:/etc/letsencrypt:ro
+      - /var/www/certbot:/var/www/certbot:ro
     depends_on:
-      - backend
-    restart: always
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--spider", "http://127.0.0.1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 15s
+    restart: unless-stopped
+    mem_limit: ${FRONTEND_MEMORY_LIMIT:-256m}
+    cpus: ${FRONTEND_CPU_LIMIT:-0.5}
+    pids_limit: 128
+    logging: *default-logging
+    networks:
+      - internal
+
+networks:
+  internal:
+    driver: bridge
 
 volumes:
-  # Cấu hình lưu trữ dữ liệu nếu cần
-  uploads_data:
+  ai_runtime_data:
+  backend_runtime_data:
+  nine_router_data:

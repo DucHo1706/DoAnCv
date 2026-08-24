@@ -135,7 +135,7 @@ function JobPositionManagementPage() {
       render: (text: string, record: any) => {
         if (record.isCategoryGroup) {
           return (
-            <Text strong style={{ fontSize: 15, color: "#1677ff" }}>
+            <Text strong style={{ fontSize: 15, color: "#2563EB" }}>
               📂 {text}
             </Text>
           );
@@ -165,7 +165,7 @@ function JobPositionManagementPage() {
               type="text"
               icon={<EditOutlined />}
               onClick={() => handleOpenEdit(record)}
-              style={{ color: "#1677ff" }}
+              style={{ color: "#2563EB" }}
             >
               Sửa
             </Button>
@@ -177,7 +177,7 @@ function JobPositionManagementPage() {
                 type="text"
                 icon={record.isActive ? <LockOutlined /> : <UnlockOutlined />}
                 danger={record.isActive}
-                style={!record.isActive ? { color: "#52c41a" } : {}}
+                style={!record.isActive ? { color: "#10B981" } : {}}
               >
                 {record.isActive ? "Khóa" : "Mở"}
               </Button>
@@ -190,7 +190,7 @@ function JobPositionManagementPage() {
 
   return (
     <PageContainer
-      title="Quản lý Vị trí công việc"
+      title="Quản lý vị trí công việc"
       extra={
         <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenCreate}>
           Thêm Vị trí
@@ -199,7 +199,7 @@ function JobPositionManagementPage() {
     >
       <Card>
         <TableToolbar searchPlaceholder="Tìm kiếm vị trí..." />
-        <Table
+        <Table scroll={{ x: "max-content" }}
           columns={columns}
           dataSource={groupedPositions}
           rowKey="id"

@@ -6,21 +6,34 @@ export interface JobDto {
   requirements: string;
   position: JobPositionDto;
   branch: BranchDto;
-  category?: { id: string; name: string } | null;
+  category?: { id: string; name: string; parentId?: string | null } | null;
   recruiter?: { id: string; name: string; email: string } | null;
   salaryRange: string;
   isActive: boolean;
   status: string;
   isApproved: boolean;
+  isRecruiting?: boolean;
+  isExpired?: boolean;
+  lifecycleStatus?: string | null;
   createdAt: string;
   startDate?: string | null;
   deadline?: string | null;
   maxCandidates?: number | null;
   jobLevel?: { name: string } | null;
   rejectReason?: string | null;
+  repostedFromJobId?: string | null;
+  campaignGroupId?: string | null;
+  recruitmentRound?: number;
 }
 
 export interface CategoryDto {
+  id: string;
+  name: string;
+  parentId?: string | null;
+  isActive: boolean;
+}
+
+export interface JobLevelDto {
   id: string;
   name: string;
   parentId?: string | null;
@@ -71,8 +84,24 @@ export interface JobReviewResponse {
 
 export const jobService = {
   async getJobs() {
-    const response = await axiosClient.get<JobDto[]>("/jobs");
-    return response.data;
+    const response = await axiosClient.get<{ items?: JobDto[]; $values?: JobDto[] }>(
+      "/jobs/published",
+      { params: { pageIndex: 1, pageSize: 24 } },
+    );
+    return response.data.items ?? response.data.$values ?? [];
+  },
+
+  async getPublishedJobCount() {
+    const response = await axiosClient.get<{
+      totalCount?: number;
+      items?: JobDto[];
+      $values?: JobDto[];
+    }>("/jobs/published", { params: { pageIndex: 1, pageSize: 1 } });
+
+    return response.data.totalCount
+      ?? response.data.items?.length
+      ?? response.data.$values?.length
+      ?? 0;
   },
 
   async getMyJobs() {
@@ -87,6 +116,11 @@ export const jobService = {
 
   async getJobPositions() {
     const response = await axiosClient.get<JobPositionDto[]>("/jobpositions");
+    return response.data;
+  },
+
+  async getJobLevels() {
+    const response = await axiosClient.get<JobLevelDto[]>("/joblevels");
     return response.data;
   },
 
@@ -171,11 +205,6 @@ export const branchService = {
     return response.data;
   },
 
-  async deleteBranch(id: string) {
-    const response = await axiosClient.delete(`/branches/${id}`);
-    return response.data;
-  },
-
   async toggleBranchStatus(id: string) {
     const response = await axiosClient.put(`/branches/${id}/toggle-status`);
     return response.data;
@@ -230,11 +259,6 @@ export const jobPositionService = {
 
   async updateJobPosition(id: string, payload: JobPositionPayload) {
     const response = await axiosClient.put<JobPositionDto>(`/jobpositions/${id}`, payload);
-    return response.data;
-  },
-
-  async deleteJobPosition(id: string) {
-    const response = await axiosClient.delete(`/jobpositions/${id}`);
     return response.data;
   },
 

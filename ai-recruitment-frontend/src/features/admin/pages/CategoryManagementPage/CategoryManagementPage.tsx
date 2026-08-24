@@ -101,7 +101,7 @@ function CategoryManagementPage() {
           ),
           icon:
             children.length > 0 ? (
-              <FolderOpenOutlined style={{ color: "#1677ff" }} />
+              <FolderOpenOutlined style={{ color: "#2563EB" }} />
             ) : (
               <FolderOutlined style={{ color: "#bae0ff" }} />
             ),
@@ -222,13 +222,13 @@ function CategoryManagementPage() {
 
   return (
     <PageContainer
-      title="Danh mục Ngành nghề Tuyển dụng"
+      title="Danh mục ngành nghề tuyển dụng"
     >
       <Row gutter={24}>
         {/* CỘT TRÁI: CÂY THƯ MỤC */}
         <Col xs={24} md={10} lg={9}>
           <Card
-            title="Cấu trúc Ngành nghề"
+            title="Cấu trúc ngành nghề"
             extra={
               <Button
                 type="primary"
@@ -346,7 +346,7 @@ function CategoryManagementPage() {
       </Row>
 
       <Modal
-        title="Thêm Danh mục mới"
+        title="Thêm danh mục mới"
         open={isCreateModalOpen}
         onOk={handleCreateSave}
         onCancel={() => setIsCreateModalOpen(false)}

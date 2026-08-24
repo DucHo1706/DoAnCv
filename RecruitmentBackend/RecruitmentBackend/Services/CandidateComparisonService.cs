@@ -33,6 +33,9 @@ namespace RecruitmentBackend.Services
             string? sortBy,
             string? criterionName,
             string? search,
+            string? skill,
+            decimal? minScore,
+            double? minYearsOfExperience,
             ClaimsPrincipal user
         )
         {
@@ -65,6 +68,16 @@ namespace RecruitmentBackend.Services
                 return (false, "Vui lòng cung cấp criterionName khi xếp hạng theo tiêu chí.", null);
             }
 
+            if (minScore is < 0 or > 100)
+            {
+                return (false, "Điểm AI tối thiểu phải từ 0 đến 100.", null);
+            }
+
+            if (minYearsOfExperience is < 0 or > 80)
+            {
+                return (false, "Số năm kinh nghiệm tối thiểu phải từ 0 đến 80.", null);
+            }
+
             var job = ownershipResult.Job!;
             var rawCandidates = await GetRawCandidatesAsync(job.JobID, null);
             var response = await BuildResponseAsync(job, rawCandidates);
@@ -76,7 +89,36 @@ namespace RecruitmentBackend.Services
                 response.Candidates = response.Candidates
                     .Where(candidate =>
                         candidate.CandidateName.Contains(normalizedSearch, StringComparison.OrdinalIgnoreCase) ||
-                        candidate.CandidateEmail.Contains(normalizedSearch, StringComparison.OrdinalIgnoreCase))
+                        candidate.CandidateEmail.Contains(normalizedSearch, StringComparison.OrdinalIgnoreCase) ||
+                        candidate.CandidatePhone.Contains(normalizedSearch, StringComparison.OrdinalIgnoreCase) ||
+                        candidate.Degree.Contains(normalizedSearch, StringComparison.OrdinalIgnoreCase) ||
+                        candidate.Major.Contains(normalizedSearch, StringComparison.OrdinalIgnoreCase) ||
+                        candidate.University.Contains(normalizedSearch, StringComparison.OrdinalIgnoreCase) ||
+                        candidate.MatchedSkills.Any(value => value.Contains(normalizedSearch, StringComparison.OrdinalIgnoreCase)))
+                    .ToList();
+            }
+
+            if (string.IsNullOrWhiteSpace(skill) == false)
+            {
+                string normalizedSkill = skill.Trim();
+                response.Candidates = response.Candidates
+                    .Where(candidate => candidate.MatchedSkills.Any(value =>
+                        value.Contains(normalizedSkill, StringComparison.OrdinalIgnoreCase)))
+                    .ToList();
+            }
+
+            if (minScore.HasValue)
+            {
+                response.Candidates = response.Candidates
+                    .Where(candidate => candidate.AiScore.HasValue && candidate.AiScore.Value >= minScore.Value)
+                    .ToList();
+            }
+
+            if (minYearsOfExperience.HasValue)
+            {
+                response.Candidates = response.Candidates
+                    .Where(candidate => candidate.YearsOfExperience.HasValue &&
+                        candidate.YearsOfExperience.Value >= minYearsOfExperience.Value)
                     .ToList();
             }
 

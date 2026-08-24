@@ -9,6 +9,7 @@ interface MockInterviewQuestion {
   intention: string;
   star_guide: string;
   best_answer: string;
+  is_fallback?: boolean;
 }
 
 interface InterviewQuestionsTabProps {
@@ -60,23 +61,33 @@ const InterviewQuestionsTab: React.FC<InterviewQuestionsTabProps> = ({ interview
             fontWeight: 700,
           }}
         >
-          Gợi ý tài liệu & lộ trình ôn luyện phỏng vấn từ AI
+          Lộ trình ôn tập từ AI
         </Title>
         <Text type="secondary" style={{ fontSize: 14 }}>
           AI dựa trên CV và JD của vị trí tuyển dụng để tổng hợp các chủ đề ôn tập cốt lõi cùng các đường dẫn tài liệu tự học hữu ích trên internet.
         </Text>
       </div>
 
+      {interviewQuestions.some((item) => item.is_fallback) && (
+        <Alert
+          message="Đang hiển thị lộ trình cơ bản"
+          description="Các chủ đề được chọn từ kỹ năng trong CV và phần còn thiếu so với JD. Bạn có thể thử lại khi dịch vụ AI hoạt động để nhận lộ trình chuyên sâu hơn."
+          type="info"
+          showIcon
+          style={{ borderRadius: 12 }}
+        />
+      )}
+
       {interviewQuestions.length > 0 ? (
         <Card
           size="small"
           title={
             <span style={{ color: "#2563EB", fontWeight: 700, fontSize: 14.5 }}>
-              <ReadOutlined style={{ marginRight: 6 }} /> Danh sách {interviewQuestions.length} định hướng & chủ đề phỏng vấn
+              <ReadOutlined style={{ marginRight: 6 }} /> Danh sách {interviewQuestions.length} chủ đề cần ôn tập
             </span>
           }
           style={{
-            borderRadius: 14,
+            borderRadius: 16,
             background: "#EFF6FF",
             border: "1px solid #BFDBFE",
           }}
@@ -96,7 +107,7 @@ const InterviewQuestionsTab: React.FC<InterviewQuestionsTabProps> = ({ interview
               >
                 <div style={{ marginBottom: 12 }}>
                   <Text strong style={{ fontSize: 15, color: "#0F172A", display: "block" }}>
-                    📌 Định hướng {index + 1}: {item.question}
+                    📌 Chủ đề {index + 1}: {item.question}
                   </Text>
                 </div>
 
@@ -106,7 +117,7 @@ const InterviewQuestionsTab: React.FC<InterviewQuestionsTabProps> = ({ interview
                 </div>
                 
                 <div style={{ marginBottom: 12 }}>
-                  <Text strong style={{ color: "#475569", fontSize: 13 }}>💡 Gợi ý chuẩn bị phỏng vấn: </Text>
+                  <Text strong style={{ color: "#475569", fontSize: 13 }}>💡 Cách hệ thống hóa kinh nghiệm: </Text>
                   <Paragraph style={{ color: "#64748B", margin: "4px 0 0", fontSize: 14 }}>{item.star_guide}</Paragraph>
                 </div>
 
@@ -124,7 +135,7 @@ const InterviewQuestionsTab: React.FC<InterviewQuestionsTabProps> = ({ interview
         </Card>
       ) : (
         <Alert
-          message="AI chưa sinh gợi ý ôn tập phỏng vấn cho hồ sơ này."
+          message="AI chưa tạo lộ trình ôn tập cho hồ sơ này."
           type="warning"
           showIcon
           style={{ borderRadius: 12 }}

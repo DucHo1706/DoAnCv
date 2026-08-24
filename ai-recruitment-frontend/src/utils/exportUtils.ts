@@ -25,18 +25,39 @@ export function exportToCsv(filename: string, headers: string[], rows: (string |
   URL.revokeObjectURL(url);
 }
 
-export function exportToPdfPrint(title: string, subtitle: string, headers: string[], rows: (string | number | null | undefined)[][]) {
-  const printWindow = window.open("", "_blank");
-  if (!printWindow) return;
+export async function downloadElementAsPdf(element: HTMLElement, filename: string, margin: [number, number, number, number] = [10, 10, 10, 10]) {
+  const clone = element.cloneNode(true) as HTMLElement;
+  Object.assign(clone.style, { display: "block", position: "static", width: "190mm", maxWidth: "none", background: "#FFFFFF" });
+  const host = document.createElement("div");
+  Object.assign(host.style, { position: "fixed", left: "-12000px", top: "0", width: "210mm", background: "#FFFFFF", zIndex: "-1" });
+  host.appendChild(clone);
+  document.body.appendChild(host);
+  try {
+    const module = await import("html2pdf.js");
+    const html2pdf = module.default || module;
+    await (html2pdf as any)().set({
+      margin,
+      filename,
+      image: { type: "jpeg", quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true, backgroundColor: "#FFFFFF", logging: false },
+      jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+      pagebreak: { mode: ["css", "legacy"], avoid: ["tr", ".pdf-keep"] },
+    }).from(clone).save();
+  } finally {
+    host.remove();
+  }
+}
+
+const escapeHtml = (value: unknown) => String(value ?? "-")
+  .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+  .replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+
+export async function exportToPdfPrint(title: string, subtitle: string, headers: string[], rows: (string | number | null | undefined)[][]) {
+  const report = document.createElement("section");
 
   const html = `
-    <!DOCTYPE html>
-    <html lang="vi">
-    <head>
-      <meta charset="UTF-8">
-      <title>${title}</title>
       <style>
-        body {
+        .pdf-table-report {
           font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
           padding: 30px;
           color: #0F172A;
@@ -81,20 +102,16 @@ export function exportToPdfPrint(title: string, subtitle: string, headers: strin
           color: #94A3B8;
           text-align: right;
         }
-        @media print {
-          body { padding: 0; }
-        }
       </style>
-    </head>
-    <body>
+      <div class="pdf-table-report">
       <div class="header">
-        <h1>${title}</h1>
-        <div class="subtitle">${subtitle} · Ngày xuất: ${new Date().toLocaleDateString("vi-VN")}</div>
+        <h1>${escapeHtml(title)}</h1>
+        <div class="subtitle">${escapeHtml(subtitle)} · Ngày xuất: ${new Date().toLocaleDateString("vi-VN")}</div>
       </div>
       <table>
         <thead>
           <tr>
-            ${headers.map((h) => `<th>${h}</th>`).join("")}
+            ${headers.map((h) => `<th>${escapeHtml(h)}</th>`).join("")}
           </tr>
         </thead>
         <tbody>
@@ -102,7 +119,7 @@ export function exportToPdfPrint(title: string, subtitle: string, headers: strin
             .map(
               (row) => `
             <tr>
-              ${row.map((cell) => `<td>${cell ?? "-"}</td>`).join("")}
+              ${row.map((cell) => `<td>${escapeHtml(cell)}</td>`).join("")}
             </tr>
           `
             )
@@ -110,17 +127,11 @@ export function exportToPdfPrint(title: string, subtitle: string, headers: strin
         </tbody>
       </table>
       <div class="footer">Xuất tự động từ Hệ thống Tuyển dụng AI Insight</div>
-      <script>
-        window.onload = function() {
-          window.print();
-        };
-      </script>
-    </body>
-    </html>
+      </div>
   `;
-
-  printWindow.document.write(html);
-  printWindow.document.close();
+  report.innerHTML = html;
+  const safeFilename = title.replace(/[\\/:*?"<>|]+/g, "-").trim() || "Bao-cao";
+  await downloadElementAsPdf(report, `${safeFilename}.pdf`, [8, 8, 8, 8]);
 }
 
 /**

@@ -27,17 +27,38 @@ obj/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Local Codex/runtime artifacts and deployment keys
+.local/
+.codex_vps_deploy_*
+.new_report_audit/
+.report_audit/
+.report_audit_final/
+.report_full_audit/
+.report_xml_check/
+_cv_backend_build/
+_cv_frontend_build/
+_pptx_build/
+RecruitmentBackend/_cv_backend_build/
+*.jtl
+resume
 # Upload folder (optional)
 Uploads/
 
-# Visual Studio Code
+# Visual Studio Code & Dependencies
 node_modules/
-.env
 dist/
 build/
-google-credentials.json
-appsettings.json
-appsettings.Development.json
+
+# Environment & Sensitive Credentials (Never commit to Git)
+.env
+**/.env
+**/.env.*
+!.env.example
+!**/.env.example
+**/appsettings.Development.json
+**/appsettings.Local.json
+**/google-credentials.json
 
 # Thesis / Report documents & temporary files
 BaoCao_CoSoLyLuan_Prompts*.docx
@@ -61,4 +82,8 @@ Python/generate_visual_guide.py
 
 
 # Temporary test PDF files
-test*.pdf
+test*.pdf
+Python/runtime-data/
+RecruitmentBackend/RecruitmentBackend/App_Data/
+se-metadata.json
+.tmp_backend_build_*/

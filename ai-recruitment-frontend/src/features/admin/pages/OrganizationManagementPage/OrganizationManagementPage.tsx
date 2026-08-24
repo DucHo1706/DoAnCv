@@ -9,6 +9,7 @@ import {
   Modal,
   Form,
   Input,
+  InputNumber,
   message,
   Typography,
   Popconfirm,
@@ -45,12 +46,41 @@ import axiosClient from "../../../../services/axiosClient";
 import { branchService } from "../../../../services/jobService";
 import { appTheme } from "../../../../constants/theme";
 import { exportToCsv } from "../../../../utils/exportUtils";
+import { useRealtimeResourceRefresh } from "../../../../hooks/useRealtimeRefresh";
 
 const { Text } = Typography;
 
+function getApiErrorMessage(error: any, fallback = "Thao tác thất bại!") {
+  const data = error?.response?.data;
+
+  if (typeof data === "string" && data.trim()) {
+    return data.trim();
+  }
+
+  if (typeof data?.message === "string" && data.message.trim()) {
+    return data.message.trim();
+  }
+
+  if (data?.errors && typeof data.errors === "object") {
+    const validationMessages = Object.values(data.errors)
+      .flatMap((value) => (Array.isArray(value) ? value : [value]))
+      .filter((value): value is string => typeof value === "string" && value.trim().length > 0);
+
+    if (validationMessages.length > 0) {
+      return validationMessages.join(" ");
+    }
+  }
+
+  if (!error?.response && typeof error?.message === "string" && error.message.trim()) {
+    return error.message.trim();
+  }
+
+  return fallback;
+}
+
 export default function OrganizationManagementPage() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const activeTabKey = searchParams.get("tab") || "branches";
+  const activeTabKey = searchParams.get("tab") || "categories";
 
   const handleTabChange = (key: string) => {
     setSearchParams({ tab: key });
@@ -58,8 +88,7 @@ export default function OrganizationManagementPage() {
 
   return (
     <PageContainer
-      title="Quản lý Cơ cấu Tổ chức"
-      subtitle="Quản lý tập trung các danh mục nền tảng: Chi nhánh làm việc, Lĩnh vực Ngành nghề, Cấp bậc và Vị trí công việc"
+      title="Danh mục tuyển dụng"
     >
       <Card
         style={{
@@ -76,16 +105,6 @@ export default function OrganizationManagementPage() {
           size="large"
           items={[
             {
-              key: "branches",
-              label: (
-                <Space size={8}>
-                  <EnvironmentOutlined style={{ color: appTheme.colors.primary }} />
-                  <span>Chi nhánh</span>
-                </Space>
-              ),
-              children: <BranchTab />,
-            },
-            {
               key: "categories",
               label: (
                 <Space size={8}>
@@ -94,16 +113,6 @@ export default function OrganizationManagementPage() {
                 </Space>
               ),
               children: <CategoryTab />,
-            },
-            {
-              key: "job-levels",
-              label: (
-                <Space size={8}>
-                  <OrderedListOutlined style={{ color: appTheme.colors.info }} />
-                  <span>Cấp bậc công việc</span>
-                </Space>
-              ),
-              children: <JobLevelTab />,
             },
             {
               key: "job-positions",
@@ -115,10 +124,142 @@ export default function OrganizationManagementPage() {
               ),
               children: <JobPositionTab />,
             },
+            {
+              key: "job-levels",
+              label: (
+                <Space size={8}>
+                  <OrderedListOutlined style={{ color: appTheme.colors.info }} />
+                  <span>Cấp bậc</span>
+                </Space>
+              ),
+              children: <JobLevelTab />,
+            },
+            {
+              key: "branches",
+              label: (
+                <Space size={8}>
+                  <EnvironmentOutlined style={{ color: appTheme.colors.primary }} />
+                  <span>Chi nhánh làm việc</span>
+                </Space>
+              ),
+              children: <BranchTab />,
+            },
+            {
+              key: "criterion-groups",
+              label: (
+                <Space size={8}>
+                  <ApartmentOutlined style={{ color: appTheme.colors.warning }} />
+                  <span>Nhóm tiêu chí</span>
+                </Space>
+              ),
+              children: <CriterionGroupTab />,
+            },
           ]}
         />
       </Card>
     </PageContainer>
+  );
+}
+
+function CriterionGroupTab() {
+  const [items, setItems] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [editingItem, setEditingItem] = useState<any>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [form] = Form.useForm();
+
+  const fetchItems = async () => {
+    setLoading(true);
+    try {
+      const response = await axiosClient.get("/CriterionGroups");
+      setItems(Array.isArray(response.data) ? response.data : response.data?.$values || []);
+    } catch (error) {
+      message.error(getApiErrorMessage(error, "Không tải được nhóm tiêu chí."));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { fetchItems(); }, []);
+  useRealtimeResourceRefresh(["criterion-groups"], fetchItems);
+
+  const openCreate = () => {
+    setEditingItem(null);
+    form.resetFields();
+    form.setFieldsValue({ evaluationMode: "CUSTOM", displayOrder: items.length * 10 + 10 });
+    setIsModalOpen(true);
+  };
+
+  const openEdit = (item: any) => {
+    setEditingItem(item);
+    form.setFieldsValue(item);
+    setIsModalOpen(true);
+  };
+
+  const save = async () => {
+    try {
+      const values = await form.validateFields();
+      setSaving(true);
+      if (editingItem) await axiosClient.put(`/CriterionGroups/${editingItem.id}`, values);
+      else await axiosClient.post("/CriterionGroups", values);
+      message.success(editingItem ? "Đã cập nhật nhóm tiêu chí." : "Đã thêm nhóm tiêu chí.");
+      setIsModalOpen(false);
+      await fetchItems();
+    } catch (error: any) {
+      if (error?.errorFields) return;
+      message.error(getApiErrorMessage(error));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const toggleStatus = async (item: any) => {
+    try {
+      await axiosClient.put(`/CriterionGroups/${item.id}/toggle-status`);
+      message.success(item.isActive ? "Đã ẩn nhóm tiêu chí." : "Đã kích hoạt nhóm tiêu chí.");
+      await fetchItems();
+    } catch (error) {
+      message.error(getApiErrorMessage(error));
+    }
+  };
+
+  const modeLabels: Record<string, string> = {
+    SKILL: "Kỹ năng", TOTAL_EXPERIENCE: "Tổng kinh nghiệm",
+    SKILL_EXPERIENCE: "Kinh nghiệm theo kỹ năng", EDUCATION: "Học vấn",
+    CERTIFICATION: "Chứng chỉ", LANGUAGE: "Ngoại ngữ",
+    LOCATION_WORK_MODE: "Địa điểm / hình thức làm việc", CUSTOM: "Đánh giá theo bằng chứng",
+  };
+
+  return (
+    <>
+      <Space style={{ width: "100%", justifyContent: "flex-end", marginBottom: 16 }}>
+        <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>Thêm nhóm tiêu chí</Button>
+      </Space>
+      <Table scroll={{ x: "max-content" }}
+        rowKey="id"
+        loading={loading}
+        dataSource={items}
+        pagination={false}
+        columns={[
+          { title: "Tên nhóm", dataIndex: "name" },
+          { title: "Cách hệ thống đánh giá", dataIndex: "evaluationMode", render: (value) => modeLabels[value] || value },
+          { title: "Mô tả", dataIndex: "description", render: (value) => value || "—" },
+          { title: "Trạng thái", dataIndex: "isActive", render: (value) => <Tag color={value ? "success" : "default"}>{value ? "Đang dùng" : "Đã ẩn"}</Tag> },
+          { title: "Thao tác", render: (_, item: any) => <Space><Button icon={<EditOutlined />} onClick={() => openEdit(item)}>Sửa</Button><Button onClick={() => toggleStatus(item)}>{item.isActive ? "Ẩn" : "Kích hoạt"}</Button></Space> },
+        ]}
+      />
+      <Modal title={editingItem ? "Sửa nhóm tiêu chí" : "Thêm nhóm tiêu chí"} open={isModalOpen} onOk={save} confirmLoading={saving} onCancel={() => setIsModalOpen(false)} okText="Lưu" cancelText="Hủy">
+        <Form form={form} layout="vertical">
+          <Form.Item name="name" label="Tên nhóm" rules={[{ required: true, whitespace: true, message: "Nhập tên nhóm tiêu chí" }]}><Input placeholder="Ví dụ: Kinh nghiệm quản lý dự án" /></Form.Item>
+          <Form.Item name="evaluationMode" label="Cách hệ thống đánh giá" rules={[{ required: true }]}>
+            <Select options={Object.entries(modeLabels).map(([value, label]) => ({ value, label }))} />
+          </Form.Item>
+          <Form.Item name="description" label="Mô tả cho HR"><Input.TextArea rows={3} placeholder="Giải thích khi nào nên chọn nhóm này" /></Form.Item>
+          <Form.Item name="displayOrder" label="Thứ tự hiển thị"><InputNumber min={0} style={{ width: "100%" }} /></Form.Item>
+        </Form>
+      </Modal>
+    </>
   );
 }
 
@@ -152,6 +293,7 @@ function BranchTab() {
   useEffect(() => {
     fetchBranches();
   }, []);
+  useRealtimeResourceRefresh(["branches"], fetchBranches);
 
   const isFiltered = searchText.trim() !== "" || statusFilter !== "all" || sortBy !== "name-asc";
 
@@ -207,8 +349,7 @@ function BranchTab() {
       setIsModalOpen(false);
       fetchBranches();
     } catch (err: any) {
-      const errMsg = err?.response?.data?.message || err?.message || "Thao tác thất bại!";
-      message.error(errMsg);
+      message.error(getApiErrorMessage(err));
     } finally {
       setSaving(false);
     }
@@ -220,7 +361,7 @@ function BranchTab() {
       message.success("Cập nhật trạng thái Chi nhánh thành công");
       fetchBranches();
     } catch (err) {
-      message.error("Lỗi khi thay đổi trạng thái!");
+      message.error(getApiErrorMessage(err, "Lỗi khi thay đổi trạng thái chi nhánh!"));
     }
   };
 
@@ -262,11 +403,11 @@ function BranchTab() {
       onFilter: (value: any, record: any) => record.isActive === value,
       render: (isActive: boolean) =>
         isActive ? (
-          <Tag color="success" style={{ borderRadius: 6, fontWeight: 700, padding: "2px 10px" }}>
+          <Tag color="success" style={{ borderRadius: 8, fontWeight: 700, padding: "2px 10px" }}>
             Hoạt động
           </Tag>
         ) : (
-          <Tag color="error" style={{ borderRadius: 6, fontWeight: 600, padding: "2px 10px" }}>
+          <Tag color="error" style={{ borderRadius: 8, fontWeight: 600, padding: "2px 10px" }}>
             Đã khóa
           </Tag>
         ),
@@ -388,7 +529,7 @@ function BranchTab() {
         </Col>
       </Row>
 
-      <Table
+      <Table scroll={{ x: "max-content" }}
         dataSource={filteredBranches.map((b) => ({ ...b, key: b.id }))}
         columns={columns}
         loading={loading}
@@ -450,6 +591,7 @@ function CategoryTab() {
   useEffect(() => {
     fetchCategories();
   }, []);
+  useRealtimeResourceRefresh(["categories"], fetchCategories);
 
   const categoryMap = useMemo(() => {
     const map = new Map<string, string>();
@@ -546,8 +688,7 @@ function CategoryTab() {
       setIsModalOpen(false);
       fetchCategories();
     } catch (err: any) {
-      const errMsg = err?.response?.data?.message || err?.message || "Thao tác thất bại!";
-      message.error(errMsg);
+      message.error(getApiErrorMessage(err));
     } finally {
       setSaving(false);
     }
@@ -559,7 +700,7 @@ function CategoryTab() {
       message.success("Cập nhật trạng thái Lĩnh vực thành công");
       fetchCategories();
     } catch (err) {
-      message.error("Lỗi khi thay đổi trạng thái!");
+      message.error(getApiErrorMessage(err, "Lỗi khi thay đổi trạng thái lĩnh vực!"));
     }
   };
 
@@ -591,11 +732,11 @@ function CategoryTab() {
       ),
     },
     {
-      title: "Danh mục Cha",
+      title: "Thuộc lĩnh vực lớn",
       dataIndex: "parentId",
       key: "parentId",
       render: (parentId: string | null) => {
-        if (!parentId) return <Tag color="blue">Danh mục gốc</Tag>;
+        if (!parentId) return <Tag color="blue">Lĩnh vực cấp cao nhất</Tag>;
         const parentName = categoryMap.get(parentId);
         return parentName ? <Tag color="default">{parentName}</Tag> : <Text type="secondary">—</Text>;
       },
@@ -612,11 +753,11 @@ function CategoryTab() {
       onFilter: (value: any, record: any) => record.isActive === value,
       render: (isActive: boolean) =>
         isActive ? (
-          <Tag color="success" style={{ borderRadius: 6, fontWeight: 700, padding: "2px 10px" }}>
+          <Tag color="success" style={{ borderRadius: 8, fontWeight: 700, padding: "2px 10px" }}>
             Hoạt động
           </Tag>
         ) : (
-          <Tag color="error" style={{ borderRadius: 6, fontWeight: 600, padding: "2px 10px" }}>
+          <Tag color="error" style={{ borderRadius: 8, fontWeight: 600, padding: "2px 10px" }}>
             Đã khóa
           </Tag>
         ),
@@ -767,7 +908,7 @@ function CategoryTab() {
         </Col>
       </Row>
 
-      <Table
+      <Table scroll={{ x: "max-content" }}
         dataSource={filteredCategories.map((c) => ({ ...c, key: c.id }))}
         columns={columns}
         loading={loading}
@@ -793,12 +934,16 @@ function CategoryTab() {
             <Input placeholder="Ví dụ: Công nghệ thông tin, Marketing, Tài chính..." />
           </Form.Item>
 
-          <Form.Item name="parentId" label="Danh mục Cha (Để trống nếu là Danh mục gốc)">
+          <Form.Item
+            name="parentId"
+            label="Thuộc lĩnh vực lớn (không bắt buộc)"
+            extra="Để trống nếu đây là lĩnh vực cấp cao nhất, ví dụ: Công nghệ thông tin."
+          >
             <TreeSelect
               showSearch
               style={{ width: "100%" }}
               dropdownStyle={{ maxHeight: 400, overflow: "auto" }}
-              placeholder="Chọn danh mục cha (Không bắt buộc)"
+              placeholder="Chọn lĩnh vực lớn nếu đây là lĩnh vực con"
               allowClear
               treeDefaultExpandAll
               treeData={treeSelectData}
@@ -840,6 +985,7 @@ function JobLevelTab() {
   useEffect(() => {
     fetchLevels();
   }, []);
+  useRealtimeResourceRefresh(["job-levels"], fetchLevels);
 
   const levelMap = useMemo(() => {
     const map = new Map<string, string>();
@@ -910,8 +1056,7 @@ function JobLevelTab() {
       setIsModalOpen(false);
       fetchLevels();
     } catch (err: any) {
-      const errMsg = err?.response?.data?.message || err?.message || "Thao tác thất bại!";
-      message.error(errMsg);
+      message.error(getApiErrorMessage(err));
     } finally {
       setSaving(false);
     }
@@ -923,7 +1068,7 @@ function JobLevelTab() {
       message.success("Cập nhật trạng thái Cấp bậc thành công");
       fetchLevels();
     } catch (err) {
-      message.error("Lỗi khi thay đổi trạng thái!");
+      message.error(getApiErrorMessage(err, "Lỗi khi thay đổi trạng thái cấp bậc!"));
     }
   };
 
@@ -955,11 +1100,11 @@ function JobLevelTab() {
       ),
     },
     {
-      title: "Nhóm Cấp bậc Cha",
+      title: "Thuộc nhóm cấp bậc",
       dataIndex: "parentId",
       key: "parentId",
       render: (parentId: string | null) => {
-        if (!parentId) return <Tag color="blue">Cấp bậc chuẩn</Tag>;
+        if (!parentId) return <Tag color="blue">Cấp bậc độc lập</Tag>;
         const parentName = levelMap.get(parentId);
         return parentName ? <Tag color="default">{parentName}</Tag> : <Text type="secondary">—</Text>;
       },
@@ -976,11 +1121,11 @@ function JobLevelTab() {
       onFilter: (value: any, record: any) => record.isActive === value,
       render: (isActive: boolean) =>
         isActive ? (
-          <Tag color="success" style={{ borderRadius: 6, fontWeight: 700, padding: "2px 10px" }}>
+          <Tag color="success" style={{ borderRadius: 8, fontWeight: 700, padding: "2px 10px" }}>
             Hoạt động
           </Tag>
         ) : (
-          <Tag color="error" style={{ borderRadius: 6, fontWeight: 600, padding: "2px 10px" }}>
+          <Tag color="error" style={{ borderRadius: 8, fontWeight: 600, padding: "2px 10px" }}>
             Đã khóa
           </Tag>
         ),
@@ -1102,7 +1247,7 @@ function JobLevelTab() {
         </Col>
       </Row>
 
-      <Table
+      <Table scroll={{ x: "max-content" }}
         dataSource={filteredLevels.map((l) => ({ ...l, key: l.id }))}
         columns={columns}
         loading={loading}
@@ -1128,10 +1273,14 @@ function JobLevelTab() {
             <Input placeholder="Ví dụ: Intern, Junior, Middle, Senior, Lead/Manager..." />
           </Form.Item>
 
-          <Form.Item name="parentId" label="Nhóm Cấp bậc Cha (Không bắt buộc)">
+          <Form.Item
+            name="parentId"
+            label="Thuộc nhóm cấp bậc (không bắt buộc)"
+            extra="Để trống nếu cấp bậc này không nằm trong một nhóm lớn hơn."
+          >
             <Select
               allowClear
-              placeholder="Chọn nhóm cấp bậc cha"
+              placeholder="Chọn nhóm cấp bậc nếu cần"
               options={levels
                 .filter((l) => !editingItem || l.id !== editingItem.id)
                 .map((l) => ({ value: l.id, label: l.name }))}
@@ -1178,6 +1327,7 @@ function JobPositionTab() {
   useEffect(() => {
     fetchData();
   }, []);
+  useRealtimeResourceRefresh(["job-positions", "categories"], fetchData);
 
   const isFiltered = searchText.trim() !== "" || selectedCategoryId !== "all" || statusFilter !== "all" || sortBy !== "name-asc";
 
@@ -1246,8 +1396,7 @@ function JobPositionTab() {
       setIsModalOpen(false);
       fetchData();
     } catch (err: any) {
-      const errMsg = err?.response?.data?.message || err?.message || "Thao tác thất bại!";
-      message.error(errMsg);
+      message.error(getApiErrorMessage(err));
     } finally {
       setSaving(false);
     }
@@ -1259,7 +1408,7 @@ function JobPositionTab() {
       message.success("Cập nhật trạng thái Vị trí thành công");
       fetchData();
     } catch (err) {
-      message.error("Lỗi khi thay đổi trạng thái!");
+      message.error(getApiErrorMessage(err, "Lỗi khi thay đổi trạng thái vị trí công việc!"));
     }
   };
 
@@ -1310,11 +1459,11 @@ function JobPositionTab() {
       onFilter: (value: any, record: any) => record.isActive === value,
       render: (isActive: boolean) =>
         isActive ? (
-          <Tag color="success" style={{ borderRadius: 6, fontWeight: 700, padding: "2px 10px" }}>
+          <Tag color="success" style={{ borderRadius: 8, fontWeight: 700, padding: "2px 10px" }}>
             Hoạt động
           </Tag>
         ) : (
-          <Tag color="error" style={{ borderRadius: 6, fontWeight: 600, padding: "2px 10px" }}>
+          <Tag color="error" style={{ borderRadius: 8, fontWeight: 600, padding: "2px 10px" }}>
             Đã khóa
           </Tag>
         ),
@@ -1450,7 +1599,7 @@ function JobPositionTab() {
         </Col>
       </Row>
 
-      <Table
+      <Table scroll={{ x: "max-content" }}
         dataSource={filteredPositions.map((p) => ({ ...p, key: p.id }))}
         columns={columns}
         loading={loading}

@@ -1,5 +1,5 @@
 import React from "react";
-import { Card, Typography, Progress, Divider, Table } from "antd";
+import { Card, Typography, Progress, Divider, Table, Tag } from "antd";
 import type { CriteriaResultDto } from "../../services/recruitmentService";
 
 const { Text, Title } = Typography;
@@ -262,11 +262,11 @@ export const AiReportCard: React.FC<AiReportCardProps> = ({
         </div>
       </div>
 
-      {/* Questions Block */}
+      {/* Topics that should be clarified or reviewed */}
       {questions.length > 0 && (
         <div style={{ marginBottom: 20 }}>
           <Text strong style={{ display: "block", marginBottom: 8, color: "#F59E0B", fontSize: 13 }}>
-            Gợi ý câu hỏi phỏng vấn:
+            Nội dung cần làm rõ:
           </Text>
           <ul style={{ paddingLeft: 16, margin: 0, fontSize: 13, color: "#475569" }}>
             {questions.map((q: string, idx: number) => (
@@ -282,29 +282,79 @@ export const AiReportCard: React.FC<AiReportCardProps> = ({
           <Text strong style={{ display: "block", marginBottom: 8, color: "#0F172A", fontSize: 13 }}>
             Điểm số theo tiêu chí:
           </Text>
-          <Table
+          <Table scroll={{ x: "max-content" }}
             dataSource={criteriaResults}
             rowKey={(record: any) => record.criterionName || record.criterion_name}
             pagination={false}
             size="small"
             bordered
+            expandable={{
+              rowExpandable: (record: any) => Boolean(
+                record.comment || record.evidenceText || record.evidence_text ||
+                record.extractedValue || record.extracted_value
+              ),
+              expandedRowRender: (record: any) => {
+                const evidence = record.evidenceText || record.evidence_text;
+                const extractedValue = record.extractedValue || record.extracted_value;
+                const needsVerification = record.needsVerification ?? record.needs_verification;
+                return (
+                  <div style={{ display: "grid", gap: 6, fontSize: 13 }}>
+                    {record.comment ? <div><Text strong>Nhận xét: </Text>{record.comment}</div> : null}
+                    {evidence ? (
+                      <div><Text strong>Bằng chứng trong CV: </Text>“{evidence}”</div>
+                    ) : (
+                      <div><Text type="secondary">Chưa tìm thấy đoạn bằng chứng trực tiếp trong CV.</Text></div>
+                    )}
+                    {extractedValue ? <div><Text strong>Giá trị trích xuất: </Text>{extractedValue}</div> : null}
+                    {needsVerification ? (
+                      <div><Tag color="gold">Cần HR xác minh</Tag></div>
+                    ) : null}
+                  </div>
+                );
+              },
+            }}
             columns={[
               {
                 title: "Tiêu chí",
                 key: "criterionName",
-                width: "60%",
+                width: "42%",
                 render: (_: any, record: any) =>
                   record.criterionName || record.criterion_name || "Chưa rõ",
               },
               {
+                title: "Mức đáp ứng",
+                key: "matchLevel",
+                width: "24%",
+                render: (_: any, record: any) => {
+                  const level = record.matchLevel || record.match_level;
+                  const labels: Record<string, { text: string; color: string }> = {
+                    FULL: { text: "Đáp ứng", color: "green" },
+                    PARTIAL: { text: "Một phần", color: "blue" },
+                    NOT_FOUND: { text: "Chưa tìm thấy", color: "orange" },
+                    INSUFFICIENT_DATA: { text: "Thiếu dữ liệu", color: "default" },
+                  };
+                  const current = labels[level] || labels.INSUFFICIENT_DATA;
+                  return <Tag color={current.color}>{current.text}</Tag>;
+                },
+              },
+              {
                 title: "Điểm số",
                 key: "score",
-                width: "40%",
+                width: "18%",
                 render: (_: any, record: any) => (
                   <Text strong>
                     {record.score || 0}/{record.maxScore || record.max_score || 0}
                   </Text>
                 ),
+              },
+              {
+                title: "Tin cậy",
+                key: "confidence",
+                width: "16%",
+                render: (_: any, record: any) =>
+                  typeof record.confidence === "number"
+                    ? `${Math.round(record.confidence * 100)}%`
+                    : "Chưa rõ",
               },
             ]}
           />

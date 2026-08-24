@@ -1,12 +1,15 @@
 import React, { useEffect, useState, useRef } from "react";
 import { Typography, Button, Tag, Space, Row, Col, Card, Progress, message } from "antd";
-import { ArrowLeftOutlined, SendOutlined, RedoOutlined, AlertOutlined } from "@ant-design/icons";
+import { ArrowLeftOutlined, SendOutlined, AlertOutlined } from "@ant-design/icons";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import axiosClient from "../../../../services/axiosClient";
-import CvAiPreviewModal from "../../../../components/candidate/CvAiPreviewModal";
+import { cvBuilderService } from "../../services/cvBuilderService";
+import { createCvBuilderPdf } from "../../utils/createCvBuilderPdf";
+import type { BuilderSettings, CvBuilderValues } from "../CvBuilderPage/CvBuilderPage";
 import AiDetailedTabs from "../../../../components/ai-report/AiDetailedTabs";
 import PdfExportUtils from "./components/PdfExportUtils";
 import AiCoreIcon from "../../../../components/common/AiCoreIcon";
+import PageContainer from "../../../../components/common/PageContainer";
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -25,6 +28,10 @@ interface RedFlag {
   type: string;
   title: string;
   description: string;
+  evidence_text?: string;
+  evidence_section?: string;
+  confidence?: number;
+  needs_verification?: boolean;
 }
 
 interface ScoreAnalysis {
@@ -96,7 +103,6 @@ export default function CvAnalysisResultPage() {
   const [meta, setMeta] = useState<any>(null);
   const [submitting, setSubmitting] = useState(false);
   const [cvFile, setCvFile] = useState<File | null>(null);
-  const [isReanalyzeModalOpen, setIsReanalyzeModalOpen] = useState(false);
   const hasTriggeredRef = useRef(false);
 
   // Tải thông tin ứng viên từ localStorage đăng nhập an toàn
@@ -132,6 +138,8 @@ export default function CvAnalysisResultPage() {
   const locationCompanyName = location.state?.companyName || "AI Recruitment";
   const locationJobDescription = location.state?.jobDescription || "";
   const triggerAnalysis = location.state?.triggerAnalysis;
+  const structuredCvText = location.state?.structuredCvText || "";
+  const cvBuilderDocumentId = location.state?.cvBuilderDocumentId as string | undefined;
 
   const runPageAnalysis = async () => {
     if (!locationFile) return;
@@ -144,6 +152,7 @@ export default function CvAnalysisResultPage() {
       formData.append("job_description", locationJobDescription || "");
       formData.append("job_title", locationJobTitle || "");
       formData.append("company_name", locationCompanyName || "AI Recruitment");
+      if (structuredCvText) formData.append("cv_text", structuredCvText);
 
       const response = await fetch(getAiApiUrl("/analyze-cv-preview"), {
         method: "POST",
@@ -401,7 +410,7 @@ export default function CvAnalysisResultPage() {
     if (key === "2") {
       setTipsLoading(true);
       try {
-        const res = await fetch("http://127.0.0.1:8000/analyze-cv-star", {
+        const res = await fetch(getAiApiUrl("/analyze-cv-star"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
@@ -426,7 +435,7 @@ export default function CvAnalysisResultPage() {
     } else if (key === "3") {
       setLangLoading(true);
       try {
-        const res = await fetch("http://127.0.0.1:8000/analyze-cv-language", {
+        const res = await fetch(getAiApiUrl("/analyze-cv-language"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
@@ -451,7 +460,7 @@ export default function CvAnalysisResultPage() {
     } else if (key === "4") {
       setInterviewLoading(true);
       try {
-        const res = await fetch("http://127.0.0.1:8000/analyze-cv-interview", {
+        const res = await fetch(getAiApiUrl("/analyze-cv-interview"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
@@ -469,7 +478,7 @@ export default function CvAnalysisResultPage() {
           });
         }
       } catch (e) {
-        message.error("Lỗi kết nối khi tải bộ câu hỏi phỏng vấn.");
+        message.error("Lỗi kết nối khi tải lộ trình ôn tập.");
       } finally {
         setInterviewLoading(false);
       }
@@ -482,9 +491,15 @@ export default function CvAnalysisResultPage() {
     try {
       const formData = new FormData();
       formData.append("JobId", id);
-      if (cvFile) {
+      if (cvBuilderDocumentId) {
+        formData.append("CvBuilderDocumentId", cvBuilderDocumentId);
+        const builderDocument = await cvBuilderService.getById<CvBuilderValues, BuilderSettings>(cvBuilderDocumentId);
+        const snapshotFile = await createCvBuilderPdf(builderDocument);
+        formData.append("CvFile", snapshotFile);
+      }
+      if (!cvBuilderDocumentId && cvFile) {
         formData.append("CvFile", cvFile);
-      } else {
+      } else if (!cvBuilderDocumentId) {
         message.error(
           "Không tìm thấy tệp CV trong bộ nhớ tạm. Vui lòng chọn 'Quay lại' để thực hiện lại."
         );
@@ -607,6 +622,13 @@ export default function CvAnalysisResultPage() {
         ? "#f59e0b"
         : "#ef4444";
 
+  const whiteboxScore = typeof (score as any).whitebox_score === "number"
+    ? Math.max(0, Math.min(100, (score as any).whitebox_score))
+    : null;
+  const blackboxScore = typeof (score as any).blackbox_score === "number"
+    ? Math.max(0, Math.min(100, (score as any).blackbox_score))
+    : null;
+
   const getClassificationTag = (cls: string) => {
     if (isInitialLoading) {
       return (
@@ -614,7 +636,7 @@ export default function CvAnalysisResultPage() {
           color="default"
           style={{
             fontWeight: 700,
-            borderRadius: 6,
+            borderRadius: 8,
             fontSize: 14,
             padding: "4px 14px",
             background: "#f1f5f9",
@@ -627,13 +649,36 @@ export default function CvAnalysisResultPage() {
       );
     }
     switch (cls) {
+      case "Không đủ dữ liệu":
+        return (
+          <Tag
+            color="default"
+            style={{
+              fontWeight: 700,
+              borderRadius: 8,
+              fontSize: 14,
+              padding: "4px 14px",
+              background: "#f8fafc",
+              border: "1px solid #cbd5e1",
+              color: "#475569",
+            }}
+          >
+            Không đủ dữ liệu OCR
+          </Tag>
+        );
+      case "AI tạm thời không khả dụng":
+        return (
+          <Tag color="warning" style={{ fontWeight: 700, borderRadius: 8, fontSize: 14, padding: "4px 14px" }}>
+            AI tạm thời không khả dụng
+          </Tag>
+        );
       case "Phù hợp":
         return (
           <Tag
             color="success"
             style={{
               fontWeight: 700,
-              borderRadius: 6,
+              borderRadius: 8,
               fontSize: 14,
               padding: "4px 14px",
               background: "#f0fdf4",
@@ -650,7 +695,7 @@ export default function CvAnalysisResultPage() {
             color="warning"
             style={{
               fontWeight: 700,
-              borderRadius: 6,
+              borderRadius: 8,
               fontSize: 14,
               padding: "4px 14px",
               background: "#fffbeb",
@@ -667,7 +712,7 @@ export default function CvAnalysisResultPage() {
             color="error"
             style={{
               fontWeight: 700,
-              borderRadius: 6,
+              borderRadius: 8,
               fontSize: 14,
               padding: "4px 14px",
               background: "#fef2f2",
@@ -711,7 +756,7 @@ export default function CvAnalysisResultPage() {
         .light-glass-tabs .ant-tabs-ink-bar {
           background: #2563EB !important;
           height: 3px !important;
-          border-radius: 2px !important;
+          border-radius: 8px !important;
         }
         @keyframes spin {
           0% { transform: rotate(0deg); }
@@ -730,22 +775,26 @@ export default function CvAnalysisResultPage() {
       `}</style>
 
       <div style={{ maxWidth: 1300, margin: "0 auto", padding: "0 24px" }}>
-        <div style={{ marginBottom: 24 }}>
-          <Button
-            icon={<ArrowLeftOutlined />}
-            onClick={() => navigate(`/jobs/${id}`)}
-            style={{
-              background: "#FFFFFF",
-              border: "1px solid #E2E8F0",
-              color: "#0F172A",
-              borderRadius: 8,
-              fontWeight: 600,
-              height: 38,
-            }}
-          >
-            Quay lại Tin tuyển dụng
-          </Button>
-        </div>
+        <PageContainer
+          title="Kết quả phân tích CV"
+          subtitle={meta?.jobTitle || locationJobTitle || "Báo cáo đánh giá hồ sơ ứng tuyển bằng AI"}
+          extra={
+            <Button
+              icon={<ArrowLeftOutlined />}
+              onClick={() => navigate(`/jobs/${id}`)}
+              style={{
+                background: "#FFFFFF",
+                border: "1px solid #E2E8F0",
+                color: "#0F172A",
+                borderRadius: 8,
+                fontWeight: 600,
+                height: 38,
+              }}
+            >
+              Quay lại Tin tuyển dụng
+            </Button>
+          }
+        >
 
         <Row gutter={[24, 24]}>
           {/* CỘT TRÁI - Rộng 8/24 */}
@@ -785,9 +834,7 @@ export default function CvAnalysisResultPage() {
 
                   <Text type="secondary">Chuyên ngành</Text>
                   <Text strong style={{ color: "#0f172a" }}>
-                    {analysisData?.candidate_info?.extracted_skills
-                      ? "CN Kỹ thuật / Công nghệ"
-                      : isInitialLoading ? "Đang trích xuất..." : "Chưa xác định"}
+                    {isInitialLoading ? "Đang trích xuất..." : "Chưa xác định"}
                   </Text>
 
                   <Text type="secondary">Vị trí ứng tuyển</Text>
@@ -865,10 +912,10 @@ export default function CvAnalysisResultPage() {
 
                 {isInitialLoading ? (
                   <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 24 }}>
-                    <div style={{ width: "100%", height: 12, background: "#f1f5f9", borderRadius: 4, animation: "pulse 1.5s infinite" }} />
-                    <div style={{ width: "90%", height: 12, background: "#f1f5f9", borderRadius: 4, animation: "pulse 1.5s infinite" }} />
-                    <div style={{ width: "95%", height: 12, background: "#f1f5f9", borderRadius: 4, animation: "pulse 1.5s infinite" }} />
-                    <div style={{ width: "60%", height: 12, background: "#f1f5f9", borderRadius: 4, animation: "pulse 1.5s infinite" }} />
+                    <div style={{ width: "100%", height: 12, background: "#f1f5f9", borderRadius: 8, animation: "pulse 1.5s infinite" }} />
+                    <div style={{ width: "90%", height: 12, background: "#f1f5f9", borderRadius: 8, animation: "pulse 1.5s infinite" }} />
+                    <div style={{ width: "95%", height: 12, background: "#f1f5f9", borderRadius: 8, animation: "pulse 1.5s infinite" }} />
+                    <div style={{ width: "60%", height: 12, background: "#f1f5f9", borderRadius: 8, animation: "pulse 1.5s infinite" }} />
                   </div>
                 ) : (
                   <Paragraph
@@ -887,35 +934,47 @@ export default function CvAnalysisResultPage() {
 
                 {!isInitialLoading && (
                   <div style={{ marginTop: 24, textAlign: "left", background: "#f8fafc", padding: 16, borderRadius: 12, border: "1px solid #e2e8f0" }}>
-                    <Text strong style={{ display: "block", fontSize: 13, color: "#0F172A", marginBottom: 12 }}>
-                      Mô hình Đánh giá Kết hợp (Whitebox & Blackbox)
+                    <Text strong style={{ display: "block", fontSize: 13, color: "#0F172A", marginBottom: 4 }}>
+                      Cách hệ thống đánh giá CV
                     </Text>
-                    
-                    {/* Whitebox Score Component */}
+                    <Text type="secondary" style={{ display: "block", fontSize: 11.5, lineHeight: 1.5, marginBottom: 14 }}>
+                      Điểm tổng thể được AI tổng hợp từ mức độ khớp nội dung và mức độ phù hợp theo ngữ cảnh.
+                    </Text>
+
                     <div style={{ marginBottom: 12 }}>
                       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
                         <Text type="secondary" style={{ fontSize: 12 }}>
-                          Whitebox (Kỹ năng & Kinh nghiệm đối sánh)
+                          Đối chiếu từ khóa, kỹ năng và kinh nghiệm
                         </Text>
                         <Text strong style={{ fontSize: 12, color: "#16a34a" }}>
-                          {Math.round((score.total_score ?? 0) * 0.45)}%
+                          {whiteboxScore === null ? "Chưa có dữ liệu" : `${Math.round(whiteboxScore)}%`}
                         </Text>
                       </div>
-                      <Progress percent={Math.round((score.total_score ?? 0) * 0.45)} size="small" strokeColor="#16a34a" showInfo={false} />
+                      {whiteboxScore !== null && <Progress percent={whiteboxScore} size="small" strokeColor="#16a34a" showInfo={false} />}
                     </div>
 
-                    {/* Blackbox Score Component */}
                     <div>
                       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
                         <Text type="secondary" style={{ fontSize: 12 }}>
-                          Blackbox (Độ tương hợp ngữ nghĩa sâu AI)
+                          Phân tích mức độ phù hợp theo ngữ cảnh
                         </Text>
                         <Text strong style={{ fontSize: 12, color: "#2563eb" }}>
-                          {Math.round((score.total_score ?? 0) * 0.55)}%
+                          {blackboxScore === null ? "Chưa có dữ liệu" : `${Math.round(blackboxScore)}%`}
                         </Text>
                       </div>
-                      <Progress percent={Math.round((score.total_score ?? 0) * 0.55)} size="small" strokeColor="#2563eb" showInfo={false} />
+                      {blackboxScore !== null && <Progress percent={blackboxScore} size="small" strokeColor="#2563eb" showInfo={false} />}
                     </div>
+
+                    <details style={{ marginTop: 14, borderTop: "1px solid #E2E8F0", paddingTop: 10 }}>
+                      <summary style={{ cursor: "pointer", color: "#2563EB", fontSize: 11.5, fontWeight: 650 }}>
+                        Giải thích phương pháp tính
+                      </summary>
+                      <div style={{ color: "#64748B", fontSize: 11.5, lineHeight: 1.55, marginTop: 8 }}>
+                        <div><strong>Đối chiếu có thể giải thích (Whitebox):</strong> dùng TF-IDF và độ tương đồng Cosine để đo mức độ trùng khớp từ khóa.</div>
+                        <div style={{ marginTop: 5 }}><strong>Phân tích ngữ cảnh (Blackbox):</strong> dùng Gemini để xem xét ý nghĩa của kỹ năng và kinh nghiệm trong toàn bộ CV.</div>
+                        <div style={{ marginTop: 5 }}>Hai chỉ số là tín hiệu tham khảo; điểm tổng thể không phải phép cộng trực tiếp của hai tỷ lệ.</div>
+                      </div>
+                    </details>
                   </div>
                 )}
               </Card>
@@ -927,6 +986,7 @@ export default function CvAnalysisResultPage() {
             <Card style={glassCardStyle(0)} bodyStyle={{ padding: "24px 32px" }} bordered={false}>
               <AiDetailedTabs
                 parsedAnalysis={analysisData}
+                extractedSkills={cvSkills}
                 onChange={handleTabChange}
                 tipsLoading={tipsLoading}
                 langLoading={langLoading}
@@ -976,36 +1036,11 @@ export default function CvAnalysisResultPage() {
             candidateName={candidateName}
             onUpdateAnalysisData={handleUpdateAnalysisData}
           />
-          <Button
-            size="large"
-            icon={<RedoOutlined />}
-            onClick={() => setIsReanalyzeModalOpen(true)}
-            style={{
-              background: "#FFFFFF",
-              border: "1px solid #D9D9D9",
-              color: "#434343",
-              borderRadius: 8,
-              height: 46,
-              paddingInline: 28,
-              fontWeight: 600,
-            }}
-          >
-            Phân tích lại
-          </Button>
         </div>
         )}
+        </PageContainer>
       </div>
 
-      {meta && (
-        <CvAiPreviewModal
-          open={isReanalyzeModalOpen}
-          onClose={() => setIsReanalyzeModalOpen(false)}
-          jobId={id || ""}
-          jobTitle={meta.jobTitle || ""}
-          jobDescription={meta.jobDescription || meta.analysisData?.jobDescription || ""}
-          companyName={meta.companyName || "AI Recruitment"}
-        />
-      )}
     </div>
   );
 }

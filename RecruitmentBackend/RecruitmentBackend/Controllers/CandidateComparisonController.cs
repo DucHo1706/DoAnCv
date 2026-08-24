@@ -23,7 +23,10 @@ namespace RecruitmentBackend.Controllers
             string jobId,
             [FromQuery] string? sortBy,
             [FromQuery] string? criterionName,
-            [FromQuery] string? search
+            [FromQuery] string? search,
+            [FromQuery] string? skill,
+            [FromQuery] decimal? minScore,
+            [FromQuery] double? minYearsOfExperience
         )
         {
             var result = await _candidateComparisonService.GetCandidateRankingsAsync(
@@ -31,6 +34,9 @@ namespace RecruitmentBackend.Controllers
                 sortBy,
                 criterionName,
                 search,
+                skill,
+                minScore,
+                minYearsOfExperience,
                 User
             );
 

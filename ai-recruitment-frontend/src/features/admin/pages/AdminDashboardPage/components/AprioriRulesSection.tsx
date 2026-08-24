@@ -49,14 +49,14 @@ export default function AprioriRulesSection() {
         <Space size={8}>
           <Text strong>Khi có kỹ năng:</Text>
           {record.antecedent.map((skill: string) => (
-            <Tag color="blue" key={skill} style={{ fontSize: 13, padding: "2px 8px", borderRadius: 4 }}>
+            <Tag color="blue" key={skill} style={{ fontSize: 13, padding: "2px 8px", borderRadius: 8 }}>
               {skill}
             </Tag>
           ))}
           <Text type="secondary" strong>→</Text>
           <Text strong style={{ color: "#16a34a" }}>Gợi ý kỹ năng đi kèm:</Text>
           {record.consequent.map((skill: string) => (
-            <Tag color="success" key={skill} style={{ fontSize: 13, padding: "2px 8px", borderRadius: 4 }}>
+            <Tag color="success" key={skill} style={{ fontSize: 13, padding: "2px 8px", borderRadius: 8 }}>
               {skill}
             </Tag>
           ))}
@@ -113,7 +113,7 @@ export default function AprioriRulesSection() {
       }}
       title={
         <Space size={12}>
-          <RobotOutlined style={{ color: "#722ed1", fontSize: 22 }} />
+          <RobotOutlined style={{ color: "#F97316", fontSize: 22 }} />
           <Title level={4} style={{ margin: 0, fontSize: 18 }}>
             Tương quan Kỹ năng & Gợi ý Bổ trợ
           </Title>
@@ -131,7 +131,7 @@ export default function AprioriRulesSection() {
           </Button>
           <Button
             type="primary"
-            style={{ background: "#722ed1", borderColor: "#722ed1" }}
+            style={{ background: "#F97316", borderColor: "#F97316" }}
             loading={training}
             onClick={handleTrain}
           >
@@ -144,7 +144,7 @@ export default function AprioriRulesSection() {
         Gợi ý kỹ năng thường đi kèm nhau dựa trên dữ liệu hồ sơ ứng viên thực tế.
       </Paragraph>
 
-      <Table
+      <Table scroll={{ x: "max-content" }}
         loading={loading}
         dataSource={rules}
         columns={columns}

@@ -1,0 +1,24 @@
+{
+  "schema_version": 3,
+  "dataset_kind": "synthetic_offline_benchmark",
+  "notice": "Dữ liệu hư cấu chỉ dùng để kiểm thử độ bao phủ và tính nhất quán của thuật toán; không đại diện cho phân bố thị trường lao động.",
+  "reference_date": "2026-08-21",
+  "generated_on": "2026-08-22",
+  "domain_count": 8,
+  "position_count": 54,
+  "level_count": 3,
+  "job_count": 162,
+  "cv_count": 1170,
+  "pair_count": 3510,
+  "scenario_count": 3,
+  "case_type_count": 5,
+  "case_counts": {
+    "strong_documented": 234,
+    "preferred_skill_gap": 234,
+    "experience_below_requirement": 234,
+    "transferable_education": 234,
+    "language_needs_verification": 234
+  },
+  "min_distinct_candidates_per_job": 15,
+  "max_distinct_candidates_per_job": 40
+}

@@ -27,14 +27,28 @@ namespace RecruitmentBackend.Services
             return _applicationService.ApplyJobAsync(request, user);
         }
 
-        public Task<(bool IsSuccess, string Message, object Data)> GetHrApplicationsAsync(ClaimsPrincipal user)
+        public Task<(bool IsSuccess, string Message, object Data)> GetHrApplicationsAsync(
+            ClaimsPrincipal user,
+            bool includeAiDetails = true,
+            string? applicationId = null,
+            string? jobId = null)
         {
-            return _applicationService.GetHrApplicationsAsync(user);
+            return _applicationService.GetHrApplicationsAsync(user, includeAiDetails, applicationId, jobId);
         }
 
         public Task<(bool IsSuccess, string Message, object Data)> GetMyApplicationsAsync(ClaimsPrincipal user)
         {
             return _applicationService.GetMyApplicationsAsync(user);
+        }
+
+        public Task<(bool IsSuccess, string Message, object Data)> RetryAiEvaluationAsync(string applicationId, ClaimsPrincipal user)
+        {
+            return _applicationService.RetryAiEvaluationAsync(applicationId, user);
+        }
+
+        public Task<(bool IsSuccess, string Message, object Data)> WithdrawApplicationAsync(string applicationId, ClaimsPrincipal user)
+        {
+            return _applicationService.WithdrawApplicationAsync(applicationId, user);
         }
 
         public Task<(bool IsSuccess, string Message, object Data)> UpdateApplicationStatusAsync(
@@ -56,11 +70,6 @@ namespace RecruitmentBackend.Services
             ClaimsPrincipal user)
         {
             return _applicationService.RejectApplicationAsync(applicationId, request, user);
-        }
-
-        public Task<(bool IsSuccess, string Message, object Data)> ReEvaluateApplicationAsync(string applicationId, ClaimsPrincipal user)
-        {
-            return _aiEvaluationService.ReEvaluateApplicationAsync(applicationId, user);
         }
 
         public Task<(bool IsSuccess, string Message, object Data)> ScheduleInterviewAsync(

@@ -4,6 +4,7 @@ using RecruitmentBackend.DTOs.Requests;
 using RecruitmentBackend.Interfaces;
 using RecruitmentBackend.Data;
 using RecruitmentBackend.Models;
+using RecruitmentBackend.Services;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using System.Linq;
@@ -17,16 +18,23 @@ namespace RecruitmentBackend.Controllers
         private readonly IJobService _jobService;
         private readonly IAuditLogService _auditLogService;
         private readonly AppDbContext _context;
+        private readonly IMetadataChangeNotifier _changeNotifier;
 
-        public JobsController(IJobService jobService, IAuditLogService auditLogService, AppDbContext context)
+        public JobsController(
+            IJobService jobService,
+            IAuditLogService auditLogService,
+            AppDbContext context,
+            IMetadataChangeNotifier changeNotifier)
         {
             _jobService = jobService;
             _auditLogService = auditLogService;
             _context = context;
+            _changeNotifier = changeNotifier;
         }
 
         // 1. Lấy danh sách toàn bộ Job
         [HttpGet]
+        [Authorize(Roles = "Recruiter,Admin")]
         public async Task<IActionResult> GetJobs()
         {
             var jobs = await _jobService.GetAllJobsAsync();
@@ -45,12 +53,80 @@ namespace RecruitmentBackend.Controllers
             {
                 var accountId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 var jobId = await _jobService.CreatePendingJobAsync(request, accountId);
+                await _changeNotifier.NotifyAsync("jobs", "created");
                 return Ok(new { message = "Tạo tin tuyển dụng thành công!", id = jobId });
             }
             catch (Exception ex)
             {
                 return BadRequest(new { message = ex.Message });
             }
+        }
+
+        [HttpPut("{id}")]
+        [Authorize(Roles = "Recruiter")]
+        public async Task<IActionResult> UpdateJob(string id, [FromBody] CreateJobRequest request)
+        {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+            var accountId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "";
+            var result = await _jobService.UpdateRecruiterJobAsync(id, request, accountId);
+            if (!result.Success) return BadRequest(new { message = result.Message });
+            await _auditLogService.WriteLogAsync(User.FindFirst(ClaimTypes.Email)?.Value ?? "HR", "Cập nhật tin tuyển dụng", $"Tin tuyển dụng ID: {id}", HttpContext.Connection.RemoteIpAddress?.ToString());
+            await _changeNotifier.NotifyAsync("jobs", "updated");
+            return Ok(new { message = result.Message });
+        }
+
+        [HttpPost("{id}/repost")]
+        [Authorize(Roles = "Recruiter")]
+        public async Task<IActionResult> RepostJob(string id, [FromBody] RepostJobRequest request)
+        {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+
+            string accountId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? string.Empty;
+            var result = await _jobService.RepostJobAsync(id, request, accountId);
+            if (!result.Success)
+            {
+                return BadRequest(new { message = result.Message });
+            }
+
+            await _auditLogService.WriteLogAsync(
+                User.FindFirst(ClaimTypes.Email)?.Value ?? "HR",
+                "Đăng lại tin tuyển dụng",
+                $"Tin nguồn ID: {id}; tin mới ID: {result.JobId}; đợt: {result.RecruitmentRound}",
+                HttpContext.Connection.RemoteIpAddress?.ToString());
+
+            await _changeNotifier.NotifyAsync("jobs", "reposted");
+
+            return Ok(new
+            {
+                message = result.Message,
+                id = result.JobId,
+                recruitmentRound = result.RecruitmentRound
+            });
+        }
+
+        [HttpPut("{id}/archive")]
+        [Authorize(Roles = "Recruiter,Admin")]
+        public async Task<IActionResult> ArchiveJob(string id)
+        {
+            var accountId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "";
+            var isAdmin = User.IsInRole("Admin");
+            var result = await _jobService.ArchiveJobAsync(id, accountId, isAdmin);
+            if (!result.Success) return BadRequest(new { message = result.Message });
+            await _auditLogService.WriteLogAsync(User.FindFirst(ClaimTypes.Email)?.Value ?? "Hệ thống", "Lưu trữ tin tuyển dụng", $"Tin tuyển dụng ID: {id}", HttpContext.Connection.RemoteIpAddress?.ToString());
+            await _changeNotifier.NotifyAsync("jobs", "archived");
+            return Ok(new { message = result.Message });
+        }
+
+        [HttpPut("{id}/restore")]
+        [Authorize(Roles = "Recruiter,Admin")]
+        public async Task<IActionResult> RestoreJob(string id)
+        {
+            var accountId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "";
+            var result = await _jobService.RestoreArchivedJobAsync(id, accountId, User.IsInRole("Admin"));
+            if (!result.Success) return BadRequest(new { message = result.Message });
+            await _auditLogService.WriteLogAsync(User.FindFirst(ClaimTypes.Email)?.Value ?? "Hệ thống", "Khôi phục tin tuyển dụng", $"Tin tuyển dụng ID: {id}", HttpContext.Connection.RemoteIpAddress?.ToString());
+            await _changeNotifier.NotifyAsync("jobs", "restored");
+            return Ok(new { message = result.Message });
         }
 
         // API dành riêng cho HR xem danh sách việc làm của chính mình
@@ -63,11 +139,22 @@ namespace RecruitmentBackend.Controllers
             return Ok(jobs);
         }
 
+        [HttpGet("my-campaigns")]
+        [Authorize(Roles = "Recruiter")]
+        public async Task<IActionResult> GetMyCampaigns()
+        {
+            string accountId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? string.Empty;
+            var campaigns = await _jobService.GetRecruiterCampaignSummariesAsync(accountId);
+            return Ok(campaigns);
+        }
+
         // 3. Lấy chi tiết Job cho Modal "Xem chi tiết" của HR
         [HttpGet("{id}/review")]
+        [Authorize(Roles = "Recruiter,Admin")]
         public async Task<IActionResult> GetJobReview(string id)
         {
-            var reviewResult = await _jobService.ReviewJobAsync(id);
+            var accountId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "";
+            var reviewResult = await _jobService.ReviewJobAsync(id, accountId, User.IsInRole("Admin"));
             if (reviewResult == null) return NotFound("Không tìm thấy công việc");
             return Ok(reviewResult);
         }
@@ -87,6 +174,7 @@ namespace RecruitmentBackend.Controllers
             var adminEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? "Admin";
             var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
             await _auditLogService.WriteLogAsync(adminEmail, "Duyệt tin tuyển dụng", parsedTitle, ipAddress);
+            await _changeNotifier.NotifyAsync("jobs", "approved");
 
             return Ok(new { message = "Đã duyệt bài đăng thành công!" });
         }
@@ -111,6 +199,7 @@ namespace RecruitmentBackend.Controllers
             var adminEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? "Admin";
             var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
             await _auditLogService.WriteLogAsync(adminEmail, "Từ chối tin tuyển dụng", $"{parsedTitle} - Lý do: {request.Reason.Trim()}", ipAddress);
+            await _changeNotifier.NotifyAsync("jobs", "rejected");
 
             return Ok(new { message = "Đã từ chối tin tuyển dụng thành công!" });
         }
@@ -136,6 +225,7 @@ namespace RecruitmentBackend.Controllers
                 $"Đã duyệt {successCount}/{request.JobIds.Count} tin tuyển dụng (thất bại: {failCount})",
                 ipAddress
             );
+            await _changeNotifier.NotifyAsync("jobs", "bulk-approved");
 
             return Ok(new
             {
@@ -159,6 +249,7 @@ namespace RecruitmentBackend.Controllers
             var adminEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? "Admin";
             var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
             await _auditLogService.WriteLogAsync(adminEmail, "Kiểm duyệt: Gắn cờ vi phạm", $"Tin tuyển dụng ID: {id} - Lý do: {reason}", ipAddress);
+            await _changeNotifier.NotifyAsync("jobs", "flagged");
 
             return Ok(new { message = "Đã gắn cờ kiểm duyệt tin tuyển dụng thành công!" });
         }
@@ -174,6 +265,7 @@ namespace RecruitmentBackend.Controllers
             var adminEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? "Admin";
             var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
             await _auditLogService.WriteLogAsync(adminEmail, "Kiểm duyệt: Gỡ cờ vi phạm", $"Tin tuyển dụng ID: {id}", ipAddress);
+            await _changeNotifier.NotifyAsync("jobs", "unflagged");
 
             return Ok(new { message = "Đã gỡ cờ kiểm duyệt tin tuyển dụng!" });
         }
@@ -212,6 +304,7 @@ namespace RecruitmentBackend.Controllers
             var adminEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? "Admin";
             var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
             await _auditLogService.WriteLogAsync(adminEmail, actionText, parsedTitle, ipAddress);
+            await _changeNotifier.NotifyAsync("jobs", "visibility-changed");
 
             return Ok(new { message = "Cập nhật trạng thái thành công!" });
         }
@@ -235,6 +328,7 @@ namespace RecruitmentBackend.Controllers
             var recruiterEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? "HR";
             var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
             await _auditLogService.WriteLogAsync(recruiterEmail, actionText, parsedTitle, ipAddress);
+            await _changeNotifier.NotifyAsync("jobs", "visibility-changed");
 
             return Ok(new { message = "Cập nhật trạng thái thành công!" });
         }

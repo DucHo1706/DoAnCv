@@ -1,5 +1,5 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { Row, Col, Card, Typography, Space, Divider, Button } from "antd";
 import {
   DollarOutlined,
@@ -21,6 +21,7 @@ interface JobDetailContentProps {
   appliedApplication: any;
   showApplyModal: () => void;
   handleApplyWithAI: () => void;
+  handleViewAppliedAiEvaluation: () => void;
   relatedJobs?: any[];
 }
 
@@ -29,9 +30,9 @@ const JobDetailContent: React.FC<JobDetailContentProps> = ({
   appliedApplication,
   showApplyModal,
   handleApplyWithAI,
+  handleViewAppliedAiEvaluation,
   relatedJobs = [],
 }) => {
-  const navigate = useNavigate();
   return (
     <>
       {/* 1. KHU VỰC HERO CARD (TOP) */}
@@ -143,8 +144,7 @@ const JobDetailContent: React.FC<JobDetailContentProps> = ({
                 type={appliedApplication ? "default" : "primary"}
                 size="large"
                 icon={appliedApplication ? <CheckCircleOutlined /> : <SendOutlined />}
-                onClick={appliedApplication ? undefined : showApplyModal}
-                disabled={!!appliedApplication}
+                onClick={appliedApplication ? handleViewAppliedAiEvaluation : showApplyModal}
                 style={{
                   width: 220,
                   height: 44,
@@ -157,7 +157,7 @@ const JobDetailContent: React.FC<JobDetailContentProps> = ({
                   fontFamily: appTheme.font.family,
                 }}
               >
-                {appliedApplication ? "Đã ứng tuyển" : "Ứng tuyển ngay"}
+                {appliedApplication ? "Quản lý hồ sơ đã nộp" : "Ứng tuyển ngay"}
               </Button>
               {!appliedApplication && (
                 <Button
@@ -213,15 +213,6 @@ const JobDetailContent: React.FC<JobDetailContentProps> = ({
             </Title>
             <Paragraph style={{ fontSize: 14, whiteSpace: "pre-line", lineHeight: 1.7, color: appTheme.colors.textSecondary, fontFamily: appTheme.font.family }}>
               {job.requirements || "Đang cập nhật nội dung..."}
-            </Paragraph>
-
-            <Title level={5} style={{ fontSize: 16, marginTop: 24, marginBottom: 12, fontFamily: appTheme.font.family, fontWeight: 600, color: appTheme.colors.textPrimary }}>
-              Quyền lợi
-            </Title>
-            <Paragraph style={{ fontSize: 14, whiteSpace: "pre-line", lineHeight: 1.7, color: appTheme.colors.textSecondary, fontFamily: appTheme.font.family }}>
-              - Môi trường làm việc trẻ trung, năng động, chuyên nghiệp. {"\n"}- Được review lương
-              2 lần/năm. {"\n"}- Lương tháng 13 + thưởng KPI, thưởng dự án theo năng lực. {"\n"}-
-              Trợ cấp ăn trưa, đi lại, team building hàng quý.
             </Paragraph>
 
             <Divider style={{ margin: "32px 0 24px" }} />
@@ -372,17 +363,18 @@ const JobDetailContent: React.FC<JobDetailContentProps> = ({
             >
               <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                 {relatedJobs.map((rJob: any) => (
-                  <div
+                  <Link
                     key={rJob.id}
-                    onClick={() => {
-                      navigate(`/jobs/${rJob.id}`);
-                      window.scrollTo(0, 0);
-                    }}
-                    className="hover-card"
+                    to={`/jobs/${rJob.id}`}
+                    onClick={() => window.scrollTo({ top: 0, behavior: "auto" })}
+                    className="related-job-link"
                     style={{
-                      cursor: "pointer",
-                      paddingBottom: 12,
+                      display: "block",
+                      color: "inherit",
+                      textDecoration: "none",
+                      padding: "10px 12px 12px",
                       borderBottom: "1px solid #f1f5f9",
+                      borderRadius: 8,
                     }}
                   >
                     <Text strong style={{ display: "block", fontSize: 14, color: appTheme.colors.textPrimary, marginBottom: 4 }}>
@@ -392,7 +384,7 @@ const JobDetailContent: React.FC<JobDetailContentProps> = ({
                       <Text type="secondary" style={{ fontSize: 12 }}>{rJob.location}</Text>
                       <Text strong style={{ color: appTheme.colors.primary, fontSize: 13 }}>{rJob.salary}</Text>
                     </div>
-                  </div>
+                  </Link>
                 ))}
               </div>
             </Card>

@@ -55,10 +55,10 @@ export function useApplicationStatus() {
     const startSignalR = async () => {
       try {
         const signalR = await import("@microsoft/signalr");
-        const apiBase = import.meta.env.VITE_API_URL || "https://recruitinsightai.com/api";
+        const apiBase = import.meta.env.VITE_API_URL || "/api";
         const hubUrl = apiBase.replace(/\/api\/?$/, "") + "/hubs/ai-evaluation";
         connection = new signalR.HubConnectionBuilder()
-          .withUrl(hubUrl)
+          .withUrl(hubUrl, { accessTokenFactory: () => localStorage.getItem("token") || "" })
           .withAutomaticReconnect()
           .build();
 
@@ -128,6 +128,31 @@ export function useApplicationStatus() {
     if (!application) return false;
     return application.classification === "AI_ERROR";
   };
+
+  const hasCompleteDetailedAnalysis = (application: any) => {
+    if (application?.aiAnalysisComplete === true) return true;
+    if (!application?.aiReason) return false;
+    try {
+      const value = typeof application.aiReason === "string"
+        ? JSON.parse(application.aiReason.substring(application.aiReason.indexOf("{")))
+        : application.aiReason;
+      return Boolean(
+        Number(value?.analysis_version || 0) >= 4
+        && value?.score_analysis && Array.isArray(value?.criteria_results)
+        && Array.isArray(value?.optimization_tips) && value.optimization_tips.length > 0
+        && value?.language_review && value.language_review.insufficient_data !== true
+        && value.language_review.is_fallback !== true
+        && Array.isArray(value?.mock_interview) && value.mock_interview.length > 0
+      );
+    } catch {
+      return false;
+    }
+  };
+
+  const isAiIncomplete = (application: any) =>
+    Boolean(application?.hasAiEvaluation)
+    && !isAiError(application)
+    && !hasCompleteDetailedAnalysis(application);
 
   const isAiReady = (application: any) => {
     if (!application) return false;
@@ -258,10 +283,10 @@ export function useApplicationStatus() {
     }
     closeProcessingModal();
 
-    processingModalRef.current = Modal.info({
-      title: "AI đang phân tích hồ sơ",
-      centered: true,
-      width: 560,
+processingModalRef.current = Modal.info({
+title: "AI đang phân tích hồ sơ",
+centered: true,
+width: typeof window !== "undefined" && window.innerWidth < 640 ? "92vw" : 560,
       okText: "Đóng",
       onOk: () => {
         clearPollingTimer();
@@ -333,6 +358,51 @@ export function useApplicationStatus() {
     openAiDrawer(record);
   };
 
+  const handleRetryAi = async (record: any) => {
+    const applicationId = getApplicationId(record);
+    if (!applicationId) {
+      message.error("Không tìm thấy mã hồ sơ ứng tuyển.");
+      return;
+    }
+
+    try {
+      await recruitmentService.retryMyApplicationAi(applicationId);
+      const latestApplications = await fetchMyApps(false);
+      const latest = latestApplications.find((item: any) => getApplicationId(item) === applicationId);
+      message.success("Đã bắt đầu phân tích lại. Bạn không cần nộp CV lần nữa.");
+      showAiProcessingModal(latest || { ...record, classification: "Chưa phân loại", hasAiEvaluation: false });
+    } catch (error: any) {
+      message.error(error?.response?.data?.message || "Chưa thể chạy lại phân tích AI lúc này.");
+    }
+  };
+
+  const handleWithdrawApplication = (record: any) => {
+    const applicationId = getApplicationId(record);
+    if (!applicationId) {
+      message.error("Không tìm thấy mã hồ sơ ứng tuyển.");
+      return;
+    }
+
+    Modal.confirm({
+      title: "Rút hồ sơ để nộp lại?",
+      content: "Kết quả AI và snapshot của lần nộp này sẽ bị xóa. CV gốc trong hồ sơ hoặc CV tạo trực tuyến vẫn được giữ nguyên.",
+      okText: "Rút hồ sơ",
+      cancelText: "Giữ hồ sơ",
+      okButtonProps: { danger: true },
+      centered: true,
+      onOk: async () => {
+        try {
+          await recruitmentService.withdrawMyApplication(applicationId);
+          await fetchMyApps(false);
+          message.success("Đã rút hồ sơ. Bạn có thể nộp lại CV cho vị trí này.");
+        } catch (error: any) {
+          message.error(error?.response?.data?.message || "Chưa thể rút hồ sơ lúc này.");
+          throw error;
+        }
+      },
+    });
+  };
+
   useEffect(() => {
     const applicationIdFromUrl = searchParams.get("showAiDetail");
     if (!applicationIdFromUrl) return;
@@ -393,7 +463,10 @@ export function useApplicationStatus() {
     setStatusFilter,
     isAiReady,
     isAiError,
+    isAiIncomplete,
     handleViewDetail,
+    handleRetryAi,
+    handleWithdrawApplication,
     parsed,
   };
 }

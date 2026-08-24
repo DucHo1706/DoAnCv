@@ -20,5 +20,12 @@ namespace RecruitmentBackend.Models
         public string? AvatarUrl { get; set; }
         public string? DefaultCvUrl { get; set; }
         public string? DefaultCvName { get; set; }
+
+        // Quyền để HR tìm kiếm hồ sơ chủ động; mặc định riêng tư.
+        public bool RecruiterDiscoveryEnabled { get; set; } = false;
+        public bool RecruiterContactAllowed { get; set; } = false;
+        public bool RecruiterCvAllowed { get; set; } = false;
+        public DateTime? RecruiterDiscoveryUpdatedAt { get; set; }
+        public DateTime? RecruiterDiscoveryExpiresAt { get; set; }
     }
 }

@@ -233,7 +233,7 @@ export function KanbanBoard({
                           color: "#475569",
                           backgroundColor: "#F1F5F9",
                           padding: "2px 8px",
-                          borderRadius: 6,
+                          borderRadius: 8,
                           display: "inline-block",
                           maxWidth: "100%",
                           overflow: "hidden",
@@ -287,7 +287,7 @@ export function KanbanBoard({
                             <Button
                               size="small"
                               type="text"
-                              style={{ borderRadius: 6 }}
+                              style={{ borderRadius: 8 }}
                               icon={<CalendarOutlined style={{ color: "#2563EB" }} />}
                               onClick={() => onOpenScheduleModal(app)}
                             />
@@ -297,7 +297,7 @@ export function KanbanBoard({
                           <Button
                             size="small"
                             type="text"
-                            style={{ borderRadius: 6 }}
+                            style={{ borderRadius: 8 }}
                             icon={<EyeOutlined style={{ color: "#64748B" }} />}
                             onClick={() => onViewDetail(app)}
                           />
@@ -306,7 +306,7 @@ export function KanbanBoard({
                           <Button
                             size="small"
                             type="text"
-                            style={{ borderRadius: 6 }}
+                            style={{ borderRadius: 8 }}
                             icon={<MailOutlined style={{ color: "#64748B" }} />}
                             onClick={() => onNavigateEmail(app.id)}
                           />
@@ -315,7 +315,7 @@ export function KanbanBoard({
                           <Button
                             size="small"
                             type="text"
-                            style={{ borderRadius: 6 }}
+                            style={{ borderRadius: 8 }}
                             icon={<UserOutlined style={{ color: "#2563EB" }} />}
                             onClick={() => onNavigateDetail(app.id)}
                           />
@@ -331,7 +331,7 @@ export function KanbanBoard({
                         style={{
                           width: "100%",
                           background: "#F8FAFC",
-                          borderRadius: 6,
+                          borderRadius: 8,
                           border: "1px solid #E2E8F0",
                           fontSize: 11,
                           fontWeight: 500,
@@ -343,7 +343,7 @@ export function KanbanBoard({
                           { value: "Applied", label: "Mới nộp" },
                           { value: "Reviewing", label: "Đang xem xét" },
                           { value: "Interview", label: "Phỏng vấn" },
-                          { value: "Offer", label: "Nhận việc (Offer)" },
+                          { value: "Offer", label: "Đề nghị nhận việc" },
                           { value: "Rejected", label: "Đã từ chối" },
                         ]}
                       />

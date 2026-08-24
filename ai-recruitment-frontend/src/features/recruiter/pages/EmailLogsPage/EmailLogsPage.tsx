@@ -26,8 +26,23 @@ import {
 import PageContainer from "../../../../components/common/PageContainer";
 import { recruitmentService } from "../../../../services/recruitmentService";
 import dayjs from "dayjs";
+import { useResponsive } from "../../../../hooks/useResponsive";
 
 const { Text } = Typography;
+
+const sanitizeEmailHtml = (html: string): string => {
+  if (typeof window === "undefined") return "";
+  const documentNode = new DOMParser().parseFromString(html || "", "text/html");
+  const allowedTags = new Set(["P", "STRONG", "UL", "LI", "BR"]);
+  Array.from(documentNode.body.querySelectorAll("*")).forEach((element) => {
+    if (!allowedTags.has(element.tagName)) {
+      element.replaceWith(documentNode.createTextNode(element.textContent || ""));
+      return;
+    }
+    Array.from(element.attributes).forEach((attribute) => element.removeAttribute(attribute.name));
+  });
+  return documentNode.body.innerHTML;
+};
 
 interface EmailLogDto {
   emailLogID: string;
@@ -44,6 +59,7 @@ interface EmailLogDto {
 }
 
 export default function EmailLogsPage() {
+  const { isMobile } = useResponsive();
   const [logs, setLogs] = useState<EmailLogDto[]>([]);
   const [loading, setLoading] = useState(false);
   
@@ -146,7 +162,7 @@ export default function EmailLogsPage() {
             <Text type="secondary" italic style={{ fontSize: 13 }}>Không có thông tin việc làm</Text>
           )}
           {record.categoryName && (
-            <Tag color="cyan" style={{ fontSize: 10, borderRadius: 4 }}>
+            <Tag color="cyan" style={{ fontSize: 10, borderRadius: 8 }}>
               {record.categoryName}
             </Tag>
           )}
@@ -188,7 +204,7 @@ export default function EmailLogsPage() {
           icon={<EyeOutlined />}
           onClick={() => handleOpenDetail(record)}
           size="small"
-          style={{ borderRadius: 6 }}
+          style={{ borderRadius: 8 }}
         >
           Xem nội dung
         </Button>
@@ -198,8 +214,7 @@ export default function EmailLogsPage() {
 
   return (
     <PageContainer
-      title="Nhật Ký Gửi Email"
-      subtitle="Theo dõi, quản lý toàn bộ email mời phỏng vấn, mời ứng tuyển hoặc phản hồi đã gửi tới các ứng viên."
+      title="Nhật ký gửi email"
     >
       {fetchError && (
         <Alert
@@ -227,13 +242,13 @@ export default function EmailLogsPage() {
           bodyStyle={{ padding: "16px 20px" }}
         >
           <div style={{ display: "flex", flexWrap: "wrap", gap: 16, alignItems: "center", justifyContent: "space-between" }}>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 12, flex: 1, minWidth: 300 }}>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 12, flex: "1 1 520px", minWidth: 0 }}>
               <Input
                 placeholder="Tìm kiếm ứng viên, email, tiêu đề..."
                 prefix={<SearchOutlined style={{ color: "#94A3B8" }} />}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                style={{ width: 260, borderRadius: 8 }}
+                style={{ width: isMobile ? "100%" : 260, borderRadius: 8 }}
                 allowClear
               />
               
@@ -241,7 +256,7 @@ export default function EmailLogsPage() {
                 placeholder="Lọc theo Ngành nghề"
                 value={selectedCategory}
                 onChange={setSelectedCategory}
-                style={{ width: 190 }}
+                style={{ width: isMobile ? "100%" : 190 }}
                 allowClear
                 options={[
                   { value: "", label: "Tất cả ngành nghề" },
@@ -253,7 +268,7 @@ export default function EmailLogsPage() {
                 placeholder="Lọc theo Công việc"
                 value={selectedJob}
                 onChange={setSelectedJob}
-                style={{ width: 190 }}
+                style={{ width: isMobile ? "100%" : 190 }}
                 allowClear
                 options={[
                   { value: "", label: "Tất cả công việc" },
@@ -311,30 +326,30 @@ export default function EmailLogsPage() {
             Đóng
           </Button>,
         ]}
-        width={800}
+        width={isMobile ? "calc(100vw - 24px)" : 800}
         destroyOnClose
       >
         {selectedLog && (
           <div style={{ padding: "12px 0" }}>
             <div style={{ background: "#F8FAFC", padding: 16, borderRadius: 12, border: "1px solid #E2E8F0", marginBottom: 20 }}>
-              <div style={{ marginBottom: 8 }}>
-                <Text type="secondary" style={{ width: 100, display: "inline-block" }}>Người nhận:</Text>
-                <Text strong>{selectedLog.candidateName || "Chưa rõ"}</Text> 
-                <Text type="secondary" style={{ marginLeft: 8 }}>({selectedLog.recipientEmail})</Text>
+              <div style={{ marginBottom: 8, display: "flex", flexWrap: "wrap", gap: "4px 8px" }}>
+                <Text type="secondary" style={{ width: isMobile ? "100%" : 100 }}>Người nhận:</Text>
+                <Text strong>{selectedLog.candidateName || "Chưa rõ"}</Text>
+                <Text type="secondary">({selectedLog.recipientEmail})</Text>
               </div>
-              <div style={{ marginBottom: 8 }}>
-                <Text type="secondary" style={{ width: 100, display: "inline-block" }}>Tiêu đề:</Text>
+              <div style={{ marginBottom: 8, display: "flex", flexWrap: "wrap", gap: "4px 8px" }}>
+                <Text type="secondary" style={{ width: isMobile ? "100%" : 100 }}>Tiêu đề:</Text>
                 <Text strong>{selectedLog.subject}</Text>
               </div>
-              <div style={{ marginBottom: 8 }}>
-                <Text type="secondary" style={{ width: 100, display: "inline-block" }}>Công việc:</Text>
+              <div style={{ marginBottom: 8, display: "flex", flexWrap: "wrap", gap: "4px 8px" }}>
+                <Text type="secondary" style={{ width: isMobile ? "100%" : 100 }}>Công việc:</Text>
                 <Text>{selectedLog.jobTitle || "Liên hệ trực tiếp"}</Text>
                 {selectedLog.categoryName && (
-                  <Tag color="blue" style={{ marginLeft: 8 }}>{selectedLog.categoryName}</Tag>
+                  <Tag color="blue">{selectedLog.categoryName}</Tag>
                 )}
               </div>
-              <div>
-                <Text type="secondary" style={{ width: 100, display: "inline-block" }}>Thời gian gửi:</Text>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 8px" }}>
+                <Text type="secondary" style={{ width: isMobile ? "100%" : 100 }}>Thời gian gửi:</Text>
                 <Text>{dayjs(selectedLog.sentAt).format("DD/MM/YYYY HH:mm:ss")}</Text>
               </div>
             </div>
@@ -344,7 +359,7 @@ export default function EmailLogsPage() {
               style={{
                 border: "1px solid #E2E8F0",
                 borderRadius: 12,
-                padding: "20px 24px",
+                padding: isMobile ? 14 : "20px 24px",
                 background: "#FFFFFF",
                 maxHeight: 450,
                 overflowY: "auto",
@@ -352,7 +367,7 @@ export default function EmailLogsPage() {
                 fontSize: 14,
                 color: "#334155",
               }}
-              dangerouslySetInnerHTML={{ __html: selectedLog.body }}
+              dangerouslySetInnerHTML={{ __html: sanitizeEmailHtml(selectedLog.body) }}
             />
           </div>
         )}

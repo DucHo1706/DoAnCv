@@ -4,8 +4,11 @@ using RecruitmentBackend.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using RecruitmentBackend.Utilities;
 
 namespace RecruitmentBackend.Services
 {
@@ -24,68 +27,93 @@ namespace RecruitmentBackend.Services
         {
             try
             {
-                // 1. Lấy toàn bộ kỹ năng của ứng viên từ database C#
-                var cvs = await _context.CandidateCVs
-                    .Where(cv => string.IsNullOrEmpty(cv.CVExtractedSkills) == false)
-                    .Select(cv => cv.CVExtractedSkills)
+                var domainRows = await _context.CandidateCvDomains.AsNoTracking()
+                    .Where(row => row.Confidence >= 0.6m && row.Domain != "")
+                    .Select(row => new { row.CVID, row.Domain })
                     .ToListAsync();
+                var relevantCvIds = domainRows.Select(row => row.CVID).Distinct().ToList();
+                var cvRows = await _context.CandidateCVs.AsNoTracking()
+                    .Where(cv => relevantCvIds.Contains(cv.CVID) && string.IsNullOrEmpty(cv.CVExtractedSkills) == false)
+                    .Select(cv => new { cv.CVID, cv.CVExtractedSkills })
+                    .ToListAsync();
+                var skillsByCv = cvRows.ToDictionary(row => row.CVID, row => row.CVExtractedSkills);
 
-                var transactions = new List<List<string>>();
-
-                foreach (var cvSkillsJson in cvs)
+                var approvedSkills = await _context.Skills.AsNoTracking()
+                    .Include(skill => skill.Aliases)
+                    .Where(skill => skill.IsApproved)
+                    .ToListAsync();
+                var approvedTaxonomy = approvedSkills
+                    .Select(skill => skill.Name.Trim().ToLowerInvariant())
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .OrderBy(skill => skill, StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+                if (approvedTaxonomy.Count == 0)
                 {
-                    try
+                    return (false, "Chưa có taxonomy kỹ năng đã duyệt để huấn luyện Apriori.", null);
+                }
+
+                var canonicalMap = SkillTaxonomyNormalizer.BuildCanonicalMap(approvedSkills);
+                var taxonomyAliases = SkillTaxonomyNormalizer.AliasMapForApi(canonicalMap, approvedTaxonomy);
+                var trainedDomains = new List<object>();
+                var failedDomains = new List<string>();
+                var resetModels = true;
+                foreach (var group in domainRows.GroupBy(row => row.Domain.Trim(), StringComparer.OrdinalIgnoreCase))
+                {
+                    var transactions = group
+                        .Select(row => skillsByCv.TryGetValue(row.CVID, out var json)
+                            ? SkillTaxonomyNormalizer.Canonicalize(ParseSkills(json), canonicalMap)
+                            : new List<string>())
+                        .Where(skills => skills.Count > 0)
+                        .ToList();
+                    if (transactions.Count < 5) continue;
+
+                    var domainCode = BuildDomainCode(group.Key);
+                    var isSuccess = await _aiService.TrainAprioriAsync(
+                        transactions,
+                        group.Key,
+                        $"cv-{domainCode}-{DateTime.UtcNow:yyyyMMddHHmmss}",
+                        approvedTaxonomy,
+                        taxonomyAliases,
+                        resetModels);
+                    if (isSuccess)
                     {
-                        var skills = JsonSerializer.Deserialize<List<string>>(cvSkillsJson);
-                        if (skills != null && skills.Count > 0)
-                        {
-                            transactions.Add(skills.Select(s => s.ToLower().Trim()).ToList());
-                        }
+                        trainedDomains.Add(new { Domain = group.Key, CvCount = transactions.Count });
+                        resetModels = false;
                     }
-                    catch
-                    {
-                        // Bỏ qua nếu dòng JSON bị lỗi
-                    }
+                    else
+                        failedDomains.Add(group.Key);
                 }
 
-                // Fallback: Nếu cơ sở dữ liệu trống chưa có CV nào được phân tích, tự động nạp tập dữ liệu giả lập mẫu (Mock data)
-                // để giảng viên/người dùng demo tính năng khai phá luật kết hợp luôn thành công.
-                if (transactions.Count < 5)
-                {
-                    transactions.AddRange(new List<List<string>>
-                    {
-                        new List<string> { "python", "sql", "django", "fastapi" },
-                        new List<string> { "python", "sql", "fastapi" },
-                        new List<string> { "python", "django" },
-                        new List<string> { "react", "node.js", "javascript", "typescript" },
-                        new List<string> { "react", "javascript", "typescript", "css" },
-                        new List<string> { "node.js", "javascript", "express", "mongodb" },
-                        new List<string> { "c#", ".net", "sql server", "entity framework" },
-                        new List<string> { "c#", ".net", "asp.net core", "sql server" },
-                        new List<string> { "c#", ".net", "entity framework" },
-                        new List<string> { "java", "spring boot", "mysql", "docker" },
-                        new List<string> { "java", "spring boot", "postgresql" },
-                        new List<string> { "java", "mysql" },
-                        new List<string> { "php", "laravel", "mysql" },
-                        new List<string> { "docker", "kubernetes", "aws", "jenkins" },
-                        new List<string> { "react", "node.js", "javascript" }
-                    });
-                }
+                if (trainedDomains.Count == 0)
+                    return (false, "Chưa có ngành nào đủ tối thiểu 5 CV có kỹ năng hợp lệ để chạy Apriori; không dùng dữ liệu giả.", null);
+                if (failedDomains.Count > 0)
+                    return (false, $"Apriori chưa hoàn tất cho các ngành: {string.Join(", ", failedDomains)}.", new { TrainedDomains = trainedDomains });
 
-                // 2. Gửi tập giao dịch sang Python FastAPI để chạy thuật toán Apriori
-                var isSuccess = await _aiService.TrainAprioriAsync(transactions);
-
-                if (isSuccess == false)
-                {
-                    return (false, "Lỗi từ dịch vụ Python khi chạy thuật toán Apriori.", null);
-                }
-
-                return (true, $"Khai phá thành công với {transactions.Count} tập dữ liệu CV.", null);
+                return (true, $"Đã khai phá Apriori riêng cho {trainedDomains.Count} ngành.", new { TrainedDomains = trainedDomains });
             }
             catch (Exception ex)
             {
-                return (false, "Lỗi hệ thống: " + ex.Message, null);
+                return (false, "Lỗi hệ thống khi huấn luyện Apriori: " + ex.Message, null);
             }
+        }
+
+        private static List<string> ParseSkills(string json)
+        {
+            try
+            {
+                return (JsonSerializer.Deserialize<List<string>>(json) ?? new List<string>())
+                    .Select(skill => skill.Trim().ToLowerInvariant())
+                    .Where(skill => skill.Length > 0)
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+            }
+            catch { return new List<string>(); }
+        }
+
+        private static string BuildDomainCode(string domain)
+        {
+            var hash = SHA256.HashData(Encoding.UTF8.GetBytes(domain.Trim().ToLowerInvariant()));
+            return Convert.ToHexString(hash)[..10].ToLowerInvariant();
         }
 
         public async Task<(bool IsSuccess, string Message, object Data)> GetAssociationRulesAsync()
@@ -116,7 +144,16 @@ namespace RecruitmentBackend.Services
                     return (true, "Danh sách kỹ năng đầu vào trống.", new List<string>());
                 }
 
-                var recommendations = await _aiService.RecommendSkillsAsync(currentSkills, topN);
+                var approvedSkills = await _context.Skills.AsNoTracking()
+                    .Include(skill => skill.Aliases)
+                    .Where(skill => skill.IsApproved)
+                    .ToListAsync();
+                var canonicalMap = SkillTaxonomyNormalizer.BuildCanonicalMap(approvedSkills);
+                var canonicalSkills = SkillTaxonomyNormalizer.Canonicalize(currentSkills, canonicalMap);
+                if (canonicalSkills.Count == 0)
+                    return (true, "Không nhận diện được kỹ năng nào thuộc taxonomy đã duyệt.", new List<string>());
+
+                var recommendations = await _aiService.RecommendSkillsAsync(canonicalSkills, topN);
                 return (true, "Đề xuất kỹ năng đi kèm thành công.", recommendations);
             }
             catch (Exception ex)

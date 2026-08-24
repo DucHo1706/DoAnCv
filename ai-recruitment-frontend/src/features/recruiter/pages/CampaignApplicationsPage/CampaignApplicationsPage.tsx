@@ -19,6 +19,7 @@ import {
   Card,
   Col,
   Input,
+  InputNumber,
   message,
   Modal,
   Radio,
@@ -40,8 +41,20 @@ import { useCampaignApplications } from "./hooks/useCampaignApplications";
 import { KanbanBoard } from "./components/KanbanBoard";
 import { AiReportDrawer } from "./components/AiReportDrawer";
 import { ScheduleModalContent } from "./components/ScheduleModalContent";
+import { formatJobDate, resolveJobLifecycle } from "../../../../utils/jobLifecycle";
 
 const { Text, Title, Paragraph } = Typography;
+
+function getCampaignLifecycleTag(status: string) {
+  if (status === "Recruiting") return <Tag color="success" style={{ borderRadius: 8 }}>Đang tuyển</Tag>;
+  if (status === "Scheduled") return <Tag color="processing" style={{ borderRadius: 8 }}>Sắp mở tuyển</Tag>;
+  if (status === "Expired") return <Tag color="error" style={{ borderRadius: 8 }}>Đã duyệt · Hết hạn</Tag>;
+  if (status === "Closed") return <Tag color="default" style={{ borderRadius: 8 }}>Đã duyệt · Tạm ẩn</Tag>;
+  if (status === "Rejected") return <Tag color="error" style={{ borderRadius: 8 }}>Bị từ chối</Tag>;
+  if (status === "Archived") return <Tag color="default" style={{ borderRadius: 8 }}>Đã lưu trữ</Tag>;
+  if (status === "Flagged") return <Tag color="warning" style={{ borderRadius: 8 }}>Đang kiểm duyệt</Tag>;
+  return <Tag color="gold" style={{ borderRadius: 8 }}>Chờ duyệt</Tag>;
+}
 
 function renderAiDataStatusTag(application: ApplicationDto) {
   let color = "default";
@@ -83,10 +96,17 @@ export default function CampaignApplicationsPage() {
     setFilterClassification,
     filterStatus,
     setFilterStatus,
+    filterSkill,
+    setFilterSkill,
+    minAiScore,
+    setMinAiScore,
+    minYearsOfExperience,
+    setMinYearsOfExperience,
     handleResetFilters,
     isModalOpen,
     setIsModalOpen,
     selectedApp,
+    detailLoading,
     viewMode,
     setViewMode,
     applicationStatusStages,
@@ -221,7 +241,7 @@ export default function CampaignApplicationsPage() {
             overflow: "hidden",
             textOverflow: "ellipsis",
             whiteSpace: "nowrap",
-            borderRadius: 6,
+            borderRadius: 8,
             fontWeight: 500,
           }}
         >
@@ -240,7 +260,7 @@ export default function CampaignApplicationsPage() {
         return a.aiScore - b.aiScore;
       },
       render: (score: number | null, record: ApplicationDto) => {
-        let scoreBadge = <Tag style={{ borderRadius: 6 }}>Chưa có điểm AI</Tag>;
+        let scoreBadge = <Tag style={{ borderRadius: 8 }}>Chưa có điểm AI</Tag>;
 
         if (score != null) {
           const isOpt =
@@ -295,7 +315,7 @@ export default function CampaignApplicationsPage() {
               { value: "Applied", label: "Mới nộp" },
               { value: "Reviewing", label: "Đang xem xét" },
               { value: "Interview", label: "Phỏng vấn" },
-              { value: "Offer", label: "Nhận việc (Offer)" },
+              { value: "Offer", label: "Đề nghị nhận việc" },
               { value: "Rejected", label: "Đã từ chối" },
             ]}
           />
@@ -305,7 +325,7 @@ export default function CampaignApplicationsPage() {
     {
       title: "Thao tác",
       key: "action",
-      width: 390,
+      width: 510,
       align: "center" as const,
       render: (_: any, record: ApplicationDto) => (
         <Space size="small" wrap={false}>
@@ -319,6 +339,15 @@ export default function CampaignApplicationsPage() {
             style={{ borderRadius: 8 }}
           >
             Email
+          </Button>
+
+          <Button
+            icon={<CalendarOutlined />}
+            disabled={record.status === "Rejected"}
+            onClick={() => openScheduleModal(record)}
+            style={{ borderRadius: 8, color: "#2563EB", borderColor: "#2563EB" }}
+          >
+            {record.status === "Interview" ? "Sửa lịch" : "Tạo lịch"}
           </Button>
 
           <Button
@@ -402,15 +431,14 @@ export default function CampaignApplicationsPage() {
     }
   }
 
-  const deadlineDate = currentJob?.deadline ? new Date(currentJob.deadline) : null;
-  const isExpired = deadlineDate ? deadlineDate < new Date() : false;
+  const lifecycleStatus = currentJob ? resolveJobLifecycle(currentJob) : "";
   const formatDate = (d: string | null | undefined) => {
     if (!d) return "Không giới hạn";
-    return new Date(d).toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" });
+    return formatJobDate(d);
   };
 
   return (
-    <PageContainer title="Quản lý Ứng viên">
+    <PageContainer title="Quản lý ứng viên">
       <div style={{ marginBottom: 16 }}>
         <Button
           icon={<ArrowLeftOutlined />}
@@ -428,7 +456,7 @@ export default function CampaignApplicationsPage() {
           message="Lỗi tải dữ liệu"
           description={fetchError}
           action={
-            <Button size="small" type="primary" onClick={refetch}>
+            <Button size="small" type="primary" onClick={() => void refetch()}>
               Thử lại
             </Button>
           }
@@ -441,7 +469,7 @@ export default function CampaignApplicationsPage() {
         <Card
           style={{
             marginBottom: 20,
-            borderRadius: 14,
+            borderRadius: 16,
             border: "1px solid #E2E8F0",
             background: "rgba(255, 255, 255, 0.85)",
             backdropFilter: "blur(20px)",
@@ -463,16 +491,7 @@ export default function CampaignApplicationsPage() {
                 <Title level={5} style={{ margin: 0, color: "#0F172A", fontSize: 16 }}>
                   Chiến dịch: {currentJob.position?.name}
                 </Title>
-                {currentJob.status === "Published" ? (
-                  <Tag color="success" style={{ borderRadius: 6 }}>
-                    Đang tuyển
-                  </Tag>
-                ) : (
-                  <Tag color="warning" style={{ borderRadius: 6 }}>
-                    Chờ duyệt
-                  </Tag>
-                )}
-                {isExpired && <Tag color="error" style={{ borderRadius: 6 }}>Hết hạn</Tag>}
+                {getCampaignLifecycleTag(lifecycleStatus)}
               </div>
 
               <Space size={16} wrap style={{ color: "#64748B", fontSize: 13, marginBottom: 12 }}>
@@ -544,11 +563,41 @@ export default function CampaignApplicationsPage() {
 
       <Card style={{ overflow: "hidden" }}>
         <TableToolbar
-          searchPlaceholder="Tìm theo tên, email, sđt, vị trí..."
+          searchPlaceholder="Tìm theo tên, email, SĐT, vị trí hoặc kỹ năng..."
           searchValue={searchQuery}
           onSearchChange={setSearchQuery}
           extra={
             <Space wrap>
+              <Input
+                aria-label="Lọc theo kỹ năng"
+                placeholder="Kỹ năng: Python, tiếng Nhật..."
+                style={{ width: 220 }}
+                allowClear
+                value={filterSkill}
+                onChange={(event) => setFilterSkill(event.target.value)}
+              />
+              <InputNumber
+                aria-label="Điểm AI tối thiểu"
+                placeholder="Điểm AI từ"
+                min={0}
+                max={100}
+                precision={0}
+                style={{ width: 130 }}
+                value={minAiScore}
+                onChange={setMinAiScore}
+              />
+              <InputNumber
+                aria-label="Số năm kinh nghiệm tối thiểu"
+                placeholder="Kinh nghiệm từ"
+                min={0}
+                max={80}
+                precision={1}
+                addonAfter="năm"
+                style={{ width: 180 }}
+                value={minYearsOfExperience}
+                onChange={setMinYearsOfExperience}
+                disabled={!jobId}
+              />
               <Select
                 placeholder="Lọc trạng thái"
                 style={{ width: 160 }}
@@ -575,7 +624,7 @@ export default function CampaignApplicationsPage() {
                   { label: "Chưa phù hợp", value: "Chưa phù hợp" },
                 ]}
               />
-              {(searchQuery || filterStatus || filterClassification) && (
+              {(searchQuery || filterStatus || filterClassification || filterSkill || minAiScore != null || minYearsOfExperience != null) && (
                 <Button
                   icon={<RotateLeftOutlined />}
                   onClick={handleResetFilters}
@@ -658,12 +707,9 @@ export default function CampaignApplicationsPage() {
         rankingError.length === 0 &&
         loading === false &&
         rankingCandidateCount === 1 ? (
-          <Alert
-            type="info"
-            showIcon
-            message="Cần ít nhất 2 ứng viên để thực hiện so sánh."
-            style={{ marginBottom: 16 }}
-          />
+          <Text type="secondary" style={{ display: "block", marginBottom: 16 }}>
+            Cần ít nhất hai ứng viên để thực hiện so sánh.
+          </Text>
         ) : null}
 
         {selectionMode ? (
@@ -734,6 +780,7 @@ export default function CampaignApplicationsPage() {
       <AiReportDrawer
         open={isModalOpen}
         application={selectedApp}
+        loading={detailLoading}
         onClose={() => setIsModalOpen(false)}
         parseSkills={parseSkills}
       />
@@ -782,7 +829,7 @@ export default function CampaignApplicationsPage() {
             <Text strong>Ghi chú thêm</Text>
 
             <Input.TextArea
-              placeholder="Nhập ghi chú để lưu vào Talent Pool..."
+              placeholder="Nhập ghi chú để lưu vào kho ứng viên..."
               value={rejectNote}
               onChange={(e) => setRejectNote(e.target.value)}
               rows={4}

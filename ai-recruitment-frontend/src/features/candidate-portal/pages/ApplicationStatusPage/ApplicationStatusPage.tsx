@@ -25,8 +25,11 @@ import {
   CalendarOutlined,
   VideoCameraOutlined,
   DownloadOutlined,
+  ReloadOutlined,
 } from "@ant-design/icons";
 import { useApplicationStatus } from "./hooks/useApplicationStatus";
+import { getApplicationStatusLabel as translateApplicationStatus } from "../../../../utils/statusLabels";
+import { downloadElementAsPdf } from "../../../../utils/exportUtils";
 import PageContainer from "../../../../components/common/PageContainer";
 import AiDetailedTabs from "../../../../components/ai-report/AiDetailedTabs";
 import CompetencyTab from "../../../../components/ai-report/CompetencyTab";
@@ -176,7 +179,10 @@ export default function ApplicationStatusPage() {
     setStatusFilter,
     isAiReady,
     isAiError,
+    isAiIncomplete,
     handleViewDetail,
+    handleRetryAi,
+    handleWithdrawApplication,
     parsed,
   } = useApplicationStatus();
 
@@ -187,24 +193,13 @@ export default function ApplicationStatusPage() {
       return;
     }
     const hideMessage = message.loading("Đang khởi tạo tệp PDF báo cáo AI...", 0);
-    element.style.display = "block";
-    const opt = {
-      margin: [15, 15, 15, 15] as [number, number, number, number],
-      filename: `BaoCao_AI_${selectedApp?.jobTitle || "UngVien"}.pdf`,
-      image: { type: "jpeg" as const, quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true },
-      jsPDF: { unit: "mm" as const, format: "a4" as const, orientation: "portrait" as const }
-    };
     try {
-      // @ts-ignore
-      const html2pdf = (await import("html2pdf.js")).default;
-      await html2pdf().set(opt).from(element).save();
-      element.style.display = "none";
+      const safeTitle = (selectedApp?.jobTitle || "UngVien").replace(/[\\/:*?"<>|]+/g, "-");
+      await downloadElementAsPdf(element, `BaoCao_AI_${safeTitle}.pdf`, [15, 15, 15, 15]);
       hideMessage();
       message.success("Xuất báo cáo PDF thành công!");
     } catch (err: any) {
       console.error(err);
-      element.style.display = "none";
       hideMessage();
       message.error("Có lỗi xảy ra khi xuất PDF!");
     }
@@ -219,17 +214,21 @@ export default function ApplicationStatusPage() {
       case "applied":
         return { text: "Đã gửi hồ sơ (Chờ duyệt)", color: "#2563EB", bg: "rgba(37, 99, 235, 0.06)", border: "1px solid rgba(37, 99, 235, 0.12)" };
       case "reviewed":
+      case "reviewing":
         return { text: "HR đang xem xét", color: "#8B5CF6", bg: "rgba(139, 92, 246, 0.06)", border: "1px solid rgba(139, 92, 246, 0.12)" };
       case "shortlisted":
         return { text: "Hồ sơ đạt yêu cầu", color: "#06B6D4", bg: "rgba(6, 182, 212, 0.06)", border: "1px solid rgba(6, 182, 212, 0.12)" };
       case "interviewing":
+      case "interview":
         return { text: "Được chọn phỏng vấn", color: "#F59E0B", bg: "rgba(245, 158, 11, 0.06)", border: "1px solid rgba(245, 158, 11, 0.12)" };
       case "accepted":
+      case "offer":
+      case "hired":
         return { text: "Đã nhận việc 🎉", color: "#10B981", bg: "rgba(16, 185, 129, 0.06)", border: "1px solid rgba(16, 185, 129, 0.12)" };
       case "rejected":
         return { text: "Chưa phù hợp", color: "#EF4444", bg: "rgba(239, 68, 68, 0.06)", border: "1px solid rgba(239, 68, 68, 0.12)" };
       default:
-        return { text: status || "Đã gửi hồ sơ", color: "#2563EB", bg: "rgba(37, 99, 235, 0.06)", border: "1px solid rgba(37, 99, 235, 0.12)" };
+        return { text: translateApplicationStatus(status), color: "#2563EB", bg: "rgba(37, 99, 235, 0.06)", border: "1px solid rgba(37, 99, 235, 0.12)" };
     }
   };
 
@@ -308,7 +307,7 @@ export default function ApplicationStatusPage() {
     }
     .pagination-btn {
       transition: all 0.2s ease;
-      border-radius: 10px;
+      border-radius: 12px;
       border: 1px solid #E2E8F0;
       background: #FFFFFF;
       color: #64748B;
@@ -334,11 +333,13 @@ export default function ApplicationStatusPage() {
         align-items: flex-start !important;
         gap: 20px !important;
       }
-      .app-card > div {
+      .app-card > div:not(.app-card-strip) {
         width: 100% !important;
       }
       .app-card-actions {
-        justify-content: space-between !important;
+        justify-content: flex-start !important;
+        flex-wrap: wrap !important;
+        gap: 12px !important;
         border-top: 1px solid #F1F5F9;
         padding-top: 16px;
         margin-top: 4px;
@@ -348,7 +349,7 @@ export default function ApplicationStatusPage() {
 
   if (isDetailModalOpen) {
     return (
-      <PageContainer title="" subtitle="">
+      <PageContainer>
         <style dangerouslySetInnerHTML={{ __html: customStyles }} />
         <div
           style={{
@@ -364,9 +365,6 @@ export default function ApplicationStatusPage() {
               <Title level={2} style={{ marginBottom: 8, color: "#0F172A", fontWeight: 700 }}>
                 Báo cáo phân tích chi tiết từ AI
               </Title>
-              <Text type="secondary" style={{ fontSize: 16 }}>
-                Phân tích năng lực, tối ưu hóa STAR, ngôn từ chân thực và gợi ý phỏng vấn chuyên sâu cho hồ sơ ứng tuyển của bạn.
-              </Text>
             </div>
             
             <Card 
@@ -420,9 +418,9 @@ export default function ApplicationStatusPage() {
 
                     <div style={{ marginBottom: "24px", background: "#F8FAFC", padding: "16px 20px", borderRadius: "12px", border: "1px solid #E2E8F0" }}>
                       <h3 style={{ margin: "0 0 12px", fontSize: "15px", fontWeight: 700, color: "#0F172A" }}>THÔNG TIN HỒ SƠ</h3>
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px 24px", fontSize: "14px" }}>
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "10px 24px", fontSize: "14px" }}>
                         <div><strong>Vị trí ứng tuyển:</strong> {selectedApp?.jobTitle}</div>
-                        <div><strong>Điểm tương hợp AI:</strong> <span style={{ color: "#2563EB", fontWeight: 700 }}>{selectedApp?.aiScore} / 100</span></div>
+                        <div><strong>Mức đáp ứng tiêu chí:</strong> <span style={{ color: "#2563EB", fontWeight: 700 }}>{selectedApp?.aiScore} / 100</span></div>
                         <div><strong>Phân loại:</strong> {selectedApp?.classification || "Chờ xử lý"}</div>
                         <div><strong>Thời gian nộp:</strong> {selectedApp?.appliedAt ? new Date(selectedApp.appliedAt).toLocaleDateString("vi-VN") : ""}</div>
                       </div>
@@ -470,7 +468,7 @@ export default function ApplicationStatusPage() {
   }
 
   return (
-    <PageContainer title="" subtitle="">
+    <PageContainer>
       <style dangerouslySetInnerHTML={{ __html: customStyles }} />
       <div
         style={{
@@ -704,6 +702,7 @@ export default function ApplicationStatusPage() {
                 const recordId = record.id || record.applicationId;
                 const ready = isAiReady(record);
                 const error = isAiError(record);
+                const incomplete = isAiIncomplete(record);
 
                 return (
                   <div
@@ -724,6 +723,7 @@ export default function ApplicationStatusPage() {
                   >
                     {/* Brand border strip */}
                     <div
+                      className="app-card-strip"
                       style={{
                         position: "absolute",
                         left: 0,
@@ -856,6 +856,24 @@ export default function ApplicationStatusPage() {
                               <InfoCircleOutlined />
                               AI gặp lỗi
                             </span>
+                          ) : incomplete ? (
+                            <span
+                              style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 6,
+                                padding: "4px 10px",
+                                borderRadius: "8px",
+                                fontSize: "13px",
+                                fontWeight: 550,
+                                background: "rgba(245, 158, 11, 0.08)",
+                                color: "#B45309",
+                                border: "1px solid rgba(245, 158, 11, 0.18)",
+                              }}
+                            >
+                              <InfoCircleOutlined />
+                              Phân tích AI chưa đầy đủ
+                            </span>
                           ) : ready ? (
                             <span
                               style={{
@@ -964,7 +982,7 @@ export default function ApplicationStatusPage() {
                               type="secondary"
                               style={{ fontSize: "12px", marginTop: 4, fontWeight: 500, color: "#64748B" }}
                             >
-                              Điểm tương hợp
+                              Mức đáp ứng tiêu chí
                             </Text>
                           </div>
                         )}
@@ -974,8 +992,8 @@ export default function ApplicationStatusPage() {
                       <Button
                         type="primary"
                         className="app-card-btn"
-                        icon={<EyeOutlined />}
-                        onClick={() => handleViewDetail(record)}
+                        icon={error ? <ReloadOutlined /> : <EyeOutlined />}
+                        onClick={() => error ? handleRetryAi(record) : handleViewDetail(record)}
                         style={{
                           height: 44,
                           borderRadius: "12px",
@@ -986,8 +1004,32 @@ export default function ApplicationStatusPage() {
                           boxShadow: "0 4px 12px rgba(37, 99, 235, 0.12)",
                         }}
                       >
-                        {ready ? "Xem AI đánh giá" : "Theo dõi AI"}
+                        {error
+                          ? "Phân tích lại AI"
+                          : incomplete
+                          ? "Xem kết quả hiện có"
+                          : ready
+                          ? "Xem AI đánh giá"
+                          : "Theo dõi AI"}
                       </Button>
+                      {incomplete && !error && (
+                        <Button
+                          icon={<ReloadOutlined />}
+                          onClick={() => handleRetryAi(record)}
+                          style={{ height: 44, borderRadius: 12, fontWeight: 600 }}
+                        >
+                          Hoàn tất phân tích AI
+                        </Button>
+                      )}
+                      {record.status?.toLowerCase() === "applied" && (
+                        <Button
+                          danger
+                          onClick={() => handleWithdrawApplication(record)}
+                          style={{ height: 44, borderRadius: 12, fontWeight: 600 }}
+                        >
+                          Rút hồ sơ
+                        </Button>
+                      )}
                     </div>
                   </div>
                 );

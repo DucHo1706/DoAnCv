@@ -14,5 +14,12 @@ namespace RecruitmentBackend.Interfaces
         Task<(bool Success, string Message, object? Data)> UploadDefaultCvAsync(ClaimsPrincipal user, IFormFile file);
         Task<(bool Success, string Message, object? Data)> SyncCvInfoAsync(ClaimsPrincipal user);
         Task<(bool Success, string Message)> UpdateSkillsAsync(ClaimsPrincipal user, List<string> skills);
+        Task<(bool Success, string Message, object? Data)> UpdateRecruiterDiscoveryAsync(
+            ClaimsPrincipal user,
+            bool enabled,
+            bool contactAllowed,
+            bool cvAllowed,
+            DateTime? expiresAt
+        );
     }
 }

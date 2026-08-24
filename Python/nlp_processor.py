@@ -1,6 +1,15 @@
 import re
 import json
 import os
+from typing import Iterable
+from services.runtime_paths import runtime_file
+from services.skill_mining_guard import (
+    build_canonical_map,
+    canonicalize_skill_values as canonicalize_values,
+    is_suspicious_skill,
+    normalize_match_key,
+    normalize_skill,
+)
 
 try:
     import spacy
@@ -14,21 +23,98 @@ except ImportError:
     nlp = lambda x: str(x)
 
 SKILL_DB = set()
+SKILL_ALIASES = {}
 
-def load_skill_db(filename="skills.json"):
-    if not os.path.exists(filename):
-        return {"python", "java", "sql", "node.js", "react"}
-    
-    with open(filename, "r", encoding="utf-8") as f:
-        data = json.load(f)
-        return set(skill.lower() for skill in data)
+def load_skill_taxonomy():
+    # Taxonomy do SQL Server quản lý và đã được Admin duyệt. Không nạp lại
+    # skills.json lịch sử vì tệp đó từng chứa cả cụm từ do OCR/LLM suy diễn.
+    taxonomy_source = runtime_file("approved_skill_taxonomy.json")
+    approved = set()
+    aliases = {}
+    if os.path.exists(taxonomy_source):
+        try:
+            with open(taxonomy_source, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            if isinstance(data, list):
+                for entry in data:
+                    if not isinstance(entry, dict):
+                        continue
+                    canonical = normalize_skill(entry.get("name"))
+                    if not canonical or is_suspicious_skill(canonical):
+                        continue
+                    approved.add(canonical)
+                    for alias in entry.get("aliases", []) or []:
+                        alias_text = str(alias or "").strip()
+                        if alias_text and not is_suspicious_skill(alias_text):
+                            aliases[alias_text] = canonical
+        except (OSError, ValueError, TypeError):
+            approved, aliases = set(), {}
+
+    # Tương thích runtime cũ trong lần khởi động đầu tiên sau nâng cấp.
+    if not approved:
+        legacy_source = runtime_file("approved_skills.json")
+        if os.path.exists(legacy_source):
+            try:
+                with open(legacy_source, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                if isinstance(data, list):
+                    approved.update(
+                        normalized for normalized in (normalize_skill(skill) for skill in data)
+                        if normalized and not is_suspicious_skill(normalized)
+                    )
+            except (OSError, ValueError, TypeError):
+                pass
+    return approved, aliases
+
+
+def load_skill_db(filename=None):
+    del filename
+    approved, _ = load_skill_taxonomy()
+    return approved
 
 def reload_knowledge_base():
-    global SKILL_DB
-    SKILL_DB = load_skill_db()
+    global SKILL_DB, SKILL_ALIASES
+    SKILL_DB, raw_aliases = load_skill_taxonomy()
+    _, SKILL_ALIASES = build_canonical_map(SKILL_DB, raw_aliases)
     return len(SKILL_DB)
 
 reload_knowledge_base()
+
+
+def canonicalize_skill_values(values: Iterable[str]) -> list[str]:
+    return canonicalize_values(values, SKILL_DB, SKILL_ALIASES)
+
+
+def extract_skills(text: str) -> list[str]:
+    normalized_text = normalize_match_key(text)
+    candidates = []
+    for alias_key, canonical in SKILL_ALIASES.items():
+        if not alias_key:
+            continue
+        pattern = r"(?<!\S)" + re.escape(alias_key) + r"(?!\S)"
+        for match in re.finditer(pattern, normalized_text):
+            candidates.append((match.start(), match.end(), canonical, alias_key))
+
+    # Một occurrence dài thắng occurrence con nằm trong nó: `C#` không tự sinh
+    # thêm `C`, `SQL Server` không tự sinh thêm `SQL`. Nếu `SQL` xuất hiện ở vị
+    # trí độc lập khác trong CV thì occurrence đó vẫn được giữ.
+    accepted_spans = []
+    found_skills = set()
+    for start, end, canonical, alias_key in sorted(
+        candidates,
+        key=lambda item: (item[1] - item[0], len(item[3])),
+        reverse=True,
+    ):
+        overlaps_more_specific = any(
+            start < accepted_end and end > accepted_start and canonical != accepted_canonical
+            for accepted_start, accepted_end, accepted_canonical in accepted_spans
+        )
+        if overlaps_more_specific:
+            continue
+        accepted_spans.append((start, end, canonical))
+        found_skills.add(canonical)
+
+    return sorted(found_skills)
 
 def extract_information(cv_text):
     extracted_data = {
@@ -47,16 +133,17 @@ def extract_information(cv_text):
     phones = re.findall(phone_pattern, clean_text_for_phone)
     if phones:
         extracted_data["phone"] = phones[0]
+    else:
+        # OCR đôi khi nhận nhầm chữ số 0 đầu tiên thành 9. Chỉ sửa đúng một
+        # ký tự đầu và chỉ chấp nhận nếu phần còn lại tạo thành đầu số VN hợp lệ.
+        digit_candidates = re.findall(r'(?<!\d)\d{10}(?!\d)', clean_text_for_phone)
+        for candidate in digit_candidates:
+            repaired = "0" + candidate[1:]
+            if re.fullmatch(phone_pattern, repaired):
+                extracted_data["phone"] = repaired
+                break
 
-    text_lower = cv_text.lower()
-    found_skills = set()
-    
-    for skill in SKILL_DB:
-        pattern = r'(?:^|\W)' + re.escape(skill) + r'(?:$|\W)'
-        if re.search(pattern, text_lower):
-            found_skills.add(skill)
-
-    extracted_data["skills"] = list(found_skills)
+    extracted_data["skills"] = extract_skills(cv_text)
     
     return extracted_data
 

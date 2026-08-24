@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using RecruitmentBackend.Interfaces;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -7,6 +8,7 @@ namespace RecruitmentBackend.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize(Roles = "Admin")]
     public class HighUtilityController : ControllerBase
     {
         private readonly IHighUtilityService _huimService;
@@ -21,17 +23,8 @@ namespace RecruitmentBackend.Controllers
         [HttpPost("train")]
         public async Task<IActionResult> TrainHUIMModel([FromQuery] double minUtility = 100.0)
         {
-            var result = await _huimService.TrainHighUtilityModelAsync(minUtility);
-            if (result.IsSuccess == false)
-            {
-                return BadRequest(new { status = "error", message = result.Message });
-            }
-
-            var adminEmail = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? "Admin";
-            var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
-            await _auditLogService.WriteLogAsync(adminEmail, "Huấn luyện AI (HUIM)", "Mô hình Kỹ năng Giá trị Cao", ipAddress);
-
-            return Ok(new { status = "success", message = result.Message });
+            await Task.CompletedTask;
+            return Conflict(new { status = "scheduled_only", message = "HUIM được hệ thống tự động cập nhật lúc 02:00." });
         }
 
         [HttpGet("itemsets")]

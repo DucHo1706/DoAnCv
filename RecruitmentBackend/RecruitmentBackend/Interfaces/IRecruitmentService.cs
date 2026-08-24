@@ -8,8 +8,14 @@ namespace RecruitmentBackend.Interfaces
     public interface IRecruitmentService
     {
         Task<(bool IsSuccess, string Message, object Data)> ApplyJobAsync(ApplyJobRequest request, ClaimsPrincipal user);
-        Task<(bool IsSuccess, string Message, object Data)> GetHrApplicationsAsync(ClaimsPrincipal user);
+        Task<(bool IsSuccess, string Message, object Data)> GetHrApplicationsAsync(
+            ClaimsPrincipal user,
+            bool includeAiDetails = true,
+            string? applicationId = null,
+            string? jobId = null);
         Task<(bool IsSuccess, string Message, object Data)> GetMyApplicationsAsync(ClaimsPrincipal user);
+        Task<(bool IsSuccess, string Message, object Data)> RetryAiEvaluationAsync(string applicationId, ClaimsPrincipal user);
+        Task<(bool IsSuccess, string Message, object Data)> WithdrawApplicationAsync(string applicationId, ClaimsPrincipal user);
         Task<(bool IsSuccess, string Message, object Data)> UpdateApplicationStatusAsync(
             string applicationId,
             UpdateApplicationStatusRequest request,
@@ -21,7 +27,6 @@ namespace RecruitmentBackend.Interfaces
             RejectApplicationRequest request,
             ClaimsPrincipal user
         );
-        Task<(bool IsSuccess, string Message, object Data)> ReEvaluateApplicationAsync(string applicationId, ClaimsPrincipal user);
         Task<(bool IsSuccess, string Message, object Data)> ScheduleInterviewAsync(
             string applicationId,
             ScheduleInterviewRequest request,

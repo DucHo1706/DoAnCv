@@ -34,6 +34,14 @@ namespace RecruitmentBackend.Controllers
             public List<string> Skills { get; set; }
         }
 
+        public class UpdateRecruiterDiscoveryRequest
+        {
+            public bool Enabled { get; set; }
+            public bool ContactAllowed { get; set; }
+            public bool CvAllowed { get; set; }
+            public DateTime? ExpiresAt { get; set; }
+        }
+
         [HttpGet]
         public async Task<IActionResult> GetProfile()
         {
@@ -83,6 +91,20 @@ namespace RecruitmentBackend.Controllers
             var result = await _profileService.UpdateSkillsAsync(User, request.Skills);
             if (!result.Success) return BadRequest(new { message = result.Message });
             return Ok(new { message = result.Message });
+        }
+
+        [HttpPut("recruiter-discovery")]
+        public async Task<IActionResult> UpdateRecruiterDiscovery([FromBody] UpdateRecruiterDiscoveryRequest request)
+        {
+            if (request == null) return BadRequest(new { message = "Dữ liệu quyền hiển thị không hợp lệ." });
+            var result = await _profileService.UpdateRecruiterDiscoveryAsync(
+                User,
+                request.Enabled,
+                request.ContactAllowed,
+                request.CvAllowed,
+                request.ExpiresAt);
+            if (!result.Success) return BadRequest(new { message = result.Message });
+            return Ok(new { message = result.Message, data = result.Data });
         }
     }
 }

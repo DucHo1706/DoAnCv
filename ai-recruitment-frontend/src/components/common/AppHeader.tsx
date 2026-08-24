@@ -63,7 +63,7 @@ function AppHeader({ title, userName, roleLabel, onLogout }: AppHeaderProps) {
       const signalR = await import("@microsoft/signalr");
       if (cancelled) return;
 
-      const apiUrl = import.meta.env.VITE_API_URL || "https://recruitinsightai.com/api";
+      const apiUrl = import.meta.env.VITE_API_URL || "/api";
       const hubUrl = apiUrl.replace("/api", "/hubs/notifications");
 
       connection = new signalR.HubConnectionBuilder()
@@ -197,7 +197,7 @@ function AppHeader({ title, userName, roleLabel, onLogout }: AppHeaderProps) {
 
   // Render notification Popover content
   const notifPopoverContent = (
-    <div style={{ width: 350, maxHeight: 450, display: "flex", flexDirection: "column" }}>
+    <div style={{ width: 350, maxWidth: "calc(100vw - 24px)", maxHeight: 450, display: "flex", flexDirection: "column" }}>
       <div
         style={{
           display: "flex",

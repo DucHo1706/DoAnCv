@@ -28,6 +28,7 @@ export interface GenerateCandidateEmailResponse {
   message: string;
   subject: string;
   body: string;
+  source?: "ai" | "template";
 }
 
 export interface CriteriaResultDto {
@@ -39,6 +40,17 @@ export interface CriteriaResultDto {
   maxScore?: number;
   comment: string;
   hasData?: boolean;
+  match_level?: "FULL" | "PARTIAL" | "NOT_FOUND" | "INSUFFICIENT_DATA";
+  matchLevel?: "FULL" | "PARTIAL" | "NOT_FOUND" | "INSUFFICIENT_DATA";
+  confidence?: number | null;
+  evidence_text?: string;
+  evidenceText?: string;
+  evidence_section?: string;
+  evidenceSection?: string;
+  extracted_value?: string;
+  extractedValue?: string;
+  needs_verification?: boolean;
+  needsVerification?: boolean;
 }
 
 export interface ApplicationDto {
@@ -62,6 +74,10 @@ export interface ApplicationDto {
   selectedCriterionRank?: number | null;
   aiDataStatus?: "ready" | "partial" | "missing" | "error" | "invalid";
   aiDataMessage?: string;
+  degree?: string;
+  major?: string;
+  university?: string;
+  yearsOfExperience?: number | null;
 }
 
 export interface RejectApplicationRequest {
@@ -70,9 +86,21 @@ export interface RejectApplicationRequest {
 }
 
 export const recruitmentService = {
-  async getHrApplications() {
-    const response = await axiosClient.get<ApplicationDto[]>("/Recruitment/hr/applications");
+  async getHrApplications(includeAiDetails = true, jobId?: string) {
+    const response = await axiosClient.get<ApplicationDto[]>("/Recruitment/hr/applications", {
+      params: { includeAiDetails, jobId },
+    });
     return response.data;
+  },
+
+  async getHrApplicationDetail(applicationId: string) {
+    const response = await axiosClient.get<ApplicationDto[]>(
+      `/Recruitment/hr/applications/${applicationId}`
+    );
+    const items = Array.isArray(response.data)
+      ? response.data
+      : (response.data as any)?.$values || [];
+    return items[0] || null;
   },
 
   async updateApplicationStatus(applicationId: string, status: string) {
@@ -140,10 +168,13 @@ export const recruitmentService = {
     return response.data;
   },
 
-  async reEvaluateApplication(applicationId: string) {
-    const response = await axiosClient.post(
-      `/Recruitment/hr/applications/${applicationId}/re-evaluate`
-    );
+  async retryMyApplicationAi(applicationId: string) {
+    const response = await axiosClient.post(`/Recruitment/applications/${applicationId}/retry-ai`);
+    return response.data;
+  },
+
+  async withdrawMyApplication(applicationId: string) {
+    const response = await axiosClient.delete(`/Recruitment/applications/${applicationId}/withdraw`);
     return response.data;
   },
 

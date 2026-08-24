@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using RecruitmentBackend.Data;
 using System.Linq;
@@ -10,6 +11,7 @@ namespace RecruitmentBackend.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize(Roles = "Admin")]
     public class AiTrainingController : ControllerBase
     {
         private readonly AppDbContext _context;

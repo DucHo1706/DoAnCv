@@ -12,6 +12,7 @@ interface OptimizationTip {
   star_guidance?: string;
   example_before?: string | null;
   example_after?: string | null;
+  is_fallback?: boolean;
 }
 
 interface StarOptimizationTabProps {
@@ -113,7 +114,7 @@ const renderFormattedStarText = (text: string | null) => {
                 style={{
                   display: "inline-block",
                   padding: "3px 9px",
-                  borderRadius: 6,
+                  borderRadius: 8,
                   fontSize: "11px",
                   fontWeight: 700,
                   color: badgeColor,
@@ -198,7 +199,27 @@ const renderFormattedStarText = (text: string | null) => {
 };
 
 const StarOptimizationTab: React.FC<StarOptimizationTabProps> = ({ optimizationTips }) => {
-  const tipGroups = optimizationTips.reduce(
+  const normalizedTips = (optimizationTips || []).map((t: any, idx: number) => {
+    const group = t.group || "Kinh nghiệm & Dự án";
+    const title = t.title || (t.reason ? `Đề xuất tối ưu #${idx + 1}` : "Tối ưu mô tả kinh nghiệm theo chuẩn STAR");
+    const detail = t.detail || t.reason || "Bổ sung số liệu lượng hóa và sử dụng động từ hành động mạnh để gây ấn tượng với nhà tuyển dụng.";
+    const priority = t.priority || (idx === 0 ? "high" : "medium");
+    const star_guidance = t.star_guidance || "Nêu rõ bối cảnh (Situation), nhiệm vụ (Task), hành động (Action) và kết quả định lượng (Result).";
+    const example_before = t.example_before || t.original_text || null;
+    const example_after = t.example_after || t.improved_text || null;
+
+    return {
+      group,
+      title,
+      detail,
+      priority,
+      star_guidance,
+      example_before,
+      example_after,
+    } as OptimizationTip;
+  });
+
+  const tipGroups = normalizedTips.reduce(
     (acc: Record<string, OptimizationTip[]>, tip: OptimizationTip) => {
       if (tip && tip.group) {
         if (!acc[tip.group]) acc[tip.group] = [];
@@ -229,6 +250,16 @@ const StarOptimizationTab: React.FC<StarOptimizationTabProps> = ({ optimizationT
         </Text>
       </div>
 
+      {normalizedTips.some((tip: any) => tip.is_fallback) && (
+        <Alert
+          message="Đang hiển thị phân tích cơ bản"
+          description="Gemini tạm thời không khả dụng. Các gợi ý dưới đây được tạo từ câu và kỹ năng có thật trong CV; hệ thống không tự tạo thành tích hoặc số liệu."
+          type="info"
+          showIcon
+          style={{ borderRadius: 12 }}
+        />
+      )}
+
       {Object.keys(tipGroups).length > 0 ? (
         Object.entries(tipGroups).map(([group, groupTips]) => (
           <Card
@@ -240,7 +271,7 @@ const StarOptimizationTab: React.FC<StarOptimizationTabProps> = ({ optimizationT
               </span>
             }
             style={{
-              borderRadius: 14,
+              borderRadius: 16,
               background: "#FFFFFF",
               border: "1px solid #E2E8F0",
               borderLeft: "4px solid #2563EB",
@@ -269,7 +300,7 @@ const StarOptimizationTab: React.FC<StarOptimizationTabProps> = ({ optimizationT
                         style={{
                           fontSize: 10,
                           padding: "2px 8px",
-                          borderRadius: 4,
+                          borderRadius: 8,
                           background: "rgba(239, 68, 68, 0.06)",
                           border: "1px solid rgba(239, 68, 68, 0.15)",
                           color: "#EF4444",
@@ -294,7 +325,7 @@ const StarOptimizationTab: React.FC<StarOptimizationTabProps> = ({ optimizationT
                         border: "1px solid #E2E8F0",
                         borderLeft: "3px solid #2563EB",
                         padding: "10px 14px",
-                        borderRadius: 6,
+                        borderRadius: 8,
                         marginBottom: 16,
                       }}
                     >
@@ -374,8 +405,9 @@ const StarOptimizationTab: React.FC<StarOptimizationTabProps> = ({ optimizationT
         ))
       ) : (
         <Alert
-          message="Tuyệt vời! CV của bạn đã viết rất chuyên nghiệp, không cần viết lại theo STAR."
-          type="success"
+          message="Chưa có đủ dữ liệu để đề xuất viết lại theo STAR."
+          description="Hệ thống chưa có đủ dữ liệu để tạo nội dung tối ưu STAR cho hồ sơ này."
+          type="warning"
           showIcon
           style={{ borderRadius: 12 }}
         />

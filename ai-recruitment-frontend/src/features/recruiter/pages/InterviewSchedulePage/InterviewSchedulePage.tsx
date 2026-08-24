@@ -314,7 +314,15 @@ export default function InterviewSchedulePage() {
   ];
 
   return (
-    <PageContainer title="Lịch phỏng vấn ứng viên">
+    <PageContainer
+      title="Lịch phỏng vấn ứng viên"
+      subtitle="Lịch phỏng vấn luôn gắn với một hồ sơ ứng tuyển để bảo toàn lịch sử tuyển dụng."
+      extra={
+        <Button type="primary" icon={<CalendarOutlined />} onClick={() => navigate("/recruiter/applications")}>
+          Tạo lịch từ hồ sơ
+        </Button>
+      }
+    >
       {fetchError && (
         <Alert
           type="error"
@@ -721,7 +729,7 @@ export default function InterviewSchedulePage() {
       </Drawer>
 
       <Modal
-        title="Chỉnh sửa lịch phỏng vấn & Gửi Email"
+        title="Chỉnh sửa lịch phỏng vấn và gửi email"
         open={editModalOpen}
         onCancel={() => setEditModalOpen(false)}
         footer={null}

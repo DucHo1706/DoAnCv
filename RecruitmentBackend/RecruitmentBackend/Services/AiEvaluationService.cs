@@ -9,7 +9,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Security.Claims;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -23,20 +22,17 @@ namespace RecruitmentBackend.Services
     {
         private readonly AppDbContext _context;
         private readonly IAiService _aiService;
-        private readonly IServiceScopeFactory _serviceScopeFactory;
         private readonly IHubContext<AIEvaluationHub> _hubContext;
         private readonly INotificationService _notificationService;
 
         public AiEvaluationService(
             AppDbContext context,
             IAiService aiService,
-            IServiceScopeFactory serviceScopeFactory,
             IHubContext<AIEvaluationHub> hubContext,
             INotificationService notificationService)
         {
             _context = context;
             _aiService = aiService;
-            _serviceScopeFactory = serviceScopeFactory;
             _hubContext = hubContext;
             _notificationService = notificationService;
         }
@@ -58,7 +54,41 @@ namespace RecruitmentBackend.Services
             }
         }
 
-        public async Task RunAiEvaluationInBackgroundAsync(string applicationId, byte[] cvFileBytes, string fileName, string contentType)
+        private async Task SendResultAsync(string applicationId, string aiStatus, string? errorMessage = null)
+        {
+            try
+            {
+                await _hubContext.Clients.Group(applicationId).SendAsync("ReceiveResult", new
+                {
+                    aiStatus,
+                    message = errorMessage
+                });
+
+                string? jobId = await _context.Applications
+                    .AsNoTracking()
+                    .Where(application => application.ApplicationID == applicationId)
+                    .Select(application => application.JobID)
+                    .FirstOrDefaultAsync();
+
+                await _hubContext.Clients.All.SendAsync("ApplicationAnalysisChanged", new
+                {
+                    applicationId,
+                    jobId,
+                    aiStatus
+                });
+            }
+            catch (Exception signalRException)
+            {
+                Console.WriteLine($"[SignalR Error] Không thể phát kết quả hồ sơ {applicationId}: {signalRException.Message}");
+            }
+        }
+
+        public async Task RunAiEvaluationInBackgroundAsync(
+            string applicationId,
+            byte[] cvFileBytes,
+            string fileName,
+            string contentType,
+            string? structuredCvText = null)
         {
             try
             {
@@ -81,7 +111,7 @@ namespace RecruitmentBackend.Services
                 {
                     Console.WriteLine("Application đã có kết quả AI, bỏ qua: " + applicationId);
                     await SendProgressAsync(applicationId, 100, "COMPLETED", "Đã có kết quả AI.");
-                    await _hubContext.Clients.Group(applicationId).SendAsync("ReceiveResult", new { aiStatus = "Success" });
+                    await SendResultAsync(applicationId, "Success");
                     return;
                 }
 
@@ -95,12 +125,13 @@ namespace RecruitmentBackend.Services
                         "Không tìm thấy tin tuyển dụng để AI phân tích."
                     );
                     await SendProgressAsync(applicationId, 0, "FAILED", "Không tìm thấy tin tuyển dụng.");
-                    await _hubContext.Clients.Group(applicationId).SendAsync("ReceiveResult", new { aiStatus = "Failed", message = "Không tìm thấy tin tuyển dụng." });
+                    await SendResultAsync(applicationId, "Failed", "Không tìm thấy tin tuyển dụng.");
                     return;
                 }
 
                 var jobCriteria = await _context.JobCriteria
-                    .Where(jobCriterion => jobCriterion.JobID == application.JobID)
+                    .Where(jobCriterion => jobCriterion.JobID == application.JobID && jobCriterion.IsActive)
+                    .OrderBy(jobCriterion => jobCriterion.DisplayOrder)
                     .ToListAsync();
 
                 if (jobCriteria == null || jobCriteria.Count == 0)
@@ -110,7 +141,7 @@ namespace RecruitmentBackend.Services
                         "Tin tuyển dụng này chưa có tiêu chí đánh giá CV."
                     );
                     await SendProgressAsync(applicationId, 0, "FAILED", "Tin tuyển dụng chưa cấu hình tiêu chí.");
-                    await _hubContext.Clients.Group(applicationId).SendAsync("ReceiveResult", new { aiStatus = "Failed", message = "Tin tuyển dụng chưa cấu hình tiêu chí đánh giá." });
+                    await SendResultAsync(applicationId, "Failed", "Tin tuyển dụng chưa cấu hình tiêu chí đánh giá.");
                     return;
                 }
 
@@ -121,7 +152,14 @@ namespace RecruitmentBackend.Services
                     var criterionItem = new
                     {
                         name = criterion.Name,
-                        weight = criterion.Weight
+                        weight = criterion.Weight,
+                        criterionType = criterion.CriterionType,
+                        priorityLevel = criterion.PriorityLevel,
+                        @operator = criterion.Operator,
+                        targetValue = criterion.TargetValue,
+                        minDurationMonths = criterion.MinDurationMonths,
+                        evidenceSources = criterion.EvidenceSources,
+                        evaluationGuidance = criterion.EvaluationGuidance
                     };
 
                     criteriaForAi.Add(criterionItem);
@@ -167,11 +205,9 @@ namespace RecruitmentBackend.Services
 
                 await SendProgressAsync(applicationId, 45, "AI_CALL", "Đang phân tích và so khớp năng lực bằng Gemini AI...");
 
-                var aiResult = await _aiService.GetMatchingScoreAsync(
-                    cvFile,
-                    jobDescriptionForAi,
-                    criteriaJson
-                );
+                var aiResult = string.IsNullOrWhiteSpace(structuredCvText)
+                    ? await _aiService.GetMatchingScoreAsync(cvFile, jobDescriptionForAi, criteriaJson)
+                    : await _aiService.GetMatchingScoreFromTextAsync(structuredCvText, jobDescriptionForAi, criteriaJson);
 
                 await SendProgressAsync(applicationId, 80, "DATABASE_UPDATE", "Đang cập nhật hồ sơ và lưu kết quả AI vào cơ sở dữ liệu...");
 
@@ -299,26 +335,8 @@ namespace RecruitmentBackend.Services
                     Console.WriteLine("Lỗi gửi thông báo AI hoàn tất: " + ex.Message);
                 }
 
-                if (matchedSkills.Count > 0)
-                {
-                    _ = Task.Run(async () =>
-                    {
-                        try
-                        {
-                            using var scope = _serviceScopeFactory.CreateScope();
-                            var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-                            var aiService = scope.ServiceProvider.GetRequiredService<IAiService>();
-                            await SyncAllSkillsToAiAsync(dbContext, aiService);
-                        }
-                        catch (Exception syncEx)
-                        {
-                            Console.WriteLine("Loi khi sync skills background: " + syncEx.Message);
-                        }
-                    });
-                }
-
                 await SendProgressAsync(applicationId, 100, "COMPLETED", "Đã hoàn tất phân tích AI! 🎉");
-                await _hubContext.Clients.Group(applicationId).SendAsync("ReceiveResult", new { aiStatus = "Success" });
+                await SendResultAsync(applicationId, "Success");
             }
             catch (Exception ex)
             {
@@ -330,84 +348,7 @@ namespace RecruitmentBackend.Services
                 );
 
                 await SendProgressAsync(applicationId, 0, "FAILED", "Phân tích AI thất bại.");
-                await _hubContext.Clients.Group(applicationId).SendAsync("ReceiveResult", new { aiStatus = "Failed", message = ex.Message });
-            }
-        }
-
-        public async Task<(bool IsSuccess, string Message, object Data)> ReEvaluateApplicationAsync(string applicationId, ClaimsPrincipal user)
-        {
-            try
-            {
-                var app = await _context.Applications.FirstOrDefaultAsync(a => a.ApplicationID == applicationId);
-                if (app == null) return (false, "Không tìm thấy hồ sơ ứng tuyển.", null);
-
-                var cv = await _context.CandidateCVs.FirstOrDefaultAsync(c => c.CVID == app.CVID);
-                if (cv == null) return (false, "Không tìm thấy file CV.", null);
-
-                byte[] cvFileBytes;
-                string fileName = Path.GetFileName(cv.FilePath);
-                string contentType = "application/pdf"; 
-                if (fileName.EndsWith(".docx", StringComparison.OrdinalIgnoreCase)) contentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
-                else if (fileName.EndsWith(".doc", StringComparison.OrdinalIgnoreCase)) contentType = "application/msword";
-                else if (fileName.EndsWith(".png", StringComparison.OrdinalIgnoreCase)) contentType = "image/png";
-                else if (fileName.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase) || fileName.EndsWith(".jpeg", StringComparison.OrdinalIgnoreCase)) contentType = "image/jpeg";
-
-                if (cv.FilePath.StartsWith("http", StringComparison.OrdinalIgnoreCase))
-                {
-                    using var httpClient = new HttpClient();
-                    httpClient.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)");
-                    var response = await httpClient.GetAsync(cv.FilePath);
-                    if (!response.IsSuccessStatusCode)
-                    {
-                        return (false, $"Không thể tải file CV từ Cloudinary (Mã lỗi: {response.StatusCode}).", null);
-                    }
-                    cvFileBytes = await response.Content.ReadAsByteArrayAsync();
-                }
-                else
-                {
-                    string localPath = Path.Combine(Directory.GetCurrentDirectory(), cv.FilePath.TrimStart('/'));
-                    if (!File.Exists(localPath))
-                    {
-                        localPath = Path.Combine(Directory.GetCurrentDirectory(), "Uploads", fileName);
-                    }
-                    if (!File.Exists(localPath))
-                    {
-                        return (false, "Không tìm thấy file CV vật lý trên server để chấm lại.", null);
-                    }
-                    cvFileBytes = await File.ReadAllBytesAsync(localPath);
-                }
-
-                var oldEvaluation = await _context.AIEvaluations.FirstOrDefaultAsync(e => e.ApplicationID == applicationId);
-                if (oldEvaluation != null)
-                {
-                    _context.AIEvaluations.Remove(oldEvaluation);
-                    await _context.SaveChangesAsync();
-                }
-
-                _ = Task.Run(async () =>
-                {
-                    try
-                    {
-                        using var scope = _serviceScopeFactory.CreateScope();
-                        var aiEvaluationService = scope.ServiceProvider.GetRequiredService<IAiEvaluationService>();
-                        await aiEvaluationService.RunAiEvaluationInBackgroundAsync(
-                            applicationId,
-                            cvFileBytes,
-                            fileName,
-                            contentType
-                        );
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine("Lỗi background AI chấm lại: " + ex.Message);
-                    }
-                });
-
-                return (true, "Yêu cầu AI phân tích lại thành công. Vui lòng chờ vài giây và tải lại trang.", new { aiStatus = "Processing" });
-            }
-            catch (Exception ex)
-            {
-                return (false, $"Lỗi hệ thống khi chấm lại: {ex.Message}", null);
+                await SendResultAsync(applicationId, "Failed", ex.Message);
             }
         }
 
@@ -450,46 +391,5 @@ namespace RecruitmentBackend.Services
             }
         }
 
-        private static async Task SyncAllSkillsToAiAsync(AppDbContext dbContext, IAiService aiService)
-        {
-            try
-            {
-                var allSkillsJson = await dbContext.CandidateCVs
-                    .Where(cv => !string.IsNullOrEmpty(cv.CVExtractedSkills) && cv.CVExtractedSkills != "[]")
-                    .Select(cv => cv.CVExtractedSkills)
-                    .ToListAsync();
-
-                var uniqueSkills = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-                foreach (var json in allSkillsJson)
-                {
-                    try
-                    {
-                        var skills = JsonSerializer.Deserialize<List<string>>(json);
-                        if (skills != null)
-                        {
-                            foreach (var skill in skills)
-                            {
-                                if (!string.IsNullOrWhiteSpace(skill))
-                                {
-                                    uniqueSkills.Add(skill.Trim().ToLower());
-                                }
-                            }
-                        }
-                    }
-                    catch { /* skip invalid JSON */ }
-                }
-
-                if (uniqueSkills.Count > 0)
-                {
-                    await aiService.SyncSkillsToAiAsync(uniqueSkills.ToList());
-                    Console.WriteLine($"[AUTO-SYNC] Synced {uniqueSkills.Count} unique skills to Python AI.");
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("Loi khi thuc hien SyncAllSkillsToAiAsync: " + ex.Message);
-            }
-        }
     }
 }

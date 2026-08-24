@@ -25,7 +25,6 @@ import {
   ClockCircleOutlined,
   StarOutlined,
   StarFilled,
-  ThunderboltOutlined,
   CheckCircleOutlined,
   DollarOutlined,
   DatabaseOutlined,
@@ -84,6 +83,50 @@ const glassCardStyle = {
 
 const escapeRegExp = (string: string) => {
   return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+};
+
+const getPublicJobCode = (value: unknown) => {
+  const raw = String(value || "");
+  const guid = raw.match(/[0-9a-f]{8}(?:-?[0-9a-f]{4}){3}-?[0-9a-f]{12}/i)?.[0];
+  if (guid) return guid.replaceAll("-", "").slice(0, 8).toUpperCase();
+
+  let hash = 2166136261;
+  for (let index = 0; index < raw.length; index += 1) {
+    hash ^= raw.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(16).padStart(8, "0").toUpperCase();
+};
+
+const canonicalizeLocation = (name: string) => {
+  const normalized = (name || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
+
+  if (["hcm", "tphcm", "hochiminh", "thanhphohochiminh"].includes(normalized)) {
+    return { key: "ho-chi-minh", name: "Hồ Chí Minh" };
+  }
+  if (["hn", "hanoi", "thanhphohanoi"].includes(normalized)) {
+    return { key: "ha-noi", name: "Hà Nội" };
+  }
+  if (["dn", "danang", "thanhphodanang"].includes(normalized)) {
+    return { key: "da-nang", name: "Đà Nẵng" };
+  }
+
+  return { key: normalized || name, name };
+};
+
+const mergeLocationAliases = (items: any[]) => {
+  const uniqueLocations = new Map<string, { id: string; name: string }>();
+  items.forEach((branch) => {
+    const canonical = canonicalizeLocation(branch?.name || "");
+    if (canonical.name && !uniqueLocations.has(canonical.key)) {
+      uniqueLocations.set(canonical.key, { id: canonical.key, name: canonical.name });
+    }
+  });
+  return Array.from(uniqueLocations.values());
 };
 
 export default function CandidateJobPage() {
@@ -153,7 +196,8 @@ export default function CandidateJobPage() {
         const branchRes = await axiosClient.get("/Metadata/branches");
         setCategories(catRes.data?.$values || catRes.data || []);
         setJobLevels(levelRes.data?.$values || levelRes.data || []);
-        setBranches(branchRes.data?.$values || branchRes.data || []);
+        const branchItems = branchRes.data?.$values || branchRes.data || [];
+        setBranches(mergeLocationAliases(branchItems));
       } catch (error) {
         console.error("Lỗi lấy metadata:", error);
       }
@@ -275,11 +319,11 @@ export default function CandidateJobPage() {
     }
   };
 
-  // Thuật toán tính toán AI Match score giữa CV ứng viên và Công việc
+  // Đối chiếu từ khóa minh bạch; đây không phải điểm đánh giá AI.
   const calculateJobMatch = (job: any) => {
-    if (!candidateSkills || candidateSkills.length === 0) return { score: 0, matched: [] };
+    if (!candidateSkills || candidateSkills.length === 0) return { matched: [], total: 0 };
     const validSkills = candidateSkills.filter(s => s && s.trim().length > 1);
-    if (validSkills.length === 0) return { score: 0, matched: [] };
+    if (validSkills.length === 0) return { matched: [], total: 0 };
 
     const title = job.title || job.position || "";
     const desc = job.description || job.requirements || "";
@@ -294,23 +338,14 @@ export default function CandidateJobPage() {
       }
     });
 
-    const isTechJob = ["developer", "engineer", "lập trình", "software", "react", "frontend", "backend", "fullstack", "devops", "cloud", "data", "python", "java", "c#", ".net", "design", "figma", "ui/ux", "it", "hệ thống", "tester", "qa", "web"].some(k => title.toLowerCase().includes(k));
-
-    let score = 0;
-    if (matched.length > 0) {
-      score = Math.min(98, Math.round((matched.length / validSkills.length) * 50) + 48);
-    } else if (isTechJob) {
-      score = 55;
-    }
-
-    return { score, matched };
+    return { matched, total: validSkills.length };
   };
 
   // Sắp xếp danh sách việc làm
   const processedJobs = [...jobs].sort((a, b) => {
     if (sortBy === "aiMatch") {
-      const matchA = calculateJobMatch(a).score;
-      const matchB = calculateJobMatch(b).score;
+      const matchA = calculateJobMatch(a).matched.length;
+      const matchB = calculateJobMatch(b).matched.length;
       return matchB - matchA;
     }
     return 0; // Giữ nguyên thứ tự từ API (Mới cập nhật)
@@ -502,7 +537,7 @@ export default function CandidateJobPage() {
                     }
                   >
                     <Option value="all">Tất cả cấp bậc</Option>
-                    {jobLevels.map((l) => (
+                    {jobLevels.filter((l) => l.parentId).map((l) => (
                       <Option key={l.id} value={l.id}>
                         {l.name}
                       </Option>
@@ -598,8 +633,8 @@ export default function CandidateJobPage() {
                   {isLoggedIn && isCandidate && candidateSkills.length > 0 && (
                     <Option value="aiMatch">
                       <Space size={4}>
-                        <ThunderboltOutlined style={{ color: "#2563EB" }} />
-                        <span>Phù hợp nhất với CV (AI)</span>
+                        <CheckCircleOutlined style={{ color: "#2563EB" }} />
+                        <span>Nhiều kỹ năng trùng khớp</span>
                       </Space>
                     </Option>
                   )}
@@ -671,7 +706,7 @@ export default function CandidateJobPage() {
                           style={{
                             width: 56,
                             height: 56,
-                            borderRadius: 14,
+                            borderRadius: 16,
                             background: "rgba(37, 99, 235, 0.08)",
                             color: "#2563EB",
                             display: "flex",
@@ -705,22 +740,18 @@ export default function CandidateJobPage() {
                                   {jobTitle}
                                 </Title>
 
-                                {/* Badge AI Match Score */}
-                                {isLoggedIn && isCandidate && matchResult.score >= 50 && (
+                                {isLoggedIn && isCandidate && matchResult.matched.length > 0 && (
                                   <Tag
-                                    color="purple"
+                                    color="blue"
                                     style={{
                                       borderRadius: 20,
-                                      fontWeight: 800,
+                                      fontWeight: 700,
                                       padding: "3px 10px",
                                       fontSize: 11,
-                                      background: "#F3E8FF",
-                                      border: "1px solid #E9D5FF",
-                                      color: "#6B21A8",
                                       margin: 0,
                                     }}
                                   >
-                                    <ThunderboltOutlined /> {matchResult.score}% PHÙ HỢP CV
+                                    <CheckCircleOutlined /> Khớp {matchResult.matched.length}/{matchResult.total} kỹ năng
                                   </Tag>
                                 )}
                               </div>
@@ -731,12 +762,12 @@ export default function CandidateJobPage() {
                                   {companyName}
                                 </Text>
                                 {categoryName && (
-                                  <Tag style={{ background: "#F1F5F9", border: "1px solid #CBD5E1", color: "#475569", borderRadius: 6, margin: 0, fontSize: 11, fontWeight: 600 }}>
+                                  <Tag style={{ background: "#F1F5F9", border: "1px solid #CBD5E1", color: "#475569", borderRadius: 8, margin: 0, fontSize: 11, fontWeight: 600 }}>
                                     {categoryName}
                                   </Tag>
                                 )}
                                 {jobLevelName && (
-                                  <Tag style={{ background: "#EFF6FF", border: "1px solid #BFDBFE", color: "#1D4ED8", borderRadius: 6, margin: 0, fontSize: 11, fontWeight: 600 }}>
+                                  <Tag style={{ background: "#EFF6FF", border: "1px solid #BFDBFE", color: "#1D4ED8", borderRadius: 8, margin: 0, fontSize: 11, fontWeight: 600 }}>
                                     {jobLevelName}
                                   </Tag>
                                 )}
@@ -745,7 +776,7 @@ export default function CandidateJobPage() {
 
                             {/* Góc phải: Mức Lương & Nút Lưu */}
                             <div style={{ textAlign: "right", flexShrink: 0, display: "flex", alignItems: "center", gap: 12 }}>
-                              <div style={{ background: "#F0FDF4", border: "1px solid #BBF7D0", padding: "6px 14px", borderRadius: 10 }}>
+                              <div style={{ background: "#F0FDF4", border: "1px solid #BBF7D0", padding: "6px 14px", borderRadius: 12 }}>
                                 <Text strong style={{ fontSize: 17, color: "#10B981", fontWeight: 800, display: "block" }}>
                                   {salaryText}
                                 </Text>
@@ -785,7 +816,7 @@ export default function CandidateJobPage() {
 
                           {/* Hàng 3: Trích đoạn Yêu cầu & Mô tả công việc */}
                           {(job.requirements || job.description) && (
-                            <div style={{ background: "#F8FAFC", padding: "12px 16px", borderRadius: 10, border: "1px solid #F1F5F9", marginBottom: 14 }}>
+                            <div style={{ background: "#F8FAFC", padding: "12px 16px", borderRadius: 12, border: "1px solid #F1F5F9", marginBottom: 14 }}>
                               <Text type="secondary" style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", display: "block", marginBottom: 4, color: "#64748B" }}>
                                 Mô tả & Yêu cầu công việc:
                               </Text>
@@ -802,7 +833,7 @@ export default function CandidateJobPage() {
                                 ✓ Trùng khớp CV của bạn:
                               </span>
                               {matchResult.matched.map((sk: string, sIdx: number) => (
-                                <Tag key={sIdx} color="emerald" style={{ fontSize: 11, padding: "2px 8px", borderRadius: 6, margin: 0, backgroundColor: "#ECFDF5", color: "#059669", borderColor: "#A7F3D0", fontWeight: 700 }}>
+                                <Tag key={sIdx} color="emerald" style={{ fontSize: 11, padding: "2px 8px", borderRadius: 8, margin: 0, backgroundColor: "#ECFDF5", color: "#059669", borderColor: "#A7F3D0", fontWeight: 700 }}>
                                   {sk}
                                 </Tag>
                               ))}
@@ -828,7 +859,7 @@ export default function CandidateJobPage() {
                             </Space>
 
                             <Text type="secondary" style={{ fontSize: 12 }}>
-                              Mã tin: #{String(job.id || job.jobID).slice(0, 8)}
+                              Mã tin: #{getPublicJobCode(job.id || job.jobID)}
                             </Text>
                           </div>
                         </div>

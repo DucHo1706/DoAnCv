@@ -93,10 +93,10 @@ export function useEmailCandidate() {
 
       if (response.subject) setSubject(response.subject);
       if (response.body) setContent(response.body);
-      message.success("AI đã soạn thư mời Talent Pool thành công.");
+      message.success("Đã tạo thư mời Talent Pool.");
     } catch (error: any) {
       const errorMessage =
-        error?.response?.data?.message || "AI chưa thể soạn thư mời Talent Pool. Vui lòng thử lại.";
+        error?.response?.data?.message || "Chưa thể tạo thư mời Talent Pool. Vui lòng thử lại.";
       message.error(errorMessage);
     } finally {
       setIsGeneratingAi(false);
@@ -134,9 +134,9 @@ export function useEmailCandidate() {
         }
         setContent(body);
       }
-      message.success("AI đã phác thảo thư mời phỏng vấn thành công. Bạn có thể chỉnh sửa trước khi gửi.");
+      message.success("Đã tạo thư mời phỏng vấn. Bạn có thể chỉnh sửa trước khi gửi.");
     } catch (error: any) {
-      message.error("AI chưa thể tự động soạn thư mời. Bạn có thể tự viết.");
+      message.error("Chưa thể tạo thư mời. Bạn có thể tự viết nội dung.");
     } finally {
       setIsGeneratingAi(false);
     }
@@ -204,9 +204,9 @@ export function useEmailCandidate() {
 
     const fetchCandidate = async () => {
       try {
-        const data = await recruitmentService.getHrApplications();
-        const apps = Array.isArray(data) ? data : (data as any)?.$values || [];
-        const found = apps.find((app: any) => app.id === id);
+        const found = id
+          ? await recruitmentService.getHrApplicationDetail(id)
+          : null;
 
         if (found) {
           setCandidate(found);
@@ -288,10 +288,12 @@ export function useEmailCandidate() {
 
       if (response.subject) setSubject(response.subject);
       if (response.body) setContent(response.body);
-      message.success("AI đã soạn email thành công.");
+      message.success(response.source === "template"
+        ? "Đã tạo mẫu email chỉnh sửa được (AI đang tắt)."
+        : "Đã tạo nội dung email bằng AI.");
     } catch (error: any) {
       const errorMessage =
-        error?.response?.data?.message || "AI chưa thể soạn email. Vui lòng thử lại.";
+        error?.response?.data?.message || "Chưa thể tạo nội dung email. Vui lòng thử lại.";
       message.error(errorMessage);
     } finally {
       setIsGeneratingAi(false);

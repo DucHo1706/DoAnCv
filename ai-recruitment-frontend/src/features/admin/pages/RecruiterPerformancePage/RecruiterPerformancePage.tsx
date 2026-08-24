@@ -260,8 +260,7 @@ export default function RecruiterPerformancePage() {
 
   return (
     <PageContainer
-      title="Báo cáo & Phân tích Năng lực Recruiter"
-      subtitle="Đối sánh hiệu suất đăng tin, số lượng ứng viên tiếp nhận và tỷ lệ chuyển đổi trúng tuyển giữa các Chuyên viên Tuyển dụng"
+      title="Hiệu quả nhà tuyển dụng"
     >
       {/* Metric summary grid */}
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
@@ -357,7 +356,7 @@ export default function RecruiterPerformancePage() {
             prefix={<SearchOutlined style={{ color: appTheme.colors.textSecondary }} />}
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
-            style={{ width: 320, borderRadius: 8 }}
+            style={{ width: "100%", maxWidth: 320, minWidth: 0, borderRadius: 8 }}
             allowClear
           />
 

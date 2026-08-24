@@ -110,7 +110,7 @@ export default function RichTextEditor({
             padding-left: 24px;
           }
           [contenteditable="true"] a {
-            color: #1677ff;
+            color: #2563EB;
             text-decoration: underline;
           }
         `}

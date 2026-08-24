@@ -137,14 +137,14 @@ export function CandidateProfileSidebar({
             textAlign: "left",
             background: "#F8FAFC",
             padding: "12px 16px",
-            borderRadius: 10,
+            borderRadius: 12,
             border: "1px solid #F1F5F9"
           }}
         >
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
             <Text type="secondary" style={{ fontSize: 13 }}>Loại tài khoản</Text>
             <Tag color="blue" style={{ margin: 0, fontWeight: 600 }}>
-              Candidate
+              Ứng viên
             </Tag>
           </div>
           <div style={{ display: "flex", justifyContent: "space-between" }}>

@@ -3,7 +3,7 @@ import {
   StatusRunningIcon,
   StatusClosedIcon,
 } from "../../../../components/common/AppIcons";
-import { AppstoreOutlined, CalendarOutlined, CheckCircleOutlined, CheckOutlined, CloseOutlined, DollarOutlined, EyeOutlined, FileTextOutlined, FireOutlined, LockOutlined, SearchOutlined, StopOutlined, UnlockOutlined, UnorderedListOutlined, UserOutlined, DownloadOutlined, FlagOutlined, ClockCircleFilled, CheckCircleFilled, CloseCircleFilled, LockFilled } from "@ant-design/icons";
+import { AppstoreOutlined, CalendarOutlined, CheckCircleOutlined, CheckOutlined, CloseOutlined, DollarOutlined, EyeOutlined, FileTextOutlined, FireOutlined, LockOutlined, SearchOutlined, StopOutlined, UnlockOutlined, UnorderedListOutlined, UserOutlined, DownloadOutlined, FlagOutlined, ClockCircleFilled, CheckCircleFilled, CloseCircleFilled, LockFilled, InboxOutlined, UndoOutlined } from "@ant-design/icons";
 import {
   Button,
   Card,
@@ -26,19 +26,21 @@ import {
   Alert,
   Skeleton,
 } from "antd";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import PageContainer from "../../../../components/common/PageContainer";
 import EmptyState from "../../../../components/common/EmptyState";
 import AppPagination from "../../../../components/common/AppPagination";
 import { jobService, categoryService } from "../../services/jobService";
-import type { JobDto, JobReviewResponse } from "../../services/jobService";
+import type { JobDto } from "../../services/jobService";
 import { EnvironmentOutlined } from "@ant-design/icons";
 import { exportToCsv } from "../../../../utils/exportUtils";
-import { JobDetailModal } from "./components/JobDetailModal";
 import { RejectModal } from "./components/RejectModal";
 import { JobGridView } from "./components/JobGridView";
 import { JobTableView } from "./components/JobTableView";
 import { JobApprovalToolbar } from "./components/JobApprovalToolbar";
+import { formatJobDate, resolveJobLifecycle } from "../../../../utils/jobLifecycle";
+import { useRealtimeResourceRefresh } from "../../../../hooks/useRealtimeRefresh";
 
 const { Paragraph, Text, Title } = Typography;
 
@@ -55,15 +57,11 @@ type PendingJobTableItem = {
 };
 
 function formatDate(value?: string | null) {
-  if (!value) return "Chưa cập nhật";
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-
-  return date.toLocaleDateString("vi-VN");
+  return formatJobDate(value);
 }
 
 function JobApprovalPage() {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [approvingId, setApprovingId] = useState<string | null>(null);
   const [jobs, setJobs] = useState<JobDto[]>([]);
@@ -81,9 +79,6 @@ function JobApprovalPage() {
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>("all");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
 
-  const [detailOpen, setDetailOpen] = useState(false);
-  const [detailLoading, setDetailLoading] = useState(false);
-  const [jobDetail, setJobDetail] = useState<JobReviewResponse | null>(null);
 
   // Reject modal state
   const [rejectTarget, setRejectTarget] = useState<PendingJobTableItem | null>(null);
@@ -96,9 +91,9 @@ function JobApprovalPage() {
 
   const [fetchError, setFetchError] = useState<string | null>(null);
 
-  const fetchAdminJobs = async () => {
+  const fetchAdminJobs = useCallback(async (background = false) => {
     try {
-      setLoading(true);
+      if (!background) setLoading(true);
       setFetchError(null);
       const data: any = await jobService.getAdminJobs();
       setJobs(Array.isArray(data) ? data : data?.$values || []);
@@ -106,9 +101,9 @@ function JobApprovalPage() {
       console.error(error);
       setFetchError("Không tải được danh sách tin tuyển dụng. Vui lòng kiểm tra kết nối và thử lại.");
     } finally {
-      setLoading(false);
+      if (!background) setLoading(false);
     }
-  };
+  }, []);
 
   const fetchCategories = async () => {
     try {
@@ -120,9 +115,11 @@ function JobApprovalPage() {
   };
 
   useEffect(() => {
-    fetchAdminJobs();
-    fetchCategories();
-  }, []);
+    void fetchAdminJobs();
+    void fetchCategories();
+  }, [fetchAdminJobs]);
+
+  useRealtimeResourceRefresh(["jobs"], () => fetchAdminJobs(true));
 
   // Multi-filter states
   const [selectedRecruiterEmail, setSelectedRecruiterEmail] = useState<string>("all");
@@ -147,12 +144,27 @@ function JobApprovalPage() {
     return Array.from(set);
   }, [jobs]);
 
-  // Set default status to Pending if pending jobs exist
+  const representedCategories = useMemo(() => {
+    const byId = new Map<string, { id: string; name: string }>();
+    jobs.forEach((job) => {
+      if (job.category?.id && job.category.name) {
+        byId.set(job.category.id, { id: job.category.id, name: job.category.name });
+      }
+    });
+    categories.forEach((category) => {
+      if (byId.has(category.id)) {
+        byId.set(category.id, { id: category.id, name: category.name });
+      }
+    });
+    return Array.from(byId.values()).sort((left, right) => left.name.localeCompare(right.name, "vi"));
+  }, [categories, jobs]);
+
+  // Mặc định mở tab chờ duyệt khi có tin mới.
   useEffect(() => {
     if (jobs.length > 0) {
       const hasPending = jobs.some((j) => j.status === "Pending");
       if (hasPending && selectedStatus === "all") {
-        setSelectedStatus("Pending");
+        setSelectedStatus("pending");
       }
     }
   }, [jobs]);
@@ -173,7 +185,11 @@ function JobApprovalPage() {
 
       const matchesStatus =
         selectedStatus === "all" ||
-        job.status === selectedStatus;
+        (selectedStatus === "pending" && job.status === "Pending") ||
+        (selectedStatus === "active" && resolveJobLifecycle(job) === "Recruiting") ||
+        (selectedStatus === "expired" && resolveJobLifecycle(job) === "Expired") ||
+        (selectedStatus === "archived" && job.status === "Archived") ||
+        (selectedStatus === "closed" && resolveJobLifecycle(job) === "Closed");
 
       const matchesRecruiter =
         selectedRecruiterEmail === "all" ||
@@ -219,20 +235,7 @@ function JobApprovalPage() {
     setSelectedRowKeys((prev) => prev.filter((key) => validIds.has(String(key))));
   }, [tableData]);
 
-  const handleViewJob = async (record: PendingJobTableItem) => {
-    try {
-      setDetailOpen(true);
-      setDetailLoading(true);
-      const data = await jobService.getJobReview(record.id);
-      setJobDetail(data);
-    } catch (error) {
-      console.error(error);
-      message.error("Không tải được chi tiết tin tuyển dụng");
-      setDetailOpen(false);
-    } finally {
-      setDetailLoading(false);
-    }
-  };
+  const handleViewJob = (record: PendingJobTableItem) => navigate(`/admin/jobs/${record.id}`);
 
   const handleApproveJob = async (record: PendingJobTableItem) => {
     if (approvingId) return;
@@ -242,10 +245,6 @@ function JobApprovalPage() {
       const response = await jobService.approveJob(record.id);
       message.success(response?.message || "Duyệt tin tuyển dụng thành công");
       fetchAdminJobs();
-      if (jobDetail?.jobInfo.id === record.id) {
-        setDetailOpen(false);
-        setJobDetail(null);
-      }
     } catch (error: any) {
       console.error("Approve error:", error);
       const errorMessage =
@@ -265,12 +264,28 @@ function JobApprovalPage() {
       await jobService.toggleJobStatus(id);
       message.success("Cập nhật trạng thái thành công");
       fetchAdminJobs();
-      if (jobDetail?.jobInfo.id === id) {
-        setDetailOpen(false);
-        setJobDetail(null);
-      }
     } catch (error: any) {
       message.error("Lỗi khi thay đổi trạng thái!");
+    }
+  };
+
+  const handleArchive = async (id: string) => {
+    try {
+      const response = await jobService.archiveJob(id);
+      message.success(response?.message || "Đã lưu trữ tin tuyển dụng");
+      fetchAdminJobs();
+    } catch (error: any) {
+      message.error(error?.response?.data?.message || "Không thể lưu trữ tin tuyển dụng");
+    }
+  };
+
+  const handleRestore = async (id: string) => {
+    try {
+      const response = await jobService.restoreJob(id);
+      message.success(response?.message || "Đã khôi phục tin tuyển dụng");
+      fetchAdminJobs();
+    } catch (error: any) {
+      message.error(error?.response?.data?.message || "Không thể khôi phục tin tuyển dụng");
     }
   };
 
@@ -293,10 +308,6 @@ function JobApprovalPage() {
       setRejectTarget(null);
       setRejectReasonText("");
       fetchAdminJobs();
-      if (jobDetail?.jobInfo.id === rejectTarget.id) {
-        setDetailOpen(false);
-        setJobDetail(null);
-      }
     } catch (error: any) {
       const errorMessage =
         error?.response?.data?.message ||
@@ -387,8 +398,12 @@ function JobApprovalPage() {
       j.salaryRange || "Chưa cập nhật",
       j.recruiter?.name || "HR",
       j.recruiter?.email || "N/A",
-      j.status === "Published"
-        ? "Đang chạy"
+      resolveJobLifecycle(j) === "Recruiting"
+        ? "Đang tuyển"
+        : resolveJobLifecycle(j) === "Expired"
+        ? "Đã duyệt · Hết hạn"
+        : resolveJobLifecycle(j) === "Scheduled"
+        ? "Đã duyệt · Sắp mở"
         : j.status === "Pending"
         ? "Chờ duyệt"
         : j.status === "Rejected"
@@ -406,9 +421,11 @@ function JobApprovalPage() {
 
   const totalJobsCount = jobs.length;
   const pendingJobsCount = jobs.filter((j) => j.status === "Pending").length;
-  const publishedJobsCount = jobs.filter((j) => j.status === "Published").length;
+  const publishedJobsCount = jobs.filter((j) => resolveJobLifecycle(j) === "Recruiting").length;
+  const expiredJobsCount = jobs.filter((j) => resolveJobLifecycle(j) === "Expired").length;
   const rejectedJobsCount = jobs.filter((j) => j.status === "Rejected").length;
   const closedJobsCount = jobs.filter((j) => j.status === "Closed" || j.status === "Locked").length;
+  const archivedJobsCount = jobs.filter((j) => j.status === "Archived").length;
 
   const columns = [
     {
@@ -454,7 +471,7 @@ function JobApprovalPage() {
       key: "salaryRange",
       width: 160,
       render: (text: string) => (
-        <Tag color="blue" style={{ borderRadius: 6, padding: "2px 8px", fontWeight: 600 }}>
+        <Tag color="blue" style={{ borderRadius: 8, padding: "2px 8px", fontWeight: 600 }}>
           {text}
         </Tag>
       ),
@@ -479,16 +496,31 @@ function JobApprovalPage() {
       width: 150,
       render: (_: any, record: PendingJobTableItem) => {
         const st = record.raw.status;
-        if (st === "Published") {
+        const lifecycle = resolveJobLifecycle(record.raw);
+        if (lifecycle === "Expired") {
           return (
-            <Tag color="success" style={{ borderRadius: 6, fontWeight: 700, padding: "3px 10px" }}>
-              Đang chạy
+            <Tag color="error" style={{ borderRadius: 8, fontWeight: 700, padding: "3px 10px" }}>
+              Đã duyệt · Hết hạn
+            </Tag>
+          );
+        }
+        if (lifecycle === "Scheduled") {
+          return (
+            <Tag color="processing" style={{ borderRadius: 8, fontWeight: 700, padding: "3px 10px" }}>
+              Đã duyệt · Sắp mở
+            </Tag>
+          );
+        }
+        if (lifecycle === "Recruiting") {
+          return (
+            <Tag color="success" style={{ borderRadius: 8, fontWeight: 700, padding: "3px 10px" }}>
+              Đang tuyển
             </Tag>
           );
         }
         if (st === "Closed" || st === "Locked") {
           return (
-            <Tag color="default" style={{ borderRadius: 6, fontWeight: 600, padding: "3px 10px", color: "#64748B" }}>
+            <Tag color="default" style={{ borderRadius: 8, fontWeight: 600, padding: "3px 10px", color: "#64748B" }}>
               Đã đóng
             </Tag>
           );
@@ -496,14 +528,17 @@ function JobApprovalPage() {
         if (st === "Rejected") {
           return (
             <Tooltip title={record.raw.rejectReason || "Không có lý do cụ thể"}>
-              <Tag color="error" style={{ borderRadius: 6, fontWeight: 700, padding: "3px 10px", cursor: "help" }}>
+              <Tag color="error" style={{ borderRadius: 8, fontWeight: 700, padding: "3px 10px", cursor: "help" }}>
                 Đã từ chối
               </Tag>
             </Tooltip>
           );
         }
+        if (st === "Archived") {
+          return <Tag icon={<InboxOutlined />} color="default">Đã lưu trữ</Tag>;
+        }
         return (
-          <Tag color="warning" style={{ borderRadius: 6, fontWeight: 800, padding: "3px 10px", backgroundColor: "#FFF7ED", borderColor: "#FFEDD5", color: "#C2410C" }}>
+          <Tag color="warning" style={{ borderRadius: 8, fontWeight: 800, padding: "3px 10px", backgroundColor: "#FFF7ED", borderColor: "#FFEDD5", color: "#C2410C" }}>
             Chờ duyệt
           </Tag>
         );
@@ -512,7 +547,7 @@ function JobApprovalPage() {
     {
       title: "Thao tác",
       key: "actions",
-      width: 280,
+      width: 400,
       fixed: "right" as const,
       render: (_: unknown, record: PendingJobTableItem) => (
         <Space size="small">
@@ -543,7 +578,7 @@ function JobApprovalPage() {
               </Button>
             </>
           )}
-          {(record.raw.status === "Published" || record.raw.status === "Closed") && (
+          {(record.raw.status === "Published" || record.raw.status === "Closed") && resolveJobLifecycle(record.raw) !== "Expired" && (
             <Popconfirm
               title={
                 record.raw.status === "Published"
@@ -563,6 +598,15 @@ function JobApprovalPage() {
               </Button>
             </Popconfirm>
           )}
+          {record.raw.status === "Archived" ? (
+            <Popconfirm title="Khôi phục tin và chuyển về chờ duyệt?" onConfirm={() => handleRestore(record.id)} okText="Khôi phục" cancelText="Hủy">
+              <Button icon={<UndoOutlined />} size="middle">Khôi phục</Button>
+            </Popconfirm>
+          ) : (
+            <Popconfirm title="Lưu trữ tin này?" description="Dữ liệu ứng viên và kết quả AI vẫn được giữ nguyên." onConfirm={() => handleArchive(record.id)} okText="Lưu trữ" cancelText="Hủy">
+              <Button icon={<InboxOutlined />} size="middle">Lưu trữ</Button>
+            </Popconfirm>
+          )}
         </Space>
       ),
     },
@@ -570,7 +614,7 @@ function JobApprovalPage() {
 
   return (
     <PageContainer
-      title="Quản lý & Duyệt Tin tuyển dụng"
+      title="Quản lý và duyệt tin tuyển dụng"
     >
       {fetchError && (
         <Alert
@@ -579,7 +623,7 @@ function JobApprovalPage() {
           message="Lỗi tải dữ liệu"
           description={fetchError}
           action={
-            <Button size="small" type="primary" onClick={fetchAdminJobs}>
+            <Button size="small" type="primary" onClick={() => void fetchAdminJobs()}>
               Thử lại
             </Button>
           }
@@ -649,8 +693,8 @@ function JobApprovalPage() {
                 <Text type="secondary" style={{ fontSize: 13, fontWeight: 600 }}>ĐANG CHẠY</Text>
                 <CheckCircleOutlined style={{ fontSize: 22, color: "#10B981" }} />
               </div>
-              <Title level={2} style={{ margin: 0, fontWeight: 800, color: "#0F172A" }}>{publishedJobsCount}</Title>
-              <Text type="secondary" style={{ fontSize: 12 }}>Đang công khai tuyển dụng</Text>
+          <Title level={2} style={{ margin: 0, fontWeight: 800, color: "#0F172A" }}>{publishedJobsCount}</Title>
+              <Text type="secondary" style={{ fontSize: 12 }}>Công khai và còn hạn tuyển dụng</Text>
             </Space>
           </Card>
         </Col>
@@ -694,11 +738,13 @@ function JobApprovalPage() {
         setViewMode={setViewMode}
         uniqueRecruiters={uniqueRecruiters}
         uniqueBranches={uniqueBranches}
-        categories={categories}
+        categories={representedCategories}
         counts={{
           pending: pendingJobsCount,
           active: publishedJobsCount,
+          expired: expiredJobsCount,
           closed: closedJobsCount,
+          archived: archivedJobsCount,
           all: totalJobsCount,
         }}
         onExportCsv={handleExportJobsCsv}
@@ -765,22 +811,10 @@ function JobApprovalPage() {
           onApproveJob={handleApproveJob}
           onOpenReject={handleOpenReject}
           onToggleStatus={(item) => handleToggleStatus(item.id)}
+          onArchive={(item) => handleArchive(item.id)}
+          onRestore={(item) => handleRestore(item.id)}
         />
       )}
-
-      {/* Detail Modal */}
-      <JobDetailModal
-        open={detailOpen}
-        loading={detailLoading}
-        jobDetail={jobDetail}
-        approvingId={approvingId}
-        onCancel={() => {
-          setDetailOpen(false);
-          setJobDetail(null);
-        }}
-        onOpenReject={handleOpenReject}
-        onApprove={handleApproveJob}
-      />
 
       {/* Reject Reason Modal */}
       <RejectModal

@@ -12,12 +12,42 @@ export interface JobDto {
   isActive: boolean;
   status: string;
   isApproved: boolean;
+  isRecruiting?: boolean;
+  isExpired?: boolean;
+  lifecycleStatus?: string | null;
   createdAt: string;
   startDate?: string | null;
   deadline?: string | null;
   maxCandidates?: number | null;
-  jobLevel?: { name: string } | null;
+  viewCount?: number;
+  jobLevel?: { id?: string; name: string } | null;
   rejectReason?: string | null;
+  repostedFromJobId?: string | null;
+  campaignGroupId?: string | null;
+  recruitmentRound?: number;
+  criteria?: JobCriterionDto[];
+}
+
+export interface RecruiterCampaignSummaryDto {
+  id: string;
+  status: string;
+  lifecycleStatus: string;
+  createdAt: string;
+  startDate?: string | null;
+  deadline?: string | null;
+  viewCount: number;
+  recruitmentRound: number;
+  position?: { id: string; name: string } | null;
+  category?: { id: string; name: string } | null;
+  branch?: { id: string; name: string } | null;
+  jobLevel?: { id: string; name: string } | null;
+  stats: {
+    total: number;
+    newApplications: number;
+    interviewing: number;
+    offers: number;
+    hired: number;
+  };
 }
 
 export interface CategoryDto {
@@ -42,6 +72,27 @@ export interface BranchDto {
 export interface JobCriterionPayload {
   name: string;
   weight: number;
+  criterionGroupId?: string | null;
+  criterionType?: string;
+  priorityLevel?: string;
+  operator?: string;
+  targetValue?: string | null;
+  minDurationMonths?: number | null;
+  evidenceSources?: string | null;
+  evaluationGuidance?: string | null;
+  displayOrder?: number;
+}
+
+export interface JobLevelDto {
+  id: string;
+  name: string;
+  parentId?: string | null;
+  isActive: boolean;
+}
+
+export interface JobCriterionDto extends JobCriterionPayload {
+  id?: string;
+  isActive?: boolean;
 }
 
 export interface CreateJobPayload {
@@ -56,6 +107,10 @@ export interface CreateJobPayload {
   categoryId?: string | null;
   jobLevelId?: string | null;
   criteria: JobCriterionPayload[];
+}
+
+export interface RepostJobPayload extends CreateJobPayload {
+  deadline: string;
 }
 
 export interface JobReviewResponse {
@@ -97,6 +152,36 @@ export const jobService = {
 
   async createJob(payload: CreateJobPayload) {
     const response = await axiosClient.post("/jobs", payload);
+    return response.data;
+  },
+
+  async getMyCampaigns() {
+    const response = await axiosClient.get<RecruiterCampaignSummaryDto[]>("/jobs/my-campaigns");
+    return response.data;
+  },
+
+  async getJobLevels() {
+    const response = await axiosClient.get<JobLevelDto[]>("/joblevels");
+    return response.data;
+  },
+
+  async updateJob(id: string, payload: CreateJobPayload) {
+    const response = await axiosClient.put(`/jobs/${id}`, payload);
+    return response.data;
+  },
+
+  async repostJob(id: string, payload: RepostJobPayload) {
+    const response = await axiosClient.post(`/jobs/${id}/repost`, payload);
+    return response.data;
+  },
+
+  async archiveJob(id: string) {
+    const response = await axiosClient.put(`/jobs/${id}/archive`);
+    return response.data;
+  },
+
+  async restoreJob(id: string) {
+    const response = await axiosClient.put(`/jobs/${id}/restore`);
     return response.data;
   },
 
@@ -171,11 +256,6 @@ export const branchService = {
     return response.data;
   },
 
-  async deleteBranch(id: string) {
-    const response = await axiosClient.delete(`/branches/${id}`);
-    return response.data;
-  },
-
   async toggleBranchStatus(id: string) {
     const response = await axiosClient.put(`/branches/${id}/toggle-status`);
     return response.data;
@@ -230,11 +310,6 @@ export const jobPositionService = {
 
   async updateJobPosition(id: string, payload: JobPositionPayload) {
     const response = await axiosClient.put<JobPositionDto>(`/jobpositions/${id}`, payload);
-    return response.data;
-  },
-
-  async deleteJobPosition(id: string) {
-    const response = await axiosClient.delete(`/jobpositions/${id}`);
     return response.data;
   },
 

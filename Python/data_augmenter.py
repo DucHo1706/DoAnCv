@@ -22,6 +22,8 @@ def generate_synthetic_data(num_samples=10):
     Hãy tự động tạo ra {num_samples} đoạn văn bản (RawText) trích xuất từ các CV của ứng viên Việt Nam.
     Bao gồm đa dạng ngành nghề: IT, Marketing, Kế toán, Xây dựng, Thiết kế...
     Đồng thời, trích xuất chính xác danh sách các kỹ năng chuyên môn từ đoạn CV đó.
+    Đây là dữ liệu tổng hợp phục vụ thử nghiệm, không đại diện cho CV thật và không được dùng để tuyên bố độ chính xác production.
+    Không tạo tên, email, số điện thoại, địa chỉ hoặc định danh của người thật.
     
     Yêu cầu định dạng bắt buộc (Trả về ĐÚNG 1 mảng JSON, không dùng markdown ```json):
     [
@@ -34,7 +36,7 @@ def generate_synthetic_data(num_samples=10):
     
     try:
         response = client.models.generate_content(
-            model='gemini-2.5-flash',
+            model='gemini-3.5-flash-lite',
             contents=prompt,
             config=types.GenerateContentConfig(
                 response_mime_type="application/json"

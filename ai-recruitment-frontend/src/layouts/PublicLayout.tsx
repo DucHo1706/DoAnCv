@@ -12,6 +12,7 @@ import {
   StarOutlined,
   ProfileOutlined,
   UploadOutlined,
+  FileTextOutlined,
   FileSearchOutlined,
   UserOutlined,
   MenuOutlined,
@@ -100,7 +101,7 @@ function PublicLayout() {
       const signalR = await import("@microsoft/signalr");
       if (cancelled) return;
 
-      const apiUrl = import.meta.env.VITE_API_URL || "https://recruitinsightai.com/api";
+      const apiUrl = import.meta.env.VITE_API_URL || "/api";
       const hubUrl = apiUrl.replace("/api", "/hubs/notifications");
 
       connection = new signalR.HubConnectionBuilder()
@@ -191,6 +192,7 @@ function PublicLayout() {
   const candidateWorkspacePaths = [
     "/candidate/dashboard",
     "/candidate/saved-jobs",
+    "/candidate/cv-builder",
     "/profile"
   ];
   const isWorkspace = candidateWorkspacePaths.some(path => location.pathname === path);
@@ -198,6 +200,7 @@ function PublicLayout() {
   const subNavItems = [
     { path: "/candidate/dashboard", label: "Báo cáo năng lực", icon: <DashboardOutlined /> },
     { path: "/candidate/saved-jobs", label: "Việc làm đã lưu", icon: <StarOutlined /> },
+    { path: "/candidate/cv-builder", label: "Tạo CV", icon: <FileTextOutlined /> },
     { path: "/profile", label: "Hồ sơ cá nhân", icon: <ProfileOutlined /> }
   ];
 
@@ -210,7 +213,7 @@ function PublicLayout() {
 
   // Render notification Popover content
   const notifPopoverContent = (
-    <div style={{ width: 350, maxHeight: 450, display: "flex", flexDirection: "column" }} onClick={(e) => e.stopPropagation()}>
+    <div style={{ width: 350, maxWidth: "calc(100vw - 24px)", maxHeight: 450, display: "flex", flexDirection: "column" }} onClick={(e) => e.stopPropagation()}>
       <div
         style={{
           display: "flex",
@@ -469,6 +472,25 @@ function PublicLayout() {
               >
                 Giới thiệu
               </Link>
+              <Link
+                to="/candidate/cv-builder"
+                className="header-nav-link"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  height: "80px",
+                  lineHeight: "80px",
+                  padding: "0 14px",
+                  fontWeight: location.pathname === "/candidate/cv-builder" ? 700 : 600,
+                  fontSize: "14px",
+                  color: location.pathname === "/candidate/cv-builder" ? "#2563EB" : "#475569",
+                  borderBottom: location.pathname === "/candidate/cv-builder" ? "3px solid #2563EB" : "3px solid transparent"
+                }}
+              >
+                <FileTextOutlined style={{ color: "#2563EB" }} />
+                Tạo CV
+              </Link>
 
               {user && user.role === "Candidate" && (
                 <>
@@ -650,6 +672,13 @@ function PublicLayout() {
             >
               <GlobalOutlined style={{ color: "#2563EB" }} /> Giới thiệu
             </Link>
+            <Link
+              to="/candidate/cv-builder"
+              onClick={() => setMobileMenuOpen(false)}
+              style={{ fontSize: 16, fontWeight: 700, color: "#0F172A", padding: "10px 0", borderBottom: "1px solid #F1F5F9", display: "flex", alignItems: "center", gap: 10 }}
+            >
+              <FileTextOutlined style={{ color: "#2563EB" }} /> Tạo CV trực tuyến
+            </Link>
 
             {user ? (
               <>
@@ -718,7 +747,7 @@ function PublicLayout() {
               <Space direction="vertical" size={12} style={{ width: "100%" }}>
                 <a href="#" className="footer-link">Phân tích CV bằng AI</a>
                 <a href="#" className="footer-link">Năng lực & Cảnh báo</a>
-                <a href="#" className="footer-link">Gợi ý phỏng vấn</a>
+                <a href="#" className="footer-link">Lộ trình ôn tập</a>
                 <a href="#" className="footer-link">Ngôn từ & Chân thực</a>
               </Space>
             </Col>
@@ -729,7 +758,7 @@ function PublicLayout() {
               </Text>
               <Space direction="vertical" size={12} style={{ width: "100%" }}>
                 <Link to="/jobs" className="footer-link">Tìm việc làm</Link>
-                <Link to="/profile" className="footer-link">Tạo CV chuyên nghiệp</Link>
+                <Link to="/candidate/cv-builder" className="footer-link">Tạo CV trực tuyến</Link>
                 <Link to="/my-applications" className="footer-link">Việc làm đã nộp</Link>
                 <Link to="/jobs" className="footer-link">Việc làm phù hợp</Link>
               </Space>

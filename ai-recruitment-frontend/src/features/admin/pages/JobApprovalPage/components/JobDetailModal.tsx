@@ -7,17 +7,16 @@ import {
   Space,
   Descriptions,
   Divider,
+  Table,
 } from "antd";
 import { CheckOutlined, CloseOutlined } from "@ant-design/icons";
 import type { JobReviewResponse } from "../../../../recruiter/services/jobService";
+import { formatJobDate, resolveJobLifecycle } from "../../../../../utils/jobLifecycle";
 
 const { Text, Paragraph } = Typography;
 
 function formatDate(value?: string | null) {
-  if (!value) return "Chưa cập nhật";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleDateString("vi-VN");
+  return formatJobDate(value);
 }
 
 interface JobDetailModalProps {
@@ -89,9 +88,13 @@ export function JobDetailModal({
       {jobDetail && (
         <>
           <Space style={{ marginBottom: 16 }}>
-            {jobDetail.jobInfo.status === "Published" ? (
-              <Tag color="success">Đang chạy</Tag>
-            ) : jobDetail.jobInfo.status === "Closed" ? (
+            {resolveJobLifecycle(jobDetail.jobInfo) === "Expired" ? (
+              <Tag color="error">Đã duyệt · Hết hạn</Tag>
+            ) : resolveJobLifecycle(jobDetail.jobInfo) === "Scheduled" ? (
+              <Tag color="processing">Đã duyệt · Sắp mở</Tag>
+            ) : resolveJobLifecycle(jobDetail.jobInfo) === "Recruiting" ? (
+              <Tag color="success">Đang tuyển</Tag>
+            ) : resolveJobLifecycle(jobDetail.jobInfo) === "Closed" ? (
               <Tag color="default">Đã đóng</Tag>
             ) : jobDetail.jobInfo.status === "Rejected" ? (
               <Tag color="error" style={{ fontWeight: 700 }}>
@@ -172,22 +175,45 @@ export function JobDetailModal({
             </Paragraph>
           </div>
 
-          <div>
-            <Text strong>Từ khóa AI bóc tách</Text>
-            <div style={{ marginTop: 8 }}>
-              {jobDetail.wordsToHighlight?.length ? (
-                <Space wrap>
-                  {jobDetail.wordsToHighlight.map((word: string) => (
-                    <Tag color="blue" key={word}>
-                      {word}
-                    </Tag>
-                  ))}
-                </Space>
-              ) : (
-                <Text type="secondary">Chưa có từ khóa AI</Text>
+          <Divider style={{ margin: "16px 0" }} />
+
+          <div style={{ marginBottom: 16 }}>
+            <Text strong>Tiêu chí đánh giá CV do HR thiết lập</Text>
+            <Table scroll={{ x: "max-content" }}
+              style={{ marginTop: 8 }}
+              size="small"
+              bordered
+              pagination={false}
+              rowKey={(record) => record.id || record.name}
+              dataSource={jobDetail.jobInfo.criteria || []}
+              locale={{ emptyText: "HR chưa thiết lập tiêu chí đánh giá" }}
+              columns={[
+                {
+                  title: "Tiêu chí",
+                  dataIndex: "name",
+                  key: "name",
+                  render: (value: string) => <Text strong>{value}</Text>,
+                },
+                {
+                  title: "Trọng số",
+                  dataIndex: "weight",
+                  key: "weight",
+                  width: 130,
+                  align: "center" as const,
+                  render: (value: number) => <Tag color="blue">{value}%</Tag>,
+                },
+              ]}
+              summary={(data) => (
+                <Table.Summary.Row>
+                  <Table.Summary.Cell index={0}><Text strong>Tổng trọng số</Text></Table.Summary.Cell>
+                  <Table.Summary.Cell index={1} align="center">
+                    <Text strong>{data.reduce((sum, item) => sum + Number(item.weight || 0), 0)}%</Text>
+                  </Table.Summary.Cell>
+                </Table.Summary.Row>
               )}
-            </div>
+            />
           </div>
+
         </>
       )}
     </Modal>

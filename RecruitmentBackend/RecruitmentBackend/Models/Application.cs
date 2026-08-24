@@ -20,5 +20,6 @@ namespace RecruitmentBackend.Models
         public DateTime AppliedAt { get; set; } = DateTime.Now;
         public virtual AIEvaluation AIEvaluation { get; set; }
         public virtual InterviewSchedule? InterviewSchedule { get; set; }
+        public virtual ICollection<ApplicationStatusHistory> StatusHistory { get; set; } = new List<ApplicationStatusHistory>();
     }
 }

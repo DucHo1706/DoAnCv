@@ -23,12 +23,12 @@ export default function OcrErrorRateChart(props: { data: OcrErrorRateItem[] }) {
     <div style={{ minHeight: 300, padding: "8px 0" }}>
       {data.map((item, index) => {
         const barWidth = Math.max(4, (item.errorRate / maxRate) * 100);
-        let barColor = "#52c41a";
+        let barColor = "#10B981";
 
         if (item.errorRate >= 30) {
-          barColor = "#ff4d4f";
+          barColor = "#EF4444";
         } else if (item.errorRate >= 10) {
-          barColor = "#faad14";
+          barColor = "#F59E0B";
         }
 
         return (
