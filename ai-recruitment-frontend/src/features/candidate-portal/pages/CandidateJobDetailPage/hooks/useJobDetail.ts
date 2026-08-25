@@ -225,13 +225,15 @@ export function useJobDetail() {
 
       const applicationId =
         response.data?.applicationId || response.data?.data?.applicationId || null;
+      const responseData = response.data?.data || response.data || {};
       const currentJobId = getJobId(job);
 
       setAppliedApplication({
         id: applicationId,
         applicationId: applicationId,
         jobId: currentJobId,
-        aiStatus: "Processing",
+        aiStatus: responseData.aiStatus || "Pending",
+        aiNotBeforeUtc: responseData.aiNotBeforeUtc || null,
         hasAiEvaluation: false,
       });
 

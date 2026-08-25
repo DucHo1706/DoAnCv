@@ -5,6 +5,7 @@ using RecruitmentBackend.Data;
 using RecruitmentBackend.DTOs.Responses;
 using RecruitmentBackend.Interfaces;
 using RecruitmentBackend.Models;
+using RecruitmentBackend.Constants;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -93,18 +94,42 @@ namespace RecruitmentBackend.Services
             string contentType,
             string? structuredCvText = null)
         {
+            await RunAiEvaluationJobAsync(
+                applicationId,
+                cvFileBytes,
+                fileName,
+                contentType,
+                structuredCvText);
+        }
+
+        public async Task<AiEvaluationRunResult> RunAiEvaluationJobAsync(
+            string applicationId,
+            byte[] cvFileBytes,
+            string fileName,
+            string contentType,
+            string? structuredCvText = null)
+        {
             try
             {
-                await SendProgressAsync(applicationId, 10, "START", "Khởi chạy quy trình phân tích AI...");
+                await SendProgressAsync(applicationId, 10, "START", "Bắt đầu phân tích hồ sơ bằng AI...");
 
                 var application = await _context.Applications
                     .FirstOrDefaultAsync(applicationItem => applicationItem.ApplicationID == applicationId);
 
                 if (application == null)
                 {
-                    Console.WriteLine("Không tìm thấy Application để AI xử lý: " + applicationId);
                     await SendProgressAsync(applicationId, 0, "FAILED", "Không tìm thấy hồ sơ ứng tuyển.");
-                    return;
+                    return new AiEvaluationRunResult(
+                        AiEvaluationRunOutcome.PermanentFailed,
+                        "APPLICATION_NOT_FOUND",
+                        "Không tìm thấy hồ sơ ứng tuyển.");
+                }
+
+                if (application.Status == ApplicationStatuses.Withdrawn)
+                {
+                    await SendProgressAsync(applicationId, 0, "CANCELLED", "Hồ sơ đã được rút trước khi AI bắt đầu phân tích.");
+                    await SendResultAsync(applicationId, "Cancelled");
+                    return new AiEvaluationRunResult(AiEvaluationRunOutcome.Cancelled);
                 }
 
                 var existingEvaluation = await _context.AIEvaluations
@@ -112,10 +137,9 @@ namespace RecruitmentBackend.Services
 
                 if (existingEvaluation != null)
                 {
-                    Console.WriteLine("Application đã có kết quả AI, bỏ qua: " + applicationId);
                     await SendProgressAsync(applicationId, 100, "COMPLETED", "Đã có kết quả AI.");
                     await SendResultAsync(applicationId, "Success");
-                    return;
+                    return new AiEvaluationRunResult(AiEvaluationRunOutcome.AlreadyCompleted);
                 }
 
                 var job = await _context.JobPostings
@@ -129,7 +153,10 @@ namespace RecruitmentBackend.Services
                     );
                     await SendProgressAsync(applicationId, 0, "FAILED", "Không tìm thấy tin tuyển dụng.");
                     await SendResultAsync(applicationId, "Failed", "Không tìm thấy tin tuyển dụng.");
-                    return;
+                    return new AiEvaluationRunResult(
+                        AiEvaluationRunOutcome.PermanentFailed,
+                        "JOB_NOT_FOUND",
+                        "Không tìm thấy tin tuyển dụng.");
                 }
 
                 var jobCriteria = await _context.JobCriteria
@@ -145,7 +172,10 @@ namespace RecruitmentBackend.Services
                     );
                     await SendProgressAsync(applicationId, 0, "FAILED", "Tin tuyển dụng chưa cấu hình tiêu chí.");
                     await SendResultAsync(applicationId, "Failed", "Tin tuyển dụng chưa cấu hình tiêu chí đánh giá.");
-                    return;
+                    return new AiEvaluationRunResult(
+                        AiEvaluationRunOutcome.PermanentFailed,
+                        "JOB_CRITERIA_MISSING",
+                        "Tin tuyển dụng chưa cấu hình tiêu chí đánh giá.");
                 }
 
                 var criteriaForAi = new List<object>();
@@ -206,13 +236,21 @@ namespace RecruitmentBackend.Services
                     ContentType = contentType
                 };
 
-                await SendProgressAsync(applicationId, 45, "AI_CALL", "Đang phân tích và so khớp năng lực bằng Gemini AI...");
+                await SendProgressAsync(applicationId, 45, "AI_CALL", "Đang phân tích và so khớp năng lực...");
 
                 var aiResult = string.IsNullOrWhiteSpace(structuredCvText)
                     ? await _aiService.GetMatchingScoreAsync(cvFile, jobDescriptionForAi, criteriaJson)
                     : await _aiService.GetMatchingScoreFromTextAsync(structuredCvText, jobDescriptionForAi, criteriaJson);
 
-                await SendProgressAsync(applicationId, 80, "DATABASE_UPDATE", "Đang cập nhật hồ sơ và lưu kết quả AI vào cơ sở dữ liệu...");
+                await _context.Entry(application).ReloadAsync();
+                if (application.Status == ApplicationStatuses.Withdrawn)
+                {
+                    await SendProgressAsync(applicationId, 0, "CANCELLED", "Hồ sơ đã được rút nên kết quả AI không được lưu.");
+                    await SendResultAsync(applicationId, "Cancelled");
+                    return new AiEvaluationRunResult(AiEvaluationRunOutcome.Cancelled);
+                }
+
+                await SendProgressAsync(applicationId, 80, "DATABASE_UPDATE", "Đang lưu kết quả phân tích AI...");
 
                 var matchingResult = aiResult.MatchingResult;
                 double totalScore = 0;
@@ -361,21 +399,89 @@ namespace RecruitmentBackend.Services
                     Console.WriteLine("Lỗi gửi thông báo AI hoàn tất: " + ex.Message);
                 }
 
-                await SendProgressAsync(applicationId, 100, "COMPLETED", "Đã hoàn tất phân tích AI! 🎉");
+                await SendProgressAsync(applicationId, 100, "COMPLETED", "Đã hoàn tất phân tích AI.");
                 await SendResultAsync(applicationId, "Success");
+                return new AiEvaluationRunResult(AiEvaluationRunOutcome.Completed);
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Lỗi khi AI xử lý Application " + applicationId + ": " + ex.Message);
+                var failure = ClassifyFailure(ex);
+                Console.WriteLine(
+                    $"[AI Evaluation] Application {applicationId} failed with {failure.ErrorCode} ({ex.GetType().Name}).");
 
-                await SaveFailedAiEvaluationAsync(
-                    applicationId,
-                    "AI tạm thời chưa phân tích được do dịch vụ AI đang bận hoặc lỗi kết nối. Vui lòng thử lại sau."
-                );
+                if (failure.Outcome == AiEvaluationRunOutcome.PermanentFailed)
+                {
+                    await SaveFailedAiEvaluationAsync(applicationId, failure.ErrorMessage!);
+                    await SendProgressAsync(applicationId, 0, "FAILED", failure.ErrorMessage!);
+                    await SendResultAsync(applicationId, "Failed", failure.ErrorMessage);
+                }
+                else
+                {
+                    await SendProgressAsync(
+                        applicationId,
+                        0,
+                        "RETRY_SCHEDULED",
+                        "Dịch vụ AI tạm thời chưa khả dụng. Hệ thống sẽ tự thử lại.");
+                }
 
-                await SendProgressAsync(applicationId, 0, "FAILED", "Phân tích AI thất bại.");
-                await SendResultAsync(applicationId, "Failed", ex.Message);
+                return failure;
             }
+        }
+
+        private static AiEvaluationRunResult ClassifyFailure(Exception exception)
+        {
+            var message = exception.ToString().ToLowerInvariant();
+            var isAuthenticationFailure = message.Contains("401")
+                || message.Contains("403")
+                || message.Contains("unauthorized")
+                || message.Contains("forbidden")
+                || message.Contains("authentication")
+                || message.Contains("xác thực");
+            if (isAuthenticationFailure)
+            {
+                return new AiEvaluationRunResult(
+                    AiEvaluationRunOutcome.PermanentFailed,
+                    "AI_PROVIDER_AUTHENTICATION_FAILED",
+                    "Dịch vụ AI chưa xác thực được tài khoản cung cấp. Quản trị hệ thống cần đăng nhập lại tài khoản 9Router.");
+            }
+
+            var isPermanentRequestFailure = message.Contains("400")
+                || message.Contains("invalid_argument")
+                || message.Contains("unsupported media")
+                || message.Contains("invalid cv")
+                || message.Contains("tệp không hợp lệ");
+            if (isPermanentRequestFailure)
+            {
+                return new AiEvaluationRunResult(
+                    AiEvaluationRunOutcome.PermanentFailed,
+                    "AI_INVALID_REQUEST",
+                    "AI không thể xử lý nội dung CV hoặc cấu hình đánh giá hiện tại.");
+            }
+
+            var isTransient = exception is TimeoutException
+                || exception is TaskCanceledException
+                || exception is HttpRequestException
+                || message.Contains("429")
+                || message.Contains("500")
+                || message.Contains("502")
+                || message.Contains("503")
+                || message.Contains("504")
+                || message.Contains("timeout")
+                || message.Contains("timed out")
+                || message.Contains("unavailable")
+                || message.Contains("quota")
+                || message.Contains("network")
+                || message.Contains("kết nối")
+                || message.Contains("đang bận");
+
+            return new AiEvaluationRunResult(
+                isTransient
+                    ? AiEvaluationRunOutcome.TransientFailed
+                    : AiEvaluationRunOutcome.PermanentFailed,
+                isTransient ? "AI_SERVICE_TEMPORARY" : "AI_PROCESSING_FAILED",
+                isTransient
+                    ? "Dịch vụ AI tạm thời chưa khả dụng. Hệ thống sẽ tự thử lại có giới hạn."
+                    : "AI không thể hoàn tất phân tích hồ sơ này.");
         }
 
         private async Task SaveFailedAiEvaluationAsync(string applicationId, string reason)

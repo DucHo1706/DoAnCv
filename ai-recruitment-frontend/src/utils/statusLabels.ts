@@ -20,9 +20,16 @@ export const JOB_STATUS_LABELS: Record<string, string> = {
 };
 
 export const AI_STATUS_LABELS: Record<string, string> = {
-  processing: "Đang phân tích", completed: "Đã phân tích",
-  failed: "Phân tích thất bại", pending: "Đang chờ phân tích",
-  ready: "Dữ liệu AI sẵn sàng", error: "Dữ liệu AI bị lỗi",
+  pending: "Đang chờ phân tích",
+  processing: "Đang phân tích",
+  retryscheduled: "Sẽ tự động thử lại",
+  completed: "Đã phân tích",
+  failed: "Chưa hoàn tất phân tích",
+  cancelrequested: "Đang hủy phân tích",
+  cancelled: "Đã hủy phân tích",
+  notscheduled: "Chưa xếp lịch phân tích",
+  ready: "Dữ liệu AI sẵn sàng",
+  error: "Dữ liệu AI bị lỗi",
 };
 
 export const SOURCING_STAGE_LABELS: Record<string, string> = {

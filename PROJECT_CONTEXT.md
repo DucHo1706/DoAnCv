@@ -158,6 +158,15 @@ AI chỉ hỗ trợ quyết định; không tự động loại ứng viên và 
 - Phân tích mới dùng `analysis_version=5`. Snapshot cũ được giữ nguyên lịch sử nhưng bị xem là chưa hoàn chỉnh và có thể chạy lại trên CV đã nộp; Apriori/HUIM tự chạy không viết lại `AIEvaluation` cũ. Không bulk re-analysis âm thầm vì tốn quota và tạo tải không kiểm soát.
 - Chatbot chỉ tải catalog khi câu hỏi có ý định tìm việc/lương, tối đa 6 job, 10 lượt lịch sử; Gemini trực tiếp dùng ngân sách 20 giây rồi thử 9Router dự phòng 8 giây, backend timeout 35 giây.
 
+### 3.17 Hàng đợi đánh giá AI và quyền rút hồ sơ
+
+- Nộp hồ sơ và đánh giá AI là hai vòng đời độc lập. Application được ghi nhận `Applied` ngay; `AiEvaluationTask` được lưu bền vững trong cùng transaction và chỉ đủ điều kiện chạy sau 30 giây. Khoảng chờ này áp dụng theo từng hồ sơ, không chặn ứng viên nộp tiếp sang job khác.
+- Trạng thái hàng đợi chỉ dùng `Pending`, `Processing`, `RetryScheduled`, `Completed`, `Failed`, `CancelRequested`, `Cancelled`; không dùng trạng thái tuyển dụng `Reviewing` để biểu diễn AI đang chạy. Chỉ HR mới thay đổi giai đoạn tuyển dụng.
+- Ứng viên được rút khi hồ sơ còn `Applied`. Nếu AI chưa bắt đầu, task chuyển `Cancelled` và không gọi provider; nếu đã chạy, chuyển `CancelRequested`, giữ lịch sử và bỏ kết quả đến sau. Rút hồ sơ không xóa Application/CV/evaluation và không cho nộp lại cùng job/vòng tuyển.
+- Lỗi tạm thời được thử lại hữu hạn sau 30 giây, 2 phút và 5 phút; lỗi xác thực hoặc dữ liệu đầu vào không hợp lệ dừng ngay. Người dùng chỉ có một thao tác phân tích lại trên CV đã lưu, không phải nộp hồ sơ mới.
+- Worker dùng optimistic concurrency để tránh hai tiến trình nhận cùng task; trạng thái huỷ được đọc lại trước khi ghi kết quả. Không backfill tự động các application cũ chưa có task để tránh bùng quota; hồ sơ cũ chỉ chạy lại khi người dùng chủ động yêu cầu.
+- Trang Việc làm mobile phải cho thấy kết quả trước bộ lọc dài: bộ lọc nâng cao mặc định thu gọn dưới breakpoint `lg`; ô tìm kiếm, card, mức lương, nút thao tác, phân trang và trang chi tiết không được tạo tràn ngang ở viewport 390px.
+
 ## 4. Khoảng trống đã xác định trong code/hệ thống
 
 Những điểm dưới đây là kết quả khảo sát trước đó và phải kiểm tra lại trên branch hiện tại trước khi sửa:
@@ -227,9 +236,10 @@ Nguyên tắc tính điểm dự kiến:
 | P0-01 | Chuẩn hóa mô hình tiêu chí đánh giá | ĐANG LÀM | Kiểm tra schema hiện tại | HR tạo được tiêu chí có kiểu, toán tử, giá trị, trọng số và nguồn bằng chứng; dữ liệu cũ vẫn đọc được |
 | P0-02 | Chuẩn hóa experience timeline | ĐÃ XONG | Parser CV | `analysis_version=5` chỉ tính section việc làm/thực tập, hợp nhất overlap và không tính học vấn/dự án/chứng chỉ; regression CV không có việc làm trả 0 tháng, case thực tập 04/2026–06/2026 trả 3 tháng; build/test, migration và smoke HTTPS VPS commit `1db890a` đã đạt |
 | P0-03 | Lịch sử trạng thái và thống kê trong ngày | ĐANG LÀM | Thống nhất trạng thái | Dashboard HR/Admin có số hôm nay đúng theo sự kiện và múi giờ VN |
+| P0-04 | Hàng đợi AI bền vững sau khi nộp hồ sơ | ĐANG LÀM | Application, AI service | Application và task ghi cùng transaction; grace 30 giây, huỷ/retry hữu hạn, không chặn nộp job khác; backend/frontend build đạt, chờ migration và smoke VPS |
 | P1-01 | HR chủ động tìm ứng viên | ĐANG LÀM | P0-01, quyền riêng tư | Đã có MVP opt-in và tìm/lọc hồ sơ rút gọn; còn smoke test endpoint và hoàn thiện luồng mời/liên hệ |
 | P1-02 | Đăng lại tin tuyển dụng | ĐANG LÀM | Luồng duyệt tin | Code/API/UI/migration và public smoke test đã đạt; còn smoke test thao tác đăng lại bằng tài khoản HR và duyệt vòng mới bằng Admin |
-| P1-03 | Realtime, bộ lọc và responsive HR/Admin | ĐÃ XONG | SignalR, dữ liệu job/application | Local: API chiến dịch trả 200/113 bản ghi; Selenium read-only đạt 54/54 bước trên 17 route × 3 breakpoint, không tràn ngang/429/lỗi network nội bộ; backend/frontend build đạt. Chưa deploy VPS |
+| P1-03 | Realtime, bộ lọc và responsive HR/Admin/Ứng viên | ĐANG LÀM | SignalR, dữ liệu job/application | HR/Admin đã audit 17 route × 3 breakpoint; trang danh sách/chi tiết Jobs ứng viên đã sửa mobile và build production đạt, chờ smoke 390px trên VPS |
 | P2-01 | Phân tích kỹ năng theo ngành | ĐANG LÀM | Taxonomy kỹ năng | Đã bỏ domain/skill hard-code runtime, áp catalog SQL đã duyệt và chạy startup mining cho 4 ngành; còn kiểm chứng chất lượng trên dataset thật nhiều ngành |
 | P2-02 | Sửa mô hình HUIM/Apriori và cơ chế skip | ĐANG LÀM | P2-01 | Đã tách model theo domain, fingerprint gồm alias, backend/Python chạy startup + 02:00 và có metadata; còn kiểm chứng utility lương trên dữ liệu thật |
 | P2-03 | Trang Admin AI Insights riêng | TẠM HOÃN | P2-01 | Theo quyết định 2026-08-22, Apriori/HUIM chạy nền và không cần màn Admin riêng; chỉ mở lại nếu phạm vi khóa luận thay đổi |
@@ -280,6 +290,8 @@ Mỗi mẫu cần expected result cho: đọc file, trường trích xuất, tr�
 
 ## 10. Nhật ký quyết định
 
+- 2026-08-25: Tách trạng thái Application khỏi `AiEvaluationTask` và thêm grace 30 giây theo từng hồ sơ. Rút trước lúc worker nhận task sẽ huỷ mà không gọi AI; nộp job khác không bị cooldown toàn cục; lỗi tạm thời retry hữu hạn và application cũ không được backfill tự động. Tác động: giảm lạm dụng quota nhưng vẫn giữ lịch sử, không làm sai giai đoạn tuyển dụng và chịu được restart backend.
+- 2026-08-25: Trang Jobs ứng viên dùng bộ lọc nâng cao thu gọn trên mobile, bỏ min-width card/nút cố định và xếp lại hero chi tiết/form nộp CV ở 390px. Tác động: chức năng tìm, lọc, xem và nộp hồ sơ vẫn dùng cùng API/validation, chỉ thay đổi trình bày responsive.
 - 2026-08-25: Tách `SkillObservations` khỏi taxonomy đã duyệt. Observation phải có provenance SQL và đủ ba nguồn/độ tin cậy mới chờ Admin review; không tự thêm vào Skills, Apriori/HUIM hay scoring. Tác động: log 140 skills/58 alias phản ánh catalog đã duyệt chứ không phải giới hạn nhận biết vĩnh viễn; kỹ năng mới được học có kiểm soát ở chu kỳ sau khi duyệt.
 - 2026-08-25: `analysis_version=5` đánh dấu pipeline timeline/skill observation/extraction gate mới. Kết quả cũ không được sửa bởi scheduler mining; backend/frontend đánh dấu chưa hoàn chỉnh và cho retry trên CV đã lưu. Tác động: tránh âm thầm tốn quota hoặc đổi lịch sử, nhưng muốn thấy kết quả sửa phải chủ động phân tích lại.
 - 2026-08-25: Thời gian Education/Project/Certificate/Hackathon không phải kinh nghiệm nghề nghiệp. CV không có section Experience chỉ được tính khi block có bằng chứng việc làm/thực tập rõ; project vẫn chứng minh skill. Tác động: regression từng nhầm năm học thành 44 tháng nay trả 0 tháng đi làm.

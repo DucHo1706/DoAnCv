@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using RecruitmentBackend.Controllers;
 using RecruitmentBackend.Data;
 using RecruitmentBackend.DTOs.Responses;
@@ -14,11 +13,11 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Threading.Tasks;
-using System.Net.Http;
 using Microsoft.AspNetCore.SignalR;
 using RecruitmentBackend.Hubs;
 
@@ -28,28 +27,22 @@ namespace RecruitmentBackend.Services
     {
         private readonly AppDbContext _context;
         private readonly IFileService _fileService;
-        private readonly IServiceScopeFactory _serviceScopeFactory;
         private readonly IHubContext<AIEvaluationHub> _hubContext;
         private readonly INotificationService _notificationService;
-        private readonly IAiService _aiService;
-        private readonly IHttpClientFactory _httpClientFactory;
+        private readonly IAiEvaluationQueueService _aiEvaluationQueue;
 
         public ApplicationService(
             AppDbContext context,
             IFileService fileService,
-            IServiceScopeFactory serviceScopeFactory,
             IHubContext<AIEvaluationHub> hubContext,
             INotificationService notificationService,
-            IAiService aiService,
-            IHttpClientFactory httpClientFactory)
+            IAiEvaluationQueueService aiEvaluationQueue)
         {
             _context = context;
             _fileService = fileService;
-            _serviceScopeFactory = serviceScopeFactory;
             _hubContext = hubContext;
             _notificationService = notificationService;
-            _aiService = aiService;
-            _httpClientFactory = httpClientFactory;
+            _aiEvaluationQueue = aiEvaluationQueue;
         }
 
         public async Task<(bool IsSuccess, string Message, object Data)> RetryAiEvaluationAsync(
@@ -58,94 +51,30 @@ namespace RecruitmentBackend.Services
         {
             var accountId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (string.IsNullOrWhiteSpace(accountId))
-                return (false, "Không xác định được tài khoản đang đăng nhập.", null);
+                return (false, "Không xác định được tài khoản đang đăng nhập.", null!);
 
-            var applicationData = await (
-                from application in _context.Applications
-                join cv in _context.CandidateCVs on application.CVID equals cv.CVID
+            var application = await (
+                from applicationItem in _context.Applications
+                join cv in _context.CandidateCVs on applicationItem.CVID equals cv.CVID
                 join candidate in _context.Candidates on cv.CandidateID equals candidate.CandidateID
-                where application.ApplicationID == applicationId && candidate.AccountID == accountId
-                select new { application, cv }
+                where applicationItem.ApplicationID == applicationId && candidate.AccountID == accountId
+                select applicationItem
             ).FirstOrDefaultAsync();
 
-            if (applicationData == null)
-                return (false, "Không tìm thấy hồ sơ ứng tuyển hoặc bạn không có quyền thao tác.", null);
+            if (application == null)
+                return (false, "Không tìm thấy hồ sơ ứng tuyển hoặc bạn không có quyền thao tác.", null!);
 
-            var evaluation = await _context.AIEvaluations
-                .FirstOrDefaultAsync(item => item.ApplicationID == applicationId);
-            if (evaluation != null
-                && !string.Equals(evaluation.Classification, "AI_ERROR", StringComparison.OrdinalIgnoreCase)
-                && HasCompleteDetailedAnalysis(evaluation.Reason))
-                return (false, "Hồ sơ đã có kết quả AI và không cần phân tích lại.", null);
+            if (application.Status == ApplicationStatuses.Withdrawn)
+                return (false, "Hồ sơ đã được rút nên không thể yêu cầu AI phân tích lại.", null!);
 
-            byte[] fileBytes = Array.Empty<byte>();
-            var fileName = "CV.pdf";
-            var contentType = "application/pdf";
-            var structuredText = applicationData.cv.SourceType == "CvBuilder"
-                ? applicationData.cv.RawText
-                : null;
+            var retry = await _aiEvaluationQueue.RequestRetryAsync(applicationId);
+            if (!retry.IsSuccess)
+                return (false, retry.Message, null!);
 
-            if (string.IsNullOrWhiteSpace(structuredText))
-            {
-                if (string.IsNullOrWhiteSpace(applicationData.cv.FilePath)
-                    || !Uri.TryCreate(applicationData.cv.FilePath, UriKind.Absolute, out var fileUri))
-                {
-                    return (false, "Không tìm thấy tệp CV đã nộp để chạy lại phân tích.", null);
-                }
-
-                try
-                {
-                    var client = _httpClientFactory.CreateClient();
-                    fileBytes = await client.GetByteArrayAsync(fileUri);
-                    fileName = CvFileNameHelper.GetDisplayName(fileUri.LocalPath, "CV.pdf");
-                    contentType = Path.GetExtension(fileName).ToLowerInvariant() switch
-                    {
-                        ".docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                        ".png" => "image/png",
-                        ".jpg" or ".jpeg" => "image/jpeg",
-                        ".webp" => "image/webp",
-                        _ => "application/pdf"
-                    };
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Không tải được CV để phân tích lại {applicationId}: {ex.Message}");
-                    return (false, "Không tải được tệp CV đã nộp. Vui lòng liên hệ nhà tuyển dụng để được hỗ trợ.", null);
-                }
-            }
-            else
-            {
-                fileBytes = new byte[] { 0 };
-                fileName = "CV-truc-tuyen.pdf";
-            }
-
-            if (evaluation != null)
-            {
-                _context.AIEvaluations.Remove(evaluation);
-                await _context.SaveChangesAsync();
-            }
-
-            var bytesForAi = fileBytes;
-            var textForAi = structuredText;
-            _ = Task.Run(async () =>
-            {
-                try
-                {
-                    using var scope = _serviceScopeFactory.CreateScope();
-                    var aiEvaluationService = scope.ServiceProvider.GetRequiredService<IAiEvaluationService>();
-                    await aiEvaluationService.RunAiEvaluationInBackgroundAsync(
-                        applicationId, bytesForAi, fileName, contentType, textForAi);
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Lỗi chạy lại AI cho {applicationId}: {ex.Message}");
-                }
-            });
-
-            return (true, "Hệ thống đã bắt đầu phân tích lại hồ sơ. Bạn không cần nộp CV lần nữa.", new
+            return (true, retry.Message, new
             {
                 applicationId,
-                aiStatus = "Processing"
+                aiStatus = retry.AiStatus
             });
         }
 
@@ -170,7 +99,7 @@ namespace RecruitmentBackend.Services
 
             var application = applicationData.Application;
 
-            if (!string.Equals(application.Status, "Applied", StringComparison.OrdinalIgnoreCase))
+            if (!string.Equals(application.Status, ApplicationStatuses.Applied, StringComparison.OrdinalIgnoreCase))
                 return (false, "Chỉ có thể rút hồ sơ khi đang ở trạng thái Đã nộp và HR chưa bắt đầu xử lý.", null);
 
             var hasInterview = await _context.InterviewSchedules
@@ -180,23 +109,30 @@ namespace RecruitmentBackend.Services
             if (hasInterview || hasHrInteraction)
                 return (false, "Hồ sơ đã được nhà tuyển dụng xử lý nên không thể rút để nộp lại.", null);
 
-            _context.Applications.Remove(application);
-            await _context.SaveChangesAsync();
-
-            // CandidateCV được tạo riêng cho mỗi lần nộp. Xóa snapshot sau khi đã
-            // xóa đơn, nhưng giữ nguyên CvBuilderDocument/ hồ sơ gốc để nộp lại.
-            var snapshotStillUsed = await _context.Applications
-                .AnyAsync(item => item.CVID == applicationData.Snapshot.CVID);
-            if (!snapshotStillUsed)
+            application.Status = ApplicationStatuses.Withdrawn;
+            _context.ApplicationStatusHistories.Add(new ApplicationStatusHistory
             {
-                _context.CandidateCVs.Remove(applicationData.Snapshot);
-                await _context.SaveChangesAsync();
-            }
+                ApplicationID = application.ApplicationID,
+                FromStatus = ApplicationStatuses.Applied,
+                ToStatus = ApplicationStatuses.Withdrawn,
+                ChangedAtUtc = DateTime.UtcNow,
+                ChangedByAccountID = accountId,
+                Source = "CandidateWithdrawal"
+            });
+            await _context.SaveChangesAsync();
+            await _aiEvaluationQueue.CancelAsync(applicationId);
+            var aiStatus = await _context.AiEvaluationTasks
+                .AsNoTracking()
+                .Where(item => item.ApplicationID == applicationId)
+                .Select(item => item.Status)
+                .FirstOrDefaultAsync();
 
-            return (true, "Đã rút hồ sơ ứng tuyển. Bạn có thể chọn CV và nộp lại cho vị trí này.", new
+            return (true, "Đã rút hồ sơ. Lịch sử ứng tuyển được giữ lại và bạn không thể nộp lại vào cùng đợt tuyển dụng này.", new
             {
                 applicationId,
-                jobId = application.JobID
+                jobId = application.JobID,
+                status = ApplicationStatuses.Withdrawn,
+                aiStatus = aiStatus ?? AiEvaluationTaskStatuses.Cancelled
             });
         }
 
@@ -527,23 +463,6 @@ namespace RecruitmentBackend.Services
                     return (false, fileValidationError, null);
                 }
 
-                try
-                {
-                    if (sourceBuilderDocument == null)
-                    {
-                        var cvValidation = await _aiService.ValidateCvAsync(cvFileBytes, originalFileName, contentType);
-                        if (!cvValidation.IsValid)
-                        {
-                            return (false, cvValidation.Message, null);
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Lỗi kiểm tra CV trước khi nộp: {ex.Message}");
-                    return (false, "Chưa thể kiểm tra nội dung CV lúc này. Vui lòng thử lại sau.", null);
-                }
-
                 if (!useStoredCv)
                 {
                     cvUrl = await _fileService.SaveFileAsync(request.CvFile!);
@@ -568,6 +487,11 @@ namespace RecruitmentBackend.Services
                         ? "CvBuilder"
                         : useStoredCv ? "Stored" : "Uploaded",
                     SourceDocumentId = sourceBuilderDocument?.Id,
+                    ContentHash = Convert.ToHexString(
+                        SHA256.HashData(
+                            string.IsNullOrWhiteSpace(structuredCvText)
+                                ? cvFileBytes
+                                : Encoding.UTF8.GetBytes(structuredCvText))),
                     CreatedAt = DateTime.Now
                 };
 
@@ -579,7 +503,7 @@ namespace RecruitmentBackend.Services
                     ApplicationID = Guid.NewGuid().ToString(),
                     JobID = request.JobId,
                     CVID = newCv.CVID,
-                    Status = "Applied",
+                    Status = ApplicationStatuses.Applied,
                     AppliedAt = DateTime.Now
                 };
 
@@ -594,7 +518,9 @@ namespace RecruitmentBackend.Services
                     Source = "ApplicationCreated"
                 });
 
-                await _context.SaveChangesAsync();
+                // Hồ sơ, snapshot CV, lịch sử và tác vụ AI được ghi trong cùng một lần SaveChanges.
+                // Nhờ đó không có hồ sơ mới nào bị thất lạc tác vụ khi tiến trình dừng giữa chừng.
+                var aiNotBeforeUtc = await _aiEvaluationQueue.EnqueueAsync(newApplication.ApplicationID);
 
                 try
                 {
@@ -632,30 +558,6 @@ namespace RecruitmentBackend.Services
                     Console.WriteLine("Lỗi gửi thông báo ứng tuyển mới: " + ex.Message);
                 }
 
-                // 10. Kích hoạt AI chạy nền
-                string applicationIdForAi = newApplication.ApplicationID;
-
-                _ = Task.Run(async () =>
-                {
-                    try
-                    {
-                        using var scope = _serviceScopeFactory.CreateScope();
-                        var aiEvaluationService = scope.ServiceProvider.GetRequiredService<IAiEvaluationService>();
-
-                        await aiEvaluationService.RunAiEvaluationInBackgroundAsync(
-                            applicationIdForAi,
-                            cvFileBytes,
-                            originalFileName,
-                            contentType,
-                            structuredCvText
-                        );
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine("Lỗi background AI: " + ex.Message);
-                    }
-                });
-
                 var dataToReturn = new
                 {
                     message = "Chúc mừng! Hồ sơ của bạn đã được gửi đến nhà tuyển dụng thành công.",
@@ -663,15 +565,16 @@ namespace RecruitmentBackend.Services
                     jobId = newApplication.JobID,
                     cvId = newCv.CVID,
                     cvUrl = cvUrl,
-                    aiStatus = "Processing"
+                    aiStatus = AiEvaluationTaskStatuses.Pending,
+                    aiNotBeforeUtc
                 };
 
                 return (true, "Nộp CV thành công", dataToReturn);
             }
             catch (Exception ex)
             {
-                string innerError = ex.InnerException != null ? ex.InnerException.Message : ex.Message;
-                return (false, $"Lỗi hệ thống khi xử lý CV: {innerError}", null);
+                Console.WriteLine($"Lỗi khi ghi nhận hồ sơ ứng tuyển ({ex.GetType().Name}).");
+                return (false, "Hệ thống chưa thể ghi nhận hồ sơ lúc này. Vui lòng thử lại sau.", null);
             }
         }
 
@@ -735,6 +638,21 @@ namespace RecruitmentBackend.Services
                         criteriaResultsJson = includeAiDetails && ai != null ? ai.CriteriaResultsJson : null
                     }
                 ).ToListAsync();
+
+                var applicationIds = rawApplications.Select(item => item.id).ToList();
+                var aiTasksByApplicationId = await _context.AiEvaluationTasks
+                    .AsNoTracking()
+                    .Where(task => applicationIds.Contains(task.ApplicationID))
+                    .Select(task => new
+                    {
+                        task.ApplicationID,
+                        task.Status,
+                        task.NotBeforeUtc,
+                        task.AttemptCount,
+                        task.MaxAttempts,
+                        task.LastErrorMessage
+                    })
+                    .ToDictionaryAsync(task => task.ApplicationID);
 
                 var applications = new List<object>();
 
@@ -801,6 +719,17 @@ namespace RecruitmentBackend.Services
                         }
                     }
 
+                    aiTasksByApplicationId.TryGetValue(application.id, out var aiTask);
+                    var aiStatus = aiTask?.Status ?? "NotScheduled";
+                    if (application.classification != null)
+                    {
+                        aiStatus = string.Equals(application.classification, "AI_ERROR", StringComparison.OrdinalIgnoreCase)
+                            ? aiTask != null && AiEvaluationTaskStatuses.ActiveStatuses.Contains(aiTask.Status)
+                                ? aiTask.Status
+                                : AiEvaluationTaskStatuses.Failed
+                            : AiEvaluationTaskStatuses.Completed;
+                    }
+
                     var applicationItem = new
                     {
                         id = application.id,
@@ -816,6 +745,11 @@ namespace RecruitmentBackend.Services
                         appliedAt = application.appliedAt,
                         phone = application.phone,
                         cvUrl = application.cvUrl,
+                        aiStatus,
+                        aiNotBeforeUtc = aiTask?.NotBeforeUtc,
+                        aiAttemptCount = aiTask?.AttemptCount ?? 0,
+                        aiMaxAttempts = aiTask?.MaxAttempts ?? 0,
+                        aiErrorMessage = aiTask?.LastErrorMessage,
                         aiScore = application.aiScore,
                         aiReason = application.aiReason,
                         matchedSkills = matchedSkillsList,
@@ -885,6 +819,19 @@ namespace RecruitmentBackend.Services
                 ).ToListAsync();
 
                 var applicationIds = rawApplications.Select(item => item.id).ToList();
+                var aiTasksByApplicationId = await _context.AiEvaluationTasks
+                    .AsNoTracking()
+                    .Where(task => applicationIds.Contains(task.ApplicationID))
+                    .Select(task => new
+                    {
+                        task.ApplicationID,
+                        task.Status,
+                        task.NotBeforeUtc,
+                        task.AttemptCount,
+                        task.MaxAttempts,
+                        task.LastErrorMessage
+                    })
+                    .ToDictionaryAsync(task => task.ApplicationID);
                 var schedulesByApplicationId = await _context.InterviewSchedules
                     .AsNoTracking()
                     .Where(schedule => applicationIds.Contains(schedule.ApplicationID))
@@ -967,17 +914,21 @@ namespace RecruitmentBackend.Services
                         }
                     }
 
-                    string aiStatus = "Processing";
+                    aiTasksByApplicationId.TryGetValue(application.id, out var aiTask);
+                    string aiStatus = aiTask?.Status ?? "NotScheduled";
 
                     if (application.hasAiEvaluation == true)
                     {
                         if (application.classification == "AI_ERROR")
                         {
-                            aiStatus = "Failed";
+                            if (aiTask == null || !AiEvaluationTaskStatuses.ActiveStatuses.Contains(aiTask.Status))
+                            {
+                                aiStatus = AiEvaluationTaskStatuses.Failed;
+                            }
                         }
                         else
                         {
-                            aiStatus = "Completed";
+                            aiStatus = AiEvaluationTaskStatuses.Completed;
                         }
                     }
 
@@ -1006,6 +957,10 @@ namespace RecruitmentBackend.Services
                         aiAnalysisComplete = application.hasAiEvaluation
                             && HasCompleteDetailedAnalysis(application.aiReason),
                         aiStatus = aiStatus,
+                        aiNotBeforeUtc = aiTask?.NotBeforeUtc,
+                        aiAttemptCount = aiTask?.AttemptCount ?? 0,
+                        aiMaxAttempts = aiTask?.MaxAttempts ?? 0,
+                        aiErrorMessage = aiTask?.LastErrorMessage,
                         aiScore = application.aiScore,
                         aiReason = application.aiReason,
                         matchedSkills = matchedSkillsList,

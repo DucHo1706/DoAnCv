@@ -509,7 +509,7 @@ export default function CvAnalysisResultPage() {
       await axiosClient.post("/Recruitment/apply", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
-      message.success("Nộp hồ sơ thành công! AI chúc bạn sớm nhận lịch hẹn phỏng vấn 🎉");
+      message.success("Nộp hồ sơ thành công. Kết quả phân tích sẽ được cập nhật trong Lịch sử ứng tuyển.");
       localStorage.removeItem(`cv_analysis_result_${id}`);
       navigate("/my-applications");
     } catch (error: any) {

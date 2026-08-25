@@ -16,7 +16,10 @@ import {
   EnvironmentOutlined
 } from "@ant-design/icons";
 import EmptyState from "../../../../../components/common/EmptyState";
-import { getApplicationStatusLabel as translateApplicationStatus } from "../../../../../utils/statusLabels";
+import {
+  getAiStatusLabel,
+  getApplicationStatusLabel as translateApplicationStatus,
+} from "../../../../../utils/statusLabels";
 
 const { Text } = Typography;
 
@@ -61,11 +64,22 @@ export const ApplicationHistoryTab: React.FC<ApplicationHistoryTabProps> = ({
   };
 
   const isAiReady = (app: any) => {
-    return app.aiStatus === "Completed" || (app.aiScore !== undefined && app.aiScore !== null && app.aiScore > 0);
+    return String(app.aiStatus || "").toLowerCase() === "completed" || app.hasAiEvaluation === true;
   };
 
   const isAiError = (app: any) => {
-    return app.aiStatus === "Failed";
+    const status = String(app.aiStatus || "").toLowerCase();
+    return status === "failed" || status === "notscheduled";
+  };
+
+  const isAiCancelled = (app: any) => {
+    const status = String(app.aiStatus || "").toLowerCase();
+    return status === "cancelled" || status === "cancelrequested";
+  };
+
+  const isAiProcessing = (app: any) => {
+    const status = String(app.aiStatus || "").toLowerCase();
+    return status === "pending" || status === "processing" || status === "retryscheduled";
   };
 
   // Helper selectors for summary stats
@@ -75,7 +89,7 @@ export const ApplicationHistoryTab: React.FC<ApplicationHistoryTabProps> = ({
     ? Math.round(readyApps.reduce((acc, app) => acc + (app.aiScore || 0), 0) / readyApps.length)
     : 0;
   const processingCount = applications.filter(
-    (app) => !isAiReady(app) && !isAiError(app)
+    (app) => isAiProcessing(app)
   ).length;
 
   const filteredApplications = useMemo(() => {
@@ -86,13 +100,16 @@ export const ApplicationHistoryTab: React.FC<ApplicationHistoryTabProps> = ({
 
       let matchesStatus = true;
       if (statusFilter === "processing") {
-        matchesStatus = isAiReady(application) === false && isAiError(application) === false;
+        matchesStatus = isAiProcessing(application) === true;
       }
       if (statusFilter === "completed") {
         matchesStatus = isAiReady(application) === true;
       }
       if (statusFilter === "failed") {
         matchesStatus = isAiError(application) === true;
+      }
+      if (statusFilter === "cancelled") {
+        matchesStatus = isAiCancelled(application) === true;
       }
       return matchesSearch && matchesStatus;
     });
@@ -224,6 +241,7 @@ export const ApplicationHistoryTab: React.FC<ApplicationHistoryTabProps> = ({
                 { value: "processing", label: "AI đang phân tích" },
                 { value: "completed", label: "AI đã hoàn tất" },
                 { value: "failed", label: "AI lỗi phân tích" },
+                { value: "cancelled", label: "AI đã hủy" },
               ]}
             />
           </Col>
@@ -241,6 +259,8 @@ export const ApplicationHistoryTab: React.FC<ApplicationHistoryTabProps> = ({
             renderItem={(app) => {
               const ready = isAiReady(app);
               const error = isAiError(app);
+              const cancelled = isAiCancelled(app);
+              const aiStatus = String(app.aiStatus || "").toLowerCase();
               return (
                 <List.Item>
                   <Card
@@ -269,6 +289,8 @@ export const ApplicationHistoryTab: React.FC<ApplicationHistoryTabProps> = ({
                             borderRadius: 8,
                             background: error
                               ? "rgba(239, 68, 68, 0.06)"
+                              : cancelled
+                              ? "#F8FAFC"
                               : ready
                               ? "rgba(16, 185, 129, 0.06)"
                               : "rgba(37, 99, 235, 0.06)",
@@ -276,11 +298,11 @@ export const ApplicationHistoryTab: React.FC<ApplicationHistoryTabProps> = ({
                             alignItems: "center",
                             justifyContent: "center",
                             fontSize: 18,
-                            color: error ? "#EF4444" : ready ? "#10B981" : "#2563EB",
+                            color: error ? "#EF4444" : cancelled ? "#64748B" : ready ? "#10B981" : "#2563EB",
                             flexShrink: 0,
                           }}
                         >
-                          {error ? <InfoCircleOutlined /> : ready ? <FileDoneOutlined /> : <LoadingOutlined spin />}
+                          {error || cancelled ? <InfoCircleOutlined /> : ready ? <FileDoneOutlined /> : aiStatus === "processing" ? <LoadingOutlined spin /> : <ClockCircleOutlined />}
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <Text strong style={{ fontSize: 16, color: "#0F172A", display: "block" }}>
@@ -299,11 +321,15 @@ export const ApplicationHistoryTab: React.FC<ApplicationHistoryTabProps> = ({
                               <ClockCircleOutlined /> {app.appliedAt ? new Date(app.appliedAt).toLocaleDateString("vi-VN") : "N/A"}
                             </Text>
                             {error ? (
-                              <Tag color="error">AI gặp lỗi</Tag>
+                              <Tag color="error">{getAiStatusLabel(app.aiStatus || "Failed")}</Tag>
+                            ) : cancelled ? (
+                              <Tag>{getAiStatusLabel(app.aiStatus || "Cancelled")}</Tag>
                             ) : ready ? (
                               <Tag color="success">AI hoàn tất</Tag>
+                            ) : aiStatus === "retryscheduled" ? (
+                              <Tag color="warning">{getAiStatusLabel(app.aiStatus)}</Tag>
                             ) : (
-                              <Tag color="processing">AI đang chấm điểm...</Tag>
+                              <Tag color="processing">{getAiStatusLabel(app.aiStatus || "Pending")}</Tag>
                             )}
                             {(() => {
                               const statusInfo = getApplicationStatusLabel(app.status);
@@ -337,9 +363,18 @@ export const ApplicationHistoryTab: React.FC<ApplicationHistoryTabProps> = ({
                             </Button>
                           </Space>
                         )}
-                        {!ready && !error && (
+                        {!ready && !error && !cancelled && (
                           <Text type="secondary" style={{ fontStyle: "italic", fontSize: 13 }}>
-                            AI đang thực hiện tính toán độ tương hợp...
+                            {aiStatus === "pending"
+                              ? "Hồ sơ đang chờ đến lượt phân tích."
+                              : aiStatus === "retryscheduled"
+                              ? "Hệ thống sẽ tự động thử lại."
+                              : "AI đang thực hiện tính toán độ tương hợp..."}
+                          </Text>
+                        )}
+                        {cancelled && (
+                          <Text type="secondary" style={{ fontStyle: "italic", fontSize: 13 }}>
+                            Tác vụ phân tích đã dừng; lịch sử ứng tuyển vẫn được giữ lại.
                           </Text>
                         )}
                         {error && (

@@ -6,6 +6,7 @@ import JobApplyModal from "./components/JobApplyModal";
 import ApplySuccessModal from "./components/ApplySuccessModal";
 import CvAiPreviewModal from "../../../../components/candidate/CvAiPreviewModal";
 import { appTheme } from "../../../../constants/theme";
+import "./CandidateJobDetailPage.css";
 
 export default function CandidateJobDetailPage() {
   const {
@@ -49,10 +50,10 @@ export default function CandidateJobDetailPage() {
   if (!job) return null;
 
   return (
-    <div style={{ background: appTheme.colors.background, minHeight: "100vh", paddingBottom: 60, paddingTop: 24 }}>
-      <div style={{ maxWidth: "1300px", margin: "0 auto", padding: "0 20px" }}>
+    <div className="candidate-job-detail-page" style={{ background: appTheme.colors.background, minHeight: "100vh", paddingBottom: 60, paddingTop: 24 }}>
+      <div className="candidate-job-detail-container" style={{ maxWidth: "1300px", margin: "0 auto", padding: "0 20px" }}>
         {/* Breadcrumb */}
-        <Breadcrumb style={{ marginBottom: 16 }}>
+        <Breadcrumb className="candidate-job-detail-breadcrumb" style={{ marginBottom: 16 }}>
           <Breadcrumb.Item
             href="/"
             onClick={(e) => {

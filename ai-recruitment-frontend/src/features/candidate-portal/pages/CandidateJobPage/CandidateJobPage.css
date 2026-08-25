@@ -1,0 +1,213 @@
+.candidate-jobs-page {
+  overflow-x: hidden;
+}
+
+.candidate-jobs-container {
+  width: 100%;
+}
+
+.candidate-jobs-mobile-filter-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  padding-top: 16px;
+  border-top: 1px solid #e2e8f0;
+}
+
+@media (max-width: 991px) {
+  .candidate-jobs-hero {
+    padding: 28px 16px 20px !important;
+  }
+
+  .candidate-jobs-content {
+    margin-top: 20px !important;
+    padding-inline: 16px !important;
+  }
+
+  .candidate-jobs-filter-card .ant-card-head {
+    min-height: 54px;
+    padding-inline: 16px;
+  }
+
+  .candidate-jobs-filter-card .ant-card-head-title,
+  .candidate-jobs-filter-card .ant-card-extra {
+    padding-block: 12px;
+  }
+
+  .candidate-jobs-results-header {
+    align-items: flex-start !important;
+  }
+
+  .candidate-jobs-sort {
+    flex: 0 0 100% !important;
+    justify-content: flex-start !important;
+  }
+}
+
+@media (max-width: 575px) {
+  .candidate-jobs-page {
+    padding-bottom: 36px !important;
+  }
+
+  .candidate-jobs-hero {
+    padding: 22px 14px 18px !important;
+  }
+
+  .candidate-jobs-title {
+    margin-bottom: 14px !important;
+    font-size: 24px !important;
+    line-height: 1.25 !important;
+  }
+
+  .candidate-jobs-search {
+    flex-direction: column;
+    align-items: stretch !important;
+    gap: 4px !important;
+    padding: 8px !important;
+    border-radius: 14px !important;
+  }
+
+  .candidate-jobs-keyword,
+  .candidate-jobs-location,
+  .candidate-jobs-search-button {
+    flex: none !important;
+    width: 100% !important;
+  }
+
+  .candidate-jobs-keyword {
+    min-height: 46px;
+  }
+
+  .candidate-jobs-location {
+    min-height: 46px;
+    border-top: 1px solid #f1f5f9;
+    border-left: 0 !important;
+  }
+
+  .candidate-jobs-search-button {
+    height: 44px !important;
+    margin-top: 4px;
+  }
+
+  .candidate-jobs-content {
+    margin-top: 14px !important;
+    padding-inline: 12px !important;
+  }
+
+  .candidate-jobs-filter-card,
+  .candidate-jobs-results-header,
+  .candidate-job-card {
+    border-radius: 12px !important;
+  }
+
+  .candidate-jobs-results-header {
+    padding: 14px !important;
+    margin-bottom: 14px !important;
+  }
+
+  .candidate-jobs-results-header h4 {
+    white-space: normal !important;
+  }
+
+  .candidate-jobs-sort {
+    display: grid !important;
+    grid-template-columns: 1fr;
+    gap: 6px !important;
+  }
+
+  .candidate-jobs-sort-select {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+  }
+
+  .candidate-job-card {
+    margin-bottom: 12px !important;
+  }
+
+  .candidate-job-card > .ant-card-body {
+    padding: 18px 14px !important;
+  }
+
+  .candidate-job-card-layout {
+    gap: 12px !important;
+  }
+
+  .candidate-job-card-icon {
+    width: 44px !important;
+    height: 44px !important;
+    border-radius: 12px !important;
+    font-size: 20px !important;
+  }
+
+  .candidate-job-card-heading {
+    flex-direction: column;
+    gap: 10px !important;
+  }
+
+  .candidate-job-card-title-block,
+  .candidate-job-card-salary-row {
+    width: 100%;
+    min-width: 0 !important;
+  }
+
+  .candidate-job-card-content h4 {
+    overflow-wrap: anywhere;
+    font-size: 17px !important;
+  }
+
+  .candidate-job-card-salary-row {
+    justify-content: space-between;
+    text-align: left !important;
+  }
+
+  .candidate-job-card-salary {
+    max-width: calc(100% - 48px);
+    padding: 5px 10px !important;
+  }
+
+  .candidate-job-card-salary .ant-typography {
+    overflow-wrap: anywhere;
+    font-size: 15px !important;
+  }
+
+  .candidate-job-card-meta {
+    flex-direction: column;
+    align-items: flex-start !important;
+    gap: 7px !important;
+  }
+
+  .candidate-job-card-footer {
+    flex-direction: column;
+    align-items: stretch !important;
+    gap: 10px;
+  }
+
+  .candidate-job-card-actions {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    width: 100%;
+    gap: 8px !important;
+  }
+
+  .candidate-job-card-actions .ant-space-item,
+  .candidate-job-card-actions .ant-btn {
+    width: 100%;
+  }
+
+  .candidate-job-card-actions .ant-btn {
+    height: 38px !important;
+    padding-inline: 8px !important;
+  }
+
+  .candidate-job-card-code {
+    align-self: flex-end;
+  }
+
+  .candidate-jobs-page .ant-pagination {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 4px;
+  }
+}

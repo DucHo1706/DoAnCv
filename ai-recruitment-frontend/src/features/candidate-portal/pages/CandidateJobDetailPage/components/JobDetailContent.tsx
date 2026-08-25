@@ -37,6 +37,7 @@ const JobDetailContent: React.FC<JobDetailContentProps> = ({
     <>
       {/* 1. KHU VỰC HERO CARD (TOP) */}
       <Card
+        className="candidate-job-detail-hero-card"
         bodyStyle={{ padding: 28 }}
         style={{
           borderRadius: 16,
@@ -46,9 +47,10 @@ const JobDetailContent: React.FC<JobDetailContentProps> = ({
           background: appTheme.colors.surface,
         }}
       >
-        <Row gutter={24} align="middle">
-          <Col flex="120px">
+        <Row className="candidate-job-detail-hero-row" gutter={[24, 20]} align="middle">
+          <Col className="candidate-job-detail-logo-column" flex="120px">
             <img
+              className="candidate-job-detail-logo"
               src={job.logo}
               alt="Company Logo"
               style={{
@@ -62,15 +64,15 @@ const JobDetailContent: React.FC<JobDetailContentProps> = ({
               }}
             />
           </Col>
-          <Col flex="auto" style={{ minWidth: 0 }}>
-            <Title level={2} style={{ margin: 0, fontSize: 22, color: appTheme.colors.textPrimary, marginBottom: 6, fontFamily: appTheme.font.family, fontWeight: 700 }}>
+          <Col className="candidate-job-detail-summary" flex="auto" style={{ minWidth: 0 }}>
+            <Title className="candidate-job-detail-title" level={2} style={{ margin: 0, fontSize: 22, color: appTheme.colors.textPrimary, marginBottom: 6, fontFamily: appTheme.font.family, fontWeight: 700 }}>
               {job.title}
             </Title>
             <Text style={{ fontSize: 16, color: appTheme.colors.textSecondary, display: "block", marginBottom: 16, fontFamily: appTheme.font.family }}>
               {job.company}
             </Text>
 
-            <Space size="large" split={<Divider type="vertical" style={{ height: 20 }} />} wrap>
+            <Space className="candidate-job-detail-facts" size="large" split={<Divider type="vertical" style={{ height: 20 }} />} wrap>
               <Space align="center" size={12}>
                 <div
                   style={{
@@ -138,13 +140,14 @@ const JobDetailContent: React.FC<JobDetailContentProps> = ({
               </Space>
             </Space>
           </Col>
-          <Col style={{ flexShrink: 0 }}>
-            <Space direction="vertical" style={{ width: "100%" }} size={12}>
+          <Col className="candidate-job-detail-actions-column" style={{ flexShrink: 0 }}>
+            <Space className="candidate-job-detail-actions" direction="vertical" style={{ width: "100%" }} size={12}>
               <Button
                 type={appliedApplication ? "default" : "primary"}
                 size="large"
                 icon={appliedApplication ? <CheckCircleOutlined /> : <SendOutlined />}
                 onClick={appliedApplication ? handleViewAppliedAiEvaluation : showApplyModal}
+                className="candidate-job-detail-action-button"
                 style={{
                   width: 220,
                   height: 44,
@@ -164,6 +167,7 @@ const JobDetailContent: React.FC<JobDetailContentProps> = ({
                   size="large"
                   icon={<ExperimentOutlined />}
                   onClick={handleApplyWithAI}
+                  className="candidate-job-detail-action-button"
                   style={{
                     width: 220,
                     height: 44,
@@ -187,10 +191,11 @@ const JobDetailContent: React.FC<JobDetailContentProps> = ({
       </Card>
 
       {/* 2. KHU VỰC CHI TIẾT */}
-      <Row gutter={24}>
+      <Row className="candidate-job-detail-main-row" gutter={[24, 20]}>
         {/* Cột trái: Chi tiết JD */}
         <Col xs={24} lg={16} xl={17}>
           <Card
+            className="candidate-job-detail-description-card"
             title={<Title level={4} style={{ margin: 0, fontFamily: appTheme.font.family, fontWeight: 600, fontSize: 18 }}>Chi tiết tin tuyển dụng</Title>}
             style={{
               borderRadius: 16,
@@ -221,6 +226,7 @@ const JobDetailContent: React.FC<JobDetailContentProps> = ({
               Cách thức ứng tuyển
             </Title>
             <div
+              className="candidate-job-detail-apply-note"
               style={{
                 background: "#f0fdf4",
                 border: "1px solid #bbf7d0",
@@ -239,6 +245,7 @@ const JobDetailContent: React.FC<JobDetailContentProps> = ({
         <Col xs={24} lg={8} xl={7}>
           {/* Bảng Thông tin chung */}
           <Card
+            className="candidate-job-detail-info-card"
             title={<Title level={5} style={{ margin: 0, fontFamily: appTheme.font.family, fontWeight: 600, fontSize: 15 }}>Thông tin chung</Title>}
             style={{
               borderRadius: 16,
@@ -317,6 +324,7 @@ const JobDetailContent: React.FC<JobDetailContentProps> = ({
 
           {/* Bảng Thông tin công ty */}
           <Card
+            className="candidate-job-detail-company-card"
             title={<Title level={5} style={{ margin: 0, fontFamily: appTheme.font.family, fontWeight: 600, fontSize: 15 }}>Thông tin công ty</Title>}
             style={{
               borderRadius: 16,
@@ -325,7 +333,7 @@ const JobDetailContent: React.FC<JobDetailContentProps> = ({
               background: appTheme.colors.surface,
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+            <div className="candidate-job-detail-company" style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
               <img
                 src={job.logo}
                 alt="logo"
@@ -352,6 +360,7 @@ const JobDetailContent: React.FC<JobDetailContentProps> = ({
           {/* Bảng Việc làm tương tự */}
           {relatedJobs && relatedJobs.length > 0 && (
             <Card
+              className="candidate-job-detail-related-card"
               title={<Title level={5} style={{ margin: 0, fontFamily: appTheme.font.family, fontWeight: 600, fontSize: 15 }}>Việc làm tương tự</Title>}
               style={{
                 borderRadius: 16,
@@ -380,7 +389,7 @@ const JobDetailContent: React.FC<JobDetailContentProps> = ({
                     <Text strong style={{ display: "block", fontSize: 14, color: appTheme.colors.textPrimary, marginBottom: 4 }}>
                       {rJob.title}
                     </Text>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div className="candidate-job-detail-related-meta" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                       <Text type="secondary" style={{ fontSize: 12 }}>{rJob.location}</Text>
                       <Text strong style={{ color: appTheme.colors.primary, fontSize: 13 }}>{rJob.salary}</Text>
                     </div>

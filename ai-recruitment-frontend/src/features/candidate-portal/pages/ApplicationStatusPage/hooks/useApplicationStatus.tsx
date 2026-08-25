@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
-import { message, Modal, Spin } from "antd";
+import { message, Modal } from "antd";
 import { recruitmentService } from "../../../services/recruitmentService";
 
 export function useApplicationStatus() {
@@ -11,7 +11,6 @@ export function useApplicationStatus() {
   const [searchParams, setSearchParams] = useSearchParams();
   const hasHandledDeepLinkRef = useRef(false);
   const pollingTimerRef = useRef<number | null>(null);
-  const processingModalRef = useRef<any>(null);
   const [searchText, setSearchText] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
 
@@ -88,8 +87,6 @@ export function useApplicationStatus() {
           
           fetchMyApps(false).then(() => {
             if (!isSubscribed) return;
-            // Tự động đóng modal loading đang quay tròn nếu có
-            closeProcessingModal();
             clearPollingTimer();
           }).catch((err: any) => console.error("Lỗi cập nhật danh sách ứng tuyển ứng viên:", err));
         });
@@ -126,7 +123,20 @@ export function useApplicationStatus() {
 
   const isAiError = (application: any) => {
     if (!application) return false;
-    return application.classification === "AI_ERROR";
+    const aiStatus = String(application.aiStatus || "").toLowerCase();
+    return aiStatus === "failed"
+      || aiStatus === "notscheduled"
+      || application.classification === "AI_ERROR";
+  };
+
+  const isAiCancelled = (application: any) => {
+    const aiStatus = String(application?.aiStatus || "").toLowerCase();
+    return aiStatus === "cancelled" || aiStatus === "cancelrequested";
+  };
+
+  const isAiProcessing = (application: any) => {
+    const aiStatus = String(application?.aiStatus || "").toLowerCase();
+    return aiStatus === "pending" || aiStatus === "processing" || aiStatus === "retryscheduled";
   };
 
   const hasCompleteDetailedAnalysis = (application: any) => {
@@ -157,6 +167,7 @@ export function useApplicationStatus() {
   const isAiReady = (application: any) => {
     if (!application) return false;
     if (isAiError(application) === true) return false;
+    if (isAiCancelled(application) === true) return false;
     if (application.hasAiEvaluation === true) return true;
 
     const classification = application.classification || "";
@@ -191,8 +202,8 @@ export function useApplicationStatus() {
       content: (
         <div style={{ marginTop: 12 }}>
           <div style={{ color: "#64748b", marginBottom: 8, fontSize: "14px" }}>
-            Hệ thống AI tạm thời chưa phân tích được hồ sơ này. Có thể dịch vụ AI đang bận hoặc gặp
-            lỗi kết nối.
+            Hệ thống chưa hoàn tất phân tích hồ sơ này. Bạn có thể dùng một lượt yêu cầu phân tích lại;
+            không cần nộp CV thêm lần nữa.
           </div>
           <div style={{ color: "#94a3b8", fontSize: "13px" }}>
             Hồ sơ của bạn vẫn đã được gửi đến nhà tuyển dụng thành công. Bạn có thể quay lại kiểm
@@ -207,13 +218,6 @@ export function useApplicationStatus() {
     if (pollingTimerRef.current !== null) {
       window.clearTimeout(pollingTimerRef.current);
       pollingTimerRef.current = null;
-    }
-  };
-
-  const closeProcessingModal = () => {
-    if (processingModalRef.current) {
-      processingModalRef.current.destroy();
-      processingModalRef.current = null;
     }
   };
 
@@ -239,7 +243,6 @@ export function useApplicationStatus() {
 
         if (isAiReady(targetApplication) === true) {
           clearPollingTimer();
-          closeProcessingModal();
           message.success("Quá trình AI phân tích hồ sơ đã hoàn tất.");
           setTimeout(() => {
             openAiDrawer(targetApplication);
@@ -249,7 +252,6 @@ export function useApplicationStatus() {
 
         if (isAiError(targetApplication) === true) {
           clearPollingTimer();
-          closeProcessingModal();
           setTimeout(() => {
             showAiErrorModal();
           }, 300);
@@ -258,7 +260,6 @@ export function useApplicationStatus() {
 
         if (retryCount >= maxRetryCount) {
           clearPollingTimer();
-          closeProcessingModal();
           message.info("AI vẫn đang phân tích hồ sơ. Bạn có thể quay lại kiểm tra sau.");
           return;
         }
@@ -275,74 +276,20 @@ export function useApplicationStatus() {
     pollingTimerRef.current = window.setTimeout(poll, 3000);
   };
 
-  const showAiProcessingModal = (application: any) => {
+  const followAiProgress = (application: any) => {
     const applicationId = getApplicationId(application);
     if (!applicationId) {
       message.error("Không tìm thấy mã hồ sơ ứng tuyển.");
       return;
     }
-    closeProcessingModal();
-
-processingModalRef.current = Modal.info({
-title: "AI đang phân tích hồ sơ",
-centered: true,
-width: typeof window !== "undefined" && window.innerWidth < 640 ? "92vw" : 560,
-      okText: "Đóng",
-      onOk: () => {
-        clearPollingTimer();
-      },
-      onCancel: () => {
-        clearPollingTimer();
-      },
-      afterClose: () => {
-        processingModalRef.current = null;
-      },
-      content: (
-        <div style={{ marginTop: 16, textAlign: "center" }}>
-          <div
-            style={{
-              width: 86,
-              height: 86,
-              borderRadius: "50%",
-              background: "#f0f7ff",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              margin: "0 auto 18px",
-            }}
-          >
-            <Spin size="large" />
-          </div>
-
-          <div style={{ fontSize: 16, marginBottom: 8, color: "#1e293b", fontWeight: 600 }}>
-            Hệ thống AI đang đọc kỹ CV của bạn, vui lòng chờ trong giây lát...
-          </div>
-
-          <div style={{ color: "#64748b", marginBottom: 16 }}>
-            Hồ sơ ứng tuyển vị trí <strong>{application?.jobTitle || "này"}</strong> đã được ghi
-            nhận. AI đang đối chiếu CV với tiêu chí tuyển dụng của nhà tuyển dụng.
-          </div>
-
-          <div
-            style={{
-              background: "#fafafa",
-              border: "1px dashed #d9d9d9",
-              borderRadius: 12,
-              padding: 14,
-              marginTop: 16,
-              textAlign: "left",
-            }}
-          >
-            <div style={{ color: "#64748b", display: "flex", flexDirection: "column", gap: 6 }}>
-              <div>• Đang bóc tách thông tin CV...</div>
-              <div>• Đang so khớp kỹ năng với tin tuyển dụng...</div>
-              <div>• Đang chuẩn bị nhận xét và điểm phù hợp...</div>
-            </div>
-          </div>
-        </div>
-      ),
-    });
-
+    const aiStatus = String(application?.aiStatus || "").toLowerCase();
+    if (aiStatus === "pending") {
+      message.info("Hồ sơ đang trong thời gian chờ ngắn trước khi phân tích. Bạn có thể rút hồ sơ khi HR chưa xử lý.");
+    } else if (aiStatus === "retryscheduled") {
+      message.info("Lần gọi AI trước bị gián đoạn. Hệ thống đã tự xếp lịch thử lại.");
+    } else {
+      message.info("AI đang phân tích hồ sơ. Trang sẽ tự cập nhật khi có kết quả.");
+    }
     startPollingAiResult(applicationId);
   };
 
@@ -351,8 +298,12 @@ width: typeof window !== "undefined" && window.innerWidth < 640 ? "92vw" : 560,
       showAiErrorModal();
       return;
     }
+    if (isAiCancelled(record) === true) {
+      message.info("Phân tích AI đã được hủy theo trạng thái rút hồ sơ.");
+      return;
+    }
     if (isAiReady(record) === false) {
-      showAiProcessingModal(record);
+      followAiProgress(record);
       return;
     }
     openAiDrawer(record);
@@ -369,8 +320,8 @@ width: typeof window !== "undefined" && window.innerWidth < 640 ? "92vw" : 560,
       await recruitmentService.retryMyApplicationAi(applicationId);
       const latestApplications = await fetchMyApps(false);
       const latest = latestApplications.find((item: any) => getApplicationId(item) === applicationId);
-      message.success("Đã bắt đầu phân tích lại. Bạn không cần nộp CV lần nữa.");
-      showAiProcessingModal(latest || { ...record, classification: "Chưa phân loại", hasAiEvaluation: false });
+      message.success("Đã xếp lịch phân tích lại. Bạn không cần nộp CV lần nữa.");
+      followAiProgress(latest || { ...record, aiStatus: "Pending", classification: "Chưa phân loại", hasAiEvaluation: false });
     } catch (error: any) {
       message.error(error?.response?.data?.message || "Chưa thể chạy lại phân tích AI lúc này.");
     }
@@ -384,8 +335,8 @@ width: typeof window !== "undefined" && window.innerWidth < 640 ? "92vw" : 560,
     }
 
     Modal.confirm({
-      title: "Rút hồ sơ để nộp lại?",
-      content: "Kết quả AI và snapshot của lần nộp này sẽ bị xóa. CV gốc trong hồ sơ hoặc CV tạo trực tuyến vẫn được giữ nguyên.",
+      title: "Rút hồ sơ ứng tuyển?",
+      content: "Lịch sử ứng tuyển, CV đã nộp và kết quả AI đã có vẫn được giữ lại. Tác vụ AI đang chờ sẽ được hủy; bạn không thể nộp lại vào cùng đợt tuyển dụng này.",
       okText: "Rút hồ sơ",
       cancelText: "Giữ hồ sơ",
       okButtonProps: { danger: true },
@@ -394,7 +345,7 @@ width: typeof window !== "undefined" && window.innerWidth < 640 ? "92vw" : 560,
         try {
           await recruitmentService.withdrawMyApplication(applicationId);
           await fetchMyApps(false);
-          message.success("Đã rút hồ sơ. Bạn có thể nộp lại CV cho vị trí này.");
+          message.success("Đã rút hồ sơ. Lịch sử ứng tuyển vẫn được giữ lại.");
         } catch (error: any) {
           message.error(error?.response?.data?.message || "Chưa thể rút hồ sơ lúc này.");
           throw error;
@@ -420,7 +371,7 @@ width: typeof window !== "undefined" && window.innerWidth < 640 ? "92vw" : 560,
     } else if (isAiReady(targetApplication) === true) {
       openAiDrawer(targetApplication);
     } else {
-      showAiProcessingModal(targetApplication);
+      followAiProgress(targetApplication);
     }
     setSearchParams({}, { replace: true });
   }, [applications, searchParams]);
@@ -428,7 +379,6 @@ width: typeof window !== "undefined" && window.innerWidth < 640 ? "92vw" : 560,
   useEffect(() => {
     return () => {
       clearPollingTimer();
-      closeProcessingModal();
     };
   }, []);
 
@@ -463,6 +413,8 @@ width: typeof window !== "undefined" && window.innerWidth < 640 ? "92vw" : 560,
     setStatusFilter,
     isAiReady,
     isAiError,
+    isAiCancelled,
+    isAiProcessing,
     isAiIncomplete,
     handleViewDetail,
     handleRetryAi,

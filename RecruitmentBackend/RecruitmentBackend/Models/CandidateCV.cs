@@ -21,6 +21,8 @@ namespace RecruitmentBackend.Models
         public string? Certificates { get; set; } // Lưu chuỗi JSON
         public string? SourceType { get; set; }
         public string? SourceDocumentId { get; set; }
+        [MaxLength(64)]
+        public string? ContentHash { get; set; }
 
         public DateTime CreatedAt { get; set; } = DateTime.Now;
     }

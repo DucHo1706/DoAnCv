@@ -47,6 +47,7 @@ const JobApplyModal: React.FC<JobApplyModalProps> = ({
 
   return (
     <Modal
+      className="candidate-job-apply-modal"
       title={`Ứng tuyển vị trí: ${title}`}
       open={open}
       onOk={onOk}

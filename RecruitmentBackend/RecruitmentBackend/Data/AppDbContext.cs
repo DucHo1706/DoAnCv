@@ -28,6 +28,7 @@ namespace RecruitmentBackend.Data
         public DbSet<CandidateCvDomain> CandidateCvDomains { get; set; }
         public DbSet<CvBuilderDocument> CvBuilderDocuments { get; set; }
         public DbSet<Application> Applications { get; set; }
+        public DbSet<AiEvaluationTask> AiEvaluationTasks { get; set; }
         public DbSet<ApplicationStatusHistory> ApplicationStatusHistories { get; set; }
         public DbSet<AIEvaluation> AIEvaluations { get; set; }
         public DbSet<JobCriterion> JobCriteria { get; set; }
@@ -55,6 +56,19 @@ namespace RecruitmentBackend.Data
                 .WithOne()
                 .HasForeignKey<AIEvaluation>(ai => ai.ApplicationID)
                 .OnDelete(DeleteBehavior.Cascade); // Nếu xóa đơn ứng tuyển thì tự động xóa luôn kết quả đánh giá AI
+
+            modelBuilder.Entity<Application>()
+                .HasOne(application => application.AiEvaluationTask)
+                .WithOne(task => task.Application)
+                .HasForeignKey<AiEvaluationTask>(task => task.ApplicationID)
+                .OnDelete(DeleteBehavior.Cascade);
+            modelBuilder.Entity<AiEvaluationTask>()
+                .HasIndex(task => task.ApplicationID)
+                .IsUnique();
+            modelBuilder.Entity<AiEvaluationTask>()
+                .HasIndex(task => new { task.Status, task.NotBeforeUtc });
+            modelBuilder.Entity<CandidateCV>()
+                .HasIndex(cv => cv.ContentHash);
 
             modelBuilder.Entity<CandidateCvDomain>()
                 .HasIndex(x => new { x.CVID, x.Domain })

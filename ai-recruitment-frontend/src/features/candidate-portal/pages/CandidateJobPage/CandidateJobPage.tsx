@@ -17,6 +17,7 @@ import {
   message,
   Alert,
   Skeleton,
+  Grid,
 } from "antd";
 import {
   SearchOutlined,
@@ -35,10 +36,14 @@ import {
   TeamOutlined,
   AppstoreOutlined,
   BuildOutlined,
+  FilterOutlined,
+  UpOutlined,
+  DownOutlined,
 } from "@ant-design/icons";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import axiosClient from "../../../../services/axiosClient";
 import { appTheme } from "../../../../constants/theme";
+import "./CandidateJobPage.css";
 
 const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
@@ -132,6 +137,9 @@ const mergeLocationAliases = (items: any[]) => {
 export default function CandidateJobPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const screens = Grid.useBreakpoint();
+  const isDesktop = Boolean(screens.lg);
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
   // Khởi tạo giá trị mặc định từ URL
   const [keyword, setKeyword] = useState(searchParams.get("keyword") || "");
@@ -352,21 +360,23 @@ export default function CandidateJobPage() {
   });
 
   return (
-    <div style={{ background: appTheme.colors.background, minHeight: "100vh", paddingBottom: 60 }}>
+    <div className="candidate-jobs-page" style={{ background: appTheme.colors.background, minHeight: "100vh", paddingBottom: 60 }}>
       {/* 1. KHU VỰC TÌM KIẾM (SEARCH HERO SECTION) */}
       <div
+        className="candidate-jobs-hero"
         style={{
           background: "#F8FAFC",
           padding: "40px 20px 24px",
           borderBottom: "1px solid #E2E8F0",
         }}
       >
-        <div style={{ maxWidth: "1300px", margin: "0 auto" }}>
-          <Title level={1} style={{ color: "#0F172A", marginBottom: 18, fontWeight: 800, fontSize: 30, letterSpacing: "-0.02em" }}>
+        <div className="candidate-jobs-container" style={{ maxWidth: "1300px", margin: "0 auto" }}>
+          <Title className="candidate-jobs-title" level={1} style={{ color: "#0F172A", marginBottom: 18, fontWeight: 800, fontSize: 30, letterSpacing: "-0.02em" }}>
             Tìm kiếm cơ hội nghề nghiệp
           </Title>
 
           <div
+            className="candidate-jobs-search"
             style={{
               background: "white",
               padding: "10px 14px",
@@ -380,6 +390,7 @@ export default function CandidateJobPage() {
             }}
           >
             <Input
+              className="candidate-jobs-keyword"
               size="large"
               placeholder="Nhập tên công việc, vị trí, kỹ năng (ví dụ: React, C#, Bắc Ninh)..."
               prefix={<SearchOutlined style={{ color: "#64748B", fontSize: 20 }} />}
@@ -390,6 +401,7 @@ export default function CandidateJobPage() {
               onPressEnter={handleSearch}
             />
             <Select
+              className="candidate-jobs-location"
               size="large"
               showSearch
               placeholder="Tất cả địa điểm"
@@ -412,6 +424,7 @@ export default function CandidateJobPage() {
               ))}
             </Select>
             <Button
+              className="candidate-jobs-search-button"
               type="primary"
               size="large"
               onClick={handleSearch}
@@ -432,34 +445,53 @@ export default function CandidateJobPage() {
       </div>
 
       {/* 2. KHU VỰC NỘI DUNG CHÍNH */}
-      <div style={{ maxWidth: "1300px", margin: "28px auto 0", padding: "0 20px" }}>
-        <Row gutter={24}>
+      <div className="candidate-jobs-content candidate-jobs-container" style={{ maxWidth: "1300px", margin: "28px auto 0", padding: "0 20px" }}>
+        <Row className="candidate-jobs-layout" gutter={[24, 20]}>
           {/* Cột trái: Bộ lọc Sidebar */}
-          <Col xs={24} lg={6} xl={6}>
+          <Col className="candidate-jobs-filter-column" xs={24} lg={6} xl={6}>
             <Card
-              title={<span style={{ fontWeight: 700, fontSize: 16 }}>Lọc nâng cao</span>}
-              style={{ ...glassCardStyle, position: "sticky", top: 100 }}
+              className="candidate-jobs-filter-card"
+              title={
+                <span style={{ fontWeight: 700, fontSize: 16 }}>
+                  <FilterOutlined style={{ marginRight: 8 }} />
+                  Lọc nâng cao
+                </span>
+              }
+              style={{ ...glassCardStyle, position: isDesktop ? "sticky" : "static", top: 100 }}
               bodyStyle={{
                 padding: "16px 20px",
-                maxHeight: "calc(100vh - 120px)",
-                overflowY: "auto",
+                maxHeight: isDesktop ? "calc(100vh - 120px)" : "none",
+                overflowY: isDesktop ? "auto" : "visible",
+                display: isDesktop || mobileFiltersOpen ? "block" : "none",
               }}
               extra={
-                <Space size={8} align="center">
+                isDesktop ? (
+                  <Space size={8} align="center">
+                    <Button
+                      type="link"
+                      size="small"
+                      danger
+                      style={{ padding: 0 }}
+                      onClick={handleClearFilter}
+                    >
+                      Xóa lọc
+                    </Button>
+                    <Divider type="vertical" style={{ margin: 0 }} />
+                    <Button type="link" size="small" style={{ padding: 0 }} onClick={handleSearch}>
+                      Áp dụng
+                    </Button>
+                  </Space>
+                ) : (
                   <Button
-                    type="link"
+                    type="text"
                     size="small"
-                    danger
-                    style={{ padding: 0 }}
-                    onClick={handleClearFilter}
+                    icon={mobileFiltersOpen ? <UpOutlined /> : <DownOutlined />}
+                    onClick={() => setMobileFiltersOpen((current) => !current)}
+                    aria-expanded={mobileFiltersOpen}
                   >
-                    Xóa lọc
+                    {mobileFiltersOpen ? "Thu gọn" : "Mở bộ lọc"}
                   </Button>
-                  <Divider type="vertical" style={{ margin: 0 }} />
-                  <Button type="link" size="small" style={{ padding: 0 }} onClick={handleSearch}>
-                    Áp dụng
-                  </Button>
-                </Space>
+                )
               }
             >
               <Space direction="vertical" size="middle" style={{ width: "100%" }}>
@@ -596,14 +628,30 @@ export default function CandidateJobPage() {
                     />
                   </div>
                 </div>
+
+                {!isDesktop && (
+                  <div className="candidate-jobs-mobile-filter-actions">
+                    <Button onClick={handleClearFilter}>Xóa lọc</Button>
+                    <Button
+                      type="primary"
+                      onClick={() => {
+                        handleSearch();
+                        setMobileFiltersOpen(false);
+                      }}
+                    >
+                      Xem kết quả
+                    </Button>
+                  </div>
+                )}
               </Space>
             </Card>
           </Col>
 
           {/* Cột phải: Danh sách việc làm */}
-          <Col xs={24} lg={18} xl={18}>
+          <Col className="candidate-jobs-results-column" xs={24} lg={18} xl={18}>
             {/* Thanh Tiêu đề & Sắp xếp cá nhân hóa */}
             <div
+              className="candidate-jobs-results-header"
               style={{
                 background: "#FFFFFF",
                 padding: "16px 20px",
@@ -622,9 +670,10 @@ export default function CandidateJobPage() {
                 Tìm thấy <span style={{ color: "#2563EB" }}>{totalCount}</span> việc làm phù hợp
               </Title>
 
-              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", flex: 1, justifyContent: "flex-end" }}>
+              <div className="candidate-jobs-sort" style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", flex: 1, justifyContent: "flex-end" }}>
                 <Text type="secondary" style={{ fontSize: 14, whiteSpace: "nowrap" }}>Sắp xếp theo:</Text>
                 <Select
+                  className="candidate-jobs-sort-select"
                   value={sortBy}
                   onChange={setSortBy}
                   style={{ minWidth: 200, maxWidth: 260 }}
@@ -689,7 +738,7 @@ export default function CandidateJobPage() {
                   return (
                     <Card
                       key={job.id || job.jobID}
-                      className="premium-card"
+                      className="premium-card candidate-job-card"
                       style={{
                         borderRadius: 16,
                         border: "1px solid #E2E8F0",
@@ -700,9 +749,10 @@ export default function CandidateJobPage() {
                       }}
                       bodyStyle={{ padding: "24px 28px" }}
                     >
-                      <div style={{ display: "flex", gap: 20, alignItems: "flex-start" }}>
+                      <div className="candidate-job-card-layout" style={{ display: "flex", gap: 20, alignItems: "flex-start" }}>
                         {/* Container Logo Icon Công nghệ/Ngành nghề bên trái */}
                         <div
+                          className="candidate-job-card-icon"
                           style={{
                             width: 56,
                             height: 56,
@@ -720,10 +770,10 @@ export default function CandidateJobPage() {
                         </div>
 
                         {/* Nội dung thông tin chi tiết việc làm */}
-                        <div style={{ flex: 1, minWidth: 0 }}>
+                        <div className="candidate-job-card-content" style={{ flex: 1, minWidth: 0 }}>
                           {/* Hàng 1: Tiêu đề + AI Match Tag + Mức lương & Lưu */}
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16, marginBottom: 8, flexWrap: "wrap" }}>
-                            <div style={{ flex: 1, minWidth: 240 }}>
+                          <div className="candidate-job-card-heading" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16, marginBottom: 8, flexWrap: "wrap" }}>
+                            <div className="candidate-job-card-title-block" style={{ flex: 1, minWidth: 0 }}>
                               <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 6 }}>
                                 <Title
                                   level={4}
@@ -775,8 +825,8 @@ export default function CandidateJobPage() {
                             </div>
 
                             {/* Góc phải: Mức Lương & Nút Lưu */}
-                            <div style={{ textAlign: "right", flexShrink: 0, display: "flex", alignItems: "center", gap: 12 }}>
-                              <div style={{ background: "#F0FDF4", border: "1px solid #BBF7D0", padding: "6px 14px", borderRadius: 12 }}>
+                            <div className="candidate-job-card-salary-row" style={{ textAlign: "right", flexShrink: 0, display: "flex", alignItems: "center", gap: 12 }}>
+                              <div className="candidate-job-card-salary" style={{ background: "#F0FDF4", border: "1px solid #BBF7D0", padding: "6px 14px", borderRadius: 12 }}>
                                 <Text strong style={{ fontSize: 17, color: "#10B981", fontWeight: 800, display: "block" }}>
                                   {salaryText}
                                 </Text>
@@ -798,7 +848,7 @@ export default function CandidateJobPage() {
                           </div>
 
                           {/* Hàng 2: Địa điểm, Ngày đăng, Hạn nộp */}
-                          <div style={{ display: "flex", alignItems: "center", gap: 20, flexWrap: "wrap", fontSize: 13, color: "#64748B", margin: "12px 0 14px" }}>
+                          <div className="candidate-job-card-meta" style={{ display: "flex", alignItems: "center", gap: 20, flexWrap: "wrap", fontSize: 13, color: "#64748B", margin: "12px 0 14px" }}>
                             <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
                               <EnvironmentOutlined style={{ color: "#2563EB" }} />
                               <strong style={{ color: "#334155" }}>{locationText}</strong>
@@ -841,8 +891,8 @@ export default function CandidateJobPage() {
                           )}
 
                           {/* Hàng 5: Nút Thao tác Ứng tuyển & Xem chi tiết */}
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 12, borderTop: "1px solid #F1F5F9" }}>
-                            <Space size={12}>
+                          <div className="candidate-job-card-footer" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 12, borderTop: "1px solid #F1F5F9" }}>
+                            <Space className="candidate-job-card-actions" size={12}>
                               <Button
                                 type="primary"
                                 onClick={() => navigate(`/jobs/${job.id || job.jobID}`)}
@@ -858,7 +908,7 @@ export default function CandidateJobPage() {
                               </Button>
                             </Space>
 
-                            <Text type="secondary" style={{ fontSize: 12 }}>
+                            <Text className="candidate-job-card-code" type="secondary" style={{ fontSize: 12 }}>
                               Mã tin: #{getPublicJobCode(job.id || job.jobID)}
                             </Text>
                           </div>
@@ -873,10 +923,11 @@ export default function CandidateJobPage() {
                   <div style={{ textAlign: "center", marginTop: 24 }}>
                     <Pagination
                       current={pageIndex}
-                      pageSize={10}
+                      pageSize={12}
                       total={totalCount}
                       onChange={(page) => setPageIndex(page)}
                       showSizeChanger={false}
+                      responsive
                     />
                   </div>
                 )}

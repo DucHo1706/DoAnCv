@@ -105,6 +105,8 @@ builder.Services.AddSwaggerGen(options =>
 
 builder.Services.Configure<EmailSettings>(
     builder.Configuration.GetSection("EmailSettings"));
+builder.Services.Configure<AiEvaluationQueueSettings>(
+    builder.Configuration.GetSection(AiEvaluationQueueSettings.SectionName));
 
 // 3. Đăng ký các Services
 builder.Services.AddScoped<IFileService, FileService>();
@@ -118,6 +120,8 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IJobPositionService, JobPositionService>();
 builder.Services.AddScoped<IApplicationService, ApplicationService>();
 builder.Services.AddScoped<IAiEvaluationService, AiEvaluationService>();
+builder.Services.AddScoped<IAiEvaluationQueueService, AiEvaluationQueueService>();
+builder.Services.AddHostedService<AiEvaluationQueueWorker>();
 builder.Services.AddScoped<IInterviewService, InterviewService>();
 builder.Services.AddScoped<IRecruitmentService, RecruitmentService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();

@@ -28,7 +28,10 @@ import {
   ReloadOutlined,
 } from "@ant-design/icons";
 import { useApplicationStatus } from "./hooks/useApplicationStatus";
-import { getApplicationStatusLabel as translateApplicationStatus } from "../../../../utils/statusLabels";
+import {
+  getAiStatusLabel,
+  getApplicationStatusLabel as translateApplicationStatus,
+} from "../../../../utils/statusLabels";
 import { downloadElementAsPdf } from "../../../../utils/exportUtils";
 import PageContainer from "../../../../components/common/PageContainer";
 import AiDetailedTabs from "../../../../components/ai-report/AiDetailedTabs";
@@ -179,6 +182,8 @@ export default function ApplicationStatusPage() {
     setStatusFilter,
     isAiReady,
     isAiError,
+    isAiCancelled,
+    isAiProcessing,
     isAiIncomplete,
     handleViewDetail,
     handleRetryAi,
@@ -250,7 +255,7 @@ export default function ApplicationStatusPage() {
     ? Math.round(readyApps.reduce((acc, app) => acc + (app.aiScore || 0), 0) / readyApps.length)
     : 0;
   const processingCount = applications.filter(
-    (app) => !isAiReady(app) && !isAiError(app)
+    (app) => isAiProcessing(app)
   ).length;
 
   const filteredApplications = applications.filter((application) => {
@@ -260,13 +265,16 @@ export default function ApplicationStatusPage() {
     let matchesStatus = true;
 
     if (statusFilter === "processing") {
-      matchesStatus = isAiReady(application) === false && isAiError(application) === false;
+      matchesStatus = isAiProcessing(application) === true;
     }
     if (statusFilter === "completed") {
       matchesStatus = isAiReady(application) === true;
     }
     if (statusFilter === "failed") {
       matchesStatus = isAiError(application) === true;
+    }
+    if (statusFilter === "cancelled") {
+      matchesStatus = isAiCancelled(application) === true;
     }
     return matchesSearch && matchesStatus;
   });
@@ -648,6 +656,7 @@ export default function ApplicationStatusPage() {
                   { value: "processing", label: "AI đang phân tích" },
                   { value: "completed", label: "AI đã hoàn tất" },
                   { value: "failed", label: "AI lỗi phân tích" },
+                  { value: "cancelled", label: "AI đã hủy" },
                 ]}
               />
             </Col>
@@ -702,7 +711,64 @@ export default function ApplicationStatusPage() {
                 const recordId = record.id || record.applicationId;
                 const ready = isAiReady(record);
                 const error = isAiError(record);
+                const cancelled = isAiCancelled(record);
                 const incomplete = isAiIncomplete(record);
+                const normalizedAiStatus = String(record.aiStatus || "").toLowerCase();
+                const aiStatusView = error
+                  ? {
+                      text: getAiStatusLabel(record.aiStatus || "Failed"),
+                      color: appTheme.colors.error,
+                      background: "rgba(220, 38, 38, 0.06)",
+                      border: "1px solid rgba(220, 38, 38, 0.12)",
+                      icon: <InfoCircleOutlined />,
+                    }
+                  : incomplete
+                  ? {
+                      text: "Phân tích AI chưa đầy đủ",
+                      color: "#B45309",
+                      background: "rgba(245, 158, 11, 0.08)",
+                      border: "1px solid rgba(245, 158, 11, 0.18)",
+                      icon: <InfoCircleOutlined />,
+                    }
+                  : ready
+                  ? {
+                      text: "AI đã hoàn tất",
+                      color: appTheme.colors.success,
+                      background: "rgba(22, 163, 74, 0.06)",
+                      border: "1px solid rgba(22, 163, 74, 0.12)",
+                      icon: <FileDoneOutlined />,
+                    }
+                  : cancelled
+                  ? {
+                      text: getAiStatusLabel(record.aiStatus || "Cancelled"),
+                      color: "#64748B",
+                      background: "#F8FAFC",
+                      border: "1px solid #E2E8F0",
+                      icon: <InfoCircleOutlined />,
+                    }
+                  : normalizedAiStatus === "retryscheduled"
+                  ? {
+                      text: getAiStatusLabel(record.aiStatus),
+                      color: "#B45309",
+                      background: "rgba(245, 158, 11, 0.08)",
+                      border: "1px solid rgba(245, 158, 11, 0.18)",
+                      icon: <ReloadOutlined />,
+                    }
+                  : normalizedAiStatus === "pending"
+                  ? {
+                      text: getAiStatusLabel(record.aiStatus),
+                      color: appTheme.colors.primary,
+                      background: "rgba(37, 99, 235, 0.06)",
+                      border: "1px solid rgba(37, 99, 235, 0.12)",
+                      icon: <ClockCircleOutlined />,
+                    }
+                  : {
+                      text: getAiStatusLabel(record.aiStatus || "Processing"),
+                      color: appTheme.colors.primary,
+                      background: "rgba(37, 99, 235, 0.06)",
+                      border: "1px solid rgba(37, 99, 235, 0.12)",
+                      icon: <LoadingOutlined spin />,
+                    };
 
                 return (
                   <div
@@ -732,6 +798,8 @@ export default function ApplicationStatusPage() {
                         width: "5px",
                         background: error
                           ? appTheme.colors.error
+                          : cancelled
+                          ? "#94A3B8"
                           : ready
                           ? appTheme.colors.success
                           : appTheme.colors.primary,
@@ -757,6 +825,8 @@ export default function ApplicationStatusPage() {
                           borderRadius: "12px",
                           background: error
                             ? "rgba(220, 38, 38, 0.06)"
+                            : cancelled
+                            ? "#F8FAFC"
                             : ready
                             ? "rgba(22, 163, 74, 0.06)"
                             : "rgba(37, 99, 235, 0.06)",
@@ -766,6 +836,8 @@ export default function ApplicationStatusPage() {
                           fontSize: "20px",
                           color: error
                             ? appTheme.colors.error
+                            : cancelled
+                            ? "#64748B"
                             : ready
                             ? appTheme.colors.success
                             : appTheme.colors.primary,
@@ -773,6 +845,8 @@ export default function ApplicationStatusPage() {
                       >
                         {error ? (
                           <AiCoreIcon size={20} />
+                        ) : cancelled ? (
+                          <InfoCircleOutlined />
                         ) : ready ? (
                           <FileDoneOutlined />
                         ) : (
@@ -838,79 +912,23 @@ export default function ApplicationStatusPage() {
                           })()}
 
                           {/* Status pill tag */}
-                          {error ? (
-                            <span
-                              style={{
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: 6,
-                                padding: "4px 10px",
-                                borderRadius: "8px",
-                                fontSize: "13px",
-                                fontWeight: 550,
-                                background: "rgba(220, 38, 38, 0.06)",
-                                color: appTheme.colors.error,
-                                border: "1px solid rgba(220, 38, 38, 0.12)",
-                              }}
-                            >
-                              <InfoCircleOutlined />
-                              AI gặp lỗi
-                            </span>
-                          ) : incomplete ? (
-                            <span
-                              style={{
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: 6,
-                                padding: "4px 10px",
-                                borderRadius: "8px",
-                                fontSize: "13px",
-                                fontWeight: 550,
-                                background: "rgba(245, 158, 11, 0.08)",
-                                color: "#B45309",
-                                border: "1px solid rgba(245, 158, 11, 0.18)",
-                              }}
-                            >
-                              <InfoCircleOutlined />
-                              Phân tích AI chưa đầy đủ
-                            </span>
-                          ) : ready ? (
-                            <span
-                              style={{
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: 6,
-                                padding: "4px 10px",
-                                borderRadius: "8px",
-                                fontSize: "13px",
-                                fontWeight: 550,
-                                background: "rgba(22, 163, 74, 0.06)",
-                                color: appTheme.colors.success,
-                                border: "1px solid rgba(22, 163, 74, 0.12)",
-                              }}
-                            >
-                              <FileDoneOutlined />
-                              AI đã hoàn tất
-                            </span>
-                          ) : (
-                            <span
-                              style={{
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: 6,
-                                padding: "4px 10px",
-                                borderRadius: "8px",
-                                fontSize: "13px",
-                                fontWeight: 550,
-                                background: "rgba(37, 99, 235, 0.06)",
-                                color: appTheme.colors.primary,
-                                border: "1px solid rgba(37, 99, 235, 0.12)",
-                              }}
-                            >
-                              <LoadingOutlined spin />
-                              AI đang đối sánh...
-                            </span>
-                          )}
+                          <span
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 6,
+                              padding: "4px 10px",
+                              borderRadius: "8px",
+                              fontSize: "13px",
+                              fontWeight: 550,
+                              background: aiStatusView.background,
+                              color: aiStatusView.color,
+                              border: aiStatusView.border,
+                            }}
+                          >
+                            {aiStatusView.icon}
+                            {aiStatusView.text}
+                          </span>
                         </div>
                         {record.status?.toLowerCase() === "interview" && (
                           <InterviewScheduleWidget applicationId={recordId} />
@@ -959,11 +977,25 @@ export default function ApplicationStatusPage() {
                           <Text type="secondary" style={{ fontSize: "13px" }}>
                             Bị gián đoạn
                           </Text>
+                        ) : cancelled ? (
+                          <Text type="secondary" style={{ fontSize: "13px" }}>
+                            Không thực hiện
+                          </Text>
                         ) : !ready ? (
                           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-                            <Spin size="small" indicator={<LoadingOutlined style={{ fontSize: 16 }} spin />} />
+                            {normalizedAiStatus === "processing" ? (
+                              <Spin size="small" indicator={<LoadingOutlined style={{ fontSize: 16 }} spin />} />
+                            ) : normalizedAiStatus === "retryscheduled" ? (
+                              <ReloadOutlined style={{ color: "#B45309" }} />
+                            ) : (
+                              <ClockCircleOutlined style={{ color: appTheme.colors.primary }} />
+                            )}
                             <Text type="secondary" style={{ fontSize: "12px", textAlign: "center" }}>
-                              Đang tính...
+                              {normalizedAiStatus === "processing"
+                                ? "Đang tính..."
+                                : normalizedAiStatus === "retryscheduled"
+                                ? "Chờ thử lại"
+                                : "Đang chờ"}
                             </Text>
                           </div>
                         ) : (
@@ -993,6 +1025,7 @@ export default function ApplicationStatusPage() {
                         type="primary"
                         className="app-card-btn"
                         icon={error ? <ReloadOutlined /> : <EyeOutlined />}
+                        disabled={cancelled}
                         onClick={() => error ? handleRetryAi(record) : handleViewDetail(record)}
                         style={{
                           height: 44,
@@ -1010,7 +1043,9 @@ export default function ApplicationStatusPage() {
                           ? "Xem kết quả hiện có"
                           : ready
                           ? "Xem AI đánh giá"
-                          : "Theo dõi AI"}
+                          : cancelled
+                          ? "Phân tích đã hủy"
+                          : "Xem trạng thái AI"}
                       </Button>
                       {incomplete && !error && (
                         <Button
