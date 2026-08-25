@@ -84,6 +84,74 @@ class LlmRouterServiceTests(unittest.TestCase):
         self.assertEqual(result, "Phản hồi nhanh")
         self.assertEqual(post.call_args.kwargs["json"]["model"], "Gemini")
 
+    def test_router_retries_next_model_when_chat_validator_rejects_truncated_markdown(self):
+        truncated = Mock()
+        truncated.text = json.dumps({
+            "choices": [{
+                "message": {"content": "Gợi ý **Kỹ sư Kiểm thử"},
+                "finish_reason": "stop",
+            }]
+        })
+        truncated.json.return_value = json.loads(truncated.text)
+        truncated.raise_for_status.return_value = None
+        complete = Mock()
+        complete.text = json.dumps({
+            "choices": [{
+                "message": {"content": "Gợi ý **Kỹ sư Kiểm thử tự động**."},
+                "finish_reason": "stop",
+            }]
+        })
+        complete.json.return_value = json.loads(complete.text)
+        complete.raise_for_status.return_value = None
+
+        validator = lambda text: text.count("**") % 2 == 0
+        with patch.object(gemini_service, "LLM_ROUTER_ENABLED", True), \
+             patch.object(gemini_service, "LLM_ROUTER_BASE_URL", "http://127.0.0.1:20128/v1"), \
+             patch.object(gemini_service.requests, "post", side_effect=[truncated, complete]) as post:
+            result = gemini_service._generate_router_content(
+                [{"role": "user", "content": "chat"}],
+                is_json=False,
+                models=["Gemini", "deepseek"],
+                content_validator=validator,
+            )
+
+        self.assertEqual(result, "Gợi ý **Kỹ sư Kiểm thử tự động**.")
+        self.assertEqual(
+            [call.kwargs["json"]["model"] for call in post.call_args_list],
+            ["Gemini", "deepseek"],
+        )
+
+    def test_router_retries_when_finish_reason_reports_token_limit(self):
+        limited = Mock()
+        limited.text = json.dumps({
+            "choices": [{
+                "message": {"content": "Phản hồi nhìn có vẻ hợp lệ."},
+                "finish_reason": "length",
+            }]
+        })
+        limited.json.return_value = json.loads(limited.text)
+        limited.raise_for_status.return_value = None
+        complete = Mock()
+        complete.text = json.dumps({
+            "choices": [{
+                "message": {"content": "Phản hồi hoàn chỉnh."},
+                "finish_reason": "stop",
+            }]
+        })
+        complete.json.return_value = json.loads(complete.text)
+        complete.raise_for_status.return_value = None
+
+        with patch.object(gemini_service, "LLM_ROUTER_ENABLED", True), \
+             patch.object(gemini_service, "LLM_ROUTER_BASE_URL", "http://127.0.0.1:20128/v1"), \
+             patch.object(gemini_service.requests, "post", side_effect=[limited, complete]):
+            result = gemini_service._generate_router_content(
+                [{"role": "user", "content": "chat"}],
+                is_json=False,
+                models=["Gemini", "deepseek"],
+            )
+
+        self.assertEqual(result, "Phản hồi hoàn chỉnh.")
+
     def test_failed_router_enters_cooldown_and_skips_next_request(self):
         with patch.object(gemini_service, "LLM_ROUTER_ENABLED", True), \
              patch.object(gemini_service, "clients", []), \
@@ -101,6 +169,7 @@ class LlmRouterServiceTests(unittest.TestCase):
         self.assertTrue(gemini_service._router_is_cooling_down())
 
     def test_generate_forwards_feature_specific_router_models(self):
+        validator = lambda text: bool(text)
         with patch.object(gemini_service, "LLM_ROUTER_ENABLED", True), \
              patch.object(
                  gemini_service,
@@ -113,6 +182,7 @@ class LlmRouterServiceTests(unittest.TestCase):
                 router_first=True,
                 router_budget_seconds=12,
                 router_models=["Gemini", "deepseek"],
+                content_validator=validator,
             )
 
         self.assertEqual(result, "Phản hồi chatbot")
@@ -120,6 +190,7 @@ class LlmRouterServiceTests(unittest.TestCase):
             generate_router.call_args.kwargs["models"],
             ["Gemini", "deepseek"],
         )
+        self.assertIs(generate_router.call_args.kwargs["content_validator"], validator)
 
     def test_direct_first_returns_gemini_response_without_calling_router(self):
         direct_client = Mock()

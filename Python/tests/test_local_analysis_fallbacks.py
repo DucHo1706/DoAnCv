@@ -3,6 +3,7 @@ from unittest.mock import patch
 
 from services.interview_service import get_fallback_mock_interview, get_fallback_star_tips
 from services.scoring_service import (
+    _is_complete_chat_response,
     build_local_language_review,
     chat_with_candidate,
     classify_gemini_unavailable_reason,
@@ -82,6 +83,14 @@ class LocalAnalysisFallbackTests(unittest.TestCase):
 
         with self.assertRaises(RuntimeError):
             chat_with_candidate("Tư vấn CV giúp tôi")
+
+    def test_chat_validator_accepts_short_but_complete_reply(self):
+        self.assertTrue(_is_complete_chat_response("Chào bạn!"))
+
+    def test_chat_validator_rejects_only_clear_truncation_signals(self):
+        self.assertFalse(_is_complete_chat_response("Gợi ý **Kỹ sư Kiểm thử"))
+        self.assertFalse(_is_complete_chat_response("Nội dung ```python"))
+        self.assertFalse(_is_complete_chat_response("[RECOMMEND_JOB: 12 | Backend"))
 
 
 if __name__ == "__main__":

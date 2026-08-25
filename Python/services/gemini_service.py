@@ -6,6 +6,7 @@ import requests
 import json
 import threading
 import base64
+from collections.abc import Callable
 from dotenv import load_dotenv
 from utils.logger import logger
 
@@ -47,6 +48,11 @@ LLM_ROUTER_MAX_TOKENS = max(512, int(os.getenv("LLM_ROUTER_MAX_TOKENS", "12000")
 LLM_ROUTER_ENABLED = bool(LLM_ROUTER_BASE_URL and LLM_ROUTER_MODELS)
 _router_unavailable_until = 0.0
 _router_state_lock = threading.Lock()
+
+
+class GeneratedContentValidationError(ValueError):
+    """Provider trả nội dung có HTTP 200 nhưng chưa đạt điều kiện của chức năng."""
+
 
 MIN_REQUEST_TIMEOUT_MS = max(10000, int(os.getenv("GEMINI_MIN_REQUEST_TIMEOUT_MS", "10000")))
 DEFAULT_REQUEST_TIMEOUT_MS = max(
@@ -314,12 +320,37 @@ def _router_response_text(response: requests.Response) -> str:
     return content
 
 
+def _router_finish_reason(response: requests.Response) -> str:
+    """Lấy lý do kết thúc mà không ghi nội dung/prompt nhạy cảm vào log."""
+    raw = response.text.strip()
+    try:
+        if raw.startswith("data:"):
+            finish_reason = ""
+            for line in raw.splitlines():
+                if not line.startswith("data:"):
+                    continue
+                payload_text = line[5:].strip()
+                if not payload_text or payload_text == "[DONE]":
+                    continue
+                payload = json.loads(payload_text)
+                for choice in payload.get("choices", []) or []:
+                    if choice.get("finish_reason"):
+                        finish_reason = str(choice["finish_reason"])
+            return finish_reason
+        payload = response.json()
+        choices = payload.get("choices", []) if isinstance(payload, dict) else []
+        return str(choices[0].get("finish_reason") or "") if choices else ""
+    except (TypeError, ValueError, KeyError, IndexError, AttributeError):
+        return ""
+
+
 def _generate_router_content(
     messages: list[dict],
     is_json: bool,
     total_budget_seconds: int | None = None,
     max_tokens: int | None = None,
     models: list[str] | None = None,
+    content_validator: Callable[[str], bool] | None = None,
 ) -> str:
     if not LLM_ROUTER_ENABLED:
         raise ConnectionError("9Router chưa được bật cho tiến trình này.")
@@ -350,12 +381,22 @@ def _generate_router_content(
             )
             response.raise_for_status()
             content = _router_response_text(response)
+            finish_reason = _router_finish_reason(response).strip().casefold()
+            if finish_reason in {"length", "max_tokens"}:
+                raise GeneratedContentValidationError(
+                    "9Router dừng vì hết giới hạn token trước khi hoàn tất phản hồi."
+                )
             if is_json:
                 content = clean_json_text(content)
                 json.loads(content)
+            if content_validator is not None and not content_validator(content):
+                raise GeneratedContentValidationError(
+                    "9Router trả nội dung chưa hoàn chỉnh cho chức năng hiện tại."
+                )
             elapsed_ms = int((time.monotonic() - attempt_started) * 1000)
             logger.info(
-                f"9Router phản hồi thành công với model {model_name} sau {elapsed_ms} ms."
+                f"9Router phản hồi thành công với model {model_name} sau {elapsed_ms} ms "
+                f"(finish_reason={finish_reason or 'unknown'}, chars={len(content)})."
             )
             return content
         except Exception as error:
@@ -380,6 +421,7 @@ def generate_content_with_retry(
     router_budget_seconds: int = None,
     router_models: list[str] | None = None,
     max_output_tokens: int = None,
+    content_validator: Callable[[str], bool] | None = None,
 ) -> str:
     """
     Goi Gemini API voi co che tu dong thu lai tren danh sach API Keys
@@ -393,6 +435,7 @@ def generate_content_with_retry(
                 total_budget_seconds=router_budget_seconds,
                 max_tokens=max_output_tokens,
                 models=router_models,
+                content_validator=content_validator,
             )
             _mark_router_available()
             return content
@@ -410,6 +453,7 @@ def generate_content_with_retry(
                 total_budget_seconds=router_budget_seconds,
                 max_tokens=max_output_tokens,
                 models=router_models,
+                content_validator=content_validator,
             )
         if router_error is not None:
             raise ConnectionError(
@@ -424,6 +468,7 @@ def generate_content_with_retry(
                 total_budget_seconds=router_budget_seconds,
                 max_tokens=max_output_tokens,
                 models=router_models,
+                content_validator=content_validator,
             )
         raise ConnectionError("Ket noi Gemini dang tam nghi; su dung ket qua du phong cuc bo.")
 
@@ -512,6 +557,10 @@ def generate_content_with_retry(
                         text = clean_json_text(text)
                         # Validate JSON structure
                         json.loads(text)
+                    if content_validator is not None and not content_validator(text):
+                        raise GeneratedContentValidationError(
+                            "Gemini trả nội dung chưa hoàn chỉnh cho chức năng hiện tại."
+                        )
                     return text
             except Exception as e:
                 last_error = e
@@ -525,6 +574,11 @@ def generate_content_with_retry(
                         "Khong the ket noi Gemini; chuyen ngay sang ket qua du phong cuc bo."
                     ) from e
                 logger.warning(f"Loi goi model {model_name} voi Key #{client_idx+1}: {e}")
+                if isinstance(e, GeneratedContentValidationError):
+                    logger.warning(
+                        f"Model {model_name} trả nội dung chưa hoàn chỉnh; chuyển model kế tiếp."
+                    )
+                    break
                 if "404" in err_str or "not_found" in err_str or "not found" in err_str:
                     logger.warning(f"Model {model_name} khong ton tai (404 NOT_FOUND). Bo qua model nay.")
                     is_model_not_found = True
@@ -584,6 +638,7 @@ def generate_content_with_retry(
                 total_budget_seconds=router_budget_seconds,
                 max_tokens=max_output_tokens,
                 models=router_models,
+                content_validator=content_validator,
             )
             _mark_router_available()
             return content

@@ -273,10 +273,15 @@ Context mining:
 
 ```text
 9Router (nếu cấu hình)
-  -> model router 1, 2, ...
+  -> model router 1
+      -> đọc content + finish_reason
+      -> JSON/schema hoặc validator riêng của chức năng
+      -> nội dung bị cắt: thử model router tiếp theo
+  -> model router 2, ...
   -> lỗi toàn bộ
 Gemini trực tiếp
   -> model 1 với các key khả dụng
+  -> validator riêng của chức năng trước khi nhận kết quả
   -> cooldown theo key/model/network
   -> model tiếp theo trong tổng ngân sách thời gian
   -> lỗi toàn bộ
@@ -305,16 +310,20 @@ Frontend POST /api/Chatbot/chat
               |-- 9Router trước, chỉ thử LLM_ROUTER_CHAT_MODELS
               |     mặc định: Gemini, deepseek
               |     ngân sách router: 12 giây
+              |     HTTP 200 nhưng finish_reason=length/max_tokens
+              |       hoặc Markdown/tag chưa đóng -> thử model kế tiếp
               `-- Gemini trực tiếp nếu router không khả dụng
                     request timeout: 10 giây
                     ngân sách direct: 12 giây
+                    áp cùng validator hoàn chỉnh trước khi trả về
 ```
 
 - Danh sách model chatbot tách bằng `LLM_ROUTER_CHAT_MODELS`; model thử nghiệm hoặc chậm trong `LLM_ROUTER_MODELS` không làm câu hỏi ngắn phải chờ theo.
 - Python giới hạn đầu ra khoảng 900 token để giảm thời gian nhưng vẫn giữ prompt hệ thống, tối đa 10 lượt lịch sử và ngữ cảnh job có chọn lọc.
+- `gemini_service` không coi mọi HTTP 200 là thành công: `finish_reason=length/max_tokens` bị loại. `scoring_service._is_complete_chat_response` chỉ chặn dấu hiệu cắt chắc chắn như cặp `**`, khối code hoặc tag `[RECOMMEND_JOB: ...]` chưa đóng; câu trả lời ngắn nhưng hoàn chỉnh vẫn hợp lệ. Model kế tiếp được thử trong cùng ngân sách thay vì trả đoạn bị cụt cho người dùng.
 - Python trả HTTP `503` khi provider không tạo được nội dung trong ngân sách. Backend giữ nguyên trạng thái lỗi dịch vụ và không lưu câu báo lỗi như một tin nhắn AI thành công.
 - Khi AI sinh thẻ `[RECOMMEND_JOB: ID | vị trí | khu vực | lương]`, backend ưu tiên ID đang có trong tập job SQL vừa cấp cho prompt, rồi ghi đè tên/khu vực/lương bằng dữ liệu SQL. Nếu ID sai hoặc model quên thẻ nhưng câu trả lời có đúng tên vị trí trong catalog, `NormalizeJobRecommendations` đối chiếu tên không phân biệt hoa/thường và dấu để gắn lại metadata chuẩn từ SQL. Không khớp cả ID lẫn tên vị trí thì thẻ bị loại; nội dung model tự sinh không được biến thành liên kết job thật.
-- Log chỉ ghi model, HTTP status và thời gian millisecond; không ghi prompt, toàn văn CV, token hay API key.
+- Log chỉ ghi model, `finish_reason`, độ dài ký tự, HTTP status và thời gian millisecond; không ghi prompt, toàn văn CV, nội dung phản hồi, token hay API key.
 - Các ngưỡng trên là ngân sách chờ để failover, không phải cam kết thời gian phản hồi. Độ trễ thực tế phải đo tại cùng môi trường provider đang dùng.
 
 ### Phiên bản phân tích và dữ liệu cũ
@@ -522,7 +531,7 @@ Python chỉ trả ID và similarity. Nó không tự công khai job, không tha
 
 - Email: backend cấp đúng context nghiệp vụ; Python sinh subject/body. `email_service` có template fallback để HR vẫn có bản nháp khi provider lỗi, nhưng payload phải giữ trạng thái phân biệt nếu caller cần hiển thị nguồn.
 - Đánh giá trả lời phỏng vấn: câu hỏi, câu trả lời và vị trí đi vào `interview_service`; kết quả chỉ hỗ trợ HR, không tự đổi trạng thái application.
-- Chatbot: backend lưu session/history, cắt độ dài và bổ sung job SQL có chọn lọc; Python chỉ tạo câu trả lời. Backend xác thực job recommendation theo ID hoặc tên vị trí khớp catalog, sau đó luôn dùng metadata SQL trước khi lưu và trả frontend.
+- Chatbot: backend lưu session/history, cắt độ dài và bổ sung job SQL có chọn lọc; Python tạo câu trả lời rồi kiểm tra dấu hiệu bị cắt trước khi chấp nhận. Backend xác thực job recommendation theo ID hoặc tên vị trí khớp catalog, sau đó luôn dùng metadata SQL trước khi lưu và trả frontend.
 - File đính kèm chatbot được parser chuyển thành text trong request hiện tại; nội dung này không tự trở thành CandidateCV, Application hoặc dataset mining.
 
 ### 12.9 Luồng skill observation tới taxonomy
@@ -630,5 +639,9 @@ ChatbotController.cs
   -> chat_controller.chat_bot
   -> scoring_service.chat_with_candidate
   -> gemini_service.generate_content_with_retry
+       -> _generate_router_content
+       -> _router_response_text + _router_finish_reason
+       -> _is_complete_chat_response
+       -> model kế tiếp nếu kết quả bị cắt
   -> ChatbotService.NormalizeJobRecommendations
 ```
