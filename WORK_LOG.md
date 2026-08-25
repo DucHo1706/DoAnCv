@@ -6,8 +6,8 @@ File này là nhật ký nối tiếp, không chứa credential hoặc dữ li�
 
 | Môi trường | Trạng thái xác nhận gần nhất | Commit | Ghi chú |
 |---|---|---|---|
-| Local | Chatbot fast-path/validator đạt 22 unit test; dữ liệu người dùng được giữ ngoài Git | `41c323f` + thay đổi/artifact ngoài phạm vi | Sáu ZIP 450 CV, tài liệu demo, `JobService` và tool Selenium không được stage |
-| Git remote | Code chatbot, đối chiếu job SQL và bản đồ Python đã push | `41c323f` trên `feature/feature-based-refactor-vps` | Không chứa credential, SQLite 9Router hoặc ZIP dữ liệu |
+| Local | Chatbot fast-path/validator đạt 22 unit test; dữ liệu người dùng được giữ ngoài Git | Runtime `41c323f` + tài liệu ở HEAD | Sáu ZIP 450 CV, tài liệu demo, `JobService` và tool Selenium không được stage |
+| Git remote | Code chatbot, đối chiếu job SQL và bản đồ Python đã push | Runtime `41c323f` + tài liệu ở HEAD trên `feature/feature-based-refactor-vps` | Không chứa credential, SQLite 9Router hoặc ZIP dữ liệu |
 | VPS | Bốn container healthy; ba smoke chatbot HTTPS liên tiếp đạt | `41c323f` | `/health` 200; taxonomy SQL nạp 140 kỹ năng/58 bí danh; Apriori/HUIM skip vì không có dữ liệu mới |
 
 ## Nhật ký thực hiện
@@ -23,7 +23,7 @@ File này là nhật ký nối tiếp, không chứa credential hoặc dữ li�
 - Kiểm thử local: `python -m compileall -q services tests` đạt; `tests.test_llm_router_service` + `tests.test_local_analysis_fallbacks` đạt 22/22, gồm router model failover, `finish_reason`, Gemini SDK `MAX_TOKENS`, Markdown/tag/meta-reasoning, câu ngắn hợp lệ và provider error. Backend Release build ở vòng trước đạt 0 lỗi/442 warning legacy; thay đổi cuối chỉ thuộc Python/tài liệu.
 - Kiểm thử VPS: deploy profile 9Router tại `41c323f`; AI/backend/frontend/9Router đều healthy. Ba request thật đăng nhập HR rồi gọi chatbot qua HTTPS đều HTTP 200, thời gian chatbot client 6.699/4.266/4.100 ms, mỗi phản hồi dài 402–522 ký tự, hoàn chỉnh và có đúng một `[RECOMMEND_JOB]` hợp lệ. Log backend 6.073/3.691/3.632 ms; log AI dùng Gemini 4.386/3.516/3.459 ms với `finish_reason=stop`. Đây là ba mẫu smoke, không phải SLA hay benchmark tải.
 - Health/log: `https://recruitinsightai.com/` và `/health` trả 200; lần thử `/api/Health` trả 404 vì đó không phải route của dự án và đã kiểm tra lại đúng `/health`. Taxonomy retry trong lúc backend khởi động rồi nạp thành công 140 kỹ năng/58 bí danh; discovery thấy 214 candidate chờ review và Apriori/HUIM skip đúng vì không có dữ liệu mới. Không thấy lỗi chatbot sau ba smoke cuối.
-- Git/VPS/hạn chế: commit cuối `41c323f` đã push và VPS fast-forward đúng HEAD. Lượt deploy đầu ở bước kiểm tra validator từng build nhầm HEAD cũ `c436a0e` vì script deploy không tự pull; đã phát hiện bằng log/`git rev-parse`, sau đó chạy `git pull --ff-only` rồi deploy lại, không sửa lịch sử để che sự cố. Độ trễ vẫn phụ thuộc provider; chưa đo tải đồng thời. Các thay đổi `JobService`, Selenium, ZIP CV, tài liệu demo và artifact của người dùng vẫn được giữ ngoài stage.
+- Git/VPS/hạn chế: runtime `41c323f` đã push và VPS fast-forward đúng commit trước khi build; tài liệu nghiệm thu được push ở commit HEAD tiếp theo và không cần build lại image. Lượt deploy đầu ở bước kiểm tra validator từng build nhầm HEAD cũ `c436a0e` vì script deploy không tự pull; đã phát hiện bằng log/`git rev-parse`, sau đó chạy `git pull --ff-only` rồi deploy lại, không sửa lịch sử để che sự cố. Độ trễ vẫn phụ thuộc provider; chưa đo tải đồng thời. Các thay đổi `JobService`, Selenium, ZIP CV, tài liệu demo và artifact của người dùng vẫn được giữ ngoài stage.
 
 ### 2026-08-25 17:08 +07:00 — P1-04-CHATBOT-FAST-PATH-LOCAL — Rút ngắn chatbot, xác thực job gợi ý và cập nhật bản đồ Python
 
