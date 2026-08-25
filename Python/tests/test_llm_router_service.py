@@ -152,6 +152,16 @@ class LlmRouterServiceTests(unittest.TestCase):
 
         self.assertEqual(result, "Phản hồi hoàn chỉnh.")
 
+    def test_gemini_finish_reason_detects_sdk_max_tokens_enum(self):
+        finish_reason = Mock(name="finish_reason")
+        finish_reason.name = "MAX_TOKENS"
+        response = Mock(candidates=[Mock(finish_reason=finish_reason)])
+
+        reason = gemini_service._gemini_finish_reason(response)
+
+        self.assertEqual(reason, "MAX_TOKENS")
+        self.assertTrue(gemini_service._is_token_limit_finish_reason(reason))
+
     def test_failed_router_enters_cooldown_and_skips_next_request(self):
         with patch.object(gemini_service, "LLM_ROUTER_ENABLED", True), \
              patch.object(gemini_service, "clients", []), \

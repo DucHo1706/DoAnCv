@@ -631,7 +631,7 @@ Nhiệm vụ của bạn là trả lời câu hỏi của người dùng bằng 
             router_first=True,
             router_budget_seconds=12,
             router_models=LLM_ROUTER_CHAT_MODELS,
-            max_output_tokens=900,
+            max_output_tokens=4096,
             content_validator=_is_complete_chat_response,
         )
     except Exception as e:
@@ -647,6 +647,15 @@ def _is_complete_chat_response(content: str) -> bool:
     if text.count("**") % 2 != 0 or text.count("```") % 2 != 0:
         return False
     if text.endswith(("(", "[", "{")):
+        return False
+    normalized = text.casefold()
+    provider_meta_markers = (
+        "wait, format instruction",
+        "format instruction says",
+        "i need to follow the format",
+        "we need to follow the format",
+    )
+    if any(marker in normalized for marker in provider_meta_markers):
         return False
     recommendation_marker = "[RECOMMEND_JOB:"
     if recommendation_marker in text:

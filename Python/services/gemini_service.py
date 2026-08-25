@@ -344,6 +344,23 @@ def _router_finish_reason(response: requests.Response) -> str:
         return ""
 
 
+def _gemini_finish_reason(response) -> str:
+    """Đọc finish reason của Google SDK nếu response có candidate metadata."""
+    candidates = getattr(response, "candidates", None)
+    if not isinstance(candidates, (list, tuple)) or not candidates:
+        return ""
+    reason = getattr(candidates[0], "finish_reason", None)
+    if reason is None:
+        return ""
+    reason_name = getattr(reason, "name", None)
+    return str(reason_name or reason)
+
+
+def _is_token_limit_finish_reason(finish_reason: str) -> bool:
+    normalized = str(finish_reason or "").strip().casefold()
+    return normalized in {"length", "max_tokens"} or "max_tokens" in normalized
+
+
 def _generate_router_content(
     messages: list[dict],
     is_json: bool,
@@ -382,7 +399,7 @@ def _generate_router_content(
             response.raise_for_status()
             content = _router_response_text(response)
             finish_reason = _router_finish_reason(response).strip().casefold()
-            if finish_reason in {"length", "max_tokens"}:
+            if _is_token_limit_finish_reason(finish_reason):
                 raise GeneratedContentValidationError(
                     "9Router dừng vì hết giới hạn token trước khi hoàn tất phản hồi."
                 )
@@ -553,6 +570,11 @@ def generate_content_with_retry(
                 )
                 if response and response.text:
                     text = response.text.strip()
+                    finish_reason = _gemini_finish_reason(response)
+                    if _is_token_limit_finish_reason(finish_reason):
+                        raise GeneratedContentValidationError(
+                            "Gemini dừng vì hết giới hạn token trước khi hoàn tất phản hồi."
+                        )
                     if is_json:
                         text = clean_json_text(text)
                         # Validate JSON structure

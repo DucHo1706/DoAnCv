@@ -76,6 +76,7 @@ class LocalAnalysisFallbackTests(unittest.TestCase):
         self.assertEqual(kwargs["total_budget_ms"], 12000)
         self.assertEqual(kwargs["request_timeout_ms"], 10000)
         self.assertEqual(kwargs["router_models"], ["Gemini", "deepseek"])
+        self.assertEqual(kwargs["max_output_tokens"], 4096)
 
     @patch("services.scoring_service.generate_content_with_retry")
     def test_chatbot_provider_failure_is_not_returned_as_successful_reply(self, generate):
@@ -91,6 +92,9 @@ class LocalAnalysisFallbackTests(unittest.TestCase):
         self.assertFalse(_is_complete_chat_response("Gợi ý **Kỹ sư Kiểm thử"))
         self.assertFalse(_is_complete_chat_response("Nội dung ```python"))
         self.assertFalse(_is_complete_chat_response("[RECOMMEND_JOB: 12 | Backend"))
+        self.assertFalse(
+            _is_complete_chat_response("Wait, format instruction says to use a tag.")
+        )
 
 
 if __name__ == "__main__":
