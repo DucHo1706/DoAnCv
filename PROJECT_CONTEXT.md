@@ -225,7 +225,7 @@ Nguyên tắc tính điểm dự kiến:
 |---|---|---|---|---|
 | P0-00 | Lập bản đồ và tổ chức module Python giai đoạn 1 | ĐÃ XONG | Không | Có README tra cứu, validation dùng chung, test và compile thành công |
 | P0-01 | Chuẩn hóa mô hình tiêu chí đánh giá | ĐANG LÀM | Kiểm tra schema hiện tại | HR tạo được tiêu chí có kiểu, toán tử, giá trị, trọng số và nguồn bằng chứng; dữ liệu cũ vẫn đọc được |
-| P0-02 | Chuẩn hóa experience timeline | ĐANG LÀM | Parser CV | Local đã hợp nhất overlap và loại ngày học vấn/dự án khỏi thâm niên; regression CV không có việc làm trả 0 tháng, còn chờ deploy/smoke VPS |
+| P0-02 | Chuẩn hóa experience timeline | ĐÃ XONG | Parser CV | `analysis_version=5` chỉ tính section việc làm/thực tập, hợp nhất overlap và không tính học vấn/dự án/chứng chỉ; regression CV không có việc làm trả 0 tháng, case thực tập 04/2026–06/2026 trả 3 tháng; build/test, migration và smoke HTTPS VPS commit `1db890a` đã đạt |
 | P0-03 | Lịch sử trạng thái và thống kê trong ngày | ĐANG LÀM | Thống nhất trạng thái | Dashboard HR/Admin có số hôm nay đúng theo sự kiện và múi giờ VN |
 | P1-01 | HR chủ động tìm ứng viên | ĐANG LÀM | P0-01, quyền riêng tư | Đã có MVP opt-in và tìm/lọc hồ sơ rút gọn; còn smoke test endpoint và hoàn thiện luồng mời/liên hệ |
 | P1-02 | Đăng lại tin tuyển dụng | ĐANG LÀM | Luồng duyệt tin | Code/API/UI/migration và public smoke test đã đạt; còn smoke test thao tác đăng lại bằng tài khoản HR và duyệt vòng mới bằng Admin |

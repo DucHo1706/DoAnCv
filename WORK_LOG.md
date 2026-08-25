@@ -6,11 +6,22 @@ File này là nhật ký nối tiếp, không chứa credential hoặc dữ li�
 
 | Môi trường | Trạng thái xác nhận gần nhất | Commit | Ghi chú |
 |---|---|---|---|
-| Local | README gốc và 9Router circuit breaker đã kiểm thử | Git `HEAD` + hai tệp demo không stage | Hai tệp demo có credential thử nghiệm được giữ local và không đưa vào Git |
-| Git remote | Code 9Router và README gốc đã push | Nhánh `feature/feature-based-refactor-vps` | Commit runtime `b5322a2`, README/config mẫu `5fc56d2`; nhật ký hoàn tất nằm ở commit tài liệu kế tiếp |
-| VPS | Bốn container healthy; SQLite 9Router đã phục hồi, source có README | `5fc56d2` | Compose đạt, origin health 200, router chỉ map loopback; tài khoản free có thể thành công/timeout theo từng lượt |
+| Local | AI v5/timeline/observation đã đạt test; dữ liệu người dùng được giữ ngoài Git | `1db890a` + artifact untracked | Sáu ZIP 450 CV và tài liệu demo chưa nhập database, chưa stage |
+| Git remote | Code AI v5, migration và tài liệu liên quan đã push | Nhánh `feature/feature-based-refactor-vps` | Commit runtime `1db890a`; không chứa credential hoặc ZIP dữ liệu |
+| VPS | Bốn container healthy; migration observation đã áp dụng; HTTPS đạt | `1db890a` | AI/backend/frontend/9Router healthy, `/health` 200, API Admin ẩn trả 401 khi anonymous |
 
 ## Nhật ký thực hiện
+
+### 2026-08-25 11:28 +07:00 — P0-02-AI-V5-VPS — Triển khai timeline đúng và hàng đợi kỹ năng lên VPS
+
+- Trạng thái: `ĐÃ XONG` phần code, migration, Git và triển khai VPS của P0-02/AI v5. Theo yêu cầu người dùng, dừng trước bước nhập 450 PDF; không có CV trong sáu ZIP được upload, không tạo application và không ghi dữ liệu kiểm thử mới vào SQL trong mục này.
+- Mục tiêu/phạm vi: phát hành commit sửa timeline CV không có việc làm, observation kỹ năng có kiểm soát, version gate v5 và giới hạn chatbot; không thay đổi credential, DNS, firewall, dữ liệu tài khoản hoặc 9Router SQLite.
+- Git/deploy: commit `1db890a` (`fix(ai): correct experience timeline and observe new skills`) đã push lên nhánh `feature/feature-based-refactor-vps`; VPS fast-forward từ `5fc56d2` lên `1db890a` và chạy `deploy/vps/deploy.sh` với profile 9Router. Backend/frontend/AI build thành công; frontend chỉ còn warning chunk lớn và annotation SignalR đã biết, backend 0 lỗi/449 warning legacy.
+- Database/migration: EF áp dụng `20260825040550_AddSkillObservationQueue`, tạo `SkillObservations`, khóa chính và ba index rồi ghi lịch sử migration. Log sau khởi động không có `Unhandled exception`, `Failed executing` hoặc `fail:`. Rollback vẫn là migration `Down`: xóa bảng observation và trả `CandidateCvDomains.Confidence` về precision trước đó.
+- Runtime AI/mining: AI service chờ backend trong hai lần đầu rồi đồng bộ taxonomy SQL thành công với 140 kỹ năng/58 bí danh. Scheduler cập nhật 2 phân loại domain, chạy Apriori riêng cho 7 ngành và HUIM riêng cho 4 ngành; toàn bộ request train quan sát được trả HTTP 200. Đây là xác nhận luồng chạy, không phải phép đo accuracy thị trường.
+- Smoke production: bốn container `ai-service`, backend, frontend và 9Router đều `healthy`; `https://recruitinsightai.com/health` trả 200. `GET /api/jobs/published?pageSize=100` trả 44 tin công khai; đã quan sát các vị trí mới thuộc cloud/security/AI/product. API ẩn `GET /api/skills/observations` trả 401 khi không đăng nhập, đúng ranh giới Admin.
+- Dữ liệu mới còn lại: sáu ZIP chứa đúng 450 PDF/30 nhóm/15 CV mỗi nhóm. Automation cũ chưa hỗ trợ trực tiếp ZIP gắn với job được người khác tạo; đã chỉ đọc cấu trúc để xác nhận nhóm, chưa sửa tool và chưa giải nén. Bước sau phải đối chiếu đủ 30 `JobID`, hạn/trạng thái nhận hồ sơ và chạy Selenium có checkpoint; không dùng 44 tin công khai làm bằng chứng rằng mọi cặp nhóm-job đã ghép đúng.
+- File tài liệu cập nhật trong bước chốt: `PROJECT_CONTEXT.md`, `WORK_LOG.md`. Worktree tiếp tục giữ nguyên sáu ZIP, thư mục tài liệu demo và script demo của người dùng ở trạng thái untracked.
 
 ### 2026-08-25 11:21 +07:00 — P0-02-P2-01-AI-V5-LOCAL — Sửa timeline, học kỹ năng có kiểm soát và rút ngắn chatbot
 
