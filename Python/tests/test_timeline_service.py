@@ -6,6 +6,69 @@ from services.scoring_service import reconcile_timeline_criteria
 
 
 class TimelineServiceTests(unittest.TestCase):
+    def test_education_and_projects_are_not_work_experience_without_experience_section(self):
+        text = """SUMMARY
+Backend intern candidate without professional employment.
+EDUCATION
+Bachelor's Degree | Software Engineering
+2023 - 2027
+SKILLS
+ASP.NET Core, SQL Server, Node.js, MongoDB, Docker
+PROJECTS
+Cinema Booking System | Backend Developer
+02/2026 - Present
+Built APIs with ASP.NET Core and SQL Server.
+CERTIFICATE
+Hackathon | Backend Developer
+10/2025 - 12/2025
+Built APIs with Node.js and MongoDB.
+"""
+
+        result = extract_experience_timeline(
+            text,
+            ["ASP.NET Core", "SQL Server", "Node.js", "MongoDB", "Docker"],
+            date(2026, 8, 25),
+        )
+
+        self.assertEqual(result["total_experience_months"], 0)
+        self.assertEqual(result["skill_experience_months"], {})
+        self.assertEqual(result["experiences"], [])
+        self.assertTrue(result["insufficient_data"])
+        self.assertEqual(result["source_scope"], "employment_evidence_fallback")
+
+    def test_unheaded_internship_is_allowed_by_strict_employment_fallback(self):
+        text = """Backend Developer Intern | Company A
+04/2026 - 06/2026
+Developed APIs with ASP.NET Core and SQL Server.
+"""
+
+        result = extract_experience_timeline(
+            text,
+            ["ASP.NET Core", "SQL Server"],
+            date(2026, 8, 25),
+        )
+
+        self.assertEqual(result["total_experience_months"], 3)
+        self.assertEqual(result["skill_experience_months"]["ASP.NET Core"], 3)
+
+    def test_skill_duration_does_not_leak_into_adjacent_experience_block(self):
+        text = """KINH NGHIỆM LÀM VIỆC
+Backend Developer | 01/2024 - 12/2024
+Phát triển API bằng Python.
+DevOps Engineer | 01/2025 - 12/2025
+Triển khai hệ thống với Docker."""
+
+        result = extract_experience_timeline(
+            text,
+            ["Python", "Docker"],
+            date(2026, 8, 20),
+        )
+
+        self.assertEqual(result["skill_experience_months"]["Python"], 12)
+        self.assertEqual(result["skill_experience_months"]["Docker"], 12)
+        self.assertEqual(result["experiences"][0]["skills"], ["Python"])
+        self.assertEqual(result["experiences"][1]["skills"], ["Docker"])
+
     def test_accepts_strict_numeric_period_when_ocr_drops_separator(self):
         result = extract_experience_timeline("Backend Developer | 01/2024 06/2025\nASP.NET Core", ["ASP.NET Core"])
         self.assertEqual(result["total_experience_months"], 18)
@@ -143,7 +206,7 @@ Triển khai Linux.
 
     def test_timeline_overrides_llm_duration_for_skill_criterion(self):
         timeline = extract_experience_timeline(
-            "01/2025 - 12/2025\nTriển khai Docker trong dự án.",
+            "DevOps Intern | Company A\n01/2025 - 12/2025\nTriển khai Docker trong hệ thống nội bộ.",
             ["Docker"],
             date(2026, 8, 20),
         )

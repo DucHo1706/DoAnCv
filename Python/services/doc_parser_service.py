@@ -114,6 +114,22 @@ def _append_vision_candidate(
 
 def _apply_analysis_safety_gate(result: DocumentExtractionResult) -> DocumentExtractionResult:
     """Không cho nội dung trông hợp lệ nhưng mâu thuẫn giữa các bộ đọc đi vào AI chấm điểm."""
+    normalized_text = (result.text or "").strip().casefold()
+    if (
+        normalized_text.startswith("data:image/")
+        or "data:image/" in normalized_text
+        or "base64,/9j/" in normalized_text
+        or "base64,ivbor" in normalized_text
+    ):
+        result.text = ""
+        result.quality_score = 0.0
+        result.quality_level = "insufficient"
+        result.analysis_safe = False
+        result.warnings.append(
+            "Nguồn OCR trả về dữ liệu ảnh thay vì văn bản; hệ thống đã loại bỏ để không đưa dữ liệu nhị phân vào phân tích."
+        )
+        return result
+
     method = (result.method or "").casefold()
     is_raster_result = "tesseract" in method or "vision" in method or "pdf_ocr" in method
     agreement = result.agreement_score

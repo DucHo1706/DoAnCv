@@ -575,7 +575,7 @@ Nhiệm vụ của bạn là trả lời câu hỏi của người dùng bằng 
 """
     history_serializable = []
     if history:
-        for msg in history:
+        for msg in list(history)[-10:]:
             if hasattr(msg, "model_dump"):
                 history_serializable.append(msg.model_dump())
             elif hasattr(msg, "dict"):
@@ -584,6 +584,19 @@ Nhiệm vụ của bạn là trả lời câu hỏi của người dùng bằng 
                 history_serializable.append(msg)
             else:
                 history_serializable.append(str(msg))
+
+    def bounded(value, limit):
+        normalized = str(value or "").strip()
+        return normalized if len(normalized) <= limit else normalized[:limit]
+
+    user_message = bounded(user_message, 4000)
+    job_description = bounded(job_description, 6000)
+    file_text = bounded(file_text, 12000)
+    system_knowledge = bounded(system_knowledge, 8000)
+    history_json = bounded(
+        json.dumps(history_serializable, ensure_ascii=False) if history_serializable else "[]",
+        12000,
+    )
 
     prompt = f"""
 {system_instruction}
@@ -598,13 +611,21 @@ Nhiệm vụ của bạn là trả lời câu hỏi của người dùng bằng 
 {file_text}
 
 --- LICH SU TRO CHUYEN ---
-{json.dumps(history_serializable) if history_serializable else "[]"}
+{history_json}
 
 --- CAU HOI MOI CUA NGUOI DUNG ---
 {user_message}
 """
     try:
-        return generate_content_with_retry(prompt, is_json=False)
+        return generate_content_with_retry(
+            prompt,
+            is_json=False,
+            request_timeout_ms=10000,
+            total_budget_ms=20000,
+            router_first=False,
+            router_budget_seconds=8,
+            max_output_tokens=900,
+        )
     except Exception as e:
         logger.error(f"Loi chatbot: {e}")
         return "Xin lỗi, hệ thống AI đang quá tải. Vui lòng thử lại sau."

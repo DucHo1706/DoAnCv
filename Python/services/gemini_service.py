@@ -306,12 +306,18 @@ def _router_response_text(response: requests.Response) -> str:
     return content
 
 
-def _generate_router_content(messages: list[dict], is_json: bool) -> str:
+def _generate_router_content(
+    messages: list[dict],
+    is_json: bool,
+    total_budget_seconds: int | None = None,
+    max_tokens: int | None = None,
+) -> str:
     if not LLM_ROUTER_ENABLED:
         raise ConnectionError("9Router chưa được bật cho tiến trình này.")
     last_error: Exception | None = None
     endpoint = f"{LLM_ROUTER_BASE_URL}/chat/completions"
-    request_deadline = time.monotonic() + LLM_ROUTER_TOTAL_BUDGET_SECONDS
+    router_budget = total_budget_seconds or LLM_ROUTER_TOTAL_BUDGET_SECONDS
+    request_deadline = time.monotonic() + max(1, router_budget)
     for model_name in LLM_ROUTER_MODELS:
         remaining_seconds = request_deadline - time.monotonic()
         if remaining_seconds <= 0:
@@ -324,7 +330,7 @@ def _generate_router_content(messages: list[dict], is_json: bool) -> str:
                     "model": model_name,
                     "messages": messages,
                     "temperature": 0,
-                    "max_tokens": LLM_ROUTER_MAX_TOKENS,
+                    "max_tokens": max_tokens or LLM_ROUTER_MAX_TOKENS,
                     "stream": False,
                 },
                 timeout=min(LLM_ROUTER_TIMEOUT_SECONDS, max(1, remaining_seconds)),
@@ -350,17 +356,23 @@ def generate_content_with_retry(
     prompt: str,
     is_json: bool = True,
     models: list = None,
-    request_timeout_ms: int = None
+    request_timeout_ms: int = None,
+    total_budget_ms: int = None,
+    router_first: bool = True,
+    router_budget_seconds: int = None,
+    max_output_tokens: int = None,
 ) -> str:
     """
     Goi Gemini API voi co che tu dong thu lai tren danh sach API Keys
     """
     router_error: Exception | None = None
-    if LLM_ROUTER_ENABLED and not _router_is_cooling_down():
+    if router_first and LLM_ROUTER_ENABLED and not _router_is_cooling_down():
         try:
             content = _generate_router_content(
                 [{"role": "user", "content": prompt}],
                 is_json=is_json,
+                total_budget_seconds=router_budget_seconds,
+                max_tokens=max_output_tokens,
             )
             _mark_router_available()
             return content
@@ -368,26 +380,47 @@ def generate_content_with_retry(
             router_error = error
             _cool_down_router()
             logger.warning("9Router tạm thời không khả dụng; chuyển sang provider kế tiếp.")
-    elif LLM_ROUTER_ENABLED:
+    elif router_first and LLM_ROUTER_ENABLED:
         router_error = ConnectionError("9Router đang tạm nghỉ sau lần gọi lỗi gần nhất.")
     if not clients:
+        if not router_first and LLM_ROUTER_ENABLED and not _router_is_cooling_down():
+            return _generate_router_content(
+                [{"role": "user", "content": prompt}],
+                is_json=is_json,
+                total_budget_seconds=router_budget_seconds,
+                max_tokens=max_output_tokens,
+            )
         if router_error is not None:
             raise ConnectionError(
                 "9Router không khả dụng và Gemini đang tắt hoặc chưa cấu hình."
             ) from router_error
         raise Exception("Khong cau hinh API keys truc tiep.")
     if _network_is_cooling_down():
+        if not router_first and LLM_ROUTER_ENABLED and not _router_is_cooling_down():
+            return _generate_router_content(
+                [{"role": "user", "content": prompt}],
+                is_json=is_json,
+                total_budget_seconds=router_budget_seconds,
+                max_tokens=max_output_tokens,
+            )
         raise ConnectionError("Ket noi Gemini dang tam nghi; su dung ket qua du phong cuc bo.")
 
     models_to_try = models if models is not None else DEFAULT_MODELS
-    config = types.GenerateContentConfig(
-        response_mime_type="application/json" if is_json else "text/plain"
-    )
+    config_kwargs = {
+        "response_mime_type": "application/json" if is_json else "text/plain"
+    }
+    if max_output_tokens:
+        config_kwargs["max_output_tokens"] = max_output_tokens
+    config = types.GenerateContentConfig(**config_kwargs)
 
     last_error = None
     attempts_started = 0
     budget_exhausted = False
-    request_deadline = time.monotonic() + (TOTAL_REQUEST_BUDGET_MS / 1000)
+    effective_budget_ms = max(
+        MIN_REQUEST_TIMEOUT_MS,
+        total_budget_ms or TOTAL_REQUEST_BUDGET_MS,
+    )
+    request_deadline = time.monotonic() + (effective_budget_ms / 1000)
     for model_name in models_to_try:
         remaining_before_model_ms = int((request_deadline - time.monotonic()) * 1000)
         if remaining_before_model_ms < MIN_REQUEST_TIMEOUT_MS:
@@ -463,6 +496,9 @@ def generate_content_with_retry(
                 err_str = str(e).lower()
                 if _is_network_error(e):
                     _cool_down_network()
+                    if not router_first:
+                        budget_exhausted = True
+                        break
                     raise ConnectionError(
                         "Khong the ket noi Gemini; chuyen ngay sang ket qua du phong cuc bo."
                     ) from e
@@ -518,12 +554,27 @@ def generate_content_with_retry(
             "Dang thu model tiep theo."
         )
         
+    if not router_first and LLM_ROUTER_ENABLED and not _router_is_cooling_down():
+        try:
+            content = _generate_router_content(
+                [{"role": "user", "content": prompt}],
+                is_json=is_json,
+                total_budget_seconds=router_budget_seconds,
+                max_tokens=max_output_tokens,
+            )
+            _mark_router_available()
+            return content
+        except Exception as error:
+            router_error = error
+            _cool_down_router()
+            logger.warning("Provider trực tiếp và 9Router đều chưa phản hồi được cho request này.")
+
     if budget_exhausted:
         raise TimeoutError(
-            f"Da het ngan sach {TOTAL_REQUEST_BUDGET_MS}ms sau {attempts_started} lan goi Gemini; "
+            f"Da het ngan sach {effective_budget_ms}ms sau {attempts_started} lan goi Gemini; "
             "cac model/key con lai chua duoc thu."
-        ) from last_error
-    raise last_error or Exception("Khong the ket noi den Google Gemini API sau khi xoay vong cac keys va models.")
+        ) from (router_error or last_error)
+    raise router_error or last_error or Exception("Khong the ket noi den Google Gemini API sau khi xoay vong cac keys va models.")
 
 
 def embed_content_with_retry(texts: list) -> list:
@@ -594,8 +645,17 @@ def generate_vision_content_with_retry(image_bytes: bytes, mime_type: str, promp
                 }],
                 is_json=False,
             )
+            normalized_content = (content or "").strip()
+            lowered_content = normalized_content.casefold()
+            if (
+                lowered_content.startswith("data:image/")
+                or "data:image/" in lowered_content
+                or "base64,/9j/" in lowered_content
+                or "base64,ivbor" in lowered_content
+            ):
+                raise ValueError("9Router Vision trả về dữ liệu ảnh thay vì văn bản OCR.")
             _mark_router_available()
-            return content
+            return normalized_content
         except Exception:
             _cool_down_router()
             logger.warning("9Router Vision chưa khả dụng; chuyển sang Gemini Vision nếu có.")
@@ -627,8 +687,18 @@ def generate_vision_content_with_retry(image_bytes: bytes, mime_type: str, promp
                     contents=[image_part, prompt]
                 )
                 if response and response.text:
+                    normalized_text = response.text.strip()
+                    lowered_text = normalized_text.casefold()
+                    if (
+                        lowered_text.startswith("data:image/")
+                        or "data:image/" in lowered_text
+                        or "base64,/9j/" in lowered_text
+                        or "base64,ivbor" in lowered_text
+                    ):
+                        logger.warning("Gemini Vision trả về dữ liệu ảnh thay vì văn bản OCR; đã bỏ kết quả này.")
+                        continue
                     logger.info(f"✅ Gemini Vision OCR thanh cong voi model {model_name} (Key #{client_idx+1})")
-                    return response.text.strip()
+                    return normalized_text
             except Exception as e:
                 logger.warning(f"Loi Gemini Vision voi model {model_name} (Key #{client_idx+1}): {e}")
                 err_str = str(e).lower()

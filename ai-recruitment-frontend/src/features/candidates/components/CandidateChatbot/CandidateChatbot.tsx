@@ -195,7 +195,7 @@ export default function CandidateChatbot() {
     if (!input.trim() && fileList.length === 0) return;
 
     const userMsg = input.trim() || "Hãy xem xét CV đính kèm của tôi.";
-    const currentHistory = messages.filter((m) => m.role !== "system");
+    const currentHistory = messages.filter((m) => m.role !== "system").slice(-10);
 
     const displayMsg =
       userMsg + (fileList.length > 0 ? `\n📎 [Đã đính kèm file: ${fileList[0].name}]` : "");
@@ -219,7 +219,7 @@ export default function CandidateChatbot() {
 
       const res = await axiosClient.post("/Chatbot/chat", formData, {
         headers: { "Content-Type": "multipart/form-data" },
-        timeout: 120000,
+        timeout: 45000,
       });
       const aiText = res.data.reply;
 

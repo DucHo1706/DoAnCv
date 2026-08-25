@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import calendar
 import re
+import unicodedata
 from dataclasses import dataclass
 from datetime import date
 from typing import Iterable
@@ -87,10 +88,63 @@ def _months_count(intervals: Iterable[tuple[int, int]]) -> int:
     return sum(end - start + 1 for start, end in _merge_month_intervals(intervals))
 
 
-def _context_for_match(lines: list[str], line_index: int) -> str:
-    start = max(0, line_index - 2)
-    end = min(len(lines), line_index + 4)
+def _context_for_period(
+    lines: list[str],
+    line_index: int,
+    previous_period_line: int | None,
+    next_period_line: int | None,
+) -> str:
+    """Lấy đúng block của một giai đoạn, không tràn sang công việc kế tiếp.
+
+    Dòng ngày là mốc đầu block. Không lấy cửa sổ ``-2/+4`` như trước vì một CV
+    viết sát nhiều công việc sẽ khiến skill của block sau bị gán cho block trước.
+    """
+    source_line = lines[line_index]
+    remaining = PERIOD_PATTERN.sub(" ", source_line)
+    remaining = OCR_NUMERIC_PERIOD_PATTERN.sub(" ", remaining)
+    remaining = re.sub(r"[|:;,./\\-]+", " ", remaining).strip()
+    # A role/company may be printed immediately above a date-only line. When
+    # the date already shares a line with the role, looking backward would pull
+    # the previous job's last bullet and leak its skills into this period.
+    backward_lines = 0 if len(remaining) >= 3 else 1
+    start = max(
+        (previous_period_line + 1) if previous_period_line is not None else 0,
+        line_index - backward_lines,
+    )
+    end = next_period_line if next_period_line is not None else len(lines)
     return "\n".join(line.strip() for line in lines[start:end] if line.strip())
+
+
+def _fold_for_evidence(value: str) -> str:
+    normalized = unicodedata.normalize("NFD", (value or "").casefold())
+    without_marks = "".join(
+        character for character in normalized
+        if unicodedata.category(character) != "Mn"
+    )
+    return re.sub(r"[^a-z0-9+#.]+", " ", without_marks).strip()
+
+
+def _is_employment_evidence(context: str) -> bool:
+    """Only rescue unheaded periods that contain actual employment evidence."""
+    folded = _fold_for_evidence(context)
+    excluded_markers = (
+        "project", "projects", "personal project", "selected project", "portfolio",
+        "du an", "hackathon", "certificate", "certification", "award",
+        "education", "academic", "degree", "university", "student", "hoc van",
+        "giai thuong", "chung chi",
+    )
+    if any(marker in folded for marker in excluded_markers):
+        return False
+
+    employment_markers = (
+        "work experience", "professional experience", "employment", "career history",
+        "internship", "intern ", " intern", "thuc tap", "cong ty", "company",
+        "full time", "part time", "freelance", "contract", "employee",
+        "developer", "engineer", "specialist", "analyst", "designer", "tester", "qa ",
+        "ky su", "lap trinh", "nhan vien",
+    )
+    padded = f" {folded} "
+    return any(marker in padded for marker in employment_markers)
 
 
 def extract_experience_timeline(
@@ -110,8 +164,21 @@ def extract_experience_timeline(
     # được tính. Ngày học vấn, chứng chỉ và dự án không mặc nhiên là thời gian
     # làm việc. CV không có heading rõ vẫn dùng fallback toàn văn để tương thích
     # tài liệu cũ, nhưng kết quả này phải được xem là kém chắc chắn hơn.
-    source_scope = "experience_sections" if experience_sections else "full_text_fallback"
-    timeline_source = "\n".join(experience_sections) if experience_sections else (cv_text or "")
+    if experience_sections:
+        source_scope = "experience_sections"
+        timeline_source = "\n".join(experience_sections)
+    else:
+        # Structured non-work sections are intentionally excluded. Their dates
+        # still support education/project evidence elsewhere, never tenure.
+        fallback_sections = []
+        for section in segmented.get("sections", []):
+            if section.get("type") not in {"personal_info", "other"}:
+                continue
+            content = str(section.get("content") or "").strip()
+            if content:
+                fallback_sections.append(content)
+        source_scope = "employment_evidence_fallback"
+        timeline_source = "\n".join(fallback_sections)
     lines = [line.strip() for line in timeline_source.splitlines()]
     skills = sorted({str(item).strip() for item in (known_skills or []) if str(item).strip()}, key=len, reverse=True)
     experiences = []
@@ -119,11 +186,27 @@ def extract_experience_timeline(
     seen = set()
     current_point = MonthPoint(current.year, current.month)
 
+    matches_by_line: dict[int, list[re.Match]] = {}
     for line_index, line in enumerate(lines):
         matches = list(PERIOD_PATTERN.finditer(line))
         # OCR đôi khi làm mất riêng dấu gạch giữa hai mốc nhưng vẫn giữ đủ MM/YYYY.
         # Chỉ chấp nhận mẫu số nghiêm ngặt để tránh ghép nhầm các ngày rời rạc.
         matches.extend(OCR_NUMERIC_PERIOD_PATTERN.finditer(line))
+        if matches:
+            matches_by_line[line_index] = matches
+
+    period_lines = sorted(matches_by_line)
+    next_period_by_line = {
+        line_index: next((candidate for candidate in period_lines if candidate > line_index), None)
+        for line_index in period_lines
+    }
+    previous_period_by_line = {
+        line_index: next((candidate for candidate in reversed(period_lines) if candidate < line_index), None)
+        for line_index in period_lines
+    }
+
+    for line_index in period_lines:
+        matches = matches_by_line[line_index]
         for match in matches:
             start, start_confidence = _normalize_token(match.group("start"), current)
             end, end_confidence = _normalize_token(match.group("end"), current, is_end=True)
@@ -133,7 +216,14 @@ def extract_experience_timeline(
             if key in seen:
                 continue
             seen.add(key)
-            context = _context_for_match(lines, line_index)
+            context = _context_for_period(
+                lines,
+                line_index,
+                previous_period_by_line[line_index],
+                next_period_by_line[line_index],
+            )
+            if source_scope == "employment_evidence_fallback" and not _is_employment_evidence(context):
+                continue
             if start.index > current_point.index:
                 future_periods.append({
                     "declared_start_date": start.iso(),

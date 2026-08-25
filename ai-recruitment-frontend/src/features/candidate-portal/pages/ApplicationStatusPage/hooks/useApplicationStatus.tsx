@@ -137,7 +137,7 @@ export function useApplicationStatus() {
         ? JSON.parse(application.aiReason.substring(application.aiReason.indexOf("{")))
         : application.aiReason;
       return Boolean(
-        Number(value?.analysis_version || 0) >= 4
+        Number(value?.analysis_version || 0) >= 5
         && value?.score_analysis && Array.isArray(value?.criteria_results)
         && Array.isArray(value?.optimization_tips) && value.optimization_tips.length > 0
         && value?.language_review && value.language_review.insufficient_data !== true

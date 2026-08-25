@@ -20,6 +20,7 @@ namespace RecruitmentBackend.Data
         public DbSet<Position> Positions { get; set; }
         public DbSet<Skill> Skills { get; set; }
         public DbSet<SkillAlias> SkillAliases { get; set; }
+        public DbSet<SkillObservation> SkillObservations { get; set; }
 
         // 3. Module Recruitment
         public DbSet<JobPosting> JobPostings { get; set; }
@@ -192,6 +193,22 @@ namespace RecruitmentBackend.Data
                 .IsUnique();
             modelBuilder.Entity<SkillAlias>()
                 .HasIndex(alias => alias.SkillID);
+
+            modelBuilder.Entity<SkillObservation>()
+                .Property(observation => observation.Confidence)
+                .HasPrecision(5, 2);
+            modelBuilder.Entity<SkillObservation>()
+                .HasIndex(observation => new
+                {
+                    observation.SourceType,
+                    observation.SourceEntityID,
+                    observation.NormalizedCandidate
+                })
+                .IsUnique();
+            modelBuilder.Entity<SkillObservation>()
+                .HasIndex(observation => new { observation.Status, observation.NormalizedCandidate });
+            modelBuilder.Entity<SkillObservation>()
+                .HasIndex(observation => observation.LastObservedAtUtc);
 
             modelBuilder.Entity<JobPosting>()
                 .HasIndex(job => new { job.CampaignGroupID, job.RecruitmentRound })

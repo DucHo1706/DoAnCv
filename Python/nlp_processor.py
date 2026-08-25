@@ -10,6 +10,7 @@ from services.skill_mining_guard import (
     normalize_match_key,
     normalize_skill,
 )
+from services.skill_observation_service import extract_unknown_skill_observations
 
 try:
     import spacy
@@ -115,6 +116,11 @@ def extract_skills(text: str) -> list[str]:
         found_skills.add(canonical)
 
     return sorted(found_skills)
+
+
+def extract_skill_observations(text: str) -> list[dict]:
+    """Tách skill lạ thành quan sát; không đưa chúng vào kết quả canonical."""
+    return extract_unknown_skill_observations(text, SKILL_ALIASES)
 
 def extract_information(cv_text):
     extracted_data = {

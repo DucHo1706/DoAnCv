@@ -1,85 +1,121 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using RecruitmentBackend.Data;
 using RecruitmentBackend.Interfaces;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text.Json;
-using System.Text.RegularExpressions;
-using System.Threading;
-using System.Threading.Tasks;
+using RecruitmentBackend.Models;
+using RecruitmentBackend.Utilities;
 
 namespace RecruitmentBackend.Services
 {
     /// <summary>
-    /// Thu gom skill mới theo batch. Không tự duyệt skill chưa đủ bằng chứng.
+    /// Tổng hợp quan sát kỹ năng từ nhiều CV/JD độc lập. Service chỉ chuyển
+    /// trạng thái hàng chờ; không tự tạo Skill hoặc alias đã duyệt.
     /// </summary>
     public class SkillDiscoveryService : ISkillDiscoveryService
     {
-        private static readonly Regex Mojibake = new(@"(?:Ã.|Â.|áº|Ä.|�)", RegexOptions.Compiled);
-        private readonly AppDbContext _context;
-        private readonly string _queuePath;
+        private const int MinimumIndependentSources = 3;
+        private const decimal MinimumAverageConfidence = 0.75m;
 
-        public SkillDiscoveryService(AppDbContext context, IWebHostEnvironment environment)
+        private readonly AppDbContext _context;
+        private readonly ILogger<SkillDiscoveryService> _logger;
+
+        public SkillDiscoveryService(
+            AppDbContext context,
+            ILogger<SkillDiscoveryService> logger)
         {
             _context = context;
-            var directory = Path.Combine(environment.ContentRootPath, "App_Data");
-            Directory.CreateDirectory(directory);
-            _queuePath = Path.Combine(directory, "skill-discovery-queue.json");
+            _logger = logger;
         }
 
         public async Task<int> CollectAsync(CancellationToken cancellationToken = default)
         {
-            var approvedSkills = (await _context.Skills.AsNoTracking()
+            var approved = await _context.Skills
+                .AsNoTracking()
                 .Where(skill => skill.IsApproved)
-                .Select(skill => skill.Name)
-                .ToListAsync(cancellationToken))
-                .Select(Normalize)
-                .Where(skill => skill.Length > 0)
-                .ToHashSet(StringComparer.OrdinalIgnoreCase);
-            var raw = await _context.CandidateCVs.AsNoTracking()
-                .Where(cv => cv.CVExtractedSkills != null && cv.CVExtractedSkills != "[]")
-                .Select(cv => cv.CVExtractedSkills)
+                .Include(skill => skill.Aliases)
                 .ToListAsync(cancellationToken);
-            var counts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-            foreach (var json in raw)
+
+            var approvedMap = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            foreach (var skill in approved)
             {
-                try
+                var canonicalKey = SkillTaxonomyNormalizer.NormalizeKey(skill.Name);
+                if (canonicalKey.Length > 0)
+                    approvedMap[canonicalKey] = skill.Id;
+                foreach (var alias in skill.Aliases)
                 {
-                    var skills = JsonSerializer.Deserialize<List<string>>(json) ?? new List<string>();
-                    foreach (var value in skills.Select(Normalize).Where(x => x.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase))
-                        counts[value] = counts.TryGetValue(value, out var count) ? count + 1 : 1;
+                    var aliasKey = SkillTaxonomyNormalizer.NormalizeKey(alias.Alias);
+                    if (aliasKey.Length > 0)
+                        approvedMap[aliasKey] = skill.Id;
                 }
-                catch { }
             }
 
-            var pending = counts
-                .Where(x => !approvedSkills.Contains(x.Key) && !IsSuspicious(x.Key))
-                .OrderByDescending(x => x.Value)
-                .Select(x => new
-                {
-                    rawSkill = x.Key,
-                    occurrences = x.Value,
-                    status = x.Value >= 3 ? "candidate_for_review" : "quarantine",
-                    reason = x.Value >= 3 ? "Xuất hiện ở nhiều CV, cần chuẩn hóa trước khi duyệt." : "Chưa đủ tần suất để kết luận skill hợp lệ."
-                })
-                .ToList();
+            var observations = await _context.SkillObservations
+                .Where(item => item.Status != SkillObservationStatuses.Rejected)
+                .ToListAsync(cancellationToken);
 
-            var payload = new
+            var mappedThisRun = 0;
+            foreach (var observation in observations)
             {
-                generatedAtUtc = DateTime.UtcNow,
-                totalCvTransactions = raw.Count,
-                pendingCount = pending.Count,
-                pending
-            };
-            var tempPath = _queuePath + ".tmp";
-            await File.WriteAllTextAsync(tempPath, JsonSerializer.Serialize(payload, new JsonSerializerOptions { WriteIndented = true }), cancellationToken);
-            File.Move(tempPath, _queuePath, true);
-            return pending.Count;
-        }
+                if (!approvedMap.TryGetValue(observation.NormalizedCandidate, out var skillId))
+                    continue;
 
-        private static string Normalize(string value) => string.Join(" ", (value ?? "").Trim().ToLowerInvariant().Split(' ', StringSplitOptions.RemoveEmptyEntries));
-        private static bool IsSuspicious(string value) => value.Length > 64 || value.Split(' ').Length > 5 || Mojibake.IsMatch(value);
+                if (observation.Status != SkillObservationStatuses.Mapped || observation.ResolvedSkillID != skillId)
+                {
+                    observation.Status = SkillObservationStatuses.Mapped;
+                    observation.ResolvedSkillID = skillId;
+                    observation.ReviewedAtUtc ??= DateTime.UtcNow;
+                    mappedThisRun++;
+                }
+            }
+
+            var unresolved = observations
+                .Where(item => item.Status != SkillObservationStatuses.Mapped
+                    && item.Status != SkillObservationStatuses.Approved)
+                .GroupBy(item => item.NormalizedCandidate, StringComparer.OrdinalIgnoreCase);
+
+            foreach (var group in unresolved)
+            {
+                var sourceCount = group
+                    .Select(item => $"{item.SourceType}:{item.SourceEntityID}")
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .Count();
+                var cvCount = group
+                    .Where(item => item.SourceType == "CV")
+                    .Select(item => item.SourceEntityID)
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .Count();
+                var jobCount = group
+                    .Where(item => item.SourceType == "JD")
+                    .Select(item => item.SourceEntityID)
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .Count();
+                var averageConfidence = group.Average(item => item.Confidence);
+                var hasIndependentEvidence = cvCount >= 2 || jobCount >= 2;
+                var nextStatus = sourceCount >= MinimumIndependentSources
+                    && hasIndependentEvidence
+                    && averageConfidence >= MinimumAverageConfidence
+                        ? SkillObservationStatuses.CandidateForReview
+                        : SkillObservationStatuses.Quarantine;
+
+                foreach (var observation in group)
+                    observation.Status = nextStatus;
+            }
+
+            await _context.SaveChangesAsync(cancellationToken);
+
+            var reviewCount = observations.Count(item => item.Status == SkillObservationStatuses.CandidateForReview);
+            var quarantineCount = observations.Count(item => item.Status == SkillObservationStatuses.Quarantine);
+            var mappedCount = observations.Count(item => item.Status == SkillObservationStatuses.Mapped);
+            _logger.LogInformation(
+                "Skill discovery summary: approved taxonomy={Approved}; observations={Total}; review={Review}; quarantine={Quarantine}; mapped={Mapped}; newly mapped={NewlyMapped}.",
+                approved.Count,
+                observations.Count,
+                reviewCount,
+                quarantineCount,
+                mappedCount,
+                mappedThisRun);
+
+            return reviewCount;
+        }
     }
 }

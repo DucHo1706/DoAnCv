@@ -79,6 +79,74 @@ class LlmRouterServiceTests(unittest.TestCase):
         self.assertEqual(generate.call_count, 1)
         self.assertTrue(gemini_service._router_is_cooling_down())
 
+    def test_direct_first_returns_gemini_response_without_calling_router(self):
+        direct_client = Mock()
+        direct_client.models.generate_content.return_value = Mock(
+            text='{"provider":"gemini"}'
+        )
+
+        with patch.object(gemini_service, "LLM_ROUTER_ENABLED", True), \
+             patch.object(gemini_service, "clients", [direct_client]), \
+             patch.object(gemini_service, "_available_clients", return_value=[(0, direct_client)]), \
+             patch.object(gemini_service, "_create_client", return_value=direct_client), \
+             patch.object(gemini_service, "_generate_router_content") as generate_router:
+            result = gemini_service.generate_content_with_retry(
+                "chat",
+                models=["direct-test-model"],
+                router_first=False,
+                total_budget_ms=20000,
+            )
+
+        self.assertEqual(json.loads(result), {"provider": "gemini"})
+        generate_router.assert_not_called()
+
+    def test_direct_first_falls_back_to_router_after_transient_failure(self):
+        direct_client = Mock()
+        direct_client.models.generate_content.side_effect = RuntimeError(
+            "503 UNAVAILABLE"
+        )
+
+        with patch.object(gemini_service, "LLM_ROUTER_ENABLED", True), \
+             patch.object(gemini_service, "clients", [direct_client]), \
+             patch.object(gemini_service, "_available_clients", return_value=[(0, direct_client)]), \
+             patch.object(gemini_service, "_create_client", return_value=direct_client), \
+             patch.object(
+                 gemini_service,
+                 "_generate_router_content",
+                 return_value='{"provider":"router"}',
+             ) as generate_router:
+            result = gemini_service.generate_content_with_retry(
+                "chat",
+                models=["direct-fallback-test-model"],
+                router_first=False,
+                total_budget_ms=20000,
+                router_budget_seconds=8,
+            )
+
+        self.assertEqual(json.loads(result), {"provider": "router"})
+        generate_router.assert_called_once()
+        self.assertEqual(
+            generate_router.call_args.kwargs["total_budget_seconds"],
+            8,
+        )
+
+    def test_vision_router_data_uri_echo_is_discarded(self):
+        with patch.object(gemini_service, "LLM_ROUTER_ENABLED", True), \
+             patch.object(gemini_service, "clients", []), \
+             patch.object(
+                 gemini_service,
+                 "_generate_router_content",
+                 return_value="data:image/jpeg;base64,/9j/echoed-payload",
+             ):
+            result = gemini_service.generate_vision_content_with_retry(
+                image_bytes=b"jpeg-bytes",
+                mime_type="image/jpeg",
+                prompt="OCR",
+            )
+
+        self.assertEqual(result, "")
+        self.assertTrue(gemini_service._router_is_cooling_down())
+
 
 if __name__ == "__main__":
     unittest.main()

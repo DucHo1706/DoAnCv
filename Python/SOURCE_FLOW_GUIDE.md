@@ -106,7 +106,7 @@ Hàm trung tâm là `cv_analysis_service.score_resume_sync`.
 | 3 | extraction safety gate | Cho phân tích hoặc trả `insufficient` |
 | 4 | `scoring_service.is_document_a_resume` | Xác định tài liệu có cấu trúc CV |
 | 5 | `nlp_processor.extract_information` cho CV/JD | Email, số điện thoại và kỹ năng canonical |
-| 6 | `timeline_service.extract_experience_timeline` | Tổng tháng không cộng trùng, tháng theo kỹ năng, gap/future |
+| 6 | `timeline_service.extract_experience_timeline` | Tổng tháng làm việc không cộng trùng, tháng theo kỹ năng, gap/future; không cộng học vấn/dự án |
 | 7 | `section_segmentation_service.segment_cv_sections` | Skills/Experience/Projects/Education/... |
 | 8 | `scoring_service.calculate_resume_score` | Kết quả LLM theo từng tiêu chí hoặc fallback có giới hạn |
 | 9 | `reconcile_timeline_criteria` | Ghi đè tiêu chí thời lượng bằng phép tính timeline cục bộ |
@@ -192,7 +192,9 @@ Nguyên tắc:
 
 - Quy tắc ký hiệu tổng quát xử lý hoa/thường, khoảng trắng và dấu kỹ thuật.
 - Đồng nghĩa nghiệp vụ như `NodeJS -> Node.js` phải nằm trong `SkillAliases`, không viết cứng trong Apriori/HUIM.
-- Skill lạ được `SkillDiscoveryService` đưa vào hàng chờ; không tự thêm vào taxonomy.
+- Skill lạ không bị bỏ mất nhưng cũng không được đưa thẳng vào taxonomy. Python trả `skill_observations` riêng; backend lưu provenance/confidence vào bảng `SkillObservations`.
+- `SkillDiscoveryService` chỉ nâng một nhóm lên `CandidateForReview` khi có ít nhất 3 nguồn độc lập, có ít nhất 2 CV hoặc 2 JD và confidence trung bình từ 0,75. Admin map vào skill cũ, duyệt skill mới hoặc từ chối qua API có phân quyền.
+- Observation chưa duyệt không được cộng điểm, tạo red flag hoặc train Apriori/HUIM. Queue JSON cũ không còn là nguồn runtime.
 - Note/tag HR là context phân loại nguồn ứng viên, không tự biến thành bằng chứng kỹ năng trong CV.
 
 ## 7. Luồng Apriori và Two-Phase HUIM chạy nền
@@ -202,7 +204,7 @@ Scheduler thực tế nằm ở `RecruitmentBackend/Services/MiningSchedulerServ
 ```text
 Backend khởi động hoặc đến 02:00 giờ Việt Nam
   |
-  |-- SkillDiscoveryService: gom skill chưa duyệt vào queue
+  |-- SkillDiscoveryService: nhóm observation và nâng trạng thái chờ duyệt
   |-- CandidateCvDomainService: gán domain có evidence/confidence
   |-- tạo fingerprint Skills + Aliases + CV + JD + Talent Pool + Domain
   |
@@ -283,6 +285,15 @@ Không ghi tên provider vào UI người dùng. UI cần phân biệt:
 
 Một lượt full score có thể gọi LLM cho nhiều phần: chấm tiêu chí, phân tích sâu, STAR, ngôn từ và phỏng vấn. Đây là lý do nhiều CV đồng thời tạo tải lớn dù chỉ có một endpoint `/score-cv`.
 
+Riêng chatbot dùng ngân sách ngắn hơn: Gemini trực tiếp tối đa khoảng 20 giây rồi thử 9Router dự phòng tối đa 8 giây. Backend chỉ nạp catalog tối đa 6 job khi câu hỏi có ý định tìm việc/lương, giới hạn 10 lượt lịch sử và timeout HTTP 35 giây. Đây là giới hạn độ trễ, không phải cam kết provider luôn phản hồi.
+
+### Phiên bản phân tích và dữ liệu cũ
+
+- Snapshot mới ghi `analysis_version=5`.
+- Kết quả phiên bản thấp hơn vẫn được giữ để bảo toàn lịch sử, nhưng frontend/backend xem là chưa hoàn chỉnh và cho phép phân tích lại CV đã nộp.
+- Apriori/HUIM chạy nền không tự viết lại `AIEvaluation` cũ. Sau khi kết quả phân tích mới được lưu, chu kỳ mining kế tiếp tự cập nhật nếu fingerprint đổi.
+- Không bulk re-analyze âm thầm vì thao tác đó tiêu thụ quota LLM và có thể gây tải lớn.
+
 ## 9. Bản đồ debug theo triệu chứng
 
 | Triệu chứng | Mở file/hàm trước |
@@ -292,7 +303,7 @@ Một lượt full score có thể gọi LLM cho nhiều phần: chấm tiêu ch
 | `analysis_safe=false` | `_apply_analysis_safety_gate`, xem alternatives/agreement/warnings |
 | Skill không được nhận diện | `nlp_processor.extract_skills` → taxonomy SQL/alias sync |
 | Điểm 0 hoặc 100 bất hợp lý | `calculate_resume_score` → `normalize_scoring_result` → hai hàm `reconcile_*` |
-| Kinh nghiệm bị cộng trùng | `timeline_service.extract_experience_timeline` |
+| Kinh nghiệm bị cộng trùng hoặc lấy nhầm năm học/dự án | `timeline_service.extract_experience_timeline` → section/strict employment evidence |
 | Red flag biến mất | `partition_red_flags` → `resolve_grounded_evidence` |
 | Tab Ngôn từ trống | `build_language_review_for_extraction` → `normalize_language_review` |
 | LLM timeout/quota | `gemini_service.generate_content_with_retry` |
@@ -322,3 +333,5 @@ Chỉ cần theo một CV qua tám điểm này trước; sau đó mới đi sâ
 - Model Apriori/HUIM được lưu file runtime; nếu chạy nhiều replica phải dùng volume/state dùng chung hoặc chỉ định một instance huấn luyện.
 - `scoring_service.py` và `cv_analysis_service.py` còn lớn; nên tách tiếp orchestration, scoring rules, evidence và language review sau khi khóa luận ổn định.
 - Kết quả synthetic chứng minh luồng và tính nhất quán, không chứng minh accuracy trên CV thật hoặc toàn thị trường.
+- Timeline chỉ tính section Experience/Employment/Work History. Khi CV không có heading, fallback chỉ nhận block có tín hiệu việc làm rõ như chức danh + công ty/thực tập; Education/Project/Certificate/Hackathon bị loại. Dự án vẫn là bằng chứng kỹ năng nhưng không phải thâm niên nghề nghiệp.
+- Bộ ZIP kiểm thử bổ sung ngày 2026-08-25 có 450 PDF duy nhất cho 30 JD, 15 CV/JD; tất cả đọc được lớp text và hiện đều một trang. Nhóm E/F khai báo 3–4 template; bộ này chưa được nhập/chấm toàn bộ và chưa chứng minh accuracy hoặc khả năng OCR scan nhiều trang.

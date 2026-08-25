@@ -211,7 +211,7 @@ namespace RecruitmentBackend.Services
                     && root.TryGetProperty("analysis_version", out var analysisVersion)
                     && analysisVersion.ValueKind == JsonValueKind.Number
                     && analysisVersion.TryGetInt32(out var version)
-                    && version >= 4
+                    && version >= 5
                     && root.TryGetProperty("score_analysis", out var scoreAnalysis)
                     && scoreAnalysis.ValueKind == JsonValueKind.Object
                     && root.TryGetProperty("criteria_results", out var criteriaResults)

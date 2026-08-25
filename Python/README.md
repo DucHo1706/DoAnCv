@@ -202,6 +202,13 @@ Benchmark OCR/layout vẫn dùng corpus `test_data/cv_layout_corpus/`; không g�
 
 ## 9. Nợ kỹ thuật cần xử lý theo thứ tự
 
+### Phiên bản dữ liệu và vòng quan sát kỹ năng
+
+- Phân tích mới dùng `analysis_version=5`; snapshot cũ không tự thay đổi chỉ vì Apriori/HUIM chạy nền.
+- CV/JD trả hai tập riêng: kỹ năng canonical đã duyệt và `skill_observations` chưa duyệt. Backend lưu observation có nguồn/bằng chứng vào SQL; chỉ observation đủ nhiều nguồn mới chuyển chờ Admin rà soát.
+- Timeline nghề nghiệp không cộng mốc học vấn, dự án, chứng chỉ hoặc hackathon. Dự án vẫn cấp bằng chứng kỹ năng nhưng không làm tăng tổng tháng đi làm.
+- Xem sơ đồ chi tiết, ngưỡng duyệt, retry dữ liệu cũ và đường debug trong [`SOURCE_FLOW_GUIDE.md`](SOURCE_FLOW_GUIDE.md).
+
 1. Bổ sung test bảo vệ API hiện hành.
 2. Tách validation tiêu chí dùng chung.
 3. Tách `cv_analysis_service` thành parsing, extraction, scoring orchestration và learning.

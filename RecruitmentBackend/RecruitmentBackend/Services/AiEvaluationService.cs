@@ -24,17 +24,20 @@ namespace RecruitmentBackend.Services
         private readonly IAiService _aiService;
         private readonly IHubContext<AIEvaluationHub> _hubContext;
         private readonly INotificationService _notificationService;
+        private readonly ISkillObservationService _skillObservationService;
 
         public AiEvaluationService(
             AppDbContext context,
             IAiService aiService,
             IHubContext<AIEvaluationHub> hubContext,
-            INotificationService notificationService)
+            INotificationService notificationService,
+            ISkillObservationService skillObservationService)
         {
             _context = context;
             _aiService = aiService;
             _hubContext = hubContext;
             _notificationService = notificationService;
+            _skillObservationService = skillObservationService;
         }
 
         private async Task SendProgressAsync(string applicationId, int progress, string stage, string messageStr = "")
@@ -291,6 +294,13 @@ namespace RecruitmentBackend.Services
                     candidateCv.YearsOfExperience = matchingResult?.ExtractedInfo?.YearsOfExperience ?? 0;
                 }
 
+                if (aiResult.JobExtractedSkills != null && aiResult.JobExtractedSkills.Count > 0)
+                {
+                    job.JDExtractedSkills = JsonSerializer.Serialize(
+                        aiResult.JobExtractedSkills,
+                        jsonSerializeOptions);
+                }
+
                 var newEvaluation = new AIEvaluation
                 {
                     EvaluationID = Guid.NewGuid().ToString(),
@@ -306,6 +316,22 @@ namespace RecruitmentBackend.Services
 
                 _context.AIEvaluations.Add(newEvaluation);
                 await _context.SaveChangesAsync();
+
+                try
+                {
+                    await _skillObservationService.RecordAsync(
+                        application.CVID,
+                        job.JobID,
+                        aiResult.CandidateInfo?.SkillObservations,
+                        aiResult.JobSkillObservations);
+                }
+                catch (Exception observationException)
+                {
+                    // Hàng quan sát là dữ liệu bổ sung; lỗi ghi nhận không được
+                    // biến một kết quả chấm điểm đã lưu thành thất bại giả.
+                    Console.WriteLine(
+                        $"[Skill Observation Warning] Không thể ghi nhận skill mới: {observationException.GetType().Name}");
+                }
 
                 // Trigger notification to candidate that AI evaluation is completed
                 try

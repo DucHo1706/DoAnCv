@@ -18,6 +18,12 @@ namespace RecruitmentBackend.DTOs.Responses
         [JsonPropertyName("matching_result")]
         public MatchingResult MatchingResult { get; set; }
 
+        [JsonPropertyName("job_extracted_skills")]
+        public List<string> JobExtractedSkills { get; set; } = new List<string>();
+
+        [JsonPropertyName("job_skill_observations")]
+        public List<SkillObservationCandidate> JobSkillObservations { get; set; } = new List<SkillObservationCandidate>();
+
       
     }
 
@@ -31,7 +37,30 @@ namespace RecruitmentBackend.DTOs.Responses
 
         [JsonPropertyName("extracted_skills")]
         public List<string> ExtractedSkills { get; set; } = new List<string>();
+
+        [JsonPropertyName("raw_text")]
         public string RawText { get; set; }
+
+        [JsonPropertyName("skill_observations")]
+        public List<SkillObservationCandidate> SkillObservations { get; set; } = new List<SkillObservationCandidate>();
+    }
+
+    public class SkillObservationCandidate
+    {
+        [JsonPropertyName("raw_text")]
+        public string RawText { get; set; } = string.Empty;
+
+        [JsonPropertyName("normalized_candidate")]
+        public string NormalizedCandidate { get; set; } = string.Empty;
+
+        [JsonPropertyName("evidence_text")]
+        public string EvidenceText { get; set; } = string.Empty;
+
+        [JsonPropertyName("source_section")]
+        public string SourceSection { get; set; } = string.Empty;
+
+        [JsonPropertyName("confidence")]
+        public double Confidence { get; set; }
     }
 
     public class MatchingResult

@@ -124,7 +124,10 @@ builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<IBranchService, BranchService>();
 builder.Services.AddScoped<IJobLevelService, JobLevelService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
-builder.Services.AddHttpClient<IChatbotService, ChatbotService>();
+builder.Services.AddHttpClient<IChatbotService, ChatbotService>(client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(35);
+});
 builder.Services.AddScoped<IEmailSenderService, EmailSenderService>();
   builder.Services.AddHttpClient<ICandidateEmailAiService, CandidateEmailAiService>(client =>
   {
@@ -135,6 +138,7 @@ builder.Services.AddScoped<IAprioriService, AprioriService>();
 builder.Services.AddScoped<IHighUtilityService, HighUtilityService>();
 builder.Services.AddScoped<ICandidateCvDomainService, CandidateCvDomainService>();
 builder.Services.AddScoped<ISkillDiscoveryService, SkillDiscoveryService>();
+builder.Services.AddScoped<ISkillObservationService, SkillObservationService>();
 builder.Services.AddHostedService<MiningSchedulerService>();
 builder.Services.AddScoped<ICandidateComparisonService, CandidateComparisonService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();

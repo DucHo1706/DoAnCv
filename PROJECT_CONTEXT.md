@@ -150,6 +150,14 @@ AI chỉ hỗ trợ quyết định; không tự động loại ứng viên và 
 - Khi router lỗi, Python chuyển Gemini trực tiếp rồi fallback cục bộ có nhãn; tắt profile phải bỏ `LLM_ROUTER_BASE_URL` và restart `ai-service`.
 - SQLite local `0.5.55` được chụp bằng SQLite Online Backup và phục hồi nguyên provider/combo/API key vào volume VPS; image được ghim cùng phiên bản trước khi nâng cấp có chủ đích. Python giới hạn tổng thời gian thử router và đặt circuit breaker sau lỗi để tài khoản free hết quota không làm hàng loạt CV cùng chờ.
 
+### 3.16 Observation kỹ năng, timeline nghề nghiệp và phiên bản phân tích
+
+- Kỹ năng canonical và kỹ năng quan sát là hai lớp khác nhau. CV/JD chỉ được chấm/mining bằng `Skills.IsApproved` + `SkillAliases`; cụm lạ ở section kỹ năng/công cụ/yêu cầu được lưu vào `SkillObservations` có provenance, confidence và trạng thái `Quarantine`.
+- `SkillDiscoveryService` chỉ nâng observation lên `CandidateForReview` khi có ít nhất ba nguồn độc lập, có bằng chứng từ ít nhất hai CV hoặc hai JD và confidence trung bình từ 0,75. Admin có API map/duyệt mới/từ chối; không có UI thuật toán và không tự duyệt để tránh nhiễm taxonomy.
+- Timeline nghề nghiệp chỉ tính block kinh nghiệm/việc làm. Khi thiếu heading, fallback phải có tín hiệu chức danh + công ty/thực tập rõ; ngày học vấn, dự án, chứng chỉ và hackathon không được cộng. Dự án vẫn là bằng chứng skill nhưng không phải thâm niên.
+- Phân tích mới dùng `analysis_version=5`. Snapshot cũ được giữ nguyên lịch sử nhưng bị xem là chưa hoàn chỉnh và có thể chạy lại trên CV đã nộp; Apriori/HUIM tự chạy không viết lại `AIEvaluation` cũ. Không bulk re-analysis âm thầm vì tốn quota và tạo tải không kiểm soát.
+- Chatbot chỉ tải catalog khi câu hỏi có ý định tìm việc/lương, tối đa 6 job, 10 lượt lịch sử; Gemini trực tiếp dùng ngân sách 20 giây rồi thử 9Router dự phòng 8 giây, backend timeout 35 giây.
+
 ## 4. Khoảng trống đã xác định trong code/hệ thống
 
 Những điểm dưới đây là kết quả khảo sát trước đó và phải kiểm tra lại trên branch hiện tại trước khi sửa:
@@ -217,7 +225,7 @@ Nguyên tắc tính điểm dự kiến:
 |---|---|---|---|---|
 | P0-00 | Lập bản đồ và tổ chức module Python giai đoạn 1 | ĐÃ XONG | Không | Có README tra cứu, validation dùng chung, test và compile thành công |
 | P0-01 | Chuẩn hóa mô hình tiêu chí đánh giá | ĐANG LÀM | Kiểm tra schema hiện tại | HR tạo được tiêu chí có kiểu, toán tử, giá trị, trọng số và nguồn bằng chứng; dữ liệu cũ vẫn đọc được |
-| P0-02 | Chuẩn hóa experience timeline | ĐÃ XONG | Parser CV | Hoàn thành nền tảng local: hợp nhất overlap, tính tổng liên quan/theo kỹ năng, phát hiện gap và lưu bằng chứng; chưa deploy VPS |
+| P0-02 | Chuẩn hóa experience timeline | ĐANG LÀM | Parser CV | Local đã hợp nhất overlap và loại ngày học vấn/dự án khỏi thâm niên; regression CV không có việc làm trả 0 tháng, còn chờ deploy/smoke VPS |
 | P0-03 | Lịch sử trạng thái và thống kê trong ngày | ĐANG LÀM | Thống nhất trạng thái | Dashboard HR/Admin có số hôm nay đúng theo sự kiện và múi giờ VN |
 | P1-01 | HR chủ động tìm ứng viên | ĐANG LÀM | P0-01, quyền riêng tư | Đã có MVP opt-in và tìm/lọc hồ sơ rút gọn; còn smoke test endpoint và hoàn thiện luồng mời/liên hệ |
 | P1-02 | Đăng lại tin tuyển dụng | ĐANG LÀM | Luồng duyệt tin | Code/API/UI/migration và public smoke test đã đạt; còn smoke test thao tác đăng lại bằng tài khoản HR và duyệt vòng mới bằng Admin |
@@ -226,7 +234,7 @@ Nguyên tắc tính điểm dự kiến:
 | P2-02 | Sửa mô hình HUIM/Apriori và cơ chế skip | ĐANG LÀM | P2-01 | Đã tách model theo domain, fingerprint gồm alias, backend/Python chạy startup + 02:00 và có metadata; còn kiểm chứng utility lương trên dữ liệu thật |
 | P2-03 | Trang Admin AI Insights riêng | TẠM HOÃN | P2-01 | Theo quyết định 2026-08-22, Apriori/HUIM chạy nền và không cần màn Admin riêng; chỉ mở lại nếu phạm vi khóa luận thay đổi |
 | P3-01 | Bộ tối thiểu 15 CV kiểm thử | ĐÃ XONG | Danh sách ngành/mẫu | 15 CV hư cấu dài, đa định dạng/layout + 1 PDF không phải CV, có ground truth và audit tự động đạt 16/16 local |
-| P3-02 | Test nghiệp vụ/API/UI/AI | ĐANG LÀM | Các task trên | Selenium đã tạo/duyệt 24 job và nộp đủ 480/480 application qua UI, 20 CV/job. Audit read-only đã đọc đủ 480 snapshot: 81 mức điểm, 479 JSON v4 và 1 legacy; phát hiện 211 kết quả ngôn từ cũ ở trạng thái insufficient và 373 hồ sơ từng bị gắn red flag quá rộng. Policy mới chuyển điểm yếu thông thường về `weaknesses`; live API xác nhận CV văn bản tốt có language review và không bị ép red flag. Còn phân tích lại mẫu snapshot cũ, các kịch bản role HR/Admin còn lại và báo cáo tổng hợp; không gọi dữ liệu synthetic là accuracy AI |
+| P3-02 | Test nghiệp vụ/API/UI/AI | ĐANG LÀM | Các task trên | Selenium đã có 480 application cũ; thêm 450 PDF duy nhất cho đúng 30 JD trong 6 ZIP, 15 CV/JD, tất cả đọc được lớp text và hiện đều một trang. Chưa nhập/chấm toàn bộ bộ mới; v4/legacy cần retry lên v5, không gọi dữ liệu synthetic là accuracy AI |
 | P3-03 | Benchmark và bằng chứng báo cáo | ĐANG LÀM | P3-01, P3-02 | Benchmark offline 1.170 CV/162 JD/3.510 cặp đã chạy lại và đạt; còn p95 end-to-end có Gemini, tải đồng thời và dữ liệu CV thật đã ẩn danh nếu muốn kết luận accuracy thực tế |
 
 ## 7. Ma trận CV kiểm thử tối thiểu
@@ -272,6 +280,10 @@ Mỗi mẫu cần expected result cho: đọc file, trường trích xuất, tr�
 
 ## 10. Nhật ký quyết định
 
+- 2026-08-25: Tách `SkillObservations` khỏi taxonomy đã duyệt. Observation phải có provenance SQL và đủ ba nguồn/độ tin cậy mới chờ Admin review; không tự thêm vào Skills, Apriori/HUIM hay scoring. Tác động: log 140 skills/58 alias phản ánh catalog đã duyệt chứ không phải giới hạn nhận biết vĩnh viễn; kỹ năng mới được học có kiểm soát ở chu kỳ sau khi duyệt.
+- 2026-08-25: `analysis_version=5` đánh dấu pipeline timeline/skill observation/extraction gate mới. Kết quả cũ không được sửa bởi scheduler mining; backend/frontend đánh dấu chưa hoàn chỉnh và cho retry trên CV đã lưu. Tác động: tránh âm thầm tốn quota hoặc đổi lịch sử, nhưng muốn thấy kết quả sửa phải chủ động phân tích lại.
+- 2026-08-25: Thời gian Education/Project/Certificate/Hackathon không phải kinh nghiệm nghề nghiệp. CV không có section Experience chỉ được tính khi block có bằng chứng việc làm/thực tập rõ; project vẫn chứng minh skill. Tác động: regression từng nhầm năm học thành 44 tháng nay trả 0 tháng đi làm.
+- 2026-08-25: Bộ bổ sung gồm 450 PDF không trùng cho 30 JD (15 CV/JD), tất cả có text và một trang; nhóm E/F khai báo 3–4 template. Tác động: dùng làm dữ liệu E2E synthetic tiếp theo, chưa được coi là bằng chứng OCR scan/nhiều trang hay accuracy thị trường trước khi chạy chấm/audit.
 - 2026-08-25: 9Router VPS dùng bản sao nhất quán của SQLite local `0.5.55`, volume riêng và cổng `127.0.0.1:20128`; dashboard quản lý qua SSH tunnel, dùng cổng máy cá nhân `20129` nếu `20128` đang bị bản local chiếm. `/v1/models` nội bộ đã trả 200 và bảo toàn 11 provider, 2 combo, 2 API key hoạt động. Request completion trên local và VPS cùng không thành công do trạng thái tài khoản free hiện tại (429/timeout; Antigravity refresh 403), không phải lỗi migration. Tác động: giữ toàn bộ cấu hình để dùng lại khi quota reset; Python phải fail fast sang Gemini trực tiếp/fallback trong thời gian router cooldown.
 - 2026-08-25: Bản `45fdd9c` đã được phát hành lên VPS origin mới `180.93.100.30` tại source `/home/ubuntu/KhoaLuan`; ba container lõi healthy, origin/public HTTPS và API smoke đạt. 9Router chưa bật và không được coi là đã triển khai. Tác động: Git/local/VPS cùng commit cho phần ứng dụng; các snapshot AI lịch sử vẫn giữ dữ liệu cũ cho tới khi được phân tích lại.
 - 2026-08-25: Realtime HR/Admin dùng hai hub hiện có làm kênh báo thay đổi và phát event tài nguyên dùng chung ở frontend; page tự refetch nền có debounce. Danh sách chiến dịch chuyển sang `GET /api/Jobs/my-campaigns` group/count tại SQL và giữ fallback tuyến tính cho backend cũ chưa restart. Tác động: không còn tải toàn bộ CV/PII/AI để dựng card chiến dịch; badge Admin, danh sách tin, chiến dịch, ứng viên và danh mục có cùng cơ chế làm mới.

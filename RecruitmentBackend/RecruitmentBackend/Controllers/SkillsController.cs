@@ -4,12 +4,12 @@ using Microsoft.EntityFrameworkCore;
 using RecruitmentBackend.Data;
 using RecruitmentBackend.DTOs.Requests;
 using RecruitmentBackend.DTOs.Responses;
-using RecruitmentBackend.Models;
 using RecruitmentBackend.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using RecruitmentBackend.Models;
 
 namespace RecruitmentBackend.Controllers
 {
@@ -152,6 +152,221 @@ namespace RecruitmentBackend.Controllers
                 message = $"Đã đưa {addedCount} kỹ năng mới vào hàng chờ duyệt; chưa dùng để chấm điểm hoặc khai phá.",
                 added_count = addedCount
             });
+        }
+
+        [HttpGet("observations")]
+        public async Task<IActionResult> GetObservations(
+            [FromQuery] string status = SkillObservationStatuses.CandidateForReview,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 50)
+        {
+            page = Math.Max(1, page);
+            pageSize = Math.Clamp(pageSize, 1, 100);
+            var allowedStatuses = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                SkillObservationStatuses.Quarantine,
+                SkillObservationStatuses.CandidateForReview,
+                SkillObservationStatuses.Mapped,
+                SkillObservationStatuses.Approved,
+                SkillObservationStatuses.Rejected
+            };
+            if (!allowedStatuses.Contains(status))
+                return BadRequest("Trạng thái quan sát kỹ năng không hợp lệ.");
+
+            var rows = await _context.SkillObservations
+                .AsNoTracking()
+                .Where(item => item.Status == status)
+                .OrderByDescending(item => item.LastObservedAtUtc)
+                .ToListAsync();
+            var grouped = rows
+                .GroupBy(item => item.NormalizedCandidate, StringComparer.OrdinalIgnoreCase)
+                .Select(group => new
+                {
+                    normalizedCandidate = group.Key,
+                    displayText = group.OrderByDescending(item => item.Confidence).First().DisplayText,
+                    status = group.First().Status,
+                    independentSources = group.Select(item => $"{item.SourceType}:{item.SourceEntityID}")
+                        .Distinct(StringComparer.OrdinalIgnoreCase).Count(),
+                    cvSources = group.Where(item => item.SourceType == "CV")
+                        .Select(item => item.SourceEntityID).Distinct(StringComparer.OrdinalIgnoreCase).Count(),
+                    jobSources = group.Where(item => item.SourceType == "JD")
+                        .Select(item => item.SourceEntityID).Distinct(StringComparer.OrdinalIgnoreCase).Count(),
+                    averageConfidence = Math.Round(group.Average(item => item.Confidence), 2),
+                    firstObservedAtUtc = group.Min(item => item.FirstObservedAtUtc),
+                    lastObservedAtUtc = group.Max(item => item.LastObservedAtUtc),
+                    sampleObservationId = group.OrderByDescending(item => item.Confidence)
+                        .First().SkillObservationID,
+                    sampleEvidence = group.OrderByDescending(item => item.Confidence)
+                        .First().EvidenceText,
+                    resolvedSkillId = group.Select(item => item.ResolvedSkillID).FirstOrDefault(value => value.HasValue)
+                })
+                .OrderByDescending(item => item.independentSources)
+                .ThenByDescending(item => item.averageConfidence)
+                .ToList();
+
+            return Ok(new
+            {
+                status,
+                totalCandidates = grouped.Count,
+                page,
+                pageSize,
+                items = grouped.Skip((page - 1) * pageSize).Take(pageSize)
+            });
+        }
+
+        [HttpPost("observations/{observationId:long}/map")]
+        public async Task<IActionResult> MapObservation(
+            long observationId,
+            [FromBody] MapSkillObservationRequest request)
+        {
+            var observation = await _context.SkillObservations
+                .FirstOrDefaultAsync(item => item.SkillObservationID == observationId);
+            if (observation == null) return NotFound("Không tìm thấy quan sát kỹ năng.");
+
+            var skill = await _context.Skills
+                .Include(item => item.Aliases)
+                .FirstOrDefaultAsync(item => item.Id == request.SkillId && item.IsApproved);
+            if (skill == null) return NotFound("Không tìm thấy kỹ năng đã duyệt để ánh xạ.");
+
+            var conflict = await FindTaxonomyConflictAsync(observation.NormalizedCandidate, skill.Id);
+            if (conflict != null) return BadRequest(conflict);
+
+            if (SkillTaxonomyNormalizer.NormalizeKey(skill.Name) != observation.NormalizedCandidate
+                && !skill.Aliases.Any(alias => alias.NormalizedAlias == observation.NormalizedCandidate))
+            {
+                _context.SkillAliases.Add(new SkillAlias
+                {
+                    SkillID = skill.Id,
+                    Alias = observation.DisplayText,
+                    NormalizedAlias = observation.NormalizedCandidate
+                });
+            }
+
+            var updated = await ResolveObservationGroupAsync(
+                observation.NormalizedCandidate,
+                skill.Id,
+                SkillObservationStatuses.Mapped,
+                "Đã ánh xạ vào kỹ năng hiện có.");
+            await _context.SaveChangesAsync();
+            return Ok(new { message = $"Đã ánh xạ {updated} nguồn quan sát vào kỹ năng {skill.Name}." });
+        }
+
+        [HttpPost("observations/{observationId:long}/approve-new")]
+        public async Task<IActionResult> ApproveNewObservation(
+            long observationId,
+            [FromBody] ApproveSkillObservationRequest request)
+        {
+            var canonicalName = request?.CanonicalName?.Trim() ?? string.Empty;
+            var canonicalKey = SkillTaxonomyNormalizer.NormalizeKey(canonicalName);
+            if (canonicalName.Length == 0 || canonicalName.Length > 100 || canonicalKey.Length == 0)
+                return BadRequest("Tên kỹ năng chuẩn không hợp lệ.");
+
+            var observation = await _context.SkillObservations
+                .FirstOrDefaultAsync(item => item.SkillObservationID == observationId);
+            if (observation == null) return NotFound("Không tìm thấy quan sát kỹ năng.");
+
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+            var allSkills = await _context.Skills.Include(item => item.Aliases).ToListAsync();
+            var skill = allSkills.FirstOrDefault(item =>
+                SkillTaxonomyNormalizer.NormalizeKey(item.Name) == canonicalKey);
+            if (skill == null)
+            {
+                skill = new Skill { Name = canonicalName, IsApproved = true };
+                _context.Skills.Add(skill);
+                await _context.SaveChangesAsync();
+            }
+            else
+            {
+                skill.IsApproved = true;
+                skill.Name = canonicalName;
+            }
+
+            var conflict = await FindTaxonomyConflictAsync(observation.NormalizedCandidate, skill.Id);
+            if (conflict != null)
+            {
+                await transaction.RollbackAsync();
+                return BadRequest(conflict);
+            }
+            if (canonicalKey != observation.NormalizedCandidate
+                && !skill.Aliases.Any(alias => alias.NormalizedAlias == observation.NormalizedCandidate))
+            {
+                _context.SkillAliases.Add(new SkillAlias
+                {
+                    SkillID = skill.Id,
+                    Alias = observation.DisplayText,
+                    NormalizedAlias = observation.NormalizedCandidate
+                });
+            }
+
+            var updated = await ResolveObservationGroupAsync(
+                observation.NormalizedCandidate,
+                skill.Id,
+                SkillObservationStatuses.Approved,
+                "Đã duyệt thành kỹ năng chuẩn.");
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
+            return Ok(new { message = $"Đã duyệt kỹ năng {skill.Name} từ {updated} nguồn quan sát." });
+        }
+
+        [HttpPost("observations/{observationId:long}/reject")]
+        public async Task<IActionResult> RejectObservation(
+            long observationId,
+            [FromBody] RejectSkillObservationRequest request)
+        {
+            var observation = await _context.SkillObservations
+                .FirstOrDefaultAsync(item => item.SkillObservationID == observationId);
+            if (observation == null) return NotFound("Không tìm thấy quan sát kỹ năng.");
+
+            var reason = string.IsNullOrWhiteSpace(request?.Reason)
+                ? "Không được chấp nhận vào taxonomy."
+                : request.Reason.Trim();
+            if (reason.Length > 500) return BadRequest("Lý do từ chối không được vượt quá 500 ký tự.");
+            var updated = await ResolveObservationGroupAsync(
+                observation.NormalizedCandidate,
+                null,
+                SkillObservationStatuses.Rejected,
+                reason);
+            await _context.SaveChangesAsync();
+            return Ok(new { message = $"Đã từ chối {updated} nguồn quan sát cùng kỹ năng." });
+        }
+
+        private async Task<string?> FindTaxonomyConflictAsync(string normalizedCandidate, int targetSkillId)
+        {
+            var approvedNames = await _context.Skills.AsNoTracking()
+                .Where(item => item.IsApproved && item.Id != targetSkillId)
+                .Select(item => new { item.Id, item.Name })
+                .ToListAsync();
+            var nameConflict = approvedNames.FirstOrDefault(item =>
+                SkillTaxonomyNormalizer.NormalizeKey(item.Name) == normalizedCandidate);
+            if (nameConflict != null)
+                return $"Cụm này đã là tên chuẩn của kỹ năng {nameConflict.Name}.";
+
+            var aliasConflict = await _context.SkillAliases.AsNoTracking()
+                .FirstOrDefaultAsync(item => item.NormalizedAlias == normalizedCandidate
+                    && item.SkillID != targetSkillId);
+            return aliasConflict == null
+                ? null
+                : "Cụm này đã là bí danh của một kỹ năng khác.";
+        }
+
+        private async Task<int> ResolveObservationGroupAsync(
+            string normalizedCandidate,
+            int? skillId,
+            string status,
+            string note)
+        {
+            var rows = await _context.SkillObservations
+                .Where(item => item.NormalizedCandidate == normalizedCandidate)
+                .ToListAsync();
+            var nowUtc = DateTime.UtcNow;
+            foreach (var row in rows)
+            {
+                row.Status = status;
+                row.ResolvedSkillID = skillId;
+                row.ReviewNote = note;
+                row.ReviewedAtUtc = nowUtc;
+            }
+            return rows.Count;
         }
     }
 }

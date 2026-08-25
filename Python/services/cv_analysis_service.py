@@ -310,9 +310,11 @@ def score_resume_sync(
     # Trich xuat ky nang bang NLP
     extracted_info = nlp_processor.extract_information(cv_text)
     cv_skills = extracted_info["skills"]
+    cv_skill_observations = nlp_processor.extract_skill_observations(cv_text)
 
     jd_info = nlp_processor.extract_information(job_description)
     jd_skills = jd_info["skills"]
+    job_skill_observations = nlp_processor.extract_skill_observations(job_description)
     experience_timeline = extract_experience_timeline(cv_text, cv_skills)
     normalized_sections = segment_cv_sections(cv_text)
 
@@ -418,7 +420,7 @@ def score_resume_sync(
 
     # Gom goi tat ca thong tin
     full_analysis_data = {
-        "analysis_version": 4,
+        "analysis_version": 5,
         "extracted_skills": cv_skills,
         "score_analysis": {
             "total_score": scoring_result.get("total_score", 0),
@@ -458,9 +460,12 @@ def score_resume_sync(
             "raw_text": cv_text,
             "ExtractedSkills": cv_skills,
             "RawText": cv_text,
+            "skill_observations": cv_skill_observations,
             "extraction_quality": extraction_quality,
             "experience_timeline": experience_timeline
         },
+        "job_extracted_skills": jd_skills,
+        "job_skill_observations": job_skill_observations,
         "matching_result": scoring_result
     }
 

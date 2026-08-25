@@ -2,11 +2,30 @@ import json
 import unittest
 from unittest.mock import patch
 
-from services import cv_analysis_service
+from services import cv_analysis_service, doc_parser_service
 from services.document_layout_service import DocumentExtractionResult
 
 
 class CvAnalysisExtractionGateTests(unittest.TestCase):
+    def test_data_uri_is_rejected_before_analysis(self):
+        extraction = DocumentExtractionResult(
+            text="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQ",
+            method="gemini_vision_pdf_fallback",
+            quality_score=95.0,
+            quality_level="high",
+            blocks=[],
+            alternatives=[],
+            warnings=[],
+            analysis_safe=True,
+        )
+
+        result = doc_parser_service._apply_analysis_safety_gate(extraction)
+
+        self.assertEqual(result.text, "")
+        self.assertEqual(result.quality_level, "insufficient")
+        self.assertFalse(result.analysis_safe)
+        self.assertTrue(any("dữ liệu ảnh" in warning for warning in result.warnings))
+
     def setUp(self):
         cv_analysis_service.TEXT_CACHE.clear()
         cv_analysis_service.SCORE_CACHE.clear()

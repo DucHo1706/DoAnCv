@@ -58,6 +58,41 @@ class SkillTaxonomyAliasTests(unittest.TestCase):
             ["sql", "sql server"],
         )
 
+    def test_unknown_skill_is_observed_but_not_added_to_canonical_result(self):
+        text = """KỸ NĂNG KỸ THUẬT
+NodeJS; Temporal Workflow; Event Storming
+
+KINH NGHIỆM
+Backend Developer"""
+
+        self.assertEqual(nlp_processor.extract_skills(text), ["node.js"])
+        observations = nlp_processor.extract_skill_observations(text)
+
+        self.assertEqual(
+            [item["normalized_candidate"] for item in observations],
+            ["event storming", "temporal workflow"],
+        )
+        self.assertTrue(all(item["evidence_text"] for item in observations))
+
+    def test_unknown_skill_observation_is_domain_independent(self):
+        text = "Kỹ năng chuyên môn: Bóc tách khối lượng; Dự toán công trình; MSSQL"
+        observations = nlp_processor.extract_skill_observations(text)
+
+        self.assertEqual(
+            [item["normalized_candidate"] for item in observations],
+            ["boc tach khoi luong", "du toan cong trinh"],
+        )
+
+    def test_unknown_skill_observation_rejects_mojibake_and_long_sentences(self):
+        text = """Skills: Temporal Workflow; Ä‘áº£m báº£o cháº¥t lÆ°á»£ng
+Sử dụng công cụ để phối hợp với các thành viên trong dự án và khách hàng"""
+        observations = nlp_processor.extract_skill_observations(text)
+
+        self.assertEqual(
+            [item["normalized_candidate"] for item in observations],
+            ["temporal workflow"],
+        )
+
     def test_mining_uses_supplied_aliases_without_hidden_mapping(self):
         without_aliases, _, _ = canonicalize_transactions_with_indices(
             [["NodeJS"]], taxonomy_skills=["node.js"]

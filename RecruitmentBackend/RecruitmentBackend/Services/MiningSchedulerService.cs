@@ -78,7 +78,8 @@ namespace RecruitmentBackend.Services
             var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var discovery = scope.ServiceProvider.GetRequiredService<ISkillDiscoveryService>();
             var pendingSkills = await discovery.CollectAsync(token);
-            if (pendingSkills > 0) _logger.LogInformation("Collected {Count} unknown skills for taxonomy review.", pendingSkills);
+            if (pendingSkills > 0)
+                _logger.LogInformation("There are {Count} skill candidates with independent evidence awaiting taxonomy review.", pendingSkills);
             var inferredDomains = scope.ServiceProvider.GetRequiredService<ICandidateCvDomainService>();
             var inferredCount = await inferredDomains.InferAndPersistAsync(token);
             if (inferredCount > 0) _logger.LogInformation("Updated {Count} CV domain classifications.", inferredCount);
