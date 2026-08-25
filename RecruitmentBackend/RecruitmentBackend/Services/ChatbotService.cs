@@ -16,8 +16,12 @@ public class ChatbotService : IChatbotService
     private const int MaxHistoryLength = 12_000;
     private const int MaxJobTextLength = 6_000;
     private static readonly Regex RecommendedJobTagRegex = new(
-        @"\[RECOMMEND_JOB:\s*(?<id>[^|\]]+)\s*\|[^\]]*\]",
+        @"\[RECOMMEND_JOB:\s*(?<id>[^|\]]+)\s*\|\s*(?<position>[^|\]]+)\s*\|[^\]]*\]",
         RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
+    private static readonly CompareInfo VietnameseCompareInfo =
+        CultureInfo.GetCultureInfo("vi-VN").CompareInfo;
+    private const CompareOptions VietnameseTextCompareOptions =
+        CompareOptions.IgnoreCase | CompareOptions.IgnoreNonSpace;
     private readonly HttpClient _httpClient;
     private readonly string _pythonApiUrl;
     private readonly AppDbContext _context;
@@ -216,14 +220,42 @@ public class ChatbotService : IChatbotService
             return reply;
         }
 
-        return RecommendedJobTagRegex.Replace(reply, match =>
+        var normalizedReply = RecommendedJobTagRegex.Replace(reply, match =>
         {
             var jobId = match.Groups["id"].Value.Trim();
-            return validJobs.TryGetValue(jobId, out var job)
-                ? $"[RECOMMEND_JOB: {jobId} | {job.PositionName} | {job.BranchName} | {job.Salary}]"
-                : string.Empty;
+            if (validJobs.TryGetValue(jobId, out var job))
+            {
+                return BuildRecommendationTag(jobId, job);
+            }
+
+            var positionName = match.Groups["position"].Value.Trim();
+            var matchedByPosition = validJobs.FirstOrDefault(candidate =>
+                VietnameseCompareInfo.Compare(
+                    candidate.Value.PositionName,
+                    positionName,
+                    VietnameseTextCompareOptions) == 0);
+            return string.IsNullOrWhiteSpace(matchedByPosition.Key)
+                ? string.Empty
+                : BuildRecommendationTag(matchedByPosition.Key, matchedByPosition.Value);
         });
+
+        if (validJobs.Count == 0 || RecommendedJobTagRegex.IsMatch(normalizedReply))
+        {
+            return normalizedReply.Trim();
+        }
+
+        var mentionedJob = validJobs.FirstOrDefault(candidate =>
+            VietnameseCompareInfo.IndexOf(
+                normalizedReply,
+                candidate.Value.PositionName,
+                VietnameseTextCompareOptions) >= 0);
+        return string.IsNullOrWhiteSpace(mentionedJob.Key)
+            ? normalizedReply.Trim()
+            : $"{normalizedReply.Trim()}\n\n{BuildRecommendationTag(mentionedJob.Key, mentionedJob.Value)}";
     }
+
+    private static string BuildRecommendationTag(string jobId, RecommendedJob job) =>
+        $"[RECOMMEND_JOB: {jobId} | {job.PositionName} | {job.BranchName} | {job.Salary}]";
 
     private static bool HasJobSearchIntent(string prompt)
     {

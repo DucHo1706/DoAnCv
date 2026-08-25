@@ -313,7 +313,7 @@ Frontend POST /api/Chatbot/chat
 - Danh sách model chatbot tách bằng `LLM_ROUTER_CHAT_MODELS`; model thử nghiệm hoặc chậm trong `LLM_ROUTER_MODELS` không làm câu hỏi ngắn phải chờ theo.
 - Python giới hạn đầu ra khoảng 900 token để giảm thời gian nhưng vẫn giữ prompt hệ thống, tối đa 10 lượt lịch sử và ngữ cảnh job có chọn lọc.
 - Python trả HTTP `503` khi provider không tạo được nội dung trong ngân sách. Backend giữ nguyên trạng thái lỗi dịch vụ và không lưu câu báo lỗi như một tin nhắn AI thành công.
-- Khi AI sinh thẻ `[RECOMMEND_JOB: ID | vị trí | khu vực | lương]`, backend chỉ giữ ID đang có trong tập job SQL vừa cấp cho prompt, rồi ghi đè tên/khu vực/lương bằng dữ liệu SQL. Thẻ có ID không hợp lệ bị loại, tránh biến nội dung model tự sinh thành liên kết job thật.
+- Khi AI sinh thẻ `[RECOMMEND_JOB: ID | vị trí | khu vực | lương]`, backend ưu tiên ID đang có trong tập job SQL vừa cấp cho prompt, rồi ghi đè tên/khu vực/lương bằng dữ liệu SQL. Nếu ID sai hoặc model quên thẻ nhưng câu trả lời có đúng tên vị trí trong catalog, `NormalizeJobRecommendations` đối chiếu tên không phân biệt hoa/thường và dấu để gắn lại metadata chuẩn từ SQL. Không khớp cả ID lẫn tên vị trí thì thẻ bị loại; nội dung model tự sinh không được biến thành liên kết job thật.
 - Log chỉ ghi model, HTTP status và thời gian millisecond; không ghi prompt, toàn văn CV, token hay API key.
 - Các ngưỡng trên là ngân sách chờ để failover, không phải cam kết thời gian phản hồi. Độ trễ thực tế phải đo tại cùng môi trường provider đang dùng.
 
@@ -522,7 +522,7 @@ Python chỉ trả ID và similarity. Nó không tự công khai job, không tha
 
 - Email: backend cấp đúng context nghiệp vụ; Python sinh subject/body. `email_service` có template fallback để HR vẫn có bản nháp khi provider lỗi, nhưng payload phải giữ trạng thái phân biệt nếu caller cần hiển thị nguồn.
 - Đánh giá trả lời phỏng vấn: câu hỏi, câu trả lời và vị trí đi vào `interview_service`; kết quả chỉ hỗ trợ HR, không tự đổi trạng thái application.
-- Chatbot: backend lưu session/history, cắt độ dài và bổ sung job SQL có chọn lọc; Python chỉ tạo câu trả lời. Backend xác thực job recommendation trước khi lưu và trả frontend.
+- Chatbot: backend lưu session/history, cắt độ dài và bổ sung job SQL có chọn lọc; Python chỉ tạo câu trả lời. Backend xác thực job recommendation theo ID hoặc tên vị trí khớp catalog, sau đó luôn dùng metadata SQL trước khi lưu và trả frontend.
 - File đính kèm chatbot được parser chuyển thành text trong request hiện tại; nội dung này không tự trở thành CandidateCV, Application hoặc dataset mining.
 
 ### 12.9 Luồng skill observation tới taxonomy
