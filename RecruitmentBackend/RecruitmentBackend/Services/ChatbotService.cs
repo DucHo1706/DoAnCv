@@ -1,9 +1,11 @@
 using System.Diagnostics;
 using System.Globalization;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using RecruitmentBackend.Data;
 using RecruitmentBackend.DTOs.Requests;
+using RecruitmentBackend.Exceptions;
 using RecruitmentBackend.Interfaces;
 
 namespace RecruitmentBackend.Services;
@@ -13,6 +15,9 @@ public class ChatbotService : IChatbotService
     private const int MaxPromptLength = 4_000;
     private const int MaxHistoryLength = 12_000;
     private const int MaxJobTextLength = 6_000;
+    private static readonly Regex RecommendedJobTagRegex = new(
+        @"\[RECOMMEND_JOB:\s*(?<id>[^|\]]+)\s*\|[^\]]*\]",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
     private readonly HttpClient _httpClient;
     private readonly string _pythonApiUrl;
     private readonly AppDbContext _context;
@@ -44,7 +49,7 @@ public class ChatbotService : IChatbotService
         content.Add(new StringContent(prompt), "prompt");
         content.Add(new StringContent(history), "history");
         content.Add(new StringContent(jobDescription), "job_description");
-        content.Add(new StringContent(systemKnowledge), "system_knowledge");
+        content.Add(new StringContent(systemKnowledge.Text), "system_knowledge");
 
         if (request.File is { Length: > 0 })
         {
@@ -61,15 +66,24 @@ public class ChatbotService : IChatbotService
         {
             using var response = await _httpClient.PostAsync($"{_pythonApiUrl}/chat", content);
             var responseString = await response.Content.ReadAsStringAsync();
-            response.EnsureSuccessStatusCode();
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning(
+                    "Chatbot AI trả HTTP {StatusCode} sau {ElapsedMs} ms.",
+                    (int)response.StatusCode,
+                    stopwatch.ElapsedMilliseconds);
+                throw new ChatbotUnavailableException(
+                    "Trợ lý AI đang bận. Vui lòng thử lại sau giây lát.");
+            }
 
             using var jsonDocument = JsonDocument.Parse(responseString);
             var root = jsonDocument.RootElement;
             if (root.TryGetProperty("status", out var status) && status.GetString() == "success")
             {
-                var reply = root.TryGetProperty("reply", out var replyElement)
+                var rawReply = root.TryGetProperty("reply", out var replyElement)
                     ? replyElement.GetString() ?? "Trợ lý chưa tạo được nội dung trả lời."
                     : "Trợ lý chưa tạo được nội dung trả lời.";
+                var reply = NormalizeJobRecommendations(rawReply, systemKnowledge.Jobs);
                 var extractedText = root.TryGetProperty("extracted_text", out var extracted)
                     ? extracted.GetString() ?? string.Empty
                     : string.Empty;
@@ -85,17 +99,29 @@ public class ChatbotService : IChatbotService
             var message = root.TryGetProperty("message", out var error)
                 ? error.GetString()
                 : null;
-            return ($"Trợ lý AI chưa thể phản hồi: {message ?? "không xác định được nguyên nhân"}.", string.Empty);
+            _logger.LogWarning(
+                "Chatbot AI trả trạng thái lỗi sau {ElapsedMs} ms; Message={Message}",
+                stopwatch.ElapsedMilliseconds,
+                message ?? "unknown");
+            throw new ChatbotUnavailableException(
+                "Trợ lý AI đang bận. Vui lòng thử lại sau giây lát.");
+        }
+        catch (ChatbotUnavailableException)
+        {
+            throw;
         }
         catch (TaskCanceledException) when (!_httpClient.Timeout.Equals(Timeout.InfiniteTimeSpan))
         {
             _logger.LogWarning("Chatbot hết thời gian chờ sau {ElapsedMs} ms.", stopwatch.ElapsedMilliseconds);
-            return ("Trợ lý AI phản hồi quá chậm. Vui lòng thử lại sau ít phút.", string.Empty);
+            throw new ChatbotUnavailableException(
+                "Trợ lý AI phản hồi quá chậm. Vui lòng thử lại sau giây lát.");
         }
         catch (Exception exception)
         {
             _logger.LogWarning(exception, "Chatbot lỗi sau {ElapsedMs} ms.", stopwatch.ElapsedMilliseconds);
-            return ("Chưa thể kết nối với trợ lý AI. Vui lòng thử lại sau.", string.Empty);
+            throw new ChatbotUnavailableException(
+                "Chưa thể kết nối với trợ lý AI. Vui lòng thử lại sau.",
+                exception);
         }
     }
 
@@ -119,13 +145,13 @@ public class ChatbotService : IChatbotService
                 MaxJobTextLength);
     }
 
-    private async Task<string> BuildSystemKnowledgeAsync(bool includeJobCatalog)
+    private async Task<SystemKnowledgeContext> BuildSystemKnowledgeAsync(bool includeJobCatalog)
     {
         const string baseKnowledge =
             "RecruitInsightAI hỗ trợ ứng viên quản lý CV, ứng tuyển, xem trạng thái và nhận tư vấn nghề nghiệp.";
         if (!includeJobCatalog)
         {
-            return baseKnowledge;
+            return new SystemKnowledgeContext(baseKnowledge, new Dictionary<string, RecommendedJob>());
         }
 
         var todayVietnam = JobLifecyclePolicy.TodayVietnam;
@@ -154,25 +180,49 @@ public class ChatbotService : IChatbotService
 
         if (jobs.Count == 0)
         {
-            return $"{baseKnowledge}\nHiện chưa có tin tuyển dụng còn hạn đang hiển thị.";
+            return new SystemKnowledgeContext(
+                $"{baseKnowledge}\nHiện chưa có tin tuyển dụng còn hạn đang hiển thị.",
+                new Dictionary<string, RecommendedJob>());
         }
 
+        var validJobs = jobs.ToDictionary(
+            job => job.JobID,
+            job => new RecommendedJob(
+                job.PositionName,
+                job.BranchName,
+                FormatSalaryRange(job.SalaryMin, job.SalaryMax)));
         var lines = jobs.Select(job =>
         {
-            var salary = job.SalaryMin <= 0 && job.SalaryMax <= 0
-                ? "Thỏa thuận"
-                : job.SalaryMax <= 0
-                    ? $"{FormatSalary(job.SalaryMin)} triệu"
-                    : $"{FormatSalary(job.SalaryMin)}–{FormatSalary(job.SalaryMax)} triệu";
+            var salary = validJobs[job.JobID].Salary;
             return $"- ID: {job.JobID} | {job.PositionName} | {job.BranchName} | " +
                    $"Lương: {salary} | Yêu cầu: {Truncate(job.JobRequirement, 180)}";
         });
 
-        return Truncate(
-            $"{baseKnowledge}\nCác tin còn hạn phù hợp để tham khảo:\n{string.Join("\n", lines)}\n" +
-            "Chỉ gợi ý 1–2 tin phù hợp nhất. Khi gợi ý, thêm thẻ " +
-            "[RECOMMEND_JOB: <ID> | <Vị trí> | <Khu vực> | <Lương>] ở cuối mỗi tin.",
-            8_000);
+        return new SystemKnowledgeContext(
+            Truncate(
+                $"{baseKnowledge}\nCác tin còn hạn phù hợp để tham khảo:\n{string.Join("\n", lines)}\n" +
+                "Chỉ gợi ý 1–2 tin phù hợp nhất. Khi gợi ý, thêm thẻ " +
+                "[RECOMMEND_JOB: <ID> | <Vị trí> | <Khu vực> | <Lương>] ở cuối mỗi tin.",
+                8_000),
+            validJobs);
+    }
+
+    private static string NormalizeJobRecommendations(
+        string reply,
+        IReadOnlyDictionary<string, RecommendedJob> validJobs)
+    {
+        if (string.IsNullOrWhiteSpace(reply))
+        {
+            return reply;
+        }
+
+        return RecommendedJobTagRegex.Replace(reply, match =>
+        {
+            var jobId = match.Groups["id"].Value.Trim();
+            return validJobs.TryGetValue(jobId, out var job)
+                ? $"[RECOMMEND_JOB: {jobId} | {job.PositionName} | {job.BranchName} | {job.Salary}]"
+                : string.Empty;
+        });
     }
 
     private static bool HasJobSearchIntent(string prompt)
@@ -194,4 +244,17 @@ public class ChatbotService : IChatbotService
 
     private static string FormatSalary(decimal value) =>
         value.ToString("0.##", CultureInfo.InvariantCulture);
+
+    private static string FormatSalaryRange(decimal salaryMin, decimal salaryMax) =>
+        salaryMin <= 0 && salaryMax <= 0
+            ? "Thỏa thuận"
+            : salaryMax <= 0
+                ? $"{FormatSalary(salaryMin)} triệu"
+                : $"{FormatSalary(salaryMin)}–{FormatSalary(salaryMax)} triệu";
+
+    private sealed record RecommendedJob(string PositionName, string BranchName, string Salary);
+
+    private sealed record SystemKnowledgeContext(
+        string Text,
+        IReadOnlyDictionary<string, RecommendedJob> Jobs);
 }

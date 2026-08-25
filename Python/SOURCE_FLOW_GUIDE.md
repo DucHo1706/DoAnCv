@@ -77,22 +77,30 @@ ApplicationService.cs
   |                                                   |
   |<---------------- hợp lệ / không hợp lệ -----------+
   |
-  |-- lưu CandidateCV + Application trước
-  |-- trả aiStatus=Processing để người dùng nộp job khác
-  `-- Task.Run -> AiEvaluationService.cs
-                  |
-                  |-- lấy JD + JobCriteria từ SQL
-                  |-- POST /score-cv hoặc /score-cv-text
-                  |-- lưu text/skill/điểm/kết quả
-                  `-- SignalR + thông báo hoàn tất/lỗi
+  |-- lưu CandidateCV + Application + AiEvaluationTask
+  |-- task có NotBeforeUtc = thời điểm nộp + 30 giây
+  |-- trả aiStatus=Pending để người dùng tiếp tục nộp job khác
+  `-- AiEvaluationQueueWorker
+       |-- nhận một task đủ thời gian bằng transaction Serializable
+       |-- tải snapshot CV từ RawText, file local hoặc URL kho lưu trữ
+       |-- gọi AiEvaluationService.RunAiEvaluationJobAsync
+       |    |-- lấy JD + JobCriteria từ SQL
+       |    |-- POST /score-cv hoặc /score-cv-text
+       |    `-- lưu text/skill/điểm/kết quả
+       |-- Completed: phát SignalR + thông báo hoàn tất
+       |-- TransientFailed: hẹn lại sau 30 giây, 2 phút hoặc 5 phút
+       `-- PermanentFailed/Cancelled: dừng và giữ lịch sử trạng thái
 ```
 
 Điểm quan trọng:
 
 - CV Builder gọi `/score-cv-text`; PDF/DOCX/ảnh gọi `/score-cv`.
 - `/validate-cv` chạy trước và cache kết quả trích xuất theo SHA-256. `/score-cv` dùng lại text đó để tránh OCR hai lần.
-- `Application` được lưu trước khi AI chạy nền. Vì vậy ứng viên không phải chờ job thứ nhất phân tích xong mới nộp job thứ hai.
-- Mỗi request `/score-cv` vẫn xử lý đồng bộ bên trong một tác vụ nền. Nhiều hồ sơ tạo nhiều tác vụ song song; đây không phải hàng đợi bền vững.
+- `Application`, snapshot CV và `AiEvaluationTask` được ghi nhận trước khi AI chạy. Vì vậy ứng viên không phải chờ job thứ nhất phân tích xong mới nộp job thứ hai.
+- Khoảng chờ 30 giây thuộc từng application, không phải cooldown toàn tài khoản. Ứng viên có thể rút hồ sơ `Applied` trong khoảng này để task chuyển `Cancelled` trước khi dùng quota AI.
+- Nếu ứng viên rút khi provider đã chạy, task chuyển `CancelRequested`. Worker đọc lại `RowVersion`, bỏ kết quả đến muộn và không gắn đánh giá vào hồ sơ đã rút.
+- Task nằm trong SQL nên backend restart không làm mất hàng đợi. Task `Processing` quá cũ được phục hồi thành `RetryScheduled` nếu còn lượt; mặc định tối đa ba lần thử tự động.
+- Lỗi dữ liệu cố định như mất CV hoặc sai định dạng dừng ngay. Lỗi mạng, kho file hoặc provider tạm thời mới được retry. Người dùng chỉ có một lượt yêu cầu phân tích lại thủ công để chống lạm dụng.
 - Kết quả đầy đủ được đóng gói vào `matching_result.summary` dưới dạng JSON snapshot để frontend đọc lại mà không gọi LLM mỗi lần mở trang.
 
 ## 4. Bên trong `/score-cv`
@@ -285,7 +293,29 @@ Không ghi tên provider vào UI người dùng. UI cần phân biệt:
 
 Một lượt full score có thể gọi LLM cho nhiều phần: chấm tiêu chí, phân tích sâu, STAR, ngôn từ và phỏng vấn. Đây là lý do nhiều CV đồng thời tạo tải lớn dù chỉ có một endpoint `/score-cv`.
 
-Riêng chatbot dùng ngân sách ngắn hơn: Gemini trực tiếp tối đa khoảng 20 giây rồi thử 9Router dự phòng tối đa 8 giây. Backend chỉ nạp catalog tối đa 6 job khi câu hỏi có ý định tìm việc/lương, giới hạn 10 lượt lịch sử và timeout HTTP 35 giây. Đây là giới hạn độ trễ, không phải cam kết provider luôn phản hồi.
+Riêng chatbot dùng fast-path tách khỏi chuỗi model phân tích CV:
+
+```text
+Frontend POST /api/Chatbot/chat
+  -> ChatbotService.cs
+      |-- giới hạn prompt, lịch sử và file
+      |-- chỉ truy vấn tối đa 6 job còn hạn nếu nhận diện ý định tìm việc/lương
+      `-- POST Python /chat, HttpClient timeout 35 giây
+          -> scoring_service.chat_with_candidate
+              |-- 9Router trước, chỉ thử LLM_ROUTER_CHAT_MODELS
+              |     mặc định: Gemini, deepseek
+              |     ngân sách router: 12 giây
+              `-- Gemini trực tiếp nếu router không khả dụng
+                    request timeout: 10 giây
+                    ngân sách direct: 12 giây
+```
+
+- Danh sách model chatbot tách bằng `LLM_ROUTER_CHAT_MODELS`; model thử nghiệm hoặc chậm trong `LLM_ROUTER_MODELS` không làm câu hỏi ngắn phải chờ theo.
+- Python giới hạn đầu ra khoảng 900 token để giảm thời gian nhưng vẫn giữ prompt hệ thống, tối đa 10 lượt lịch sử và ngữ cảnh job có chọn lọc.
+- Python trả HTTP `503` khi provider không tạo được nội dung trong ngân sách. Backend giữ nguyên trạng thái lỗi dịch vụ và không lưu câu báo lỗi như một tin nhắn AI thành công.
+- Khi AI sinh thẻ `[RECOMMEND_JOB: ID | vị trí | khu vực | lương]`, backend chỉ giữ ID đang có trong tập job SQL vừa cấp cho prompt, rồi ghi đè tên/khu vực/lương bằng dữ liệu SQL. Thẻ có ID không hợp lệ bị loại, tránh biến nội dung model tự sinh thành liên kết job thật.
+- Log chỉ ghi model, HTTP status và thời gian millisecond; không ghi prompt, toàn văn CV, token hay API key.
+- Các ngưỡng trên là ngân sách chờ để failover, không phải cam kết thời gian phản hồi. Độ trễ thực tế phải đo tại cùng môi trường provider đang dùng.
 
 ### Phiên bản phân tích và dữ liệu cũ
 
@@ -309,7 +339,10 @@ Riêng chatbot dùng ngân sách ngắn hơn: Gemini trực tiếp tối đa kho
 | LLM timeout/quota | `gemini_service.generate_content_with_retry` |
 | Apriori/HUIM không chạy | `MiningSchedulerService.RunIfInputChangedAsync` và metadata Python |
 | Mining sai ngành | `CandidateCvDomainService.InferAndPersistAsync` |
-| Nộp xong nhưng AI mãi Processing | `ApplicationService` Task.Run → `AiEvaluationService` → SignalR/database |
+| Nộp xong nhưng AI mãi Pending/Processing | `AiEvaluationTasks` → `AiEvaluationQueueWorker.ProcessNextAsync` → `AiEvaluationService` |
+| Chatbot phản hồi chậm | `ChatbotService.BuildSystemKnowledgeAsync` → `scoring_service.chat_with_candidate` → log elapsed trong `_generate_router_content` |
+| Chatbot gợi ý job không mở được | `ChatbotService.NormalizeJobRecommendations` và tập job SQL được nạp cho prompt |
+| `/extract-cv` lỗi khi đọc kỹ năng | `analysis_controller.extract_cv` → `nlp_processor.extract_information` |
 
 ## 10. Điểm đặt breakpoint khi học luồng
 
@@ -318,20 +351,284 @@ Riêng chatbot dùng ngân sách ngắn hơn: Gemini trực tiếp tối đa kho
 1. C#: `ApplicationService.SubmitApplicationAsync` tại bước gọi `ValidateCvAsync`.
 2. Python: `analysis_controller.validate_cv`.
 3. Python: `doc_parser_service.extract_document_from_file` trước và sau `choose_best_candidate`.
-4. C#: `AiEvaluationService.RunAiEvaluationInBackgroundAsync` trước lời gọi AI.
-5. Python: `analysis_controller.score_cv`.
-6. Python: `cv_analysis_service.score_resume_sync` sau `extracted_info`, sau `scoring_result` và trước `return`.
-7. Python: `scoring_service.generate_content_with_retry` khi chọn router/model/key.
-8. C#: `AiEvaluationService` trước `_context.SaveChangesAsync()`.
+4. C#: `AiEvaluationQueueService.EnqueueAsync` sau khi tạo `AiEvaluationTask`.
+5. C#: `AiEvaluationQueueWorker.ProcessNextAsync` lúc đổi task sang `Processing`.
+6. C#: `AiEvaluationService.RunAiEvaluationJobAsync` trước lời gọi AI.
+7. Python: `analysis_controller.score_cv`.
+8. Python: `cv_analysis_service.score_resume_sync` sau `extracted_info`, sau `scoring_result` và trước `return`.
+9. Python: `gemini_service.generate_content_with_retry` khi chọn router/model/key.
+10. C#: `AiEvaluationService` trước `_context.SaveChangesAsync()` và worker trước `FinishTaskAsync`.
 
-Chỉ cần theo một CV qua tám điểm này trước; sau đó mới đi sâu vào từng thuật toán.
+Chỉ cần theo một CV qua mười điểm này trước; sau đó mới đi sâu vào từng thuật toán.
 
 ## 11. Nợ kỹ thuật cần nhớ khi trình bày
 
-- `Task.Run` trong web process cho phép nộp nhiều job nhưng không phải job queue bền vững; backend restart giữa chừng có thể làm tác vụ đang chạy mất. Luồng retry/hoàn tất lại là lớp phục hồi hiện tại.
+- Hàng đợi AI đã bền vững trong SQL nhưng worker hiện xử lý tuần tự theo từng instance. Muốn tăng concurrency phải đo quota/provider, khóa nhận task và tải SQL trước; không tự tăng số worker chỉ vì có nhiều hồ sơ chờ.
+- Task cũ trước migration không được backfill tự động để tránh bùng quota. Hồ sơ lịch sử chỉ vào queue khi người dùng dùng luồng phân tích lại được cho phép.
 - Cache extraction/score nằm trong RAM Python; restart hoặc nhiều replica không dùng chung cache.
 - Model Apriori/HUIM được lưu file runtime; nếu chạy nhiều replica phải dùng volume/state dùng chung hoặc chỉ định một instance huấn luyện.
 - `scoring_service.py` và `cv_analysis_service.py` còn lớn; nên tách tiếp orchestration, scoring rules, evidence và language review sau khi khóa luận ổn định.
 - Kết quả synthetic chứng minh luồng và tính nhất quán, không chứng minh accuracy trên CV thật hoặc toàn thị trường.
 - Timeline chỉ tính section Experience/Employment/Work History. Khi CV không có heading, fallback chỉ nhận block có tín hiệu việc làm rõ như chức danh + công ty/thực tập; Education/Project/Certificate/Hackathon bị loại. Dự án vẫn là bằng chứng kỹ năng nhưng không phải thâm niên nghề nghiệp.
 - Bộ ZIP kiểm thử bổ sung ngày 2026-08-25 có 450 PDF duy nhất cho 30 JD, 15 CV/JD; tất cả đọc được lớp text và hiện đều một trang. Nhóm E/F khai báo 3–4 template; bộ này chưa được nhập/chấm toàn bộ và chưa chứng minh accuracy hoặc khả năng OCR scan nhiều trang.
+
+## 12. Bản đồ đầy đủ các chức năng Python
+
+Phần này là mục lục tra cứu toàn bộ FastAPI runtime. Khi một tính năng lỗi, đi từ endpoint sang service theo bảng thay vì tìm theo từ khóa giao diện.
+
+### 12.1 Khởi động, middleware và health
+
+`main.py` thực hiện theo thứ tự:
+
+1. Nạp biến môi trường bằng `load_dotenv` trước khi import service cần cấu hình.
+2. Tạo tác vụ `run_taxonomy_sync_scheduler` trong lifespan, thử đồng bộ taxonomy tối đa sáu lần nhưng không chặn `/health`.
+3. Sau lần khởi động, scheduler ngủ tới 02:00 giờ Việt Nam rồi đồng bộ lại `Skills` và `SkillAliases` từ backend.
+4. Chặn request có `Content-Length` vượt 10 MB bằng HTTP `413`.
+5. Chuẩn hóa lỗi Pydantic thành HTTP `400`, chỉ log endpoint và số lỗi validation.
+6. Đăng ký CORS local và bốn router: analysis, chat, skills, search.
+7. `GET /` trả trạng thái mô tả; `GET /health` là probe tối giản cho Docker.
+
+Scheduler taxonomy trong Python chỉ làm mới catalog nhận diện kỹ năng. Scheduler Apriori/HUIM chạy ở `MiningSchedulerService.cs` của backend; hai lịch không thay thế nhau.
+
+### 12.2 Toàn bộ endpoint runtime
+
+| Endpoint | Dữ liệu chính | Luồng xử lý | Trạng thái đáng chú ý |
+|---|---|---|---|
+| `POST /validate-cv` | một file tối đa 10 MB | chữ ký file → parser đa nguồn → safety gate → kiểm tra có phải CV → cache SHA-256 | `is_valid=true/false`; dependency lỗi trả `503` |
+| `POST /extract-cv` | một file CV | parser → safety gate → `extract_information` → timeline nghề nghiệp | `success`, `insufficient_data`, `invalid_document` |
+| `POST /score-cv` | file, JD, JSON criteria | validation tiêu chí → `score_resume_sync` trong threadpool | HTTP `422` khi tiêu chí/file sai; `503` khi dịch vụ không xử lý được |
+| `POST /score-cv-text` | text CV Builder, JD, criteria | kiểm tra tối thiểu 80 ký tự → cùng pipeline score | trả lỗi dữ liệu nếu CV trực tuyến quá ngắn |
+| `POST /analyze-cv-preview` | file hoặc text, JD, job/company | preview extraction và phân tích trước khi nộp | rate limit 10 request/phút/IP, cooldown 10 giây |
+| `POST /analyze-cv-star` | `LazyAnalysisRequest` | `generate_cv_star_tips` | LLM hoặc fallback STAR có cấu trúc |
+| `POST /analyze-cv-language` | `LazyAnalysisRequest` | `generate_cv_language_review` → grounded/unverified normalization | phân biệt complete, partial/fallback và insufficient |
+| `POST /analyze-cv-interview` | CV, JD, skill, job/company | `generate_cv_mock_interview` | LLM hoặc bộ câu hỏi fallback theo skill thiếu |
+| `POST /chat` | prompt, history JSON, JD, system knowledge, file tùy chọn | trích text file → dựng prompt → fast-path router/Gemini | `200 success`; provider lỗi trả HTTP `503` |
+| `POST /evaluate-answer` | question, answer, job title | `evaluate_interview_answer` | JSON đánh giá hoặc trạng thái lỗi |
+| `POST /generate-email` | invite/reject và context ứng viên | validation nghiệp vụ → `generate_candidate_email` | reject bắt buộc có lý do; có template fallback riêng |
+| `POST /semantic-search` | query và danh sách `{id,text}` | batch embedding query + job → cosine → sort giảm dần | input rỗng hoặc embedding lỗi trả danh sách rỗng |
+| `POST /refresh-config` | không có body | `nlp_processor.reload_knowledge_base` | trả tổng skill đã nạp lại |
+| `POST /update-skills` | danh sách skill | luôn từ chối | HTTP `409`; kỹ năng mới phải qua observation và Admin duyệt |
+| `POST /train-apriori` | transaction, threshold, domain, taxonomy, dataset ID | canonicalize → guard dataset → train → lưu model domain | `success`, `skipped`, `error` |
+| `POST /recommend-skills` | skill hiện có, top N | đọc model Apriori các domain phù hợp | trả danh sách gợi ý, không cộng điểm CV |
+| `GET /association-rules` | không có body | flatten model Apriori hiện hành | dữ liệu kỹ thuật, không phải API quyết định tuyển dụng |
+| `POST /train-huim` | item/quantity, utility, threshold, domain, taxonomy | canonicalize → Two-Phase → lưu model domain | `success`, `skipped`, `error` |
+| `POST /recommend-high-utility-skills` | skill hiện có, top N | đọc model HUIM | trả skill kèm utility theo dataset |
+| `GET /high-utility-itemsets` | không có body | flatten model HUIM hiện hành | không được gọi là độ hiếm hoặc giá trị thị trường |
+
+Các endpoint train/recommend được backend gọi nội bộ. Không có nút Admin/HR chạy thuật toán thủ công trong luồng người dùng.
+
+### 12.3 Luồng preview và các tab phân tích lười
+
+```text
+Ứng viên chọn CV ở màn phân tích
+  -> /analyze-cv-preview
+      |-- đọc và kiểm tra extraction
+      |-- bóc skill CV/JD
+      |-- tính similarity và phần tổng quan cần thiết
+      `-- trả snapshot nền cho giao diện
+
+Người dùng mở tab STAR
+  -> /analyze-cv-star
+Người dùng mở tab Ngôn từ & Chân thực
+  -> /analyze-cv-language
+Người dùng mở tab Lộ trình/phỏng vấn
+  -> /analyze-cv-interview
+```
+
+Tách tab giúp không tiêu thụ tất cả lời gọi LLM ngay khi người dùng chỉ xem tổng quan. Tuy vậy `/score-cv` của application vẫn tạo snapshot đầy đủ theo contract lưu trữ hiện tại; không nhầm hai luồng preview và đánh giá hồ sơ đã nộp.
+
+### 12.4 Trách nhiệm của từng service
+
+| File | Trách nhiệm runtime | Không chịu trách nhiệm |
+|---|---|---|
+| `cv_analysis_service.py` | điều phối score/preview, cache extraction, ghép snapshot và trạng thái | không quyết định tuyển dụng |
+| `doc_parser_service.py` | chọn chiến lược PDF/DOCX/ảnh, gọi OCR/Vision khi cần, áp safety gate | không chấm kỹ năng |
+| `document_layout_service.py` | candidate text, block/cột, deskew, quality và agreement | không xác minh nội dung CV là thật |
+| `nlp_processor.py` | email/phone, skill canonical và skill observation | không tự duyệt skill mới |
+| `section_segmentation_service.py` | phân đoạn experience, project, education, skill, certificate | không cộng tháng kinh nghiệm |
+| `timeline_service.py` | chuẩn hóa mốc tháng, hợp nhất overlap, gap/future và tháng theo skill | không dùng mốc dự án/học vấn làm thâm niên |
+| `criterion_validation_service.py` | parse JSON và kiểm tra type/operator/weight/option | không chấm điểm |
+| `scoring_service.py` | score criteria, reconcile rule, evidence, deep analysis, red flag, language, chatbot | không lưu SQL |
+| `ml_service.py` | TF-IDF/cosine local | không hiểu tương đương ngữ nghĩa sâu |
+| `gemini_service.py` | router/direct provider, timeout, retry, cooldown, JSON, embedding, vision | không quyết định fallback nghiệp vụ của UI |
+| `interview_service.py` | STAR, mock interview, đánh giá câu trả lời và fallback tương ứng | không sửa điểm tiêu chí tuyển dụng |
+| `email_service.py` | email mời/từ chối và template fallback | không gửi email thực tế |
+| `skills_sync_service.py` | tải taxonomy SQL, ghi file atomically, tính thời điểm 02:00 | không train Apriori/HUIM |
+| `skill_observation_service.py` | phát hiện cụm kỹ năng lạ và tạo observation có confidence/evidence | không thêm thẳng vào taxonomy |
+| `skill_mining_guard.py` | canonicalize transaction, loại item đáng ngờ, kiểm tra minimum support | không tạo dữ liệu giả khi thiếu mẫu |
+| `apriori_service.py` | frequent itemset, association rule, recommendation | không tính utility lương |
+| `huim_service.py` | Two-Phase HUIM, TWU và exact utility | không suy ra độ hiếm |
+| `mining_model_store.py` | đọc/ghi model theo domain bằng file JSON atomic | không lấy dataset từ SQL |
+| `mining_context_service.py` | gom gợi ý Apriori/HUIM thành context quan sát cho deep analysis | không biến context thành evidence |
+| `runtime_paths.py` | định tuyến file state vào runtime volume | không chứa logic thuật toán |
+| `utils/rate_limiter.py` | giới hạn request theo IP trong một process Python | không thay rate limit tài khoản ở backend |
+| `utils/error_handler.py` | đổi exception kỹ thuật thành thông báo an toàn | không che trạng thái fallback/insufficient |
+| `utils/logger.py` | định dạng log vận hành | không được log secret hoặc toàn văn CV |
+
+### 12.5 Cách `score_resume_sync` ghép kết quả cuối
+
+```text
+criteria_list
+  + extraction_quality
+  + cv_text / jd_text
+  + CV skills canonical / JD skills canonical
+  + skill_observations tách riêng
+  + sections
+  + timeline
+  + raw LLM criterion result
+  + local criterion reconciliation
+  + TF-IDF similarity
+  + mining_context quan sát
+  + deep analysis
+  + red_flags có evidence
+  + red_flag_suspicions chưa đối chiếu
+  + STAR / language / interview
+  -> full_analysis_data, analysis_version=5
+```
+
+Điểm tiêu chí được giới hạn bởi trọng số và mức bằng chứng. Timeline/rule cấu trúc được quyền ghi đè nhận định LLM cho dữ kiện có thể tính trực tiếp. Apriori/HUIM, điểm ngôn từ và số lượng công việc không được cộng vào tổng điểm đáp ứng job.
+
+### 12.6 Các nguồn dữ liệu và file state
+
+| Nguồn | Nơi sở hữu | Python dùng như thế nào |
+|---|---|---|
+| Job, criteria, application, CV, talent pool | SQL Server qua ASP.NET Core | backend dựng request hoặc dataset rồi gọi Python |
+| Skills và SkillAliases đã duyệt | SQL Server | đồng bộ thành taxonomy runtime và reload matcher |
+| SkillObservations | SQL Server | backend lưu observation Python trả về; Admin quyết định duyệt/map/từ chối |
+| `approved_skill_taxonomy.json` | runtime volume Python | catalog canonical hiện hành; ghi atomic |
+| `association_rules.json` và metadata | runtime volume Python | model Apriori tách theo domain |
+| `high_utility_itemsets.json` và metadata | runtime volume Python | model HUIM tách theo domain |
+| `TEXT_CACHE`, `SCORE_CACHE` | RAM process Python | tránh đọc/chấm lặp trong cùng process; mất khi restart |
+| `test_data/` | Git, dữ liệu hư cấu | benchmark và regression; không phải dữ liệu production |
+| `tools/` | Git, script thủ công | sinh/audit corpus; không được import vào runtime |
+| `scratch/`, `auto_trainer.py`, `pdf_extractor.py` | mã cũ/thử nghiệm | không phải đường chạy chính thức |
+
+Trong Docker, file taxonomy/model phải nằm trên volume `ai-runtime`. Khi có nhiều replica Python, cache RAM không chia sẻ và model file cần cơ chế single-writer hoặc storage dùng chung.
+
+### 12.7 Luồng tìm kiếm ngữ nghĩa
+
+```text
+Backend chọn tập job ứng viên được phép xem
+  -> POST /semantic-search với query + id/text từng job
+  -> một batch embedding duy nhất
+  -> vector query so cosine với từng vector job
+  -> sort score giảm dần
+  -> backend ghép ID với dữ liệu SQL và áp bộ lọc/quyền hiện hành
+```
+
+Python chỉ trả ID và similarity. Nó không tự công khai job, không thay bộ lọc SQL, không tự quyết định job đã hết hạn và không được trả dữ liệu job ngoài tập backend gửi vào.
+
+### 12.8 Luồng email, phỏng vấn và chatbot
+
+- Email: backend cấp đúng context nghiệp vụ; Python sinh subject/body. `email_service` có template fallback để HR vẫn có bản nháp khi provider lỗi, nhưng payload phải giữ trạng thái phân biệt nếu caller cần hiển thị nguồn.
+- Đánh giá trả lời phỏng vấn: câu hỏi, câu trả lời và vị trí đi vào `interview_service`; kết quả chỉ hỗ trợ HR, không tự đổi trạng thái application.
+- Chatbot: backend lưu session/history, cắt độ dài và bổ sung job SQL có chọn lọc; Python chỉ tạo câu trả lời. Backend xác thực job recommendation trước khi lưu và trả frontend.
+- File đính kèm chatbot được parser chuyển thành text trong request hiện tại; nội dung này không tự trở thành CandidateCV, Application hoặc dataset mining.
+
+### 12.9 Luồng skill observation tới taxonomy
+
+```text
+CV hoặc JD có cụm lạ ở section phù hợp
+  -> nlp_processor.extract_skill_observations
+  -> response skill_observations gồm label, evidence, confidence, source
+  -> backend ghi SkillObservations
+  -> SkillDiscoveryService nhóm theo nguồn độc lập
+  -> đủ ngưỡng thì CandidateForReview
+  -> Admin map alias / duyệt skill mới / từ chối
+  -> chu kỳ taxonomy 02:00 hoặc lần khởi động kế tiếp
+  -> Python reload catalog canonical
+  -> fingerprint mining đổi thì Apriori/HUIM chạy lại theo domain
+```
+
+Observation chưa duyệt không được khớp tiêu chí, không tạo red flag, không vào transaction và không làm tăng support/utility.
+
+### 12.10 Luồng Apriori và Two-Phase trong code
+
+Apriori:
+
+1. Backend dựng transaction CV theo domain và truyền taxonomy/alias/dataset ID.
+2. `skill_mining_guard.canonicalize_transactions_with_indices` chuẩn hóa và giữ chỉ số nguồn.
+3. Dataset dưới ngưỡng trả `skipped`, không thêm transaction giả.
+4. `AprioriAlgorithm.fit` tạo frequent itemset theo support count.
+5. `generate_rules` lọc confidence/lift.
+6. `mining_model_store.save_domain_model` ghi kết quả + metadata atomically.
+7. `get_recommended_skills` đọc luật có antecedent phù hợp với skill hiện có.
+
+Two-Phase HUIM:
+
+1. Backend dựng item/quantity của CV và external utility từ JD/lương cùng domain.
+2. Guard canonicalize item và kiểm tra taxonomy.
+3. Phase 1 tính Transaction Utility và TWU để lấy candidate upper-bound.
+4. Phase 2 quét lại transaction, tính exact utility và lọc theo `min_utility`.
+5. Model/metadata được ghi theo domain; recommendation chỉ đọc itemset đã lưu.
+
+Khi phản biện, nói đúng rằng HUIM hiện đo utility theo định nghĩa dữ liệu JD/lương quan sát trong hệ thống. Nó không chứng minh kỹ năng hiếm, mức lương nguyên nhân hoặc xu hướng toàn thị trường.
+
+### 12.11 Trạng thái trả về cần phân biệt
+
+| Trạng thái | Ý nghĩa | Cách UI nên xử lý |
+|---|---|---|
+| `success` | pipeline cần thiết đã hoàn tất | hiển thị kết quả và provenance phù hợp |
+| `partial` hoặc `is_fallback=true` | có kết quả cục bộ/một phần | hiển thị kết quả kèm giới hạn, cho phép chạy lại khi phù hợp |
+| `insufficient_data` | extraction/text/dataset chưa đủ | yêu cầu file rõ hơn hoặc chờ thêm dữ liệu; không hiển thị 0% |
+| `skipped` | mining không cần chạy hoặc chưa đạt ngưỡng | giữ model hợp lệ trước đó theo metadata; không gọi là lỗi |
+| `invalid_document` | file không phải CV hoặc sai định dạng | thông báo validation, không gọi scoring |
+| HTTP `409` | thao tác bị chặn theo chính sách taxonomy | chuyển người dùng sang quy trình Admin review |
+| HTTP `422` | request/criteria hợp lệ về HTTP nhưng sai nghiệp vụ đầu vào | sửa dữ liệu gửi lên |
+| HTTP `503` | provider/dependency tạm thời không khả dụng | giữ trạng thái lỗi dịch vụ, không lưu như AI success |
+
+### 12.12 Bộ test và lệnh kiểm tra theo lớp
+
+Chạy từ thư mục `Python/` bằng virtual environment của dự án:
+
+```powershell
+.\venv\Scripts\python.exe -m unittest tests.test_criterion_validation_service
+.\venv\Scripts\python.exe -m unittest tests.test_document_layout_service tests.test_cv_analysis_extraction_gate
+.\venv\Scripts\python.exe -m unittest tests.test_skill_taxonomy_aliases tests.test_skill_mining_pipeline
+.\venv\Scripts\python.exe -m unittest tests.test_timeline_service tests.test_section_segmentation_service
+.\venv\Scripts\python.exe -m unittest tests.test_scoring_evidence tests.test_local_analysis_fallbacks
+.\venv\Scripts\python.exe -m unittest tests.test_gemini_failover tests.test_llm_router_service
+.\venv\Scripts\python.exe -m unittest tests.test_offline_benchmark
+```
+
+Các lớp kiểm chứng khác nhau:
+
+- Unit test bảo vệ phép tính, normalization, status và fallback.
+- Corpus layout kiểm tra khả năng đọc PDF/DOCX/ảnh tổng hợp có ground truth.
+- Offline benchmark kiểm tra consistency trên dữ liệu hư cấu dài và nhiều domain, không gọi Gemini/SQL.
+- Selenium kiểm tra luồng web thật qua frontend/backend/database, nhưng không thay benchmark thuật toán.
+- Smoke VPS kiểm tra container, health, API và HTTPS ở đúng commit triển khai.
+- Chỉ bộ dữ liệu CV thật đã ẩn danh và gán nhãn mới dùng để phát biểu accuracy thực tế.
+
+### 12.13 Ba đường đọc source theo mục tiêu
+
+Nếu cần hiểu chấm CV:
+
+```text
+analysis_controller
+  -> cv_analysis_service
+  -> doc_parser_service + document_layout_service
+  -> nlp_processor + section_segmentation_service + timeline_service
+  -> scoring_service + gemini_service
+```
+
+Nếu cần hiểu học kỹ năng và hai thuật toán:
+
+```text
+skills_sync_service + nlp_processor
+  -> skill_observation_service + skill_mining_guard
+  -> CandidateCvDomainService.cs + MiningSchedulerService.cs
+  -> apriori_service + huim_service + mining_model_store
+  -> mining_context_service
+```
+
+Nếu cần hiểu chatbot nhanh/chậm hoặc gợi ý job:
+
+```text
+ChatbotController.cs
+  -> ChatbotService.cs
+  -> chat_controller.chat_bot
+  -> scoring_service.chat_with_candidate
+  -> gemini_service.generate_content_with_retry
+  -> ChatbotService.NormalizeJobRecommendations
+```

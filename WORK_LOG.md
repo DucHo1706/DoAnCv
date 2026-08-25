@@ -12,6 +12,18 @@ File này là nhật ký nối tiếp, không chứa credential hoặc dữ li�
 
 ## Nhật ký thực hiện
 
+### 2026-08-25 17:08 +07:00 — P1-04-CHATBOT-FAST-PATH-LOCAL — Rút ngắn chatbot, xác thực job gợi ý và cập nhật bản đồ Python
+
+- Trạng thái: `ĐANG LÀM`; code, unit test, compile và backend build local đã đạt, chưa commit/push/deploy VPS tại thời điểm ghi mục này.
+- Mục tiêu/phạm vi: giảm thời gian chatbot nhưng vẫn giữ ngữ cảnh có kiểm soát; tách model chatbot khỏi chuỗi model phân tích CV; không lưu lỗi provider như phản hồi AI; đối chiếu thẻ job do model sinh với SQL; cập nhật tài liệu đọc source cho toàn bộ chức năng Python. Không thay credential, DNS, firewall, dữ liệu tuyển dụng, API key hoặc SQLite 9Router.
+- Quyết định kỹ thuật: thêm `LLM_ROUTER_CHAT_MODELS` mặc định `Gemini,deepseek`; `/chat` ưu tiên router với ngân sách 12 giây, request direct tối đa 10 giây trong ngân sách 12 giây và giới hạn khoảng 900 output token. `_generate_router_content` nhận model list theo chức năng và log thời gian millisecond nhưng không log prompt/secret.
+- Hợp đồng lỗi và độ chính xác ngữ cảnh: Python `/chat` trả HTTP 503 khi provider không tạo được phản hồi; backend chuyển thành `ChatbotUnavailableException`/HTTP 503 tiếng Việt và không ghi `ChatMessages` lỗi như AI success. Backend chỉ giữ thẻ `[RECOMMEND_JOB]` có ID trong sáu job SQL vừa cấp cho prompt, đồng thời ghi đè vị trí/khu vực/lương bằng dữ liệu SQL; ID lạ bị loại.
+- Tài liệu/source: `Python/SOURCE_FLOW_GUIDE.md` được mở rộng thành bản đồ endpoint/service/state/test đầy đủ và đính chính `Task.Run` cũ thành hàng đợi SQL `AiEvaluationTask` có grace 30 giây, huỷ/retry/recovery. `Python/README.md` ghi fast-path mới. Trong lúc đối chiếu endpoint phát hiện `/extract-cv` gọi `nlp_processor` nhưng thiếu import và đã bổ sung import trực tiếp.
+- File thêm/sửa trong phạm vi: `.env.example`, `docker-compose.yml`, `Python/{README.md,SOURCE_FLOW_GUIDE.md}`, `Python/controllers/{analysis_controller.py,chat_controller.py}`, `Python/services/{gemini_service.py,scoring_service.py}`, hai test router/fallback, backend `ChatbotController.cs`, `ChatbotService.cs`, exception `ChatbotUnavailableException.cs`, `PROJECT_CONTEXT.md`, `WORK_LOG.md`.
+- API/database/migration/cấu hình: `/chat` Python và `/api/Chatbot/chat` đổi lỗi dependency từ payload success giả sang HTTP 503; response thành công giữ tương thích. Thêm biến môi trường tùy chọn `LLM_ROUTER_CHAT_MODELS`; không đổi schema và không có migration/rollback database. Rollback code là bỏ model list riêng và exception typed, nhưng không nên quay lại lưu thông báo lỗi như câu trả lời AI.
+- Kiểm thử thực tế: `python -m compileall` cho controller/service/DTO/utils/main đạt; `tests.test_llm_router_service` + `tests.test_local_analysis_fallbacks` đạt 17/17, gồm model list theo chức năng, forward cấu hình, router-first và provider failure. Backend Release build trước khi chốt tài liệu đạt 0 lỗi/442 warning legacy. `git diff --check` không có whitespace error, chỉ cảnh báo line ending Windows.
+- Git/VPS/hạn chế: HEAD vẫn `7343fce`; worktree giữ nguyên `JobService`, tool Selenium, ZIP/thư mục CV, tài liệu demo và các artifact ngoài phạm vi. Chưa đo chatbot sau image mới và chưa kiểm chứng HTTPS; bước tiếp theo là stage đúng file, commit/push, deploy profile 9Router, đo request thật tối thiểu và kiểm tra container/log/API trước khi đổi `ĐÃ XONG`.
+
 ### 2026-08-25 15:12 +07:00 — P0-04-P1-03-AI-QUEUE-MOBILE-LOCAL — Hàng đợi AI bền vững và trang Jobs mobile
 
 - Trạng thái: `ĐANG LÀM`; code, migration và build local đã đạt, chưa commit/push/deploy VPS tại thời điểm ghi mục này.

@@ -1,4 +1,5 @@
 from fastapi import APIRouter, UploadFile, File, Form, Request, HTTPException
+from fastapi.responses import JSONResponse
 from typing import Optional
 from dtos.request_dtos import ChatMessageModel, GenerateEmailRequest, EvaluateAnswerRequest
 from services import scoring_service, interview_service, email_service, doc_parser_service
@@ -41,7 +42,10 @@ async def chat_bot(
         raise he
     except Exception as e:
         msg = get_user_friendly_error_message(e, "Trợ lý AI đang bận. Vui lòng thử lại sau giây lát.")
-        return {"status": "error", "message": msg}
+        return JSONResponse(
+            status_code=503,
+            content={"status": "error", "message": msg},
+        )
 
 
 @router.post("/evaluate-answer")

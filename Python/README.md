@@ -128,8 +128,10 @@ Kết quả      → quality + agreement + analysis_safe → NLP/chấm điểm 
 ### 9Router local
 
 - Có thể ưu tiên endpoint OpenAI-compatible của 9Router bằng `LLM_ROUTER_BASE_URL` (local thường là `http://127.0.0.1:20128/v1`) và `LLM_ROUTER_MODELS`.
+- Chatbot dùng danh sách nhanh riêng `LLM_ROUTER_CHAT_MODELS` (mặc định `Gemini,deepseek`), router-first tối đa 12 giây rồi mới thử Gemini trực tiếp trong ngân sách 12 giây. Model phân tích CV chậm hoặc thử nghiệm trong `LLM_ROUTER_MODELS` không tham gia fast-path này.
 - `LLM_ROUTER_API_KEY` là tùy chọn cho router có bật xác thực và chỉ được cấp qua biến môi trường; không ghi key vào source hoặc log.
 - Thứ tự failover: 9Router local → Gemini (nếu bật/có key) → fallback cục bộ có gắn trạng thái. Khi chỉ muốn dùng router local mà không tiêu thụ quota Gemini, đặt thêm `GEMINI_ENABLED=false` cho đúng tiến trình Python local.
+- Riêng `/chat`, provider hết ngân sách trả HTTP `503`; backend không lưu câu báo lỗi như phản hồi AI thành công và chỉ giữ thẻ gợi ý job có ID tồn tại trong catalog SQL vừa cấp cho prompt.
 - Bằng chứng AI được truy hồi lại từ CV theo token gần-nguyên-văn. Khác dấu câu/xuống dòng hoặc một lỗi ký tự nhỏ có thể phục hồi; thay số, phủ định hoặc diễn giải lại không được giữ như bằng chứng và chỉ có thể xuất hiện dưới nhãn dấu hiệu chưa đối chiếu nếu không vi phạm quy tắc OCR/ngày tháng.
 
 ### Apriori

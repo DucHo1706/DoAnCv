@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using RecruitmentBackend.DTOs.Requests;
 using RecruitmentBackend.Interfaces;
 using RecruitmentBackend.Data;
+using RecruitmentBackend.Exceptions;
 using RecruitmentBackend.Models;
 using System;
 using System.Threading.Tasks;
@@ -60,9 +61,21 @@ namespace RecruitmentBackend.Controllers
 
                 return Ok(new { reply = aiResult.Reply });
             }
-            catch (Exception ex)
+            catch (ChatbotUnavailableException ex)
             {
-                return StatusCode(500, new { message = "Lỗi kết nối AI: " + ex.Message });
+                return StatusCode(StatusCodes.Status503ServiceUnavailable, new
+                {
+                    status = "error",
+                    message = ex.UserMessage
+                });
+            }
+            catch (Exception)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, new
+                {
+                    status = "error",
+                    message = "Không thể xử lý yêu cầu chatbot lúc này."
+                });
             }
         }
     }

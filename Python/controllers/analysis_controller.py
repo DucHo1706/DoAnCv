@@ -2,6 +2,7 @@ from fastapi import APIRouter, UploadFile, File, Form, Request, HTTPException
 from dtos.request_dtos import LazyAnalysisRequest
 from services import cv_analysis_service, interview_service, scoring_service
 from services.criterion_validation_service import parse_and_validate_criteria
+import nlp_processor
 from utils.logger import logger
 from utils.rate_limiter import check_ip_rate_limit
 from utils.error_handler import get_user_friendly_error_message

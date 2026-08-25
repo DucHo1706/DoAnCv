@@ -48,7 +48,7 @@ class LlmRouterServiceTests(unittest.TestCase):
              patch.object(gemini_service, "LLM_ROUTER_BASE_URL", "http://127.0.0.1:20128/v1"), \
              patch.object(gemini_service, "LLM_ROUTER_MODELS", ["first", "second"]), \
              patch.object(gemini_service, "LLM_ROUTER_TOTAL_BUDGET_SECONDS", 15), \
-             patch.object(gemini_service.time, "monotonic", side_effect=[100, 100, 116]), \
+             patch.object(gemini_service.time, "monotonic", side_effect=[100, 100, 100, 116, 116]), \
              patch.object(
                  gemini_service.requests,
                  "post",
@@ -62,6 +62,27 @@ class LlmRouterServiceTests(unittest.TestCase):
 
         self.assertEqual(post.call_count, 1)
         self.assertEqual(post.call_args.kwargs["timeout"], 15)
+
+    def test_router_uses_models_selected_for_current_feature(self):
+        response = Mock()
+        response.text = json.dumps({
+            "choices": [{"message": {"content": "Phản hồi nhanh"}}]
+        })
+        response.json.return_value = json.loads(response.text)
+        response.raise_for_status.return_value = None
+
+        with patch.object(gemini_service, "LLM_ROUTER_ENABLED", True), \
+             patch.object(gemini_service, "LLM_ROUTER_BASE_URL", "http://127.0.0.1:20128/v1"), \
+             patch.object(gemini_service, "LLM_ROUTER_MODELS", ["slow/global-model"]), \
+             patch.object(gemini_service.requests, "post", return_value=response) as post:
+            result = gemini_service._generate_router_content(
+                [{"role": "user", "content": "chat"}],
+                is_json=False,
+                models=["Gemini", "deepseek"],
+            )
+
+        self.assertEqual(result, "Phản hồi nhanh")
+        self.assertEqual(post.call_args.kwargs["json"]["model"], "Gemini")
 
     def test_failed_router_enters_cooldown_and_skips_next_request(self):
         with patch.object(gemini_service, "LLM_ROUTER_ENABLED", True), \
@@ -78,6 +99,27 @@ class LlmRouterServiceTests(unittest.TestCase):
 
         self.assertEqual(generate.call_count, 1)
         self.assertTrue(gemini_service._router_is_cooling_down())
+
+    def test_generate_forwards_feature_specific_router_models(self):
+        with patch.object(gemini_service, "LLM_ROUTER_ENABLED", True), \
+             patch.object(
+                 gemini_service,
+                 "_generate_router_content",
+                 return_value="Phản hồi chatbot",
+             ) as generate_router:
+            result = gemini_service.generate_content_with_retry(
+                "chat",
+                is_json=False,
+                router_first=True,
+                router_budget_seconds=12,
+                router_models=["Gemini", "deepseek"],
+            )
+
+        self.assertEqual(result, "Phản hồi chatbot")
+        self.assertEqual(
+            generate_router.call_args.kwargs["models"],
+            ["Gemini", "deepseek"],
+        )
 
     def test_direct_first_returns_gemini_response_without_calling_router(self):
         direct_client = Mock()

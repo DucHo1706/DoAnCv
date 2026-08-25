@@ -2,7 +2,11 @@ import unittest
 from unittest.mock import patch
 
 from services.interview_service import get_fallback_mock_interview, get_fallback_star_tips
-from services.scoring_service import build_local_language_review, classify_gemini_unavailable_reason
+from services.scoring_service import (
+    build_local_language_review,
+    chat_with_candidate,
+    classify_gemini_unavailable_reason,
+)
 
 
 class LocalAnalysisFallbackTests(unittest.TestCase):
@@ -57,6 +61,27 @@ class LocalAnalysisFallbackTests(unittest.TestCase):
                 RuntimeError("429 RESOURCE_EXHAUSTED quota exceeded")
             )
         self.assertEqual(reason, "quota_or_rate_limit")
+
+    @patch("services.scoring_service.generate_content_with_retry")
+    def test_chatbot_prioritizes_fast_router_models_with_bounded_fallback(self, generate):
+        generate.return_value = "Phản hồi"
+
+        result = chat_with_candidate("Tư vấn CV giúp tôi")
+
+        self.assertEqual(result, "Phản hồi")
+        kwargs = generate.call_args.kwargs
+        self.assertTrue(kwargs["router_first"])
+        self.assertEqual(kwargs["router_budget_seconds"], 12)
+        self.assertEqual(kwargs["total_budget_ms"], 12000)
+        self.assertEqual(kwargs["request_timeout_ms"], 10000)
+        self.assertEqual(kwargs["router_models"], ["Gemini", "deepseek"])
+
+    @patch("services.scoring_service.generate_content_with_retry")
+    def test_chatbot_provider_failure_is_not_returned_as_successful_reply(self, generate):
+        generate.side_effect = TimeoutError("provider timeout")
+
+        with self.assertRaises(RuntimeError):
+            chat_with_candidate("Tư vấn CV giúp tôi")
 
 
 if __name__ == "__main__":

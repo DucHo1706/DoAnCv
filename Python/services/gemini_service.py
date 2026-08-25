@@ -26,6 +26,14 @@ LLM_ROUTER_MODELS = [
     ).split(",")
     if value.strip()
 ]
+LLM_ROUTER_CHAT_MODELS = [
+    value.strip()
+    for value in os.getenv(
+        "LLM_ROUTER_CHAT_MODELS",
+        "Gemini,deepseek",
+    ).split(",")
+    if value.strip()
+]
 LLM_ROUTER_TIMEOUT_SECONDS = max(
     10, int(os.getenv("LLM_ROUTER_TIMEOUT_SECONDS", "25"))
 )
@@ -311,6 +319,7 @@ def _generate_router_content(
     is_json: bool,
     total_budget_seconds: int | None = None,
     max_tokens: int | None = None,
+    models: list[str] | None = None,
 ) -> str:
     if not LLM_ROUTER_ENABLED:
         raise ConnectionError("9Router chưa được bật cho tiến trình này.")
@@ -318,10 +327,14 @@ def _generate_router_content(
     endpoint = f"{LLM_ROUTER_BASE_URL}/chat/completions"
     router_budget = total_budget_seconds or LLM_ROUTER_TOTAL_BUDGET_SECONDS
     request_deadline = time.monotonic() + max(1, router_budget)
-    for model_name in LLM_ROUTER_MODELS:
+    models_to_try = models if models is not None else LLM_ROUTER_MODELS
+    if not models_to_try:
+        raise ValueError("9Router không có model phù hợp cho chức năng này.")
+    for model_name in models_to_try:
         remaining_seconds = request_deadline - time.monotonic()
         if remaining_seconds <= 0:
             break
+        attempt_started = time.monotonic()
         try:
             response = requests.post(
                 endpoint,
@@ -340,12 +353,17 @@ def _generate_router_content(
             if is_json:
                 content = clean_json_text(content)
                 json.loads(content)
-            logger.info(f"9Router phản hồi thành công với model {model_name}.")
+            elapsed_ms = int((time.monotonic() - attempt_started) * 1000)
+            logger.info(
+                f"9Router phản hồi thành công với model {model_name} sau {elapsed_ms} ms."
+            )
             return content
         except Exception as error:
             last_error = error
+            elapsed_ms = int((time.monotonic() - attempt_started) * 1000)
             logger.warning(
-                f"9Router model {model_name} chưa tạo được phản hồi hợp lệ: {error}"
+                f"9Router model {model_name} chưa tạo được phản hồi hợp lệ "
+                f"sau {elapsed_ms} ms: {error}"
             )
     if last_error is None:
         raise TimeoutError("9Router đã hết ngân sách chờ trước khi thử model tiếp theo.")
@@ -360,6 +378,7 @@ def generate_content_with_retry(
     total_budget_ms: int = None,
     router_first: bool = True,
     router_budget_seconds: int = None,
+    router_models: list[str] | None = None,
     max_output_tokens: int = None,
 ) -> str:
     """
@@ -373,6 +392,7 @@ def generate_content_with_retry(
                 is_json=is_json,
                 total_budget_seconds=router_budget_seconds,
                 max_tokens=max_output_tokens,
+                models=router_models,
             )
             _mark_router_available()
             return content
@@ -389,6 +409,7 @@ def generate_content_with_retry(
                 is_json=is_json,
                 total_budget_seconds=router_budget_seconds,
                 max_tokens=max_output_tokens,
+                models=router_models,
             )
         if router_error is not None:
             raise ConnectionError(
@@ -402,6 +423,7 @@ def generate_content_with_retry(
                 is_json=is_json,
                 total_budget_seconds=router_budget_seconds,
                 max_tokens=max_output_tokens,
+                models=router_models,
             )
         raise ConnectionError("Ket noi Gemini dang tam nghi; su dung ket qua du phong cuc bo.")
 
@@ -561,6 +583,7 @@ def generate_content_with_retry(
                 is_json=is_json,
                 total_budget_seconds=router_budget_seconds,
                 max_tokens=max_output_tokens,
+                models=router_models,
             )
             _mark_router_available()
             return content

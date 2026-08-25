@@ -1,4 +1,9 @@
-from .gemini_service import GEMINI_ENABLED, LLM_ROUTER_ENABLED, generate_content_with_retry
+from .gemini_service import (
+    GEMINI_ENABLED,
+    LLM_ROUTER_CHAT_MODELS,
+    LLM_ROUTER_ENABLED,
+    generate_content_with_retry,
+)
 from .mining_context_service import build_skill_mining_context
 from .ml_service import calculate_scikit_similarity, HAS_SKLEARN
 from . import interview_service
@@ -621,14 +626,15 @@ Nhiệm vụ của bạn là trả lời câu hỏi của người dùng bằng 
             prompt,
             is_json=False,
             request_timeout_ms=10000,
-            total_budget_ms=20000,
-            router_first=False,
-            router_budget_seconds=8,
+            total_budget_ms=12000,
+            router_first=True,
+            router_budget_seconds=12,
+            router_models=LLM_ROUTER_CHAT_MODELS,
             max_output_tokens=900,
         )
     except Exception as e:
         logger.error(f"Loi chatbot: {e}")
-        return "Xin lỗi, hệ thống AI đang quá tải. Vui lòng thử lại sau."
+        raise RuntimeError("Trợ lý AI chưa thể tạo phản hồi trong thời gian cho phép.") from e
 
 def calculate_resume_score(cv_text: str, jd_text: str, cv_skills: list, jd_skills: list, criteria_list: list) -> dict:
     """
