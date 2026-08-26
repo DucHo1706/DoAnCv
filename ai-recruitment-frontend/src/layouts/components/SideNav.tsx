@@ -16,6 +16,7 @@ import {
   SecurityScanOutlined,
   SettingOutlined,
   SearchOutlined,
+  TagsOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
 } from "@ant-design/icons";
@@ -202,12 +203,17 @@ export function SideNav({
     },
     {
       type: "group" as const,
-      label: renderGroupLabel("Cơ cấu Tổ chức"),
+      label: renderGroupLabel("Dữ liệu tuyển dụng"),
       children: [
         {
           key: "/admin/organization",
           icon: <ApartmentOutlined style={{ color: "#818CF8", fontSize: 16 }} />,
           label: <Link to="/admin/organization">Danh mục tuyển dụng</Link>,
+        },
+        {
+          key: "/admin/skills",
+          icon: <TagsOutlined style={{ color: "#0EA5E9", fontSize: 16 }} />,
+          label: <Link to="/admin/skills">Quản lý kỹ năng</Link>,
         },
       ],
     },

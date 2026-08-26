@@ -57,6 +57,7 @@ const RolePermissionPage = lazy(() => import("./features/admin/pages/RolePermiss
 const RecruiterPerformancePage = lazy(() => import("./features/admin/pages/RecruiterPerformancePage/RecruiterPerformancePage"));
 const SystemSettingsPage = lazy(() => import("./features/admin/pages/SystemSettingsPage/SystemSettingsPage"));
 const OrganizationManagementPage = lazy(() => import("./features/admin/pages/OrganizationManagementPage/OrganizationManagementPage"));
+const SkillTaxonomyPage = lazy(() => import("./features/admin/pages/SkillTaxonomyPage/SkillTaxonomyPage"));
 const AdminProfilePage = lazy(() => import("./features/admin/pages/AdminProfilePage/AdminProfilePage"));
 
 function App() {
@@ -121,6 +122,7 @@ function App() {
           <Route path="reports" element={<Navigate to="/admin/dashboard" replace />} />
           <Route path="audit-logs" element={<AuditLogsPage />} />
           <Route path="organization" element={<OrganizationManagementPage />} />
+          <Route path="skills" element={<SkillTaxonomyPage />} />
           <Route path="branches" element={<Navigate to="/admin/organization?tab=branches" replace />} />
           <Route path="categories" element={<Navigate to="/admin/organization?tab=categories" replace />} />
           <Route path="job-levels" element={<Navigate to="/admin/organization?tab=job-levels" replace />} />

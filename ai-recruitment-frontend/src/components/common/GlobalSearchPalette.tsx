@@ -13,6 +13,7 @@ import {
   UserOutlined,
   SettingOutlined,
   TrophyOutlined,
+  TagsOutlined,
 } from "@ant-design/icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -104,6 +105,15 @@ const NAV_ITEMS: ResultItem[] = [
     subtitle: "Cơ cấu tổ chức",
     path: "/admin/job-positions",
     keywords: "vị trí công việc position",
+  },
+  {
+    id: "nav-skills",
+    group: "Điều hướng",
+    icon: <TagsOutlined />,
+    title: "Quản lý kỹ năng",
+    subtitle: "Kỹ năng chuẩn, bí danh và hàng chờ xem xét",
+    path: "/admin/skills",
+    keywords: "kỹ năng skill taxonomy bí danh alias hàng chờ duyệt",
   },
   {
     id: "nav-recruiter-performance",

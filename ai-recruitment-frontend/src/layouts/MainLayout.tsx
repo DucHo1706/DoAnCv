@@ -27,6 +27,7 @@ const BREADCRUMB_MAP: Record<string, { group: string; label: string }> = {
   "/admin/recruiter-performance": { group: "Quản lý Nhân sự", label: "Hiệu suất Recruiter" },
   "/admin/roles": { group: "Quản lý Nhân sự", label: "Vai trò & Phân quyền" },
   "/admin/organization": { group: "Dữ liệu tuyển dụng", label: "Danh mục tuyển dụng" },
+  "/admin/skills": { group: "Dữ liệu tuyển dụng", label: "Quản lý kỹ năng" },
   "/admin/branches": { group: "Dữ liệu tuyển dụng", label: "Chi nhánh" },
   "/admin/categories": { group: "Dữ liệu tuyển dụng", label: "Lĩnh vực ngành nghề" },
   "/admin/job-levels": { group: "Dữ liệu tuyển dụng", label: "Cấp bậc công việc" },
